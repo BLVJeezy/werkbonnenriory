@@ -241,6 +241,35 @@ export type Database = {
         }
         Relationships: []
       }
+      work_order_photos: {
+        Row: {
+          created_at: string
+          id: string
+          path: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          path: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          path?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_photos_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_orders: {
         Row: {
           activity_id: string | null

@@ -15,6 +15,7 @@ import { usePerms, useRole } from "@/lib/use-role";
 import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
+import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
@@ -327,6 +328,8 @@ function Detail() {
           </form>
         )}
       </section>
+
+      <WorkOrderPhotos workOrderId={id} locked={matLocked} />
 
       {(perms.showPrices || perms.canPayment) && <section className="rounded-md border bg-card p-4">
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
