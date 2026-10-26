@@ -21,6 +21,7 @@ import { formatAddress } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 import { VAT_RATES } from "@/lib/billing";
+import { crewBuckets } from "@/lib/schedule";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
@@ -229,15 +230,21 @@ type Row = {
 };
 
 function TechList({ rows }: { rows: Row[] }) {
-  const open = rows.filter((w) => w.status !== "afgetekend");
+  const b = crewBuckets(rows.filter((w) => w.status !== "afgetekend"));
   const done = rows.filter((w) => w.status === "afgetekend");
+  const group = (title: string, list: Row[], empty: string) => (
+    <section className="space-y-3">
+      <h2 className="text-xl font-black uppercase">{title}</h2>
+      {list.length === 0 && <div className="rounded-md border bg-card p-4 text-muted-foreground">{empty}</div>}
+      {list.map((w) => <RowLink key={w.id} w={w} label="Taak" />)}
+    </section>
+  );
   return (
     <div className="space-y-8">
-      <section className="space-y-3">
-        <h1 className="text-3xl font-black uppercase">Mijn taken</h1>
-        {open.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen openstaande taken.</div>}
-        {open.map((w) => <RowLink key={w.id} w={w} label="Taak" />)}
-      </section>
+      <h1 className="text-3xl font-black uppercase">Mijn taken</h1>
+      {group("Vandaag", b.today, "Geen taken vandaag.")}
+      {group("Morgen", b.tomorrow, "Geen taken morgen.")}
+      {b.unplanned.length > 0 && group("Nog in te plannen", b.unplanned, "")}
       {done.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-xl font-black uppercase">Afgetekende werkbonnen</h2>
