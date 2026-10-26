@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { billableHours, computeTotals, euro } from "@/lib/billing";
-import { OUTLOOK_SCOPES } from "@/lib/outlook-scopes";
+import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
+import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
 import { getConnectionKeyForUser } from "@/lib/appUserConnections.server";
 
 const GATEWAY_BASE_URL = "https://connector-gateway.lovable.dev";
