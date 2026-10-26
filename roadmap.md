@@ -10,3 +10,4 @@
 - [x] Knop Google Maps-route vanaf eigen locatie naar de klant
 - [x] Knop om de klant op te bellen
 - [x] Beheerder kiest zelf wat ploegen kunnen zien per ploeg
+- [x] Omschrijving al zichtbaar in de takenlijst, voor de taak geopend is
