@@ -20,3 +20,4 @@
 - [x] Werkbonnen afdrukken
 - [ ] Werkbon mailen naar de klant
 - [x] Afrekenen sluit taak af als werkbon, geen aftekenen meer nodig
+- [x] Mailimport via eigen aanmelding met afspraak@riory.be
