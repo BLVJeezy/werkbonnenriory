@@ -81,6 +81,7 @@ function Technici() {
                     ["show_contact", "Klantgegevens"],
                     ["can_payment", "Afrekenen"],
                     ["show_signed", "Afgetekende werkbonnen"],
+                    ["large_text", "Extra grote letters"],
                   ] as const
                 ).map(([k, label]) => (
                   <label key={k} className="flex items-center gap-1.5">

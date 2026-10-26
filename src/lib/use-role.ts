@@ -9,12 +9,12 @@ function useMe() {
     queryKey: ["my_role"],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return { role: "technician" as const, perms: { ...ALL, showPrices: false, showContact: false, canPayment: false, showSigned: false } };
+      if (!u.user) return { role: "technician" as const, perms: { ...ALL, showPrices: false, showContact: false, canPayment: false, showSigned: false }, largeText: false };
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
-      if (roles?.some((r) => r.role === "admin")) return { role: "admin" as const, perms: ALL };
+      if (roles?.some((r) => r.role === "admin")) return { role: "admin" as const, perms: ALL, largeText: false };
       const { data: t } = await supabase
         .from("technicians")
-        .select("show_prices, show_contact, can_payment, show_signed")
+        .select("show_prices, show_contact, can_payment, show_signed, large_text")
         .eq("user_id", u.user.id)
         .maybeSingle();
       return {
@@ -25,6 +25,7 @@ function useMe() {
           canPayment: !!t?.can_payment,
           showSigned: !!t?.show_signed,
         },
+        largeText: !!t?.large_text,
       };
     },
   });
@@ -38,4 +39,9 @@ export function useRole() {
 /** What the signed-in crew may see/do; admins get everything. */
 export function usePerms(): Perms | null {
   return useMe().data?.perms ?? null;
+}
+
+/** Whether the admin switched on extra large letters for this crew. */
+export function useLargeText(): boolean {
+  return useMe().data?.largeText ?? false;
 }
