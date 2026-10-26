@@ -15,3 +15,7 @@
 - [x] Kalender voor admin om taken per dag in te plannen
 - [x] Ploegen zien enkel taken van vandaag, morgen en nog in te plannen
 - [x] Op een dag in de kalender klikken om een taak aan te maken
+- [ ] Werkbonnen aanpassen (admin)
+- [ ] Werkbonnen verwijderen (admin)
+- [ ] Werkbonnen afdrukken
+- [ ] Werkbon mailen naar de klant
