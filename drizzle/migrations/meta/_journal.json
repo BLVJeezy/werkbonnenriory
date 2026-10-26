@@ -57,6 +57,13 @@
       "when": 1793046726013,
       "tag": "0007_app_user_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793047495074,
+      "tag": "0008_work_order_sort_order",
+      "breakpoints": true
     }
   ]
 }

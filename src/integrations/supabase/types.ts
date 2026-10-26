@@ -261,6 +261,7 @@ export type Database = {
           signature: string | null
           signed_at: string | null
           signed_name: string | null
+          sort_order: number
           source_message_id: string | null
           source_subject: string | null
           status: string
@@ -291,6 +292,7 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          sort_order?: number
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
@@ -321,6 +323,7 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          sort_order?: number
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
