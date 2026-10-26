@@ -1,0 +1,1 @@
+ALTER TABLE public.work_orders ADD COLUMN sort_order integer NOT NULL DEFAULT 0;

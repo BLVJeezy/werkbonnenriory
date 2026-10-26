@@ -17,4 +17,14 @@ describe("crewBuckets", () => {
   it("lists unplanned tasks", () => {
     expect(b.unplanned.map((r) => r.id)).toEqual(["e"]);
   });
+  it("keeps the planned order within a day", () => {
+    const r = crewBuckets(
+      [
+        { id: "x", scheduled_date: "2026-10-26", sort_order: 2 },
+        { id: "y", scheduled_date: "2026-10-26", sort_order: 1 },
+      ],
+      new Date(2026, 9, 26, 8),
+    );
+    expect(r.today.map((t) => t.id)).toEqual(["y", "x"]);
+  });
 });
