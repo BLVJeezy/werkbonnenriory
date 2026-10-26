@@ -15,7 +15,7 @@ export type SendWerkbonResult =
   | { sent: true }
   | { sent: false; reason: "not_signed" | "no_email" | "mailbox_not_connected" | "reconnect_required" | "send_failed" };
 
-/** Sends the signed work order to the customer from the admin's linked mailbox (afspraak@riory.be). */
+/** Sends the signed work order to the customer from the admin's linked werkbon mailbox (info@riory.be). */
 export const sendWerkbonEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { workOrderId: string }) => input)
@@ -39,7 +39,7 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
     const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
     let key: string | null = null;
     for (const a of admins ?? []) {
-      key = await getConnectionKeyForUser(a.user_id, CONNECTOR);
+      key = await getConnectionKeyForUser(a.user_id, WERKBON_MAILBOX_KEY);
       if (key) break;
     }
     if (!key) return { sent: false, reason: "mailbox_not_connected" };
@@ -111,7 +111,7 @@ ${wo.signed_name ? `<p style="margin-top:16px">Afgetekend door ${esc(wo.signed_n
           },
         }),
       },
-      requiredScopes: OUTLOOK_SCOPES,
+      requiredScopes: WERKBON_MAIL_SCOPES,
     });
     if (await appUserReconnectRequired(res)) return { sent: false, reason: "reconnect_required" };
     if (!res.ok) {
