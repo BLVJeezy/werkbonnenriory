@@ -3,9 +3,9 @@
 - [x] Techniekers zien enkel toegewezen taken; na aftekenen = werkbon
 - [x] Producten beheren, techniekers selecteren ze als materiaal
 - [x] Adres opsplitsen in straat, nr, postcode, plaats
-- [ ] Start/stop-knop bij elke taak in de lijst; bij stoppen opent de taak
-- [ ] Kilometers heen en terug vanaf Natveld 47, 3740 Bilzen, aangerekend per km
-- [ ] Activiteit met uurtarief bovenaan; eerste uur vol, daarna per begonnen kwartier
-- [ ] Btw-tarief kiezen per werkbon; productprijzen; afrekenen noteren
-- [ ] Knop Google Maps-route vanaf eigen locatie naar de klant
-- [ ] Knop om de klant op te bellen
+- [x] Start/stop-knop bij elke taak in de lijst; bij stoppen opent de taak
+- [x] Kilometers heen en terug vanaf Natveld 47, 3740 Bilzen, aangerekend per km
+- [x] Activiteit met uurtarief bovenaan; eerste uur vol, daarna per begonnen kwartier
+- [x] Btw-tarief kiezen per werkbon; productprijzen; afrekenen noteren
+- [x] Knop Google Maps-route vanaf eigen locatie naar de klant
+- [x] Knop om de klant op te bellen
