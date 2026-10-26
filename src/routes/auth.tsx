@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { loginEmail } from "@/lib/login";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -29,7 +30,7 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     if (mode === "in") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail(email), password });
       setBusy(false);
       if (error) {
         toast.error("Inloggen mislukt: " + error.message);
@@ -59,8 +60,8 @@ function AuthPage() {
           Riory <span className="text-primary">Werkbonnen</span>
         </h1>
         <div className="space-y-1">
-          <Label htmlFor="email">E-mail</Label>
-          <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Label htmlFor="email">Naam ploeg of e-mail</Label>
+          <Input id="email" type="text" autoCapitalize="none" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-1">
           <Label htmlFor="pw">Wachtwoord</Label>
