@@ -1,8 +1,10 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useRole } from "@/lib/use-role";
+import { useRole, useLargeText } from "@/lib/use-role";
+import { largeTextOn, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -20,6 +22,18 @@ function Layout() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const role = useRole();
+  const adminSet = useLargeText();
+  const [device, setDevice] = useState<DeviceChoice>(null);
+  const large = largeTextOn(adminSet, device);
+
+  useEffect(() => {
+    setDevice(readDeviceChoice());
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle("large-text", large);
+  }, [large]);
+  useEffect(() => () => document.documentElement.classList.remove("large-text"), []);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="no-print border-b-4 border-primary bg-secondary text-secondary-foreground">
@@ -46,6 +60,23 @@ function Layout() {
                   Tarieven
                 </Link>
               </>
+            )}
+            {role === "technician" && (
+              <Button
+                size="sm"
+                variant={large ? "default" : "ghost"}
+                aria-pressed={large}
+                onClick={() => {
+                  const next: DeviceChoice = large ? "off" : "on";
+                  writeDeviceChoice(next);
+                  setDevice(next);
+                }}
+              >
+                <span aria-hidden className="font-mono leading-none">
+                  Aa
+                </span>
+                Grote letters
+              </Button>
             )}
             <Button
               size="sm"

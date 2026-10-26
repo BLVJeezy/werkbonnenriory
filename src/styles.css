@@ -149,4 +149,15 @@
   .no-print, button, form, canvas { display: none !important; }
   body { background: white; }
   input, select, textarea { border: none !important; appearance: none; }
+  html.large-text { font-size: 100%; }
 }
+
+/*
+ * Extra grote letters voor ploegen met zichtproblemen.
+ * Tailwind rekent alles in rem, dus de basismaat optrekken maakt letters,
+ * knoppen en spaties tegelijk groter.
+ */
+html.large-text {
+  font-size: 140%;
+}
+
