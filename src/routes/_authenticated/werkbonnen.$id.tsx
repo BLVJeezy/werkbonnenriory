@@ -16,6 +16,7 @@ import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
+import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
@@ -69,6 +70,7 @@ function Detail() {
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
+  const mailWerkbon = useServerFn(sendWerkbonEmail);
   const [kmTried, setKmTried] = useState<string | null>(null);
   const woAddr = data?.wo?.address ?? null;
   const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
@@ -107,6 +109,16 @@ function Detail() {
     const { error } = await supabase.from("work_orders").update(patch).eq("id", id);
     if (error) toast.error(error.message);
     refresh();
+    return !error;
+  }
+
+  async function mailNaarKlant() {
+    if (!wo.email) return;
+    const r = await mailWerkbon({ data: { workOrderId: id } });
+    if (r.sent) toast.success(`Werkbon gemaild naar ${wo.email}`);
+    else if (r.reason === "reconnect_required") toast.error("Koppel de mailbox info@riory.be opnieuw om te kunnen mailen");
+    else if (r.reason === "mailbox_not_connected") toast.error("Koppel eerst de mailbox info@riory.be op de werkbonnenpagina");
+    else toast.error("Mail versturen mislukt");
   }
 
   async function toggleTimer() {
@@ -128,6 +140,9 @@ function Detail() {
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
         <div className="no-print ml-auto flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => window.print()}>Afdrukken</Button>
+          {locked && wo.email && (
+            <Button variant="outline" onClick={mailNaarKlant}>Mail naar klant</Button>
+          )}
           {isAdmin && locked && (
             <Button variant="outline" onClick={() => confirm("Handtekening wissen en opnieuw openen als taak?") && update({ status: wo.technician_id ? "toegewezen" : "nieuw", signature: null, signed_name: null, signed_at: null })}>
               Heropenen
@@ -372,10 +387,11 @@ function Detail() {
                     key={m}
                     variant="outline"
                     disabled={!!running}
-                    onClick={() =>
-                      confirm(`${euro(totals.total)} ontvangen via ${m}? De taak wordt dan afgesloten als werkbon.`) &&
-                      update({ paid_method: m, paid_amount: totals.total, paid_at: new Date().toISOString(), status: "afgetekend", signed_at: new Date().toISOString() })
-                    }
+                    onClick={async () => {
+                      if (!confirm(`${euro(totals.total)} ontvangen via ${m}? De taak wordt dan afgesloten als werkbon.`)) return;
+                      if (await update({ paid_method: m, paid_amount: totals.total, paid_at: new Date().toISOString(), status: "afgetekend", signed_at: new Date().toISOString() }))
+                        await mailNaarKlant();
+                    }}
                   >
                     Betaald met {m}
                   </Button>
@@ -405,9 +421,10 @@ function Detail() {
             <Button
               size="lg"
               disabled={!signature || !signedName || !!running}
-              onClick={() =>
-                update({ signature, signed_name: signedName, signed_at: new Date().toISOString(), status: "afgetekend" })
-              }
+              onClick={async () => {
+                if (await update({ signature, signed_name: signedName, signed_at: new Date().toISOString(), status: "afgetekend" }))
+                  await mailNaarKlant();
+              }}
             >
               Aftekenen → werkbon
             </Button>

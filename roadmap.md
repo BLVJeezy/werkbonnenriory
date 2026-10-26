@@ -1,24 +1,9 @@
 # Roadmap
-- [x] Aparte techniekerslogin; huidige login = admin die techniekers aanmaakt
-- [x] Techniekers zien enkel toegewezen taken; na aftekenen = werkbon
-- [x] Producten beheren, techniekers selecteren ze als materiaal
-- [x] Adres opsplitsen in straat, nr, postcode, plaats
-- [x] Start/stop-knop bij elke taak in de lijst; bij stoppen opent de taak
-- [x] Kilometers heen en terug vanaf Natveld 47, 3740 Bilzen, aangerekend per km
-- [x] Activiteit met uurtarief bovenaan; eerste uur vol, daarna per begonnen kwartier
-- [x] Btw-tarief kiezen per werkbon; productprijzen; afrekenen noteren
-- [x] Knop Google Maps-route vanaf eigen locatie naar de klant
-- [x] Knop om de klant op te bellen
-- [x] Beheerder kiest zelf wat ploegen kunnen zien per ploeg
-- [x] Omschrijving al zichtbaar in de takenlijst, voor de taak geopend is
-- [x] Garantie-vinkje: eerste uur en kilometers niet aangerekend
-- [x] Kalender voor admin om taken per dag in te plannen
-- [x] Ploegen zien enkel taken van vandaag, morgen en nog in te plannen
-- [x] Op een dag in de kalender klikken om een taak aan te maken
-- [x] Werkbonnen aanpassen (admin)
-- [x] Werkbonnen verwijderen (admin)
-- [x] Werkbonnen afdrukken
-- [ ] Werkbon mailen naar de klant
-- [x] Afrekenen sluit taak af als werkbon, geen aftekenen meer nodig
-- [x] Mailimport via eigen aanmelding met afspraak@riory.be
-- [x] Extra grote letters per ploeg (admin vinkje + eigen knop op de tablet)
+
+- [x] Werkbon automatisch mailen naar klant na aftekenen/afrekenen, vanuit info@riory.be
+  - [x] Serverfunctie sendWerkbonEmail (verstuurt via Microsoft-koppeling)
+  - [x] Aparte mailboxkoppeling info@riory.be (zelfde flow als afspraak@riory.be), afzender voor werkbonmail
+  - [x] Automatische verzending gekoppeld aan aftekenen + afrekenen in detailpagina
+  - [x] Manuele knop "Mail naar klant" op afgetekende werkbon
+  - [ ] Open: beheerder moet info@riory.be eenmalig koppelen via de knop op de Werkbonnen-pagina (vereist Microsoft-aanmelding van de gebruiker)
+- [x] (afgezegd door gebruiker) Afzenderdomein/Lovable-e-mail — niet doen
