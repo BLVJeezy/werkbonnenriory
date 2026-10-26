@@ -392,7 +392,7 @@ function Detail() {
           <div className="space-y-2">
             {wo.signature && <img src={wo.signature} alt="Handtekening klant" className="h-40 rounded border bg-background" />}
             <p>
-              Afgetekend door <strong>{wo.signed_name}</strong> op {wo.signed_at && new Date(wo.signed_at).toLocaleString("nl-BE")}
+              {wo.signed_name ? <>Afgetekend door <strong>{wo.signed_name}</strong></> : "Afgesloten na betaling"} op {wo.signed_at && new Date(wo.signed_at).toLocaleString("nl-BE")}
             </p>
           </div>
         ) : (
