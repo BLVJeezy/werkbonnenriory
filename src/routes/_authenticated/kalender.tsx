@@ -21,7 +21,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = { id: string; number: number; customer_name: string; city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; technicians: { name: string } | null };
+type Row = { id: string; number: number; customer_name: string; city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; technicians: { name: string } | null };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -31,7 +31,7 @@ function Kalender() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders", "calendar"],
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, city, scheduled_date, status, technician_id, activity_id, vat_rate, technicians(name)").neq("status", "afgetekend").order("number")).data ?? []) as Row[],
+      ((await supabase.from("work_orders").select("id, number, customer_name, city, scheduled_date, status, technician_id, activity_id, vat_rate, sort_order, technicians(name)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
@@ -56,7 +56,23 @@ function Kalender() {
   });
   const today = iso(new Date());
 
+  const dayList = (k: string) => data.filter((w) => w.scheduled_date === k);
+  async function move(list: Row[], i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= list.length) return;
+    const next = [...list];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    await Promise.all(next.map((w, n) => supabase.from("work_orders").update({ sort_order: n + 1 }).eq("id", w.id)));
+    qc.invalidateQueries({ queryKey: ["work_orders"] });
+  }
   async function plan(id: string, date: string | null) {
+    if (date) {
+      const end = Math.max(0, ...dayList(date).filter((w) => w.id !== id).map((w) => w.sort_order)) + 1;
+      const { error } = await supabase.from("work_orders").update({ scheduled_date: date, sort_order: end }).eq("id", id);
+      if (error) toast.error(error.message);
+      qc.invalidateQueries({ queryKey: ["work_orders"] });
+      return;
+    }
     const { error } = await supabase.from("work_orders").update({ scheduled_date: date }).eq("id", id);
     if (error) toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
@@ -66,13 +82,22 @@ function Kalender() {
     onDragOver: (e: React.DragEvent) => e.preventDefault(),
     onDrop: () => { if (drag) plan(drag, date); setDrag(null); },
   });
-  const card = (w: Row) => (
+  const card = (w: Row, i?: number, list?: Row[]) => (
     <div key={w.id} draggable onDragStart={() => setDrag(w.id)} className="cursor-grab rounded border bg-background p-2 text-sm">
       <div className="flex items-start gap-1">
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}</Link>
         <button type="button" title="Verwijderen" className="px-1 text-destructive" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}>✕</button>
       </div>
-      <div className="text-xs text-muted-foreground">{w.city ?? ""}</div>
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        {list && <span className="font-mono font-bold text-primary">{i! + 1}.</span>}
+        <span className="flex-1">{w.city ?? ""}</span>
+        {list && (
+          <>
+            <button type="button" title="Eerder" disabled={i === 0} className="px-1 disabled:opacity-30" onClick={() => move(list, i!, -1)}>▲</button>
+            <button type="button" title="Later" disabled={i === list.length - 1} className="px-1 disabled:opacity-30" onClick={() => move(list, i!, 1)}>▼</button>
+          </>
+        )}
+      </div>
       <Input type="date" className="mt-1 h-7 text-xs" value={w.scheduled_date ?? ""} onChange={(e) => plan(w.id, e.target.value || null)} />
       <select className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
@@ -109,14 +134,14 @@ function Kalender() {
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
-              {data.filter((w) => w.scheduled_date === k).map(card)}
+              {dayList(k).map((w, i, l) => card(w, i, l))}
             </div>
           );
         })}
       </div>
       <section {...drop(null)} className="rounded-md border bg-card p-3">
         <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">{unplanned.map(card)}</div>
+        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">{unplanned.map((w) => card(w))}</div>
       </section>
     </div>
   );

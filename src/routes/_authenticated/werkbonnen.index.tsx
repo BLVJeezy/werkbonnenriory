@@ -247,6 +247,7 @@ function Lijst() {
 }
 
 type Row = {
+  sort_order: number;
   scheduled_date: string | null;
   id: string;
   number: number;
