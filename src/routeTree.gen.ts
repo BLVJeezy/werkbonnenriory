@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
@@ -31,6 +32,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
+  id: '/kalender',
+  path: '/kalender',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
   id: '/producten',
@@ -63,6 +69,7 @@ const AuthenticatedWerkbonnenIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/kalender': typeof AuthenticatedKalenderRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/kalender': typeof AuthenticatedKalenderRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/kalender'
     | '/producten'
     | '/tarieven'
     | '/technici'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/kalender'
     | '/producten'
     | '/tarieven'
     | '/technici'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/kalender'
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
     | '/_authenticated/technici'
@@ -148,6 +160,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/kalender': {
+      id: '/_authenticated/kalender'
+      path: '/kalender'
+      fullPath: '/kalender'
+      preLoaderRoute: typeof AuthenticatedKalenderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/producten': {
       id: '/_authenticated/producten'
@@ -188,6 +207,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
   AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
@@ -196,6 +216,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
   AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
