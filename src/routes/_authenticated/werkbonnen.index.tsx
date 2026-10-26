@@ -17,6 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatAddress } from "@/lib/address";
+import { useRole } from "@/lib/use-role";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
@@ -24,6 +26,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
 });
 
 const FILTERS = ["alle", "nieuw", "toegewezen", "afgetekend"] as const;
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -32,14 +35,16 @@ function Lijst() {
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("alle");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", address: "", phone: "", email: "", description: "" });
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["work_orders"],
     queryFn: async () =>
       (await supabase.from("work_orders").select("*, technicians(name)").order("created_at", { ascending: false })).data ?? [],
   });
+  const role = useRole();
   const rows = filter === "alle" ? data : data.filter((w) => w.status === filter);
+  if (role === "technician") return <TechList rows={data} />;
 
   async function addToe(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +53,11 @@ function Lijst() {
       .from("work_orders")
       .insert({
         customer_name: form.name,
-        address: form.address || null,
+        street: form.street || null,
+        house_number: form.house_number || null,
+        postal_code: form.postal_code || null,
+        city: form.city || null,
+        address: formatAddress(form),
         phone: form.phone || null,
         email: form.email || null,
         description: form.description || null,
@@ -60,7 +69,7 @@ function Lijst() {
       toast.error(error?.message ?? "Aanmaken mislukt");
       return;
     }
-    setForm({ name: "", address: "", phone: "", email: "", description: "" });
+    setForm(emptyForm);
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
     navigate({ to: "/werkbonnen/$id", params: { id: created.id } });
@@ -101,9 +110,25 @@ function Lijst() {
                 <Label htmlFor="nb-name">Naam klant</Label>
                 <Input id="nb-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
-              <div className="grid gap-1">
-                <Label htmlFor="nb-address">Adres</Label>
-                <Input id="nb-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <div className="grid grid-cols-[1fr_6rem] gap-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-street">Straat</Label>
+                  <Input id="nb-street" value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-nr">Nr.</Label>
+                  <Input id="nb-nr" value={form.house_number} onChange={(e) => setForm({ ...form, house_number: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-[6rem_1fr] gap-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-pc">Postcode</Label>
+                  <Input id="nb-pc" value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-city">Plaats</Label>
+                  <Input id="nb-city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1">
@@ -158,5 +183,43 @@ function Lijst() {
         ))}
       </div>
     </div>
+  );
+}
+
+type Row = { id: string; number: number; customer_name: string; address: string | null; status: string };
+
+function TechList({ rows }: { rows: Row[] }) {
+  const open = rows.filter((w) => w.status !== "afgetekend");
+  const done = rows.filter((w) => w.status === "afgetekend");
+  return (
+    <div className="space-y-8">
+      <section className="space-y-3">
+        <h1 className="text-3xl font-black uppercase">Mijn taken</h1>
+        {open.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen openstaande taken.</div>}
+        {open.map((w) => <RowLink key={w.id} w={w} label="Taak" />)}
+      </section>
+      {done.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xl font-black uppercase">Afgetekende werkbonnen</h2>
+          {done.map((w) => <RowLink key={w.id} w={w} label="Werkbon" />)}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function RowLink({ w, label }: { w: Row; label: string }) {
+  return (
+    <Link
+      to="/werkbonnen/$id"
+      params={{ id: w.id }}
+      className="flex flex-wrap items-center gap-4 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm transition hover:shadow-md"
+    >
+      <span className="font-mono text-sm text-muted-foreground">{label} #{w.number}</span>
+      <div className="min-w-0 flex-1">
+        <div className="font-bold">{w.customer_name}</div>
+        <div className="truncate text-sm text-muted-foreground">{w.address ?? "Geen adres"}</div>
+      </div>
+    </Link>
   );
 }

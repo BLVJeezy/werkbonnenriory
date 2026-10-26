@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/integrations/supabase/types";
 import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
+import { formatAddress } from "@/lib/address";
+import { useRole } from "@/lib/use-role";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }] }),
@@ -23,13 +25,14 @@ function Detail() {
   const { data } = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const [w, t, m, techs] = await Promise.all([
+      const [w, t, m, techs, prods] = await Promise.all([
         supabase.from("work_orders").select("*").eq("id", id).single(),
         supabase.from("time_entries").select("*").eq("work_order_id", id).order("started_at"),
         supabase.from("materials").select("*").eq("work_order_id", id).order("created_at"),
         supabase.from("technicians").select("*").order("name"),
+        supabase.from("products").select("*").order("name"),
       ]);
-      return { wo: w.data, times: t.data ?? [], mats: m.data ?? [], techs: techs.data ?? [] };
+      return { wo: w.data, times: t.data ?? [], mats: m.data ?? [], techs: techs.data ?? [], prods: prods.data ?? [] };
     },
   });
   const refresh = () => {
@@ -43,13 +46,19 @@ function Detail() {
     return () => clearInterval(t);
   }, []);
 
-  const [mat, setMat] = useState({ name: "", quantity: "1", unit: "st" });
+  const role = useRole();
+  const [mat, setMat] = useState({ productId: "", quantity: "1" });
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
 
   if (!data?.wo) return <p className="text-muted-foreground">Laden…</p>;
-  const { wo, times, mats, techs } = data;
+  const { wo, times, mats, techs, prods } = data;
   const locked = wo.status === "afgetekend";
+  const isAdmin = role === "admin";
+  const infoLocked = locked || !isAdmin;
+  const kind = locked ? "Werkbon" : "Taak";
+  const saveAddr = (patch: Partial<Record<"street" | "house_number" | "postal_code" | "city", string>>) =>
+    update({ ...patch, address: formatAddress({ ...wo, ...patch }) });
   const running = times.find((t) => !t.ended_at);
   const total = totalSeconds(times, now);
 
@@ -71,23 +80,31 @@ function Detail() {
   return (
     <div className="space-y-6">
       <Link to="/werkbonnen" className="text-sm text-muted-foreground underline">
-        ← Alle werkbonnen
+        {isAdmin ? "← Alle werkbonnen" : "← Mijn taken"}
       </Link>
       <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-3xl font-black uppercase">Werkbon #{wo.number}</h1>
+        <h1 className="text-3xl font-black uppercase">{kind} #{wo.number}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
       </div>
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
-        <Field label="Klant" value={wo.customer_name} disabled={locked} onSave={(v) => update({ customer_name: v })} />
-        <Field label="Adres" value={wo.address ?? ""} disabled={locked} onSave={(v) => update({ address: v })} />
-        <Field label="Telefoon" value={wo.phone ?? ""} disabled={locked} onSave={(v) => update({ phone: v })} />
-        <Field label="E-mail" value={wo.email ?? ""} disabled={locked} onSave={(v) => update({ email: v })} />
+        <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
+        <div />
+        <div className="grid grid-cols-[1fr_6rem] gap-3">
+          <Field label="Straat" value={wo.street ?? (wo.house_number || wo.city ? "" : wo.address ?? "")} disabled={infoLocked} onSave={(v) => saveAddr({ street: v })} />
+          <Field label="Nr." value={wo.house_number ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ house_number: v })} />
+        </div>
+        <div className="grid grid-cols-[6rem_1fr] gap-3">
+          <Field label="Postcode" value={wo.postal_code ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ postal_code: v })} />
+          <Field label="Plaats" value={wo.city ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ city: v })} />
+        </div>
+        <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />
+        <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />
         <div className="space-y-1 sm:col-span-2">
           <Label>Omschrijving</Label>
           <Textarea
             defaultValue={wo.description ?? ""}
-            disabled={locked}
+            disabled={infoLocked}
             onBlur={(e) => e.target.value !== (wo.description ?? "") && update({ description: e.target.value })}
           />
         </div>
@@ -96,7 +113,7 @@ function Detail() {
           <select
             className="h-9 w-full rounded-md border bg-background px-2"
             value={wo.technician_id ?? ""}
-            disabled={locked}
+            disabled={infoLocked}
             onChange={(e) =>
               update({ technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })
             }
@@ -167,20 +184,33 @@ function Detail() {
             className="flex flex-wrap gap-2"
             onSubmit={async (e) => {
               e.preventDefault();
+              const p = prods.find((x) => x.id === mat.productId);
+              if (!p) return;
               const { error } = await supabase
                 .from("materials")
-                .insert({ work_order_id: id, name: mat.name, quantity: Number(mat.quantity) || 1, unit: mat.unit || "st" });
+                .insert({ work_order_id: id, product_id: p.id, name: p.name, quantity: Number(mat.quantity) || 1, unit: p.unit });
               if (error) {
                 toast.error(error.message);
                 return;
               }
-              setMat({ name: "", quantity: "1", unit: "st" });
+              setMat({ productId: "", quantity: "1" });
               refresh();
             }}
           >
-            <Input className="w-20" type="number" step="any" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} />
-            <Input className="w-20" value={mat.unit} onChange={(e) => setMat({ ...mat, unit: e.target.value })} />
-            <Input className="min-w-48 flex-1" placeholder="Materiaal" required value={mat.name} onChange={(e) => setMat({ ...mat, name: e.target.value })} />
+            <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} />
+            <select
+              required
+              className="h-9 min-w-48 flex-1 rounded-md border bg-background px-2"
+              value={mat.productId}
+              onChange={(e) => setMat({ ...mat, productId: e.target.value })}
+            >
+              <option value="">{prods.length ? "— Kies product —" : "Nog geen producten aangemaakt"}</option>
+              {prods.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.unit})
+                </option>
+              ))}
+            </select>
             <Button>Toevoegen</Button>
           </form>
         )}
@@ -206,7 +236,7 @@ function Detail() {
                 update({ signature, signed_name: signedName, signed_at: new Date().toISOString(), status: "afgetekend" })
               }
             >
-              Werkbon aftekenen
+              Aftekenen → werkbon
             </Button>
             {running && <p className="text-sm text-muted-foreground">Stop eerst de tijd.</p>}
           </div>

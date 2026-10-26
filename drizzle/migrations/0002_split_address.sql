@@ -1,0 +1,1 @@
+ALTER TABLE public.work_orders ADD COLUMN street text, ADD COLUMN house_number text, ADD COLUMN postal_code text, ADD COLUMN city text;

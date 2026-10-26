@@ -69,9 +69,6 @@ function AuthPage() {
         <Button className="w-full" disabled={busy}>
           {mode === "in" ? "Inloggen" : "Account aanmaken"}
         </Button>
-        <button type="button" className="w-full text-sm text-muted-foreground underline" onClick={() => setMode(mode === "in" ? "up" : "in")}>
-          {mode === "in" ? "Nog geen gedeeld account? Aanmaken" : "Terug naar inloggen"}
-        </button>
       </form>
     </div>
   );
