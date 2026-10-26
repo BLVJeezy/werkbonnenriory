@@ -307,7 +307,7 @@ function Detail() {
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
         {perms.showPrices && <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
           <dt>
-            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u × {euro(Number(activity?.hourly_rate ?? 0))}
+            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u{wo.warranty && " − 1 u garantie"} × {euro(Number(activity?.hourly_rate ?? 0))}
             {!activity && <span className="text-destructive"> (kies activiteit)</span>}
           </dt>
           <dd className="text-right">{euro(totals.labour)}</dd>
@@ -317,7 +317,7 @@ function Detail() {
               ? woAddr
                 ? "berekenen…"
                 : "geen adres"
-              : `${Number(wo.distance_km).toLocaleString("nl-BE")} km heen en terug × ${euro(Number(settings?.km_rate ?? 0))}`}
+              : `${Number(wo.distance_km).toLocaleString("nl-BE")} km heen en terug × ${euro(Number(settings?.km_rate ?? 0))}${wo.warranty ? " (garantie: gratis)" : ""}`}
           </dt>
           <dd className="text-right">{euro(totals.km)}</dd>
           <dt>Materialen</dt>
