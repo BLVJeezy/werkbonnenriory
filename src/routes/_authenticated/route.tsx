@@ -22,7 +22,7 @@ function Layout() {
   const role = useRole();
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b-4 border-primary bg-secondary text-secondary-foreground">
+      <header className="no-print border-b-4 border-primary bg-secondary text-secondary-foreground">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-4 py-3">
           <Link to="/werkbonnen" className="text-lg font-black uppercase tracking-tight">
             Riory <span className="text-primary">Werkbonnen</span>
