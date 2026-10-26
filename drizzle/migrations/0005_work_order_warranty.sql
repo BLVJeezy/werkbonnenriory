@@ -1,0 +1,1 @@
+ALTER TABLE public.work_orders ADD COLUMN warranty boolean NOT NULL DEFAULT false;

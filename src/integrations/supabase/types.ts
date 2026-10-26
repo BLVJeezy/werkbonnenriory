@@ -239,6 +239,7 @@ export type Database = {
           street: string | null
           technician_id: string | null
           vat_rate: number
+          warranty: boolean
         }
         Insert: {
           activity_id?: string | null
@@ -267,6 +268,7 @@ export type Database = {
           street?: string | null
           technician_id?: string | null
           vat_rate?: number
+          warranty?: boolean
         }
         Update: {
           activity_id?: string | null
@@ -295,6 +297,7 @@ export type Database = {
           street?: string | null
           technician_id?: string | null
           vat_rate?: number
+          warranty?: boolean
         }
         Relationships: [
           {
