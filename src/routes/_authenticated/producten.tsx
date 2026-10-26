@@ -23,7 +23,10 @@ function Producten() {
   async function add(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.from("products").insert({ name, unit: unit || "st" });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setName("");
     setUnit("st");
     qc.invalidateQueries({ queryKey: ["products"] });
