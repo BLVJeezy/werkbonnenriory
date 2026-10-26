@@ -157,13 +157,16 @@ export type Database = {
       work_orders: {
         Row: {
           address: string | null
+          city: string | null
           created_at: string
           customer_name: string
           description: string | null
           email: string | null
+          house_number: string | null
           id: string
           number: number
           phone: string | null
+          postal_code: string | null
           received_at: string | null
           signature: string | null
           signed_at: string | null
@@ -171,17 +174,21 @@ export type Database = {
           source_message_id: string | null
           source_subject: string | null
           status: string
+          street: string | null
           technician_id: string | null
         }
         Insert: {
           address?: string | null
+          city?: string | null
           created_at?: string
           customer_name?: string
           description?: string | null
           email?: string | null
+          house_number?: string | null
           id?: string
           number?: number
           phone?: string | null
+          postal_code?: string | null
           received_at?: string | null
           signature?: string | null
           signed_at?: string | null
@@ -189,17 +196,21 @@ export type Database = {
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
+          street?: string | null
           technician_id?: string | null
         }
         Update: {
           address?: string | null
+          city?: string | null
           created_at?: string
           customer_name?: string
           description?: string | null
           email?: string | null
+          house_number?: string | null
           id?: string
           number?: number
           phone?: string | null
+          postal_code?: string | null
           received_at?: string | null
           signature?: string | null
           signed_at?: string | null
@@ -207,6 +218,7 @@ export type Database = {
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
+          street?: string | null
           technician_id?: string | null
         }
         Relationships: [
