@@ -231,6 +231,7 @@ function Lijst() {
 }
 
 type Row = {
+  scheduled_date: string | null;
   id: string;
   number: number;
   customer_name: string;
