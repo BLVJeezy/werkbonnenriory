@@ -16,6 +16,7 @@ import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
+import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
@@ -69,6 +70,7 @@ function Detail() {
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
+  const mailWerkbon = useServerFn(sendWerkbonEmail);
   const [kmTried, setKmTried] = useState<string | null>(null);
   const woAddr = data?.wo?.address ?? null;
   const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
@@ -107,6 +109,16 @@ function Detail() {
     const { error } = await supabase.from("work_orders").update(patch).eq("id", id);
     if (error) toast.error(error.message);
     refresh();
+    return !error;
+  }
+
+  async function mailNaarKlant() {
+    if (!wo.email) return;
+    const r = await mailWerkbon({ data: { workOrderId: id } });
+    if (r.sent) toast.success(`Werkbon gemaild naar ${wo.email}`);
+    else if (r.reason === "reconnect_required") toast.error("Koppel de mailbox info@riory.be opnieuw om te kunnen mailen");
+    else if (r.reason === "mailbox_not_connected") toast.error("Koppel eerst de mailbox info@riory.be op de werkbonnenpagina");
+    else toast.error("Mail versturen mislukt");
   }
 
   async function toggleTimer() {
