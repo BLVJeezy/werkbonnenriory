@@ -293,14 +293,14 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
   return (
     <div style={crewStyle(w.technicians?.color)} className="space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm">
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex flex-wrap items-center gap-4">
-        <span className="font-mono text-sm text-muted-foreground">{label} #{w.number}</span>
+        <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
         <div className="min-w-0 flex-1">
           <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
-          <div className="truncate text-sm text-muted-foreground">{w.address ?? "Geen adres"}</div>
+          <div className="truncate text-sm opacity-80">{w.address ?? "Geen adres"}</div>
           {w.description ? (
             <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm leading-snug">{w.description}</p>
           ) : (
-            <p className="mt-1 text-sm italic text-muted-foreground">Geen omschrijving</p>
+            <p className="mt-1 text-sm italic opacity-80">Geen omschrijving</p>
           )}
         </div>
         {running && <span className="font-mono text-sm font-bold text-primary">● tijd loopt</span>}
