@@ -14,7 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      materials: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          quantity: number
+          unit: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          quantity?: number
+          unit?: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          quantity?: number
+          unit?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technicians: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      time_entries: {
+        Row: {
+          ended_at: string | null
+          id: string
+          started_at: string
+          work_order_id: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          work_order_id: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          address: string | null
+          created_at: string
+          customer_name: string
+          description: string | null
+          email: string | null
+          id: string
+          number: number
+          phone: string | null
+          received_at: string | null
+          signature: string | null
+          signed_at: string | null
+          signed_name: string | null
+          source_message_id: string | null
+          source_subject: string | null
+          status: string
+          technician_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          customer_name?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          number?: number
+          phone?: string | null
+          received_at?: string | null
+          signature?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          source_message_id?: string | null
+          source_subject?: string | null
+          status?: string
+          technician_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          customer_name?: string
+          description?: string | null
+          email?: string | null
+          id?: string
+          number?: number
+          phone?: string | null
+          received_at?: string | null
+          signature?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          source_message_id?: string | null
+          source_subject?: string | null
+          status?: string
+          technician_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
