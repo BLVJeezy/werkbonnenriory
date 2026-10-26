@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteTask } from "@/lib/delete-task";
+import { VAT_RATES } from "@/lib/billing";
+import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }] }),
@@ -19,7 +21,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = { id: string; number: number; customer_name: string; city: string | null; scheduled_date: string | null; status: string; technicians: { name: string } | null };
+type Row = { id: string; number: number; customer_name: string; city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; technicians: { name: string } | null };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -29,8 +31,24 @@ function Kalender() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders", "calendar"],
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, city, scheduled_date, status, technicians(name)").neq("status", "afgetekend").order("number")).data ?? []) as Row[],
+      ((await supabase.from("work_orders").select("id, number, customer_name, city, scheduled_date, status, technician_id, activity_id, vat_rate, technicians(name)").neq("status", "afgetekend").order("number")).data ?? []) as Row[],
   });
+  const { data: opts } = useQuery({
+    queryKey: ["assign_opts"],
+    queryFn: async () => {
+      const [t, a] = await Promise.all([
+        supabase.from("technicians").select("id, name").order("name"),
+        supabase.from("activities").select("id, name, hourly_rate").order("name"),
+      ]);
+      return { techs: t.data ?? [], acts: a.data ?? [] };
+    },
+  });
+  async function set(id: string, patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
+    const { error } = await supabase.from("work_orders").update(patch).eq("id", id);
+    if (error) toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["work_orders"] });
+  }
+  const sel = "mt-1 h-7 w-full rounded border bg-background px-1 text-xs";
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
@@ -54,8 +72,19 @@ function Kalender() {
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}</Link>
         <button type="button" title="Verwijderen" className="px-1 text-destructive" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}>✕</button>
       </div>
-      <div className="text-xs text-muted-foreground">{w.city ?? ""}{w.technicians ? ` · ${w.technicians.name}` : " · geen ploeg"}</div>
+      <div className="text-xs text-muted-foreground">{w.city ?? ""}</div>
       <Input type="date" className="mt-1 h-7 text-xs" value={w.scheduled_date ?? ""} onChange={(e) => plan(w.id, e.target.value || null)} />
+      <select className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
+        <option value="">— Ploeg —</option>
+        {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+      </select>
+      <select className={sel} value={w.activity_id ?? ""} onChange={(e) => set(w.id, { activity_id: e.target.value || null })}>
+        <option value="">— Activiteit —</option>
+        {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+      </select>
+      <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
+        {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
+      </select>
     </div>
   );
   const unplanned = data.filter((w) => !w.scheduled_date);
