@@ -41,7 +41,7 @@ export function MailboxConnect() {
 
   async function connect() {
     const popup = window.open("", "lovable-oauth", "width=600,height=720");
-    if (!popup) return toast.error("Pop-up geblokkeerd. Sta pop-ups toe en probeer opnieuw.");
+    if (!popup) { toast.error("Pop-up geblokkeerd. Sta pop-ups toe en probeer opnieuw."); return; }
     setBusy(true);
     try {
       const { authorizationUrl } = await start();
