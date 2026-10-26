@@ -12,6 +12,10 @@ import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
 import { formatAddress } from "@/lib/address";
 import { useRole } from "@/lib/use-role";
+import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
+import { computeDistance } from "@/lib/distance.functions";
+import { TaskActions } from "@/components/TaskActions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }] }),
@@ -25,14 +29,24 @@ function Detail() {
   const { data } = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const [w, t, m, techs, prods] = await Promise.all([
+      const [w, t, m, techs, prods, acts, st] = await Promise.all([
         supabase.from("work_orders").select("*").eq("id", id).single(),
         supabase.from("time_entries").select("*").eq("work_order_id", id).order("started_at"),
         supabase.from("materials").select("*").eq("work_order_id", id).order("created_at"),
         supabase.from("technicians").select("*").order("name"),
         supabase.from("products").select("*").order("name"),
+        supabase.from("activities").select("*").order("name"),
+        supabase.from("settings").select("*").eq("id", 1).single(),
       ]);
-      return { wo: w.data, times: t.data ?? [], mats: m.data ?? [], techs: techs.data ?? [], prods: prods.data ?? [] };
+      return {
+        wo: w.data,
+        times: t.data ?? [],
+        mats: m.data ?? [],
+        techs: techs.data ?? [],
+        prods: prods.data ?? [],
+        acts: acts.data ?? [],
+        settings: st.data,
+      };
     },
   });
   const refresh = () => {
@@ -50,17 +64,38 @@ function Detail() {
   const [mat, setMat] = useState({ productId: "", quantity: "1" });
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
+  const calcKm = useServerFn(computeDistance);
+  const [kmTried, setKmTried] = useState<string | null>(null);
+  const woAddr = data?.wo?.address ?? null;
+  const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
+  useEffect(() => {
+    if (!needKm || kmTried === woAddr) return;
+    setKmTried(woAddr);
+    calcKm({ data: { id } })
+      .then((r) => r.km != null && refresh())
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needKm, woAddr]);
 
   if (!data?.wo) return <p className="text-muted-foreground">Laden…</p>;
-  const { wo, times, mats, techs, prods } = data;
+  const { wo, times, mats, techs, prods, acts, settings } = data;
   const locked = wo.status === "afgetekend";
   const isAdmin = role === "admin";
   const infoLocked = locked || !isAdmin;
   const kind = locked ? "Werkbon" : "Taak";
   const saveAddr = (patch: Partial<Record<"street" | "house_number" | "postal_code" | "city", string>>) =>
-    update({ ...patch, address: formatAddress({ ...wo, ...patch }) });
+    update({ ...patch, address: formatAddress({ ...wo, ...patch }), distance_km: null });
   const running = times.find((t) => !t.ended_at);
   const total = totalSeconds(times, now);
+  const activity = acts.find((a) => a.id === wo.activity_id);
+  const totals = computeTotals({
+    seconds: total,
+    hourlyRate: Number(activity?.hourly_rate ?? 0),
+    distanceKm: wo.distance_km == null ? null : Number(wo.distance_km),
+    kmRate: Number(settings?.km_rate ?? 0),
+    materials: mats.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })),
+    vatRate: Number(wo.vat_rate),
+  });
 
   async function update(patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
     const { error } = await supabase.from("work_orders").update(patch).eq("id", id);
@@ -86,6 +121,42 @@ function Detail() {
         <h1 className="text-3xl font-black uppercase">{kind} #{wo.number}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
       </div>
+
+      <section className="grid gap-4 rounded-md border-2 border-primary bg-card p-4 sm:grid-cols-[1fr_10rem]">
+        <div className="space-y-1">
+          <Label>Activiteit</Label>
+          <select
+            className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"
+            value={wo.activity_id ?? ""}
+            disabled={locked}
+            onChange={(e) => update({ activity_id: e.target.value || null })}
+          >
+            <option value="">{acts.length ? "— Kies activiteit —" : "Nog geen activiteiten (zie Tarieven)"}</option>
+            {acts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} — {euro(Number(a.hourly_rate))}/u
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label>Btw-tarief</Label>
+          <select
+            className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"
+            value={String(Number(wo.vat_rate))}
+            disabled={locked}
+            onChange={(e) => update({ vat_rate: Number(e.target.value) })}
+          >
+            {VAT_RATES.map((r) => (
+              <option key={r} value={r}>
+                {r}%
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
+
+      <TaskActions id={id} address={wo.address} phone={wo.phone} runningEntryId={running?.id ?? null} showTimer={false} />
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
@@ -164,6 +235,7 @@ function Detail() {
                 {m.quantity} {m.unit}
               </span>
               <span className="flex-1">{m.name}</span>
+              <span className="font-mono text-sm">{euro(Number(m.quantity) * Number(m.unit_price))}</span>
               {!locked && (
                 <Button
                   size="sm"
@@ -188,7 +260,7 @@ function Detail() {
               if (!p) return;
               const { error } = await supabase
                 .from("materials")
-                .insert({ work_order_id: id, product_id: p.id, name: p.name, quantity: Number(mat.quantity) || 1, unit: p.unit });
+                .insert({ work_order_id: id, product_id: p.id, name: p.name, quantity: Number(mat.quantity) || 1, unit: p.unit, unit_price: Number(p.price) });
               if (error) {
                 toast.error(error.message);
                 return;
@@ -207,13 +279,71 @@ function Detail() {
               <option value="">{prods.length ? "— Kies product —" : "Nog geen producten aangemaakt"}</option>
               {prods.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.unit})
+                  {p.name} ({p.unit}) — {euro(Number(p.price))}
                 </option>
               ))}
             </select>
             <Button>Toevoegen</Button>
           </form>
         )}
+      </section>
+
+      <section className="rounded-md border bg-card p-4">
+        <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
+        <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
+          <dt>
+            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u × {euro(Number(activity?.hourly_rate ?? 0))}
+            {!activity && <span className="text-destructive"> (kies activiteit)</span>}
+          </dt>
+          <dd className="text-right">{euro(totals.labour)}</dd>
+          <dt>
+            Kilometers:{" "}
+            {wo.distance_km == null
+              ? woAddr
+                ? "berekenen…"
+                : "geen adres"
+              : `${Number(wo.distance_km).toLocaleString("nl-BE")} km heen en terug × ${euro(Number(settings?.km_rate ?? 0))}`}
+          </dt>
+          <dd className="text-right">{euro(totals.km)}</dd>
+          <dt>Materialen</dt>
+          <dd className="text-right">{euro(totals.materials)}</dd>
+          <dt className="border-t pt-1">Totaal excl. btw</dt>
+          <dd className="border-t pt-1 text-right">{euro(totals.net)}</dd>
+          <dt>Btw {Number(wo.vat_rate)}%</dt>
+          <dd className="text-right">{euro(totals.vat)}</dd>
+          <dt className="text-lg font-black">Te betalen</dt>
+          <dd className="text-right text-lg font-black">{euro(totals.total)}</dd>
+        </dl>
+        <p className="mt-2 text-xs text-muted-foreground">Eerste uur volledig, daarna per begonnen kwartier.</p>
+        <div className="mt-4 space-y-2">
+          {wo.paid_at ? (
+            <p className="rounded bg-accent p-3 font-bold text-accent-foreground">
+              Betaald: {euro(Number(wo.paid_amount))} via {wo.paid_method} op {new Date(wo.paid_at).toLocaleString("nl-BE")}
+            </p>
+          ) : !locked ? (
+            <>
+              <Label>Direct afrekenen met de klant</Label>
+              <div className="flex flex-wrap gap-2">
+                {["cash", "Bancontact", "overschrijving"].map((m) => (
+                  <Button
+                    key={m}
+                    variant="outline"
+                    disabled={!!running}
+                    onClick={() =>
+                      confirm(`${euro(totals.total)} ontvangen via ${m}?`) &&
+                      update({ paid_method: m, paid_amount: totals.total, paid_at: new Date().toISOString() })
+                    }
+                  >
+                    Betaald met {m}
+                  </Button>
+                ))}
+              </div>
+              {running && <p className="text-sm text-muted-foreground">Stop eerst de tijd.</p>}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Niet ter plaatse afgerekend.</p>
+          )}
+        </div>
       </section>
 
       <section className="rounded-md border-2 border-primary bg-card p-4">
