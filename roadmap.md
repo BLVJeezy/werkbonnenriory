@@ -9,3 +9,4 @@
 - [x] Btw-tarief kiezen per werkbon; productprijzen; afrekenen noteren
 - [x] Knop Google Maps-route vanaf eigen locatie naar de klant
 - [x] Knop om de klant op te bellen
+- [ ] Beheerder kiest zelf wat ploegen kunnen zien (wacht op details)
