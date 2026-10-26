@@ -22,6 +22,7 @@ import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 import { MailboxConnect } from "@/components/MailboxConnect";
 import { deleteTask } from "@/lib/delete-task";
+import { crewStyle } from "@/lib/crew-color";
 import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
 
@@ -52,7 +53,7 @@ function Lijst() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders"],
     queryFn: async () =>
-      (await supabase.from("work_orders").select("*, technicians(name), time_entries(id, ended_at)").order("created_at", { ascending: false })).data ?? [],
+      (await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, ended_at)").order("created_at", { ascending: false })).data ?? [],
   });
   const role = useRole();
   const { data: opts } = useQuery({
@@ -290,7 +291,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
   const running = w.time_entries?.find((t) => !t.ended_at);
   const signed = w.status === "afgetekend";
   return (
-    <div className="space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm">
+    <div style={crewStyle(w.technicians?.color)} className="space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm">
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex flex-wrap items-center gap-4">
         <span className="font-mono text-sm text-muted-foreground">{label} #{w.number}</span>
         <div className="min-w-0 flex-1">
