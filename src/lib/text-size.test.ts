@@ -10,7 +10,6 @@ describe("largeTextOn", () => {
     expect(largeTextOn(false, null)).toBe(false);
   });
 
-  it="groot op de eigen tablet ook zonder toestemming van de beheerder"
   it("kan op de eigen tablet toch groot gezet worden", () => {
     expect(largeTextOn(false, "on")).toBe(true);
   });
