@@ -11,3 +11,5 @@
 - [x] Knop om de klant op te bellen
 - [x] Beheerder kiest zelf wat ploegen kunnen zien per ploeg
 - [x] Omschrijving al zichtbaar in de takenlijst, voor de taak geopend is
+- [x] Garantie-vinkje: eerste uur en kilometers niet aangerekend
+- [ ] Kalender voor admin om taken per dag in te plannen
