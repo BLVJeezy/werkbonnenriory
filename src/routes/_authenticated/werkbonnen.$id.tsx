@@ -97,6 +97,7 @@ function Detail() {
     kmRate: Number(settings?.km_rate ?? 0),
     materials: mats.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })),
     vatRate: Number(wo.vat_rate),
+    warranty: wo.warranty,
   });
 
   async function update(patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
@@ -204,6 +205,18 @@ function Detail() {
         )}
       </section>
 
+      <label className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-primary bg-card p-4 text-lg font-bold">
+        <input
+          type="checkbox"
+          className="h-6 w-6 accent-[var(--primary)]"
+          checked={wo.warranty}
+          disabled={locked || !!wo.paid_at}
+          onChange={(e) => update({ warranty: e.target.checked })}
+        />
+        Onder garantie
+        <span className="text-sm font-normal text-muted-foreground">(eerste uur en kilometers niet aangerekend)</span>
+      </label>
+
       <section className="rounded-md border bg-card p-4">
         <h2 className="mb-3 text-lg font-black uppercase">Tijd</h2>
         <div className="flex flex-wrap items-center gap-4">
@@ -294,7 +307,7 @@ function Detail() {
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
         {perms.showPrices && <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
           <dt>
-            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u × {euro(Number(activity?.hourly_rate ?? 0))}
+            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u{wo.warranty && " − 1 u garantie"} × {euro(Number(activity?.hourly_rate ?? 0))}
             {!activity && <span className="text-destructive"> (kies activiteit)</span>}
           </dt>
           <dd className="text-right">{euro(totals.labour)}</dd>
@@ -304,7 +317,7 @@ function Detail() {
               ? woAddr
                 ? "berekenen…"
                 : "geen adres"
-              : `${Number(wo.distance_km).toLocaleString("nl-BE")} km heen en terug × ${euro(Number(settings?.km_rate ?? 0))}`}
+              : `${Number(wo.distance_km).toLocaleString("nl-BE")} km heen en terug × ${euro(Number(settings?.km_rate ?? 0))}${wo.warranty ? " (garantie: gratis)" : ""}`}
           </dt>
           <dd className="text-right">{euro(totals.km)}</dd>
           <dt>Materialen</dt>

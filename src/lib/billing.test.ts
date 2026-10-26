@@ -30,4 +30,12 @@ describe("computeTotals", () => {
     expect(t.net).toBe(110);
     expect(t.total).toBe(133.1);
   });
+  it("under warranty drops the first hour and the kilometres", () => {
+    const base = { hourlyRate: 60, distanceKm: 20, kmRate: 0.5, materials: [{ quantity: 1, unit_price: 10 }], vatRate: 0, warranty: true };
+    const t = computeTotals({ ...base, seconds: 3600 + 20 * 60 });
+    expect(t.labour).toBe(30);
+    expect(t.km).toBe(0);
+    expect(t.net).toBe(40);
+    expect(computeTotals({ ...base, seconds: 40 * 60 }).labour).toBe(0);
+  });
 });

@@ -14,10 +14,13 @@ export function computeTotals(o: {
   kmRate: number;
   materials: { quantity: number; unit_price: number }[];
   vatRate: number;
+  /** Warranty: first hour and kilometres are not charged. */
+  warranty?: boolean;
 }): Totals {
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  const labour = r2(billableHours(o.seconds) * o.hourlyRate);
-  const km = r2((o.distanceKm ?? 0) * o.kmRate);
+  const hours = Math.max(0, billableHours(o.seconds) - (o.warranty ? 1 : 0));
+  const labour = r2(hours * o.hourlyRate);
+  const km = o.warranty ? 0 : r2((o.distanceKm ?? 0) * o.kmRate);
   const materials = r2(o.materials.reduce((s, m) => s + Number(m.quantity) * Number(m.unit_price), 0));
   const net = r2(labour + km + materials);
   const vat = r2((net * o.vatRate) / 100);

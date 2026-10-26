@@ -36,6 +36,20 @@
       "when": 1793044311370,
       "tag": "0004_crew_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793045864476,
+      "tag": "0005_work_order_warranty",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793045915821,
+      "tag": "0006_work_order_scheduled_date",
+      "breakpoints": true
     }
   ]
 }

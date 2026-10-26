@@ -230,6 +230,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           received_at: string | null
+          scheduled_date: string | null
           signature: string | null
           signed_at: string | null
           signed_name: string | null
@@ -239,6 +240,7 @@ export type Database = {
           street: string | null
           technician_id: string | null
           vat_rate: number
+          warranty: boolean
         }
         Insert: {
           activity_id?: string | null
@@ -258,6 +260,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           received_at?: string | null
+          scheduled_date?: string | null
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
@@ -267,6 +270,7 @@ export type Database = {
           street?: string | null
           technician_id?: string | null
           vat_rate?: number
+          warranty?: boolean
         }
         Update: {
           activity_id?: string | null
@@ -286,6 +290,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           received_at?: string | null
+          scheduled_date?: string | null
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
@@ -295,6 +300,7 @@ export type Database = {
           street?: string | null
           technician_id?: string | null
           vat_rate?: number
+          warranty?: boolean
         }
         Relationships: [
           {

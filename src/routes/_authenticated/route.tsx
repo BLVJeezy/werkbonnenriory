@@ -33,6 +33,9 @@ function Layout() {
             </Link>
             {role === "admin" && (
               <>
+                <Link to="/kalender" className={navCls} activeProps={active}>
+                  Kalender
+                </Link>
                 <Link to="/technici" className={navCls} activeProps={active}>
                   Ploegen
                 </Link>
