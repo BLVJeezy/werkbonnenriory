@@ -127,27 +127,39 @@ export type Database = {
       }
       technicians: {
         Row: {
+          can_payment: boolean
           created_at: string
           email: string | null
           id: string
           name: string
           phone: string | null
+          show_contact: boolean
+          show_prices: boolean
+          show_signed: boolean
           user_id: string | null
         }
         Insert: {
+          can_payment?: boolean
           created_at?: string
           email?: string | null
           id?: string
           name: string
           phone?: string | null
+          show_contact?: boolean
+          show_prices?: boolean
+          show_signed?: boolean
           user_id?: string | null
         }
         Update: {
+          can_payment?: boolean
           created_at?: string
           email?: string | null
           id?: string
           name?: string
           phone?: string | null
+          show_contact?: boolean
+          show_prices?: boolean
+          show_signed?: boolean
           user_id?: string | null
         }
         Relationships: []
@@ -313,6 +325,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_crew_sees_signed: { Args: never; Returns: boolean }
       my_technician_id: { Args: never; Returns: string }
     }
     Enums: {
