@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ type Row = { id: string; number: number; customer_name: string; city: string | n
 
 function Kalender() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [start, setStart] = useState(() => monday(new Date()));
   const [drag, setDrag] = useState<string | null>(null);
   const { data = [] } = useQuery({
@@ -63,14 +64,17 @@ function Kalender() {
         <Button variant="outline" size="sm" onClick={() => setStart(monday(new Date()))}>Deze week</Button>
         <Button variant="outline" size="sm" onClick={() => shift(7)}>Volgende week →</Button>
       </div>
-      <p className="text-sm text-muted-foreground">Sleep een taak naar een dag, of kies een datum.</p>
+      <p className="text-sm text-muted-foreground">Sleep een taak naar een dag, of kies een datum. Klik op + om op die dag een nieuwe taak aan te maken.</p>
       <div className="grid gap-2 md:grid-cols-7">
         {days.map((d) => {
           const k = iso(d);
           return (
             <div key={k} {...drop(k)} className={`min-h-40 space-y-2 rounded-md border bg-card p-2 ${k === today ? "border-2 border-primary" : ""}`}>
-              <div className="text-sm font-black uppercase">
-                {d.toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-sm font-black uppercase">
+                  {d.toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}
+                </span>
+                <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
               {data.filter((w) => w.scheduled_date === k).map(card)}
             </div>

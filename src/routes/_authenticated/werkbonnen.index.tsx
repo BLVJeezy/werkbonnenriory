@@ -21,14 +21,17 @@ import { formatAddress } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 import { VAT_RATES } from "@/lib/billing";
+import { crewBuckets } from "@/lib/schedule";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
+  validateSearch: (s: Record<string, unknown>): { dag?: string } =>
+    typeof s["dag"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["dag"]) ? { dag: s["dag"] } : {},
   component: Lijst,
 });
 
 const FILTERS = ["alle", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -36,8 +39,13 @@ function Lijst() {
   const runImport = useServerFn(importFromMailbox);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("alle");
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const { dag } = Route.useSearch();
+  const [open, setOpenState] = useState(!!dag);
+  const [form, setForm] = useState({ ...emptyForm, scheduled_date: dag ?? "" });
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    if (!v && dag) navigate({ to: "/werkbonnen", search: {}, replace: true });
+  };
   const [saving, setSaving] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["work_orders"],
@@ -78,6 +86,7 @@ function Lijst() {
         status: form.technician_id ? "toegewezen" : "nieuw",
         activity_id: form.activity_id || null,
         vat_rate: Number(form.vat_rate),
+        scheduled_date: form.scheduled_date || null,
       })
       .select("id")
       .single();
@@ -123,6 +132,10 @@ function Lijst() {
               <DialogTitle>Handmatig werkbon toevoegen</DialogTitle>
             </DialogHeader>
             <form onSubmit={addToe} className="grid gap-3">
+              <div className="grid gap-1">
+                <Label htmlFor="nb-dag">Ingepland op</Label>
+                <Input id="nb-dag" type="date" value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })} />
+              </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-name">Naam klant</Label>
                 <Input id="nb-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -218,6 +231,7 @@ function Lijst() {
 }
 
 type Row = {
+  scheduled_date: string | null;
   id: string;
   number: number;
   customer_name: string;
@@ -229,15 +243,21 @@ type Row = {
 };
 
 function TechList({ rows }: { rows: Row[] }) {
-  const open = rows.filter((w) => w.status !== "afgetekend");
+  const b = crewBuckets(rows.filter((w) => w.status !== "afgetekend"));
   const done = rows.filter((w) => w.status === "afgetekend");
+  const group = (title: string, list: Row[], empty: string) => (
+    <section className="space-y-3">
+      <h2 className="text-xl font-black uppercase">{title}</h2>
+      {list.length === 0 && <div className="rounded-md border bg-card p-4 text-muted-foreground">{empty}</div>}
+      {list.map((w) => <RowLink key={w.id} w={w} label="Taak" />)}
+    </section>
+  );
   return (
     <div className="space-y-8">
-      <section className="space-y-3">
-        <h1 className="text-3xl font-black uppercase">Mijn taken</h1>
-        {open.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen openstaande taken.</div>}
-        {open.map((w) => <RowLink key={w.id} w={w} label="Taak" />)}
-      </section>
+      <h1 className="text-3xl font-black uppercase">Mijn taken</h1>
+      {group("Vandaag", b.today, "Geen taken vandaag.")}
+      {group("Morgen", b.tomorrow, "Geen taken morgen.")}
+      {b.unplanned.length > 0 && group("Nog in te plannen", b.unplanned, "")}
       {done.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-xl font-black uppercase">Afgetekende werkbonnen</h2>
