@@ -102,7 +102,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
     if (!lovableKey) throw new Error("Mailbox-koppeling ontbreekt");
     const { getConnectionKeyForUser } = await import("@/lib/appUserConnections.server");
     const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
-    const { OUTLOOK_SCOPES } = await import("@/lib/outlook.functions");
+    const { OUTLOOK_SCOPES } = await import("@/lib/outlook-scopes");
     const connectionAPIKey = await getConnectionKeyForUser(context.userId, "microsoft_outlook");
     if (!connectionAPIKey) throw new Error(`Koppel eerst de mailbox ${MAILBOX_ADDRESS} met de knop "Mailbox koppelen".`);
 

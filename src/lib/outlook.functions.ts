@@ -14,7 +14,7 @@ import {
 
 const GATEWAY_BASE_URL = "https://connector-gateway.lovable.dev";
 const CONNECTOR = "microsoft_outlook";
-export const OUTLOOK_SCOPES = ["openid", "profile", "email", "offline_access", "User.Read", "Mail.Read"];
+import { OUTLOOK_SCOPES } from "@/lib/outlook-scopes";
 
 async function assertAdmin(ctx: { supabase: any; userId: string }) {
   const { data } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
