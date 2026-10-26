@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
@@ -29,6 +30,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
+  id: '/producten',
+  path: '/producten',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTechniciRoute = AuthenticatedTechniciRouteImport.update({
   id: '/technici',
@@ -51,6 +57,7 @@ const AuthenticatedWerkbonnenIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/producten': typeof AuthenticatedProductenRoute
   '/technici': typeof AuthenticatedTechniciRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/producten': typeof AuthenticatedProductenRoute
   '/technici': typeof AuthenticatedTechniciRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
@@ -67,20 +75,34 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/technici' | '/werkbonnen/$id' | '/werkbonnen/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/producten'
+    | '/technici'
+    | '/werkbonnen/$id'
+    | '/werkbonnen/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/technici' | '/werkbonnen/$id' | '/werkbonnen'
+  to:
+    | '/'
+    | '/auth'
+    | '/producten'
+    | '/technici'
+    | '/werkbonnen/$id'
+    | '/werkbonnen'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/producten'
     | '/_authenticated/technici'
     | '/_authenticated/werkbonnen/$id'
     | '/_authenticated/werkbonnen/'
@@ -115,6 +137,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/producten': {
+      id: '/_authenticated/producten'
+      path: '/producten'
+      fullPath: '/producten'
+      preLoaderRoute: typeof AuthenticatedProductenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/technici': {
       id: '/_authenticated/technici'
       path: '/technici'
@@ -140,12 +169,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
   AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
   AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,
