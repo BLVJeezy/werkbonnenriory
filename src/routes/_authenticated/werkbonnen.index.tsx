@@ -21,6 +21,7 @@ import { formatAddress } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 import { MailboxConnect } from "@/components/MailboxConnect";
+import { deleteTask } from "@/lib/delete-task";
 import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
 
@@ -224,6 +225,19 @@ function Lijst() {
               <Badge variant={w.status === "afgetekend" ? "secondary" : "default"} className="capitalize">
                 {w.status}
               </Badge>
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Verwijderen"
+                className="text-destructive"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  deleteTask(qc, w.id, `${w.status === "afgetekend" ? "Werkbon" : "Taak"} #${w.number} (${w.customer_name})`);
+                }}
+              >
+                Verwijderen
+              </Button>
             </>
           } />
         ))}

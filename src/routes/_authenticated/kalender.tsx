@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { deleteTask } from "@/lib/delete-task";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }] }),
@@ -49,7 +50,10 @@ function Kalender() {
   });
   const card = (w: Row) => (
     <div key={w.id} draggable onDragStart={() => setDrag(w.id)} className="cursor-grab rounded border bg-background p-2 text-sm">
-      <Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-bold underline">#{w.number} {w.customer_name}</Link>
+      <div className="flex items-start gap-1">
+        <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}</Link>
+        <button type="button" title="Verwijderen" className="px-1 text-destructive" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}>✕</button>
+      </div>
       <div className="text-xs text-muted-foreground">{w.city ?? ""}{w.technicians ? ` · ${w.technicians.name}` : " · geen ploeg"}</div>
       <Input type="date" className="mt-1 h-7 text-xs" value={w.scheduled_date ?? ""} onChange={(e) => plan(w.id, e.target.value || null)} />
     </div>
