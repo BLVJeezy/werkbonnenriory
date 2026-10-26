@@ -87,10 +87,6 @@ async function extractWithAI(apiKey: string, msg: GraphMessage): Promise<Extract
   return JSON.parse(out) as Extracted;
 }
 
-function sentToMailbox(m: GraphMessage) {
-  const all = [...(m.toRecipients ?? []), ...(m.ccRecipients ?? [])];
-  return all.some((r) => r.emailAddress?.address?.toLowerCase() === MAILBOX_ADDRESS);
-}
 
 export const importFromMailbox = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -109,7 +105,8 @@ export const importFromMailbox = createServerFn({ method: "POST" })
     });
     if (!res.ok) throw new Error(`Mailbox fout [${res.status}]: ${await res.text()}`);
     const json = (await res.json()) as { value: GraphMessage[] };
-    const candidates = json.value.filter(sentToMailbox);
+    // The connected mailbox is afspraak@riory.be itself, so every inbox mail counts.
+    const candidates = json.value;
     if (candidates.length === 0) return { imported: 0, checked: json.value.length };
 
     const { data: existing } = await context.supabase
