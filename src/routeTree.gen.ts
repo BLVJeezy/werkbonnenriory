@@ -18,6 +18,7 @@ import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
+import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -65,6 +66,12 @@ const AuthenticatedWerkbonnenIdRoute =
     path: '/werkbonnen/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiOauthMicrosoft_outlookReturnRoute =
+  ApiOauthMicrosoft_outlookReturnRouteImport.update({
+    id: '/api/oauth/microsoft_outlook/return',
+    path: '/api/oauth/microsoft_outlook/return',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/technici': typeof AuthenticatedTechniciRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
+  '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesByTo {
   '/technici': typeof AuthenticatedTechniciRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
+  '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +106,7 @@ export interface FileRoutesById {
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
+  '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/technici'
     | '/werkbonnen/$id'
     | '/werkbonnen/'
+    | '/api/oauth/microsoft_outlook/return'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/technici'
     | '/werkbonnen/$id'
     | '/werkbonnen'
+    | '/api/oauth/microsoft_outlook/return'
   id:
     | '__root__'
     | '/'
@@ -130,12 +142,14 @@ export interface FileRouteTypes {
     | '/_authenticated/technici'
     | '/_authenticated/werkbonnen/$id'
     | '/_authenticated/werkbonnen/'
+    | '/api/oauth/microsoft_outlook/return'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -203,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWerkbonnenIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/oauth/microsoft_outlook/return': {
+      id: '/api/oauth/microsoft_outlook/return'
+      path: '/api/oauth/microsoft_outlook/return'
+      fullPath: '/api/oauth/microsoft_outlook/return'
+      preLoaderRoute: typeof ApiOauthMicrosoft_outlookReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -231,6 +252,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

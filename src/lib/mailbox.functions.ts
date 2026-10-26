@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { formatAddress } from "@/lib/address";
 
 export const MAILBOX_ADDRESS = "afspraak@riory.be";
-const OUTLOOK = "https://connector-gateway.lovable.dev/microsoft_outlook";
+const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev";
 const AI = "https://ai.gateway.lovable.dev/v1/responses";
 
 type Recipient = { emailAddress?: { address?: string; name?: string } };
@@ -99,17 +99,22 @@ export const importFromMailbox = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const lovableKey = process.env['LOVABLE_API_KEY'];
-    const outlookKey = process.env['MICROSOFT_OUTLOOK_API_KEY'];
-    if (!lovableKey || !outlookKey) throw new Error("Mailbox-koppeling ontbreekt");
+    if (!lovableKey) throw new Error("Mailbox-koppeling ontbreekt");
+    const { getConnectionKeyForUser } = await import("@/lib/appUserConnections.server");
+    const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
+    const { OUTLOOK_SCOPES } = await import("@/lib/outlook.functions");
+    const connectionAPIKey = await getConnectionKeyForUser(context.userId, "microsoft_outlook");
+    if (!connectionAPIKey) throw new Error(`Koppel eerst de mailbox ${MAILBOX_ADDRESS} met de knop "Mailbox koppelen".`);
 
-    const url = `${OUTLOOK}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body`;
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": outlookKey,
-        Prefer: 'outlook.body-content-type="text"',
-      },
+    const res = await callAsAppUser({
+      gatewayBaseUrl: OUTLOOK_GATEWAY,
+      connectionAPIKey,
+      connectorId: "microsoft_outlook",
+      path: "/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body",
+      init: { headers: { Prefer: 'outlook.body-content-type="text"' } },
+      requiredScopes: OUTLOOK_SCOPES,
     });
+    if (await appUserReconnectRequired(res)) throw new Error("De mailbox-koppeling is verlopen. Klik op \"Mailbox opnieuw koppelen\".");
     if (!res.ok) throw new Error(`Mailbox fout [${res.status}]: ${await res.text()}`);
     const json = (await res.json()) as { value: GraphMessage[] };
     // The connected mailbox is afspraak@riory.be itself, so every inbox mail counts.
