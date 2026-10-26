@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          product_id: string | null
           quantity: number
           unit: string
           work_order_id: string
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          product_id?: string | null
           quantity?: number
           unit?: string
           work_order_id: string
@@ -35,11 +37,19 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          product_id?: string | null
           quantity?: number
           unit?: string
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "materials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "materials_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -49,24 +59,51 @@ export type Database = {
           },
         ]
       }
-      technicians: {
+      products: {
         Row: {
           created_at: string
           id: string
           name: string
-          phone: string | null
+          unit: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
-          phone?: string | null
+          unit?: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          unit?: string
+        }
+        Relationships: []
+      }
+      technicians: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
           phone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -98,6 +135,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
       }
       work_orders: {
         Row: {
@@ -169,10 +224,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      my_technician_id: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "technician"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -299,6 +361,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "technician"],
+    },
   },
 } as const

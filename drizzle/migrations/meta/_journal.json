@@ -8,6 +8,13 @@
       "when": 1793040710790,
       "tag": "0000_werkbonnen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793043266989,
+      "tag": "0001_roles_technician_logins_products",
+      "breakpoints": true
     }
   ]
 }
