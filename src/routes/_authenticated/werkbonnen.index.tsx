@@ -26,7 +26,7 @@ import { crewBuckets } from "@/lib/schedule";
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
   validateSearch: (s: Record<string, unknown>): { dag?: string } =>
-    typeof s.dag === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.dag) ? { dag: s.dag } : {},
+    typeof s["dag"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["dag"]) ? { dag: s["dag"] } : {},
   component: Lijst,
 });
 
