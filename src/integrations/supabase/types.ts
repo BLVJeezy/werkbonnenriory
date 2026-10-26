@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          created_at: string
+          hourly_rate: number
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       materials: {
         Row: {
           created_at: string
@@ -22,6 +43,7 @@ export type Database = {
           product_id: string | null
           quantity: number
           unit: string
+          unit_price: number
           work_order_id: string
         }
         Insert: {
@@ -31,6 +53,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           unit?: string
+          unit_price?: number
           work_order_id: string
         }
         Update: {
@@ -40,6 +63,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           unit?: string
+          unit_price?: number
           work_order_id?: string
         }
         Relationships: [
@@ -64,19 +88,40 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          price: number
           unit: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          price?: number
           unit?: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          price?: number
           unit?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          base_address: string
+          id: number
+          km_rate: number
+        }
+        Insert: {
+          base_address?: string
+          id?: number
+          km_rate?: number
+        }
+        Update: {
+          base_address?: string
+          id?: number
+          km_rate?: number
         }
         Relationships: []
       }
@@ -156,15 +201,20 @@ export type Database = {
       }
       work_orders: {
         Row: {
+          activity_id: string | null
           address: string | null
           city: string | null
           created_at: string
           customer_name: string
           description: string | null
+          distance_km: number | null
           email: string | null
           house_number: string | null
           id: string
           number: number
+          paid_amount: number | null
+          paid_at: string | null
+          paid_method: string | null
           phone: string | null
           postal_code: string | null
           received_at: string | null
@@ -176,17 +226,23 @@ export type Database = {
           status: string
           street: string | null
           technician_id: string | null
+          vat_rate: number
         }
         Insert: {
+          activity_id?: string | null
           address?: string | null
           city?: string | null
           created_at?: string
           customer_name?: string
           description?: string | null
+          distance_km?: number | null
           email?: string | null
           house_number?: string | null
           id?: string
           number?: number
+          paid_amount?: number | null
+          paid_at?: string | null
+          paid_method?: string | null
           phone?: string | null
           postal_code?: string | null
           received_at?: string | null
@@ -198,17 +254,23 @@ export type Database = {
           status?: string
           street?: string | null
           technician_id?: string | null
+          vat_rate?: number
         }
         Update: {
+          activity_id?: string | null
           address?: string | null
           city?: string | null
           created_at?: string
           customer_name?: string
           description?: string | null
+          distance_km?: number | null
           email?: string | null
           house_number?: string | null
           id?: string
           number?: number
+          paid_amount?: number | null
+          paid_at?: string | null
+          paid_method?: string | null
           phone?: string | null
           postal_code?: string | null
           received_at?: string | null
@@ -220,8 +282,16 @@ export type Database = {
           status?: string
           street?: string | null
           technician_id?: string | null
+          vat_rate?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "work_orders_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_orders_technician_id_fkey"
             columns: ["technician_id"]
