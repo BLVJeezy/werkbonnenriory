@@ -23,7 +23,10 @@ function Technici() {
   async function add(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.from("technicians").insert({ name, phone: phone || null });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setName("");
     setPhone("");
     qc.invalidateQueries({ queryKey: ["technicians"] });

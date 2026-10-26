@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { Database } from "@/integrations/supabase/types";
 import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
 
@@ -52,7 +53,7 @@ function Detail() {
   const running = times.find((t) => !t.ended_at);
   const total = totalSeconds(times, now);
 
-  async function update(patch: Record<string, unknown>) {
+  async function update(patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
     const { error } = await supabase.from("work_orders").update(patch).eq("id", id);
     if (error) toast.error(error.message);
     refresh();
@@ -169,7 +170,10 @@ function Detail() {
               const { error } = await supabase
                 .from("materials")
                 .insert({ work_order_id: id, name: mat.name, quantity: Number(mat.quantity) || 1, unit: mat.unit || "st" });
-              if (error) return toast.error(error.message);
+              if (error) {
+                toast.error(error.message);
+                return;
+              }
               setMat({ name: "", quantity: "1", unit: "st" });
               refresh();
             }}

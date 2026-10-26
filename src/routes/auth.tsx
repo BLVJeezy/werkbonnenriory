@@ -31,7 +31,10 @@ function AuthPage() {
     if (mode === "in") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
-      if (error) return toast.error("Inloggen mislukt: " + error.message);
+      if (error) {
+        toast.error("Inloggen mislukt: " + error.message);
+        return;
+      }
       navigate({ to: "/werkbonnen" });
     } else {
       const { error } = await supabase.auth.signUp({
@@ -40,7 +43,10 @@ function AuthPage() {
         options: { emailRedirectTo: window.location.origin },
       });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       toast.success("Bevestig je account via de link in je mail.");
       setMode("in");
     }

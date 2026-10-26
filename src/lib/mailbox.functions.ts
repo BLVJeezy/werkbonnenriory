@@ -95,8 +95,8 @@ function sentToMailbox(m: GraphMessage) {
 export const importFromMailbox = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const lovableKey = process.env.LOVABLE_API_KEY;
-    const outlookKey = process.env.MICROSOFT_OUTLOOK_API_KEY;
+    const lovableKey = process.env['LOVABLE_API_KEY'];
+    const outlookKey = process.env['MICROSOFT_OUTLOOK_API_KEY'];
     if (!lovableKey || !outlookKey) throw new Error("Mailbox-koppeling ontbreekt");
 
     const url = `${OUTLOOK}/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body`;
