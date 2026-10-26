@@ -76,7 +76,7 @@ function Technici() {
                       className="accent-primary"
                       checked={t[k]}
                       onChange={async (e) => {
-                        await supabase.from("technicians").update({ [k]: e.target.checked }).eq("id", t.id);
+                        await supabase.from("technicians").update({ [k]: e.target.checked } as { show_prices: boolean }).eq("id", t.id);
                         qc.invalidateQueries({ queryKey: ["technicians"] });
                       }}
                     />
