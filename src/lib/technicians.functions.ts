@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { loginEmail } from "@/lib/login";
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -14,7 +15,6 @@ export const createTechnicianLogin = createServerFn({ method: "POST" })
       .object({
         name: z.string().trim().min(1).max(100),
         phone: z.string().trim().max(40).optional(),
-        email: z.string().trim().email().max(255),
         password: z.string().min(6).max(72),
       })
       .parse(d),
@@ -22,17 +22,19 @@ export const createTechnicianLogin = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = loginEmail(data.name);
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
+      email,
       password: data.password,
       email_confirm: true,
     });
-    if (error || !created.user) throw new Error(error?.message ?? "Account aanmaken mislukt");
+    if (error || !created.user)
+      throw new Error(error?.message?.includes("already") ? "Er bestaat al een ploeg met deze naam" : error?.message ?? "Account aanmaken mislukt");
     const uid = created.user.id;
     const { error: e1 } = await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: "technician" });
     const { error: e2 } = await supabaseAdmin
       .from("technicians")
-      .insert({ name: data.name, phone: data.phone || null, email: data.email, user_id: uid });
+      .insert({ name: data.name, phone: data.phone || null, email: null, user_id: uid });
     if (e1 || e2) {
       await supabaseAdmin.auth.admin.deleteUser(uid);
       throw new Error((e1 ?? e2)!.message);
