@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatAddress } from "@/lib/address";
-import { useRole } from "@/lib/use-role";
+import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
@@ -210,6 +210,7 @@ function TechList({ rows }: { rows: Row[] }) {
 }
 
 function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.ReactNode }) {
+  const showContact = usePerms()?.showContact ?? false;
   const running = w.time_entries?.find((t) => !t.ended_at);
   const signed = w.status === "afgetekend";
   return (
@@ -223,7 +224,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         {running && <span className="font-mono text-sm font-bold text-primary">● tijd loopt</span>}
         {extra}
       </Link>
-      {!signed && <TaskActions id={w.id} address={w.address} phone={w.phone} runningEntryId={running?.id ?? null} />}
+      {!signed && <TaskActions id={w.id} address={w.address} phone={showContact ? w.phone : null} runningEntryId={running?.id ?? null} />}
     </div>
   );
 }

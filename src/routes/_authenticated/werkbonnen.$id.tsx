@@ -136,7 +136,7 @@ function Detail() {
             <option value="">{acts.length ? "— Kies activiteit —" : "Nog geen activiteiten (zie Tarieven)"}</option>
             {acts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name} — {money(Number(a.hourly_rate))}/u
+                {a.name}{perms.showPrices && ` — ${money(Number(a.hourly_rate))}/u`}
               </option>
             ))}
           </select>
@@ -281,7 +281,7 @@ function Detail() {
               <option value="">{prods.length ? "— Kies product —" : "Nog geen producten aangemaakt"}</option>
               {prods.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.unit}) — {money(Number(p.price))}
+                  {p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
                 </option>
               ))}
             </select>
