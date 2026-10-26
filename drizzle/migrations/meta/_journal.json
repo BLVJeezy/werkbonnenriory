@@ -29,6 +29,13 @@
       "when": 1793043639849,
       "tag": "0003_billing_activities_km",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793044311370,
+      "tag": "0004_crew_visibility",
+      "breakpoints": true
     }
   ]
 }

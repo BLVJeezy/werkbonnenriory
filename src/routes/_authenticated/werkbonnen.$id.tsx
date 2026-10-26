@@ -11,7 +11,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
 import { formatAddress } from "@/lib/address";
-import { useRole } from "@/lib/use-role";
+import { usePerms, useRole } from "@/lib/use-role";
 import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
@@ -61,6 +61,8 @@ function Detail() {
   }, []);
 
   const role = useRole();
+  const perms = usePerms() ?? { showPrices: false, showContact: false, canPayment: false, showSigned: false };
+  const money = (n: number) => (perms.showPrices ? euro(n) : "");
   const [mat, setMat] = useState({ productId: "", quantity: "1" });
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
@@ -134,7 +136,7 @@ function Detail() {
             <option value="">{acts.length ? "— Kies activiteit —" : "Nog geen activiteiten (zie Tarieven)"}</option>
             {acts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name} — {euro(Number(a.hourly_rate))}/u
+                {a.name}{perms.showPrices && ` — ${money(Number(a.hourly_rate))}/u`}
               </option>
             ))}
           </select>
@@ -156,7 +158,7 @@ function Detail() {
         </div>
       </section>
 
-      <TaskActions id={id} address={wo.address} phone={wo.phone} runningEntryId={running?.id ?? null} showTimer={false} />
+      <TaskActions id={id} address={wo.address} phone={perms.showContact ? wo.phone : null} runningEntryId={running?.id ?? null} showTimer={false} />
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
@@ -169,8 +171,8 @@ function Detail() {
           <Field label="Postcode" value={wo.postal_code ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ postal_code: v })} />
           <Field label="Plaats" value={wo.city ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ city: v })} />
         </div>
-        <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />
-        <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />
+        {perms.showContact && <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />}
+        {perms.showContact && <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />}
         <div className="space-y-1 sm:col-span-2">
           <Label>Omschrijving</Label>
           <Textarea
@@ -235,7 +237,7 @@ function Detail() {
                 {m.quantity} {m.unit}
               </span>
               <span className="flex-1">{m.name}</span>
-              <span className="font-mono text-sm">{euro(Number(m.quantity) * Number(m.unit_price))}</span>
+              <span className="font-mono text-sm">{money(Number(m.quantity) * Number(m.unit_price))}</span>
               {!locked && (
                 <Button
                   size="sm"
@@ -279,7 +281,7 @@ function Detail() {
               <option value="">{prods.length ? "— Kies product —" : "Nog geen producten aangemaakt"}</option>
               {prods.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.unit}) — {euro(Number(p.price))}
+                  {p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
                 </option>
               ))}
             </select>
@@ -288,9 +290,9 @@ function Detail() {
         )}
       </section>
 
-      <section className="rounded-md border bg-card p-4">
+      {(perms.showPrices || perms.canPayment) && <section className="rounded-md border bg-card p-4">
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
-        <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
+        {perms.showPrices && <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
           <dt>
             Arbeid: {billableHours(total).toLocaleString("nl-BE")} u × {euro(Number(activity?.hourly_rate ?? 0))}
             {!activity && <span className="text-destructive"> (kies activiteit)</span>}
@@ -313,10 +315,10 @@ function Detail() {
           <dd className="text-right">{euro(totals.vat)}</dd>
           <dt className="text-lg font-black">Te betalen</dt>
           <dd className="text-right text-lg font-black">{euro(totals.total)}</dd>
-        </dl>
-        <p className="mt-2 text-xs text-muted-foreground">Eerste uur volledig, daarna per begonnen kwartier.</p>
+        </dl>}
+        {perms.showPrices && <p className="mt-2 text-xs text-muted-foreground">Eerste uur volledig, daarna per begonnen kwartier.</p>}
         <div className="mt-4 space-y-2">
-          {wo.paid_at ? (
+          {!perms.canPayment ? null : wo.paid_at ? (
             <p className="rounded bg-accent p-3 font-bold text-accent-foreground">
               Betaald: {euro(Number(wo.paid_amount))} via {wo.paid_method} op {new Date(wo.paid_at).toLocaleString("nl-BE")}
             </p>
@@ -344,7 +346,7 @@ function Detail() {
             <p className="text-sm text-muted-foreground">Niet ter plaatse afgerekend.</p>
           )}
         </div>
-      </section>
+      </section>}
 
       <section className="rounded-md border-2 border-primary bg-card p-4">
         <h2 className="mb-3 text-lg font-black uppercase">Aftekenen</h2>

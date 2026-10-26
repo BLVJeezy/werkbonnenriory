@@ -61,6 +61,29 @@ function Technici() {
               <div className="text-sm text-muted-foreground">
                 {[t.user_id ? `login: ${t.name}` : "geen login", t.phone].filter(Boolean).join(" · ")}
               </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {(
+                  [
+                    ["show_prices", "Prijzen en totaal"],
+                    ["show_contact", "Klantgegevens"],
+                    ["can_payment", "Afrekenen"],
+                    ["show_signed", "Afgetekende werkbonnen"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <label key={k} className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      className="accent-primary"
+                      checked={t[k]}
+                      onChange={async (e) => {
+                        await supabase.from("technicians").update({ [k]: e.target.checked }).eq("id", t.id);
+                        qc.invalidateQueries({ queryKey: ["technicians"] });
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
             </div>
             <Button
               variant="ghost"
