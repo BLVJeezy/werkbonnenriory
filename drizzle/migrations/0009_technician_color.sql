@@ -1,0 +1,1 @@
+ALTER TABLE public.technicians ADD COLUMN color text;

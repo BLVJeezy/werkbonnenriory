@@ -57,7 +57,20 @@ function Technici() {
         {data.map((t) => (
           <li key={t.id} className="flex items-center justify-between gap-3 p-4">
             <div>
-              <div className="font-bold">{t.name}</div>
+              <div className="flex items-center gap-2 font-bold">
+                <input
+                  type="color"
+                  title="Kleur van deze ploeg"
+                  className="h-8 w-10 cursor-pointer rounded border"
+                  defaultValue={t.color ?? "#f97316"}
+                  onChange={async (e) => {
+                    await supabase.from("technicians").update({ color: e.target.value }).eq("id", t.id);
+                    qc.invalidateQueries({ queryKey: ["technicians"] });
+                    qc.invalidateQueries({ queryKey: ["work_orders"] });
+                  }}
+                />
+                {t.name}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {[t.user_id ? `login: ${t.name}` : "geen login", t.phone].filter(Boolean).join(" · ")}
               </div>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteTask } from "@/lib/delete-task";
 import { VAT_RATES } from "@/lib/billing";
+import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
@@ -21,7 +22,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = { id: string; number: number; customer_name: string; city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; technicians: { name: string } | null };
+type Row = { id: string; number: number; customer_name: string; city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; technicians: { name: string; color: string | null } | null };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -31,7 +32,7 @@ function Kalender() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders", "calendar"],
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, city, scheduled_date, status, technician_id, activity_id, vat_rate, sort_order, technicians(name)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
+      ((await supabase.from("work_orders").select("id, number, customer_name, city, scheduled_date, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
@@ -48,7 +49,7 @@ function Kalender() {
     if (error) toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
   }
-  const sel = "mt-1 h-7 w-full rounded border bg-background px-1 text-xs";
+  const sel = "mt-1 h-7 w-full rounded border bg-background px-1 text-xs text-foreground";
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
@@ -83,13 +84,13 @@ function Kalender() {
     onDrop: () => { if (drag) plan(drag, date); setDrag(null); },
   });
   const card = (w: Row, i?: number, list?: Row[]) => (
-    <div key={w.id} draggable onDragStart={() => setDrag(w.id)} className="cursor-grab rounded border bg-background p-2 text-sm">
+    <div key={w.id} draggable onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className="cursor-grab rounded border bg-background p-2 text-sm">
       <div className="flex items-start gap-1">
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}</Link>
-        <button type="button" title="Verwijderen" className="px-1 text-destructive" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}>✕</button>
+        <button type="button" title="Verwijderen" className="px-1 font-bold" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}>✕</button>
       </div>
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        {list && <span className="font-mono font-bold text-primary">{i! + 1}.</span>}
+      <div className="flex items-center gap-1 text-xs opacity-80">
+        {list && <span className="font-mono font-bold">{i! + 1}.</span>}
         <span className="flex-1">{w.city ?? ""}</span>
         {list && (
           <>
@@ -98,7 +99,7 @@ function Kalender() {
           </>
         )}
       </div>
-      <Input type="date" className="mt-1 h-7 text-xs" value={w.scheduled_date ?? ""} onChange={(e) => plan(w.id, e.target.value || null)} />
+      <Input type="date" className="mt-1 h-7 bg-background text-xs text-foreground" value={w.scheduled_date ?? ""} onChange={(e) => plan(w.id, e.target.value || null)} />
       <select className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
         {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
