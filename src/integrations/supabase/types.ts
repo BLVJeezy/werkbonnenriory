@@ -159,6 +159,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          large_text: boolean
           name: string
           phone: string | null
           show_contact: boolean
@@ -172,6 +173,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          large_text?: boolean
           name: string
           phone?: string | null
           show_contact?: boolean
@@ -185,6 +187,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          large_text?: boolean
           name?: string
           phone?: string | null
           show_contact?: boolean
