@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatAddress } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
-import { MailboxConnect } from "@/components/MailboxConnect";
+import { MailboxConnect, WerkbonMailboxConnect } from "@/components/MailboxConnect";
 import { deleteTask } from "@/lib/delete-task";
 import { crewStyle } from "@/lib/crew-color";
 import { VAT_RATES } from "@/lib/billing";
@@ -126,6 +126,8 @@ function Lijst() {
           <h1 className="text-3xl font-black uppercase">Werkbonnen</h1>
           <p className="text-sm text-muted-foreground">Klanten uit {MAILBOX_ADDRESS}</p>
           <MailboxConnect />
+          <p className="mt-2 text-sm text-muted-foreground">Werkbonmail vanuit info@riory.be</p>
+          <WerkbonMailboxConnect />
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
