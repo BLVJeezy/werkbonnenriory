@@ -25,11 +25,13 @@ import { crewBuckets } from "@/lib/schedule";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
+  validateSearch: (s: Record<string, unknown>): { dag?: string } =>
+    typeof s.dag === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.dag) ? { dag: s.dag } : {},
   component: Lijst,
 });
 
 const FILTERS = ["alle", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -37,8 +39,13 @@ function Lijst() {
   const runImport = useServerFn(importFromMailbox);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("alle");
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const { dag } = Route.useSearch();
+  const [open, setOpenState] = useState(!!dag);
+  const [form, setForm] = useState({ ...emptyForm, scheduled_date: dag ?? "" });
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    if (!v && dag) navigate({ to: "/werkbonnen", search: {}, replace: true });
+  };
   const [saving, setSaving] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["work_orders"],
@@ -79,6 +86,7 @@ function Lijst() {
         status: form.technician_id ? "toegewezen" : "nieuw",
         activity_id: form.activity_id || null,
         vat_rate: Number(form.vat_rate),
+        scheduled_date: form.scheduled_date || null,
       })
       .select("id")
       .single();
@@ -124,6 +132,10 @@ function Lijst() {
               <DialogTitle>Handmatig werkbon toevoegen</DialogTitle>
             </DialogHeader>
             <form onSubmit={addToe} className="grid gap-3">
+              <div className="grid gap-1">
+                <Label htmlFor="nb-dag">Ingepland op</Label>
+                <Input id="nb-dag" type="date" value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })} />
+              </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-name">Naam klant</Label>
                 <Input id="nb-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

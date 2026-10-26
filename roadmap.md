@@ -14,4 +14,4 @@
 - [x] Garantie-vinkje: eerste uur en kilometers niet aangerekend
 - [x] Kalender voor admin om taken per dag in te plannen
 - [x] Ploegen zien enkel taken van vandaag, morgen en nog in te plannen
-- [ ] Op een dag in de kalender klikken om een taak aan te maken
+- [x] Op een dag in de kalender klikken om een taak aan te maken
