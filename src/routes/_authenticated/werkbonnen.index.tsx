@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatAddress } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
+import { VAT_RATES } from "@/lib/billing";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
 });
 
 const FILTERS = ["alle", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -44,6 +45,17 @@ function Lijst() {
       (await supabase.from("work_orders").select("*, technicians(name), time_entries(id, ended_at)").order("created_at", { ascending: false })).data ?? [],
   });
   const role = useRole();
+  const { data: opts } = useQuery({
+    queryKey: ["assign_opts"],
+    enabled: role === "admin",
+    queryFn: async () => {
+      const [t, a] = await Promise.all([
+        supabase.from("technicians").select("id, name").order("name"),
+        supabase.from("activities").select("id, name, hourly_rate").order("name"),
+      ]);
+      return { techs: t.data ?? [], acts: a.data ?? [] };
+    },
+  });
   const rows = filter === "alle" ? data : data.filter((w) => w.status === filter);
   if (role === "technician") return <TechList rows={data} />;
 
@@ -62,6 +74,10 @@ function Lijst() {
         phone: form.phone || null,
         email: form.email || null,
         description: form.description || null,
+        technician_id: form.technician_id || null,
+        status: form.technician_id ? "toegewezen" : "nieuw",
+        activity_id: form.activity_id || null,
+        vat_rate: Number(form.vat_rate),
       })
       .select("id")
       .single();
@@ -144,6 +160,28 @@ function Lijst() {
               <div className="grid gap-1">
                 <Label htmlFor="nb-desc">Omschrijving</Label>
                 <Textarea id="nb-desc" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-ploeg">Ploeg</Label>
+                  <select id="nb-ploeg" className="h-10 w-full rounded-md border bg-background px-2" value={form.technician_id} onChange={(e) => setForm({ ...form, technician_id: e.target.value })}>
+                    <option value="">— Later —</option>
+                    {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-act">Activiteit</Label>
+                  <select id="nb-act" className="h-10 w-full rounded-md border bg-background px-2" value={form.activity_id} onChange={(e) => setForm({ ...form, activity_id: e.target.value })}>
+                    <option value="">— Kies —</option>
+                    {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-btw">Btw</Label>
+                  <select id="nb-btw" className="h-10 w-full rounded-md border bg-background px-2" value={form.vat_rate} onChange={(e) => setForm({ ...form, vat_rate: e.target.value })}>
+                    {VAT_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
+                  </select>
+                </div>
               </div>
               <Button type="submit" disabled={saving}>
                 {saving ? "Opslaan…" : "Werkbon aanmaken"}

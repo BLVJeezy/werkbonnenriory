@@ -130,7 +130,7 @@ function Detail() {
           <select
             className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"
             value={wo.activity_id ?? ""}
-            disabled={locked}
+            disabled={infoLocked}
             onChange={(e) => update({ activity_id: e.target.value || null })}
           >
             <option value="">{acts.length ? "— Kies activiteit —" : "Nog geen activiteiten (zie Tarieven)"}</option>
@@ -146,7 +146,7 @@ function Detail() {
           <select
             className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"
             value={String(Number(wo.vat_rate))}
-            disabled={locked}
+            disabled={infoLocked}
             onChange={(e) => update({ vat_rate: Number(e.target.value) })}
           >
             {VAT_RATES.map((r) => (
