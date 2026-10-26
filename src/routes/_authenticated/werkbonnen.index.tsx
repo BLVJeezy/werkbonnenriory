@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatAddress } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
+import { MailboxConnect } from "@/components/MailboxConnect";
 import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
 
@@ -122,6 +123,7 @@ function Lijst() {
         <div>
           <h1 className="text-3xl font-black uppercase">Werkbonnen</h1>
           <p className="text-sm text-muted-foreground">Klanten uit {MAILBOX_ADDRESS}</p>
+          <MailboxConnect />
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
