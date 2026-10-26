@@ -88,6 +88,43 @@ function Lijst() {
           <h1 className="text-3xl font-black uppercase">Werkbonnen</h1>
           <p className="text-sm text-muted-foreground">Klanten uit {MAILBOX_ADDRESS}</p>
         </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">+ Werkbon toevoegen</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Handmatig werkbon toevoegen</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={addToe} className="grid gap-3">
+              <div className="grid gap-1">
+                <Label htmlFor="nb-name">Naam klant</Label>
+                <Input id="nb-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="nb-address">Adres</Label>
+                <Input id="nb-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-phone">Telefoon</Label>
+                  <Input id="nb-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="nb-email">E-mail</Label>
+                  <Input id="nb-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="nb-desc">Omschrijving</Label>
+                <Textarea id="nb-desc" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Opslaan…" : "Werkbon aanmaken"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
         <Button className="ml-auto" onClick={doImport} disabled={busy}>
           {busy ? "Mails lezen…" : "Mails ophalen"}
         </Button>
