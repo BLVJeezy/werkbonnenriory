@@ -8,3 +8,4 @@
 - [ ] Activiteit met uurtarief bovenaan; eerste uur vol, daarna per begonnen kwartier
 - [ ] Btw-tarief kiezen per werkbon; productprijzen; afrekenen noteren
 - [ ] Knop Google Maps-route vanaf eigen locatie naar de klant
+- [ ] Knop om de klant op te bellen
