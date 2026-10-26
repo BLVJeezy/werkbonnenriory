@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { formatAddress } from "@/lib/address";
 
 export const MAILBOX_ADDRESS = "afspraak@riory.be";
 const OUTLOOK = "https://connector-gateway.lovable.dev/microsoft_outlook";
@@ -18,7 +19,10 @@ type GraphMessage = {
 
 type Extracted = {
   customer_name: string;
-  address: string | null;
+  street: string | null;
+  house_number: string | null;
+  postal_code: string | null;
+  city: string | null;
   phone: string | null;
   email: string | null;
   description: string | null;
@@ -27,10 +31,13 @@ type Extracted = {
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["customer_name", "address", "phone", "email", "description"],
+  required: ["customer_name", "street", "house_number", "postal_code", "city", "phone", "email", "description"],
   properties: {
     customer_name: { type: "string" },
-    address: { type: ["string", "null"] },
+    street: { type: ["string", "null"] },
+    house_number: { type: ["string", "null"] },
+    postal_code: { type: ["string", "null"] },
+    city: { type: ["string", "null"] },
     phone: { type: ["string", "null"] },
     email: { type: ["string", "null"] },
     description: { type: ["string", "null"] },
@@ -52,7 +59,7 @@ async function extractWithAI(apiKey: string, msg: GraphMessage): Promise<Extract
       store: false,
       reasoning: { effort: "low" },
       instructions:
-        "Je leest een afspraakaanvraag-mail van een klant. Haal de klantgegevens eruit: naam (persoon of bedrijf), volledig adres van de werkplek, telefoonnummer, e-mailadres en een korte omschrijving van het gevraagde werk in het Nederlands. Gebruik null als iets ontbreekt. Gebruik het afzenderadres als e-mail als er geen ander staat.",
+        "Je leest een afspraakaanvraag-mail van een klant. Haal de klantgegevens eruit: naam (persoon of bedrijf), adres van de werkplek opgesplitst in straat, huisnummer (incl. bus), postcode en plaats, telefoonnummer, e-mailadres en een korte omschrijving van het gevraagde werk in het Nederlands. Gebruik null als iets ontbreekt. Gebruik het afzenderadres als e-mail als er geen ander staat.",
       input: text,
       text: { format: { type: "json_schema", name: "klant", strict: true, schema } },
     }),
@@ -126,7 +133,11 @@ export const importFromMailbox = createServerFn({ method: "POST" })
         const x = await extractWithAI(lovableKey, m);
         const { error } = await context.supabase.from("work_orders").insert({
           customer_name: x.customer_name || m.from?.emailAddress?.name || "Onbekend",
-          address: x.address,
+          street: x.street,
+          house_number: x.house_number,
+          postal_code: x.postal_code,
+          city: x.city,
+          address: formatAddress(x),
           phone: x.phone,
           email: x.email ?? m.from?.emailAddress?.address ?? null,
           description: x.description,
