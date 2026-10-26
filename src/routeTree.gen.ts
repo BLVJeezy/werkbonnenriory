@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
+import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,17 +41,25 @@ const AuthenticatedWerkbonnenIndexRoute =
     path: '/werkbonnen/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedWerkbonnenIdRoute =
+  AuthenticatedWerkbonnenIdRouteImport.update({
+    id: '/werkbonnen/$id',
+    path: '/werkbonnen/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
 }
 export interface FileRoutesById {
@@ -59,19 +68,21 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
+  '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/technici' | '/werkbonnen/'
+  fullPaths: '/' | '/auth' | '/technici' | '/werkbonnen/$id' | '/werkbonnen/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/technici' | '/werkbonnen'
+  to: '/' | '/auth' | '/technici' | '/werkbonnen/$id' | '/werkbonnen'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/technici'
+    | '/_authenticated/werkbonnen/$id'
     | '/_authenticated/werkbonnen/'
   fileRoutesById: FileRoutesById
 }
@@ -118,16 +129,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWerkbonnenIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/werkbonnen/$id': {
+      id: '/_authenticated/werkbonnen/$id'
+      path: '/werkbonnen/$id'
+      fullPath: '/werkbonnen/$id'
+      preLoaderRoute: typeof AuthenticatedWerkbonnenIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
+  AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
+  AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,
 }
 
