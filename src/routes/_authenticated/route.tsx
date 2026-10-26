@@ -39,6 +39,9 @@ function Layout() {
                 <Link to="/producten" className={navCls} activeProps={active}>
                   Producten
                 </Link>
+                <Link to="/tarieven" className={navCls} activeProps={active}>
+                  Tarieven
+                </Link>
               </>
             )}
             <Button

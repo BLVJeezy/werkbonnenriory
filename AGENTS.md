@@ -12,3 +12,5 @@
 - Outlook mail import runs in `src/lib/mailbox.functions.ts` (authenticated server fn, gateway + AI extraction); dedupe on `work_orders.source_message_id` so re-imports are safe.
 - Roles live in `user_roles` (admin|technician); RLS gives admins everything and technicians only rows of work orders assigned to them via `my_technician_id()`. Technician logins are created by `src/lib/technicians.functions.ts` (admin-checked server fn) because public sign-up is removed.
 - Work orders store address split (street, house_number, postal_code, city) plus a derived `address` string kept for list display.
+- Billing math lives in `src/lib/billing.ts` (pure, tested); the UI computes totals live and stores only the paid amount when payment is recorded.
+- Driving distance uses free OpenStreetMap services (Nominatim + OSRM) in `src/lib/distance.functions.ts`, cached on `work_orders.distance_km` and reset when the address changes.

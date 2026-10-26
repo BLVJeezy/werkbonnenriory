@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
+import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
@@ -34,6 +35,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
   id: '/producten',
   path: '/producten',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTarievenRoute = AuthenticatedTarievenRouteImport.update({
+  id: '/tarieven',
+  path: '/tarieven',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTechniciRoute = AuthenticatedTechniciRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/producten': typeof AuthenticatedProductenRoute
+  '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/producten': typeof AuthenticatedProductenRoute
+  '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
+  '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/producten'
+    | '/tarieven'
     | '/technici'
     | '/werkbonnen/$id'
     | '/werkbonnen/'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/producten'
+    | '/tarieven'
     | '/technici'
     | '/werkbonnen/$id'
     | '/werkbonnen'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/producten'
+    | '/_authenticated/tarieven'
     | '/_authenticated/technici'
     | '/_authenticated/werkbonnen/$id'
     | '/_authenticated/werkbonnen/'
@@ -144,6 +156,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProductenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tarieven': {
+      id: '/_authenticated/tarieven'
+      path: '/tarieven'
+      fullPath: '/tarieven'
+      preLoaderRoute: typeof AuthenticatedTarievenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/technici': {
       id: '/_authenticated/technici'
       path: '/technici'
@@ -170,6 +189,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
+  AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
   AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
   AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
@@ -177,6 +197,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
+  AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
   AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
   AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,

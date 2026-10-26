@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatAddress } from "@/lib/address";
 import { useRole } from "@/lib/use-role";
+import { TaskActions } from "@/components/TaskActions";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
@@ -40,7 +41,7 @@ function Lijst() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders"],
     queryFn: async () =>
-      (await supabase.from("work_orders").select("*, technicians(name)").order("created_at", { ascending: false })).data ?? [],
+      (await supabase.from("work_orders").select("*, technicians(name), time_entries(id, ended_at)").order("created_at", { ascending: false })).data ?? [],
   });
   const role = useRole();
   const rows = filter === "alle" ? data : data.filter((w) => w.status === filter);
@@ -164,29 +165,29 @@ function Lijst() {
       <div className="grid gap-3">
         {rows.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen werkbonnen.</div>}
         {rows.map((w) => (
-          <Link
-            key={w.id}
-            to="/werkbonnen/$id"
-            params={{ id: w.id }}
-            className="flex flex-wrap items-center gap-4 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm transition hover:shadow-md"
-          >
-            <span className="font-mono text-sm text-muted-foreground">#{w.number}</span>
-            <div className="min-w-0 flex-1">
-              <div className="font-bold">{w.customer_name}</div>
-              <div className="truncate text-sm text-muted-foreground">{w.address ?? "Geen adres"}</div>
-            </div>
-            <span className="text-sm">{w.technicians?.name ?? "Niet toegewezen"}</span>
-            <Badge variant={w.status === "afgetekend" ? "secondary" : "default"} className="capitalize">
-              {w.status}
-            </Badge>
-          </Link>
+          <RowLink key={w.id} w={w} label={w.status === "afgetekend" ? "Werkbon" : "Taak"} extra={
+            <>
+              <span className="text-sm">{w.technicians?.name ?? "Niet toegewezen"}</span>
+              <Badge variant={w.status === "afgetekend" ? "secondary" : "default"} className="capitalize">
+                {w.status}
+              </Badge>
+            </>
+          } />
         ))}
       </div>
     </div>
   );
 }
 
-type Row = { id: string; number: number; customer_name: string; address: string | null; status: string };
+type Row = {
+  id: string;
+  number: number;
+  customer_name: string;
+  address: string | null;
+  phone: string | null;
+  status: string;
+  time_entries: { id: string; ended_at: string | null }[];
+};
 
 function TechList({ rows }: { rows: Row[] }) {
   const open = rows.filter((w) => w.status !== "afgetekend");
@@ -208,18 +209,21 @@ function TechList({ rows }: { rows: Row[] }) {
   );
 }
 
-function RowLink({ w, label }: { w: Row; label: string }) {
+function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.ReactNode }) {
+  const running = w.time_entries?.find((t) => !t.ended_at);
+  const signed = w.status === "afgetekend";
   return (
-    <Link
-      to="/werkbonnen/$id"
-      params={{ id: w.id }}
-      className="flex flex-wrap items-center gap-4 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm transition hover:shadow-md"
-    >
-      <span className="font-mono text-sm text-muted-foreground">{label} #{w.number}</span>
-      <div className="min-w-0 flex-1">
-        <div className="font-bold">{w.customer_name}</div>
-        <div className="truncate text-sm text-muted-foreground">{w.address ?? "Geen adres"}</div>
-      </div>
-    </Link>
+    <div className="space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm">
+      <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex flex-wrap items-center gap-4">
+        <span className="font-mono text-sm text-muted-foreground">{label} #{w.number}</span>
+        <div className="min-w-0 flex-1">
+          <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
+          <div className="truncate text-sm text-muted-foreground">{w.address ?? "Geen adres"}</div>
+        </div>
+        {running && <span className="font-mono text-sm font-bold text-primary">● tijd loopt</span>}
+        {extra}
+      </Link>
+      {!signed && <TaskActions id={w.id} address={w.address} phone={w.phone} runningEntryId={running?.id ?? null} />}
+    </div>
   );
 }
