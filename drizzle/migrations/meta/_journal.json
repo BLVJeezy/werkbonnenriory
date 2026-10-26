@@ -64,6 +64,13 @@
       "when": 1793047495074,
       "tag": "0008_work_order_sort_order",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793047683284,
+      "tag": "0009_technician_color",
+      "breakpoints": true
     }
   ]
 }

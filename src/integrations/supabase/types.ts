@@ -155,6 +155,7 @@ export type Database = {
       technicians: {
         Row: {
           can_payment: boolean
+          color: string | null
           created_at: string
           email: string | null
           id: string
@@ -167,6 +168,7 @@ export type Database = {
         }
         Insert: {
           can_payment?: boolean
+          color?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -179,6 +181,7 @@ export type Database = {
         }
         Update: {
           can_payment?: boolean
+          color?: string | null
           created_at?: string
           email?: string | null
           id?: string
