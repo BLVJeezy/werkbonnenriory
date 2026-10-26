@@ -97,6 +97,7 @@ function Detail() {
     kmRate: Number(settings?.km_rate ?? 0),
     materials: mats.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })),
     vatRate: Number(wo.vat_rate),
+    warranty: wo.warranty,
   });
 
   async function update(patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
@@ -203,6 +204,18 @@ function Detail() {
           <div className="text-sm text-muted-foreground sm:self-end">Mail: “{wo.source_subject}”</div>
         )}
       </section>
+
+      <label className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-primary bg-card p-4 text-lg font-bold">
+        <input
+          type="checkbox"
+          className="h-6 w-6 accent-[var(--primary)]"
+          checked={wo.warranty}
+          disabled={locked || !!wo.paid_at}
+          onChange={(e) => update({ warranty: e.target.checked })}
+        />
+        Onder garantie
+        <span className="text-sm font-normal text-muted-foreground">(eerste uur en kilometers niet aangerekend)</span>
+      </label>
 
       <section className="rounded-md border bg-card p-4">
         <h2 className="mb-3 text-lg font-black uppercase">Tijd</h2>
