@@ -248,6 +248,7 @@ function Lijst() {
 }
 
 type Row = {
+  technicians?: { name: string; color: string | null } | null;
   sort_order: number;
   scheduled_date: string | null;
   id: string;
