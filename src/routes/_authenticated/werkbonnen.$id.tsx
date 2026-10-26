@@ -138,7 +138,7 @@ function Detail() {
               onClick={async () => {
                 if (!confirm(`${kind} #${wo.number} definitief verwijderen?`)) return;
                 const { error } = await supabase.from("work_orders").delete().eq("id", id);
-                if (error) return toast.error(error.message);
+                if (error) { toast.error(error.message); return; }
                 qc.invalidateQueries({ queryKey: ["work_orders"] });
                 toast.success("Verwijderd");
                 navigate({ to: "/werkbonnen" });
@@ -370,8 +370,8 @@ function Detail() {
                     variant="outline"
                     disabled={!!running}
                     onClick={() =>
-                      confirm(`${euro(totals.total)} ontvangen via ${m}?`) &&
-                      update({ paid_method: m, paid_amount: totals.total, paid_at: new Date().toISOString() })
+                      confirm(`${euro(totals.total)} ontvangen via ${m}? De taak wordt dan afgesloten als werkbon.`) &&
+                      update({ paid_method: m, paid_amount: totals.total, paid_at: new Date().toISOString(), status: "afgetekend", signed_at: new Date().toISOString() })
                     }
                   >
                     Betaald met {m}

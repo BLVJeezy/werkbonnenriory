@@ -19,3 +19,4 @@
 - [ ] Werkbonnen verwijderen (admin)
 - [ ] Werkbonnen afdrukken
 - [ ] Werkbon mailen naar de klant
+- [ ] Afrekenen sluit taak af als werkbon, geen aftekenen meer nodig
