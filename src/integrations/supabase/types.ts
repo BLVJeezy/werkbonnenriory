@@ -296,12 +296,17 @@ export type Database = {
           signature: string | null
           signed_at: string | null
           signed_name: string | null
+          site_city: string | null
+          site_house_number: string | null
+          site_postal_code: string | null
+          site_street: string | null
           sort_order: number
           source_message_id: string | null
           source_subject: string | null
           status: string
           street: string | null
           technician_id: string | null
+          use_site_address: boolean
           vat_rate: number
           warranty: boolean
         }
@@ -327,12 +332,17 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          site_city?: string | null
+          site_house_number?: string | null
+          site_postal_code?: string | null
+          site_street?: string | null
           sort_order?: number
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
           street?: string | null
           technician_id?: string | null
+          use_site_address?: boolean
           vat_rate?: number
           warranty?: boolean
         }
@@ -358,12 +368,17 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          site_city?: string | null
+          site_house_number?: string | null
+          site_postal_code?: string | null
+          site_street?: string | null
           sort_order?: number
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
           street?: string | null
           technician_id?: string | null
+          use_site_address?: boolean
           vat_rate?: number
           warranty?: boolean
         }

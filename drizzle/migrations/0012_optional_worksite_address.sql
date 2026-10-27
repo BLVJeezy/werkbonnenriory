@@ -1,0 +1,5 @@
+ALTER TABLE public.work_orders ADD COLUMN use_site_address boolean NOT NULL DEFAULT false, ADD COLUMN site_street text, ADD COLUMN site_house_number text, ADD COLUMN site_postal_code text, ADD COLUMN site_city text;
+CREATE OR REPLACE FUNCTION public.reset_work_order_address_distance() RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$ BEGIN
+IF ROW(NEW.street, NEW.house_number, NEW.postal_code, NEW.city, NEW.address, NEW.use_site_address, NEW.site_street, NEW.site_house_number, NEW.site_postal_code, NEW.site_city) IS DISTINCT FROM ROW(OLD.street, OLD.house_number, OLD.postal_code, OLD.city, OLD.address, OLD.use_site_address, OLD.site_street, OLD.site_house_number, OLD.site_postal_code, OLD.site_city) THEN NEW.distance_km := NULL; END IF;
+RETURN NEW; END; $$;
+CREATE TRIGGER work_order_address_distance BEFORE UPDATE ON public.work_orders FOR EACH ROW EXECUTE FUNCTION public.reset_work_order_address_distance();
