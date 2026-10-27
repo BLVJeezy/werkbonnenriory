@@ -13,6 +13,7 @@ import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
+import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
 
 export const Route = createFileRoute("/_authenticated/offertes")({
@@ -33,6 +34,7 @@ function Offertes() {
   const send = useServerFn(sendQuote);
   const getPdf = useServerFn(quotePdf);
   const convert = useServerFn(convertQuoteToTask);
+  const calcKm = useServerFn(quoteDistance);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -41,6 +43,9 @@ function Offertes() {
   const [vatRate, setVatRate] = useState("21");
   const [intro, setIntro] = useState("");
   const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
+  const [kmOn, setKmOn] = useState(false);
+  const [km, setKm] = useState<number | null>(null);
+  const [kmBusy, setKmBusy] = useState(false);
 
   const { data: quotes = [] } = useQuery({
     queryKey: ["quotes"],
