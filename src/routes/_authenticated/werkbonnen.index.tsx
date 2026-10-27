@@ -112,7 +112,7 @@ function Lijst() {
     setForm(emptyForm);
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
-    toast.success(`Taak #${created.number ?? ""} aangemaakt`);
+    toast.success("Taak aangemaakt");
     if (dag) navigate({ to: "/kalender" });
   }
 
