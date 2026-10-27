@@ -11,7 +11,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
 import { SiteAddressFields } from "@/components/SiteAddressFields";
-import { destinationAddress, formatAddress } from "@/lib/address";
+import { destinationAddress, destinationLabel, destinationLines, formatAddress, type AddressParts, type SiteAddressParts } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";

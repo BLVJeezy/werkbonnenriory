@@ -368,3 +368,18 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
     </div>
   );
 }
+
+/** Het adres waar de ploeg naartoe gaat, volledig en in regels zoals op een envelop. */
+function AddressBlock({ w }: { w: Row }) {
+  const lines = destinationLines(w);
+  return (
+    <div className="mt-0.5">
+      <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{destinationLabel(w)}</div>
+      {lines.length ? (
+        <div className="break-words font-medium leading-snug">{lines.map((l) => <div key={l}>{l}</div>)}</div>
+      ) : (
+        <div className="text-muted-foreground">Geen adres</div>
+      )}
+    </div>
+  );
+}
