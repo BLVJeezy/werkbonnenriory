@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { callTargets } from "@/lib/phone";
 
 export function mapsUrl(address: string) {
   // No origin = Google Maps starts from the phone's current location.
@@ -14,15 +15,18 @@ type Props = {
   id: string;
   address: string | null;
   phone: string | null;
+  contactPhone?: string | null;
+  contactName?: string | null;
   runningEntryId: string | null;
   showTimer?: boolean;
 };
 
 /** Start/stop timer, route and call buttons. Stopping opens the task page. */
-export function TaskActions({ id, address, phone, runningEntryId, showTimer = true }: Props) {
+export function TaskActions({ id, address, phone, contactPhone, contactName, runningEntryId, showTimer = true }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const calls = callTargets(phone, contactPhone);
 
   async function toggle() {
     setBusy(true);
@@ -53,9 +57,14 @@ export function TaskActions({ id, address, phone, runningEntryId, showTimer = tr
           </a>
         </Button>
       )}
-      {phone && (
+      {calls.contact && (
         <Button size="sm" variant="outline" asChild>
-          <a href={`tel:${phone.replace(/[^\d+]/g, "")}`}>Bel klant</a>
+          <a href={`tel:${calls.contact}`}>Bel contactpersoon{contactName ? ` (${contactName})` : ""}</a>
+        </Button>
+      )}
+      {calls.customer && (
+        <Button size="sm" variant="outline" asChild>
+          <a href={`tel:${calls.customer}`}>Bel klant</a>
         </Button>
       )}
     </div>

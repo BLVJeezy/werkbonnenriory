@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
 });
 
 const FILTERS = ["alle", "bezig", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", vat_number: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", vat_number: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -103,6 +103,8 @@ function Lijst() {
         site_house_number: form.site_house_number || null,
         site_postal_code: form.site_postal_code || null,
         site_city: form.site_city || null,
+        site_contact_name: form.site_contact_name || null,
+        site_contact_phone: form.site_contact_phone || null,
         phone: form.phone || null,
         email: form.email || null,
         vat_number: form.vat_number.trim() || null,
@@ -201,7 +203,7 @@ function Lijst() {
                   <Input id="nb-city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
                 </div>
               </div>
-              <SiteAddressFields value={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch, site_street: patch.site_street ?? current.site_street, site_house_number: patch.site_house_number ?? current.site_house_number, site_postal_code: patch.site_postal_code ?? current.site_postal_code, site_city: patch.site_city ?? current.site_city }))} />
+              <SiteAddressFields value={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch, site_street: patch.site_street ?? current.site_street, site_house_number: patch.site_house_number ?? current.site_house_number, site_postal_code: patch.site_postal_code ?? current.site_postal_code, site_city: patch.site_city ?? current.site_city, site_contact_name: patch.site_contact_name ?? current.site_contact_name, site_contact_phone: patch.site_contact_phone ?? current.site_contact_phone }))} />
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1">
                   <Label htmlFor="nb-phone">Telefoon</Label>
@@ -349,7 +351,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         {running && <RunningTask entries={w.time_entries} />}
         {extra}
       </Link>
-      {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} runningEntryId={running?.id ?? null} />}
+      {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} />}
     </div>
   );
 }

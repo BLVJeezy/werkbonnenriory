@@ -12,6 +12,7 @@ export function SiteAddressFields({ value, disabled = false, onChange, saveOnBlu
   const fields = [
     ["site_street", "Straat werf"], ["site_house_number", "Nr. werf"],
     ["site_postal_code", "Postcode werf"], ["site_city", "Plaats werf"],
+    ["site_contact_name", "Contactpersoon werf"], ["site_contact_phone", "Telefoon contactpersoon"],
   ] as const;
   return <div className="space-y-3 sm:col-span-2">
     <Label className="flex items-center gap-2">

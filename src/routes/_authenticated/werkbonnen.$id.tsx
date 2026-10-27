@@ -217,7 +217,7 @@ function Detail() {
         </div>
       </section>
 
-      <TaskActions id={id} address={destinationAddress(wo)} phone={perms.showContact ? wo.phone : null} runningEntryId={running?.id ?? null} showTimer={false} />
+      <TaskActions id={id} address={destinationAddress(wo)} phone={perms.showContact ? wo.phone : null} contactPhone={wo.site_contact_phone} contactName={wo.site_contact_name} runningEntryId={running?.id ?? null} showTimer={false} />
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
@@ -230,7 +230,7 @@ function Detail() {
           <Field label="Postcode" value={wo.postal_code ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ postal_code: v })} />
           <Field label="Plaats" value={wo.city ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ city: v })} />
         </div>
-        <SiteAddressFields value={wo} disabled={infoLocked} saveOnBlur onChange={(patch) => update({ ...patch, distance_km: null })} />
+        <SiteAddressFields value={wo} disabled={infoLocked} saveOnBlur onChange={(patch) => update("site_contact_name" in patch || "site_contact_phone" in patch ? patch : { ...patch, distance_km: null })} />
         {perms.showContact && <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />}
         {perms.showContact && <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />}
         <div className="space-y-1 sm:col-span-2">
