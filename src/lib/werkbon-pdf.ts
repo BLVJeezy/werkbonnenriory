@@ -93,6 +93,11 @@ export async function createWerkbonPdf(data: WerkbonData): Promise<Uint8Array> {
     for (const l of wrap(data.description, 10.5, W - 2 * M)) { ensure(14); page.drawText(l, { x: M, y, size: 10.5, font, color: ink }); y -= 14; }
   }
 
+  if (data.workNotes) {
+    section("Uitgevoerde werken");
+    for (const l of wrap(data.workNotes, 10.5, W - 2 * M)) { ensure(14); page.drawText(l, { x: M, y, size: 10.5, font, color: ink }); y -= 14; }
+  }
+
   if (data.materials.length) {
     section("Materialen");
     ensure(22);
