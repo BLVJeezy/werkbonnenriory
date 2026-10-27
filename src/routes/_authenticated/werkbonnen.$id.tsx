@@ -88,9 +88,9 @@ function Detail() {
 
   if (!data?.wo) return <p className="text-muted-foreground">Laden…</p>;
   const { wo, times, mats, techs, acts, settings } = data;
-  const prods = data.prods.filter((p) => isAdmin || !p.admin_only);
   const locked = wo.status === "afgetekend";
   const isAdmin = role === "admin";
+  const prods = data.prods.filter((p) => isAdmin || !p.admin_only);
   const infoLocked = !isAdmin;
   const matLocked = locked && !isAdmin;
   const kind = locked ? "Werkbon" : "Taak";

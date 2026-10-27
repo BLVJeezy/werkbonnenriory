@@ -64,7 +64,7 @@ function Klanten() {
         {rows.map((c) => (
           <div key={c.id} className="flex flex-wrap items-center gap-3 p-3">
             <div className="min-w-48 flex-1">
-              <div className="font-bold">{c.name}</div>
+              <div className="font-bold">{c.name}{c.project_name && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs font-bold">{c.project_name}</span>}</div>
               <div className="text-sm text-muted-foreground">{formatAddress(c) || "Geen adres"}</div>
             </div>
             <div className="text-sm">{[c.phone, c.email, c.billing_email && `factuur: ${c.billing_email}`, c.vat_number].filter(Boolean).join(" · ")}</div>
