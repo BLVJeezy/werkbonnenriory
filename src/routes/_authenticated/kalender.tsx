@@ -9,6 +9,8 @@ import { deleteTask } from "@/lib/delete-task";
 import { VAT_RATES } from "@/lib/billing";
 import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
+import { RunningTask } from "@/components/RunningTask";
+import type { TimeEntry } from "@/lib/time";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -22,7 +24,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = { id: string; number: number; customer_name: string; city: string | null; use_site_address: boolean; site_city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; technicians: { name: string; color: string | null } | null };
+type Row = { id: string; number: number; customer_name: string; city: string | null; use_site_address: boolean; site_city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[] };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -31,8 +33,9 @@ function Kalender() {
   const [drag, setDrag] = useState<string | null>(null);
   const { data = [] } = useQuery({
     queryKey: ["work_orders", "calendar"],
+    refetchInterval: 10000,
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, city, use_site_address, site_city, scheduled_date, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
+      ((await supabase.from("work_orders").select("id, number, customer_name, city, use_site_address, site_city, scheduled_date, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
@@ -89,6 +92,7 @@ function Kalender() {
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}</Link>
         <button type="button" title="Verwijderen" className="px-1 font-bold" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}>✕</button>
       </div>
+      <RunningTask entries={w.time_entries} />
       <div className="flex items-center gap-1 text-xs opacity-80">
         {list && <span className="font-mono font-bold">{i! + 1}.</span>}
         <span className="flex-1">{(w.use_site_address ? w.site_city : w.city) ?? ""}</span>
