@@ -1,8 +1,9 @@
 # Roadmap
 
-- [ ] Werkbonmail zonder prijzen of betaalbedragen
-- [ ] Apart aanvinkbaar werfadres bij aanmaken/bewerken en mailimport; gebruiken voor route en kilometers
-- [ ] Tests en controle in de app
+- [x] Werkbonmail zonder prijzen of betaalbedragen
+- [x] Apart aanvinkbaar werfadres bij aanmaken/bewerken en mailimport; gebruiken voor route en kilometers
+- [x] Tests en controle in de app (aanmaken, bewerken, herladen en route gecontroleerd)
+- [ ] Echte mailimport met werfadres en ontvangst van prijsloze werkbonmail controleren — vereist een geschikte nieuwe mailboxmail en gekoppelde verzendmailbox; geen klantmail als proef verstuurd.
 
 - [x] Werkbon automatisch mailen naar klant na aftekenen/afrekenen, vanuit info@riory.be
   - [x] Serverfunctie sendWerkbonEmail (verstuurt via Microsoft-koppeling)
