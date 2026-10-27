@@ -7,6 +7,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Werkbonnen uit de afspraakmailbox, toegewezen aan technici." },
       { property: "og:title", content: "Riory Werkbonnen" },
       { property: "og:description", content: "Werkbonnen uit de afspraakmailbox, toegewezen aan technici." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   beforeLoad: () => {

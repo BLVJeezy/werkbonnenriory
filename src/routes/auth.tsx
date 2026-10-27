@@ -14,6 +14,8 @@ export const Route = createFileRoute("/auth")({
       { name: "description", content: "Log in om werkbonnen te beheren." },
       { property: "og:title", content: "Inloggen — Riory Werkbonnen" },
       { property: "og:description", content: "Log in om werkbonnen te beheren." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,

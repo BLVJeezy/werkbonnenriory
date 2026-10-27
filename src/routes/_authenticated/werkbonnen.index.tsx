@@ -17,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatAddress } from "@/lib/address";
+import { SiteAddressFields } from "@/components/SiteAddressFields";
+import { destinationAddress, formatAddress, type SiteAddressParts } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 import { MailboxConnect, WerkbonMailboxConnect } from "@/components/MailboxConnect";
@@ -27,14 +28,14 @@ import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
-  head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
+  head: () => ({ meta: [{ title: "Werkbonnen — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Werkbonnen — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>): { dag?: string } =>
     typeof s["dag"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["dag"]) ? { dag: s["dag"] } : {},
   component: Lijst,
 });
 
 const FILTERS = ["alle", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -82,6 +83,11 @@ function Lijst() {
         postal_code: form.postal_code || null,
         city: form.city || null,
         address: formatAddress(form),
+        use_site_address: form.use_site_address,
+        site_street: form.site_street || null,
+        site_house_number: form.site_house_number || null,
+        site_postal_code: form.site_postal_code || null,
+        site_city: form.site_city || null,
         phone: form.phone || null,
         email: form.email || null,
         description: form.description || null,
@@ -133,7 +139,7 @@ function Lijst() {
           <DialogTrigger asChild>
             <Button variant="outline">+ Werkbon toevoegen</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Handmatig werkbon toevoegen</DialogTitle>
             </DialogHeader>
@@ -166,6 +172,7 @@ function Lijst() {
                   <Input id="nb-city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
                 </div>
               </div>
+              <SiteAddressFields value={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch, site_street: patch.site_street ?? current.site_street, site_house_number: patch.site_house_number ?? current.site_house_number, site_postal_code: patch.site_postal_code ?? current.site_postal_code, site_city: patch.site_city ?? current.site_city }))} />
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1">
                   <Label htmlFor="nb-phone">Telefoon</Label>
@@ -249,7 +256,7 @@ function Lijst() {
   );
 }
 
-type Row = {
+type Row = SiteAddressParts & {
   technicians?: { name: string; color: string | null } | null;
   sort_order: number;
   scheduled_date: string | null;
@@ -299,7 +306,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
         <div className="min-w-0 flex-1">
           <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
-          <div className="truncate text-sm opacity-80">{w.address ?? "Geen adres"}</div>
+          <div className="truncate text-sm opacity-80">{destinationAddress(w) ?? "Geen adres"}</div>
           {w.description ? (
             <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm leading-snug">{w.description}</p>
           ) : (
@@ -309,7 +316,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         {running && <span className="font-mono text-sm font-bold text-primary">● tijd loopt</span>}
         {extra}
       </Link>
-      {!signed && <TaskActions id={w.id} address={w.address} phone={showContact ? w.phone : null} runningEntryId={running?.id ?? null} />}
+      {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} runningEntryId={running?.id ?? null} />}
     </div>
   );
 }

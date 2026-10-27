@@ -11,7 +11,7 @@ import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
-  head: () => ({ meta: [{ title: "Kalender — Riory" }] }),
+  head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Kalender,
 });
 
@@ -22,7 +22,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = { id: string; number: number; customer_name: string; city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; technicians: { name: string; color: string | null } | null };
+type Row = { id: string; number: number; customer_name: string; city: string | null; use_site_address: boolean; site_city: string | null; scheduled_date: string | null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; technicians: { name: string; color: string | null } | null };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -32,7 +32,7 @@ function Kalender() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders", "calendar"],
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, city, scheduled_date, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
+      ((await supabase.from("work_orders").select("id, number, customer_name, city, use_site_address, site_city, scheduled_date, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
@@ -91,7 +91,7 @@ function Kalender() {
       </div>
       <div className="flex items-center gap-1 text-xs opacity-80">
         {list && <span className="font-mono font-bold">{i! + 1}.</span>}
-        <span className="flex-1">{w.city ?? ""}</span>
+        <span className="flex-1">{(w.use_site_address ? w.site_city : w.city) ?? ""}</span>
         {list && (
           <>
             <button type="button" title="Eerder" disabled={i === 0} className="px-1 disabled:opacity-30" onClick={() => move(list, i!, -1)}>▲</button>

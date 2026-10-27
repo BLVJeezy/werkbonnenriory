@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { euro } from "@/lib/billing";
 
 export const Route = createFileRoute("/_authenticated/producten")({
-  head: () => ({ meta: [{ title: "Producten — Riory Werkbonnen" }] }),
+  head: () => ({ meta: [{ title: "Producten — Riory Werkbonnen" }, { name: "description", content: "Beheer de producten en materialen voor Riory-werkbonnen." }, { property: "og:title", content: "Producten — Riory Werkbonnen" }, { property: "og:description", content: "Beheer de producten en materialen voor Riory-werkbonnen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Producten,
 });
 
