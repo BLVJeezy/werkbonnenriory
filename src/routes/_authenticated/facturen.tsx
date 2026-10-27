@@ -148,9 +148,10 @@ function Facturen() {
       <section className="space-y-3 rounded-md border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-black uppercase">Facturen</h2>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setSelInv(selInv.length ? [] : openIds)}>{selInv.length ? "Niets selecteren" : "Alle openstaande"}</Button>
             <Button size="sm" disabled={!selInv.length || busy} onClick={() => sendSel(selInv)}>Verzenden ({selInv.length})</Button>
+            <Button variant="outline" size="sm" disabled={busy || !data.invoices.length} onClick={sendToAccountant}>Alles naar boekhouder (UBL)</Button>
           </div>
         </div>
         <ul className="divide-y">
@@ -158,6 +159,7 @@ function Facturen() {
             <li key={i.id} className="flex flex-wrap items-center gap-3 py-2">
               <input type="checkbox" disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} />
               <span className="font-mono font-bold">{i.number}</span>
+              {i.kind === "creditnota" && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
               <span className="flex-1">{(i.customer as { name?: string }).name}</span>
               <span className="font-mono">{euro(Number(i.total))}</span>
               <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>
@@ -166,6 +168,7 @@ function Facturen() {
               {i.pdf_sent_at && <span className="text-xs text-muted-foreground">PDF gemaild</span>}
               {i.okioki_sent_at && <span className="text-xs text-muted-foreground">UBL naar OkiOki gemaild</span>}
               <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
+              {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
               {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
               {i.send_error && <p className="w-full text-xs text-destructive">{i.send_error}</p>}
             </li>
@@ -189,6 +192,8 @@ function Facturen() {
             <Input defaultValue={s.company_iban ?? ""} onBlur={(e) => e.target.value !== (s.company_iban ?? "") && saveSetting({ company_iban: e.target.value || null })} /></div>
           <div className="space-y-1"><Label>BIC</Label>
             <Input defaultValue={s.company_bic ?? ""} onBlur={(e) => e.target.value !== (s.company_bic ?? "") && saveSetting({ company_bic: e.target.value || null })} /></div>
+          <div className="space-y-1"><Label>E-mail boekhouder (voor UBL-verzending)</Label>
+            <Input type="email" defaultValue={s.accountant_email} onBlur={(e) => e.target.value !== s.accountant_email && saveSetting({ accountant_email: e.target.value })} /></div>
           <div className="space-y-1 sm:col-span-2"><Label>Algemene voorwaarden (komen achteraan op elke factuur)</Label>
             <Textarea rows={10} defaultValue={s.terms_text ?? ""} onBlur={(e) => e.target.value !== (s.terms_text ?? "") && saveSetting({ terms_text: e.target.value || null })} /></div>
         </section>
