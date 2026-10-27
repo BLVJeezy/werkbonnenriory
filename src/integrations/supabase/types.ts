@@ -111,13 +111,16 @@ export type Database = {
         Row: {
           created_at: string
           customer: Json
+          delivery_lock_until: string | null
           due_date: string
           id: string
           issue_date: string
           lines: Json
           net: number
           number: string
+          okioki_sent_at: string | null
           paid_amount: number
+          pdf_sent_at: string | null
           send_error: string | null
           sent_at: string | null
           sent_to: string | null
@@ -131,13 +134,16 @@ export type Database = {
         Insert: {
           created_at?: string
           customer: Json
+          delivery_lock_until?: string | null
           due_date: string
           id?: string
           issue_date?: string
           lines: Json
           net: number
           number: string
+          okioki_sent_at?: string | null
           paid_amount?: number
+          pdf_sent_at?: string | null
           send_error?: string | null
           sent_at?: string | null
           sent_to?: string | null
@@ -151,13 +157,16 @@ export type Database = {
         Update: {
           created_at?: string
           customer?: Json
+          delivery_lock_until?: string | null
           due_date?: string
           id?: string
           issue_date?: string
           lines?: Json
           net?: number
           number?: string
+          okioki_sent_at?: string | null
           paid_amount?: number
+          pdf_sent_at?: string | null
           send_error?: string | null
           sent_at?: string | null
           sent_to?: string | null
