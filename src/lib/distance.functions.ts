@@ -21,7 +21,7 @@ async function geocode(q: string): Promise<[number, number] | null> {
   const noBus = q.replace(/\s*(bus|bte|boîte|box)\s*\S+/gi, "").replace(/(\d+)\s*[a-z]?\s*\/\s*\S+/gi, "$1");
   const [street, ...rest] = noBus.split(",");
   const city = rest.join(",").trim();
-  const noNumber = `${street.replace(/\s*\d+\S*\s*$/, "")}, ${city}`;
+  const noNumber = `${(street ?? "").replace(/\s*\d+\S*\s*$/, "")}, ${city}`;
   for (const c of [...new Set([q, noBus, noNumber, city].filter(Boolean))]) {
     const hit = await geocodeOnce(c);
     if (hit) return hit;
