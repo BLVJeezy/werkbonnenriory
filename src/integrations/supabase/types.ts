@@ -251,6 +251,7 @@ export type Database = {
         Row: {
           admin_only: boolean
           created_at: string
+          description: string
           id: string
           name: string
           price: number
@@ -259,6 +260,7 @@ export type Database = {
         Insert: {
           admin_only?: boolean
           created_at?: string
+          description?: string
           id?: string
           name: string
           price?: number
@@ -267,6 +269,7 @@ export type Database = {
         Update: {
           admin_only?: boolean
           created_at?: string
+          description?: string
           id?: string
           name?: string
           price?: number
