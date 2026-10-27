@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { formatAddress } from "@/lib/address";
+import { formatAddress, formatSiteAddress } from "@/lib/address";
 
 export const MAILBOX_ADDRESS = "afspraak@riory.be";
 const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev";
@@ -23,6 +23,10 @@ type Extracted = {
   house_number: string | null;
   postal_code: string | null;
   city: string | null;
+  site_street: string | null;
+  site_house_number: string | null;
+  site_postal_code: string | null;
+  site_city: string | null;
   phone: string | null;
   email: string | null;
   description: string | null;
@@ -31,13 +35,17 @@ type Extracted = {
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["customer_name", "street", "house_number", "postal_code", "city", "phone", "email", "description"],
+  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "phone", "email", "description"],
   properties: {
     customer_name: { type: "string" },
     street: { type: ["string", "null"] },
     house_number: { type: ["string", "null"] },
     postal_code: { type: ["string", "null"] },
     city: { type: ["string", "null"] },
+    site_street: { type: ["string", "null"] },
+    site_house_number: { type: ["string", "null"] },
+    site_postal_code: { type: ["string", "null"] },
+    site_city: { type: ["string", "null"] },
     phone: { type: ["string", "null"] },
     email: { type: ["string", "null"] },
     description: { type: ["string", "null"] },
@@ -59,7 +67,7 @@ async function extractWithAI(apiKey: string, msg: GraphMessage): Promise<Extract
       store: false,
       reasoning: { effort: "low" },
       instructions:
-        "Je leest een afspraakaanvraag-mail van een klant. Haal de klantgegevens eruit: naam (persoon of bedrijf), adres van de werkplek opgesplitst in straat, huisnummer (incl. bus), postcode en plaats, telefoonnummer, e-mailadres en een korte omschrijving van het gevraagde werk in het Nederlands. Gebruik null als iets ontbreekt. Gebruik het afzenderadres als e-mail als er geen ander staat.",
+        "Je leest een afspraakaanvraag-mail van een klant. Haal de klantgegevens eruit: naam (persoon of bedrijf), klantadres opgesplitst in straat, huisnummer (incl. bus), postcode en plaats, en een eventueel apart werfadres in site_street, site_house_number, site_postal_code en site_city, telefoonnummer, e-mailadres en een korte omschrijving van het gevraagde werk in het Nederlands. Houd klantadres en werfadres strikt gescheiden als beide genoemd zijn. Als enkel een werfadres vermeld staat, zet het uitsluitend in de site-velden; als enkel een algemeen adres vermeld staat, gebruik de klantadresvelden. Vul de site-velden alleen bij een expliciet werfadres, interventieadres of werkplek. Gebruik null als iets ontbreekt. Gebruik het afzenderadres als e-mail als er geen ander staat.",
       input: text,
       text: { format: { type: "json_schema", name: "klant", strict: true, schema } },
     }),
@@ -143,6 +151,11 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           postal_code: x.postal_code,
           city: x.city,
           address: formatAddress(x),
+          use_site_address: !!formatSiteAddress(x),
+          site_street: x.site_street,
+          site_house_number: x.site_house_number,
+          site_postal_code: x.site_postal_code,
+          site_city: x.site_city,
           phone: x.phone,
           email: x.email ?? m.from?.emailAddress?.address ?? null,
           description: x.description,

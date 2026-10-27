@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+import { destinationAddress } from "@/lib/address";
+
 const UA = "RioryWerkbonnen/1.0 (info@riory.be)";
 
 async function geocode(q: string): Promise<[number, number] | null> {
@@ -19,10 +21,11 @@ export const computeDistance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: wo } = await context.supabase.from("work_orders").select("address").eq("id", data.id).single();
+    const { data: wo } = await context.supabase.from("work_orders").select("address, use_site_address, site_street, site_house_number, site_postal_code, site_city").eq("id", data.id).single();
     const { data: s } = await context.supabase.from("settings").select("base_address").eq("id", 1).single();
-    if (!wo?.address || !s) return { km: null };
-    const [a, b] = await Promise.all([geocode(s.base_address), geocode(wo.address)]);
+    const destination = wo ? destinationAddress(wo) : null;
+    if (!destination || !s) return { km: null };
+    const [a, b] = await Promise.all([geocode(s.base_address), geocode(destination)]);
     if (!a || !b) return { km: null };
     const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${a.join(",")};${b.join(",")}?overview=false`, {
       headers: { "User-Agent": UA },

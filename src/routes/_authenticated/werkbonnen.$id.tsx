@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/integrations/supabase/types";
 import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
-import { formatAddress } from "@/lib/address";
+import { SiteAddressFields } from "@/components/SiteAddressFields";
+import { destinationAddress, formatAddress } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";
@@ -72,7 +73,7 @@ function Detail() {
   const calcKm = useServerFn(computeDistance);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const [kmTried, setKmTried] = useState<string | null>(null);
-  const woAddr = data?.wo?.address ?? null;
+  const woAddr = data?.wo ? destinationAddress(data.wo) : null;
   const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
   useEffect(() => {
     if (!needKm || kmTried === woAddr) return;
@@ -200,7 +201,7 @@ function Detail() {
         </div>
       </section>
 
-      <TaskActions id={id} address={wo.address} phone={perms.showContact ? wo.phone : null} runningEntryId={running?.id ?? null} showTimer={false} />
+      <TaskActions id={id} address={destinationAddress(wo)} phone={perms.showContact ? wo.phone : null} runningEntryId={running?.id ?? null} showTimer={false} />
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
@@ -213,6 +214,7 @@ function Detail() {
           <Field label="Postcode" value={wo.postal_code ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ postal_code: v })} />
           <Field label="Plaats" value={wo.city ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ city: v })} />
         </div>
+        <SiteAddressFields value={wo} disabled={infoLocked} saveOnBlur onChange={(patch) => update({ ...patch, distance_km: null })} />
         {perms.showContact && <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />}
         {perms.showContact && <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />}
         <div className="space-y-1 sm:col-span-2">
