@@ -161,7 +161,7 @@ function Offertes() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-black uppercase">Offertes</h1>
-        <Button className="ml-auto" variant="outline" onClick={() => setShowForm((v) => !v)}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
+        <Button className="ml-auto" variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
       </div>
 
       {showForm && (
@@ -169,14 +169,18 @@ function Offertes() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>Klant</Label>
-              <select required className="h-10 w-full rounded-md border bg-background px-2" value={customerId} onChange={(e) => {
-                setCustomerId(e.target.value);
-                const c = customers.find((x) => x.id === e.target.value);
-                if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate))));
-              }}>
-                <option value="">— Kies klant —</option>
-                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.city ? ` (${c.city})` : ""}</option>)}
-              </select>
+              {editId ? (
+                <p className="flex h-10 items-center rounded-md border bg-muted px-2 font-bold">{editCustomer?.name}</p>
+              ) : (
+                <select required className="h-10 w-full rounded-md border bg-background px-2" value={customerId} onChange={(e) => {
+                  setCustomerId(e.target.value);
+                  const c = customers.find((x) => x.id === e.target.value);
+                  if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate))));
+                }}>
+                  <option value="">— Kies klant —</option>
+                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.city ? ` (${c.city})` : ""}</option>)}
+                </select>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Btw</Label>
