@@ -241,6 +241,17 @@ function Detail() {
             onBlur={(e) => e.target.value !== (wo.description ?? "") && update({ description: e.target.value })}
           />
         </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label>Uitgevoerde werken (door de ploeg)</Label>
+          <Textarea
+            key={wo.work_notes ?? ""}
+            rows={4}
+            placeholder="Beschrijf hier wat er gedaan werd…"
+            defaultValue={wo.work_notes ?? ""}
+            disabled={matLocked}
+            onBlur={(e) => e.target.value !== (wo.work_notes ?? "") && update({ work_notes: e.target.value.trim() || null })}
+          />
+        </div>
         <div className="space-y-1">
           <Label>Ploeg</Label>
           <select

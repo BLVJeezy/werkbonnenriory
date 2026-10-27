@@ -310,6 +310,7 @@ export type Database = {
           vat_number: string | null
           vat_rate: number
           warranty: boolean
+          work_notes: string | null
         }
         Insert: {
           activity_id?: string | null
@@ -347,6 +348,7 @@ export type Database = {
           vat_number?: string | null
           vat_rate?: number
           warranty?: boolean
+          work_notes?: string | null
         }
         Update: {
           activity_id?: string | null
@@ -384,6 +386,7 @@ export type Database = {
           vat_number?: string | null
           vat_rate?: number
           warranty?: boolean
+          work_notes?: string | null
         }
         Relationships: [
           {

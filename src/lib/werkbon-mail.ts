@@ -5,6 +5,7 @@ type MailWorkOrder = SiteAddressParts & {
   description: string | null; signed_at: string | null; signed_name: string | null;
   distance_km: number | null; warranty: boolean;
   vat_number?: string | null; signature?: string | null;
+  work_notes?: string | null;
   paid_at?: string | null; paid_amount?: number | null; paid_method?: string | null;
 };
 
@@ -13,7 +14,7 @@ export function werkbonMailData(wo: MailWorkOrder, activity: string | null, seco
   return {
     number: wo.number, customer: wo.customer_name, address: wo.address,
     siteAddress: wo.use_site_address ? formatSiteAddress(wo) : null,
-    description: wo.description, signedAt: wo.signed_at, signedName: wo.signed_name,
+    description: wo.description, workNotes: wo.work_notes ?? null, signedAt: wo.signed_at, signedName: wo.signed_name,
     vatNumber: wo.vat_number ?? null, signature: wo.signature ?? null,
     activity, seconds, distanceKm: wo.distance_km, warranty: wo.warranty,
     paid: wo.paid_at && wo.paid_amount != null ? { amount: Number(wo.paid_amount), method: wo.paid_method ?? null, at: wo.paid_at } : null,

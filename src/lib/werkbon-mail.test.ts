@@ -5,7 +5,7 @@ it("excludes all financial fields from outgoing work order data", () => {
   const wo = { number: 42, customer_name: "Klant", address: "Klantstraat 1", description: "Herstelling", signed_at: null, signed_name: "Klant", distance_km: 20, warranty: false, paid_amount: 123.45, vat_rate: 21, total: 123.45 };
   const material = { name: "Buis", quantity: 2, unit: "m", unit_price: 39.99 };
   expect(werkbonMailData(wo, "Herstelling", 4200, [material])).toEqual({
-    number: 42, customer: "Klant", address: "Klantstraat 1", siteAddress: null, description: "Herstelling", signedAt: null, signedName: "Klant", vatNumber: null, signature: null, distanceKm: 20, warranty: false, activity: "Herstelling", seconds: 4200, paid: null, materials: [{ name: "Buis", quantity: 2, unit: "m" }],
+    number: 42, customer: "Klant", address: "Klantstraat 1", siteAddress: null, description: "Herstelling", workNotes: null, signedAt: null, signedName: "Klant", vatNumber: null, signature: null, distanceKm: 20, warranty: false, activity: "Herstelling", seconds: 4200, paid: null, materials: [{ name: "Buis", quantity: 2, unit: "m" }],
   });
 });
 
