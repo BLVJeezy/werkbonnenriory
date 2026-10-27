@@ -134,6 +134,13 @@
       "when": 1793102537861,
       "tag": "0018_invoices",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793104239599,
+      "tag": "0019_invoice_okioki_delivery",
+      "breakpoints": true
     }
   ]
 }

@@ -13,7 +13,7 @@ import { euro } from "@/lib/billing";
 import { createInvoices, invoicePdf, sendInvoices } from "@/lib/invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/facturen")({
-  head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Werkbonnen omzetten naar facturen en verzenden via Peppol of e-mail." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Werkbonnen omzetten naar facturen en verzenden via Peppol of e-mail." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Facturen,
 });
 
@@ -53,7 +53,7 @@ function Facturen() {
     refresh();
   }
   async function sendSel(ids: string[]) {
-    if (!confirm(`${ids.length} factuur/facturen nu verzenden (Peppol of e-mail)?`)) return;
+    if (!confirm(`${ids.length} factuur/facturen nu verzenden? De klant krijgt de PDF; bij een ingevuld btw-nummer gaat een aparte UBL-mail naar BE0840931404701144@okioki.app.`)) return;
     setBusy(true);
     try {
       const r = await send({ data: { invoiceIds: ids } });
@@ -124,13 +124,15 @@ function Facturen() {
         <ul className="divide-y">
           {data.invoices.map((i) => (
             <li key={i.id} className="flex flex-wrap items-center gap-3 py-2">
-              <input type="checkbox" className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} />
+              <input type="checkbox" disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} />
               <span className="font-mono font-bold">{i.number}</span>
               <span className="flex-1">{(i.customer as { name?: string }).name}</span>
               <span className="font-mono">{euro(Number(i.total))}</span>
               <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>
-                {STATUS[i.status] ?? i.status}{i.sent_via ? ` · ${i.sent_via === "peppol" ? "Peppol" : "e-mail"}` : ""}
+                {STATUS[i.status] ?? i.status}{i.sent_via ? ` · ${i.sent_via === "okioki" ? "PDF + OkiOki" : i.sent_via === "peppol" ? "Peppol" : "e-mail"}` : ""}
               </span>
+              {i.pdf_sent_at && <span className="text-xs text-muted-foreground">PDF gemaild</span>}
+              {i.okioki_sent_at && <span className="text-xs text-muted-foreground">UBL naar OkiOki gemaild</span>}
               <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
               {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
               {i.send_error && <p className="w-full text-xs text-destructive">{i.send_error}</p>}

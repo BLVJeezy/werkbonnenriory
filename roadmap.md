@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Factuur-PDF naar klant en voor bedrijven (ingevuld btw-nummer) aparte UBL-mail naar OkiOki; automatisch alleen volledig betaald; afzonderlijke mailstatussen en verzendlock. 11 tests geslaagd, facturenpagina als beheerder en opslagvelden gecontroleerd.
+- [ ] Echte factuurontvangst en Peppol-aflevering via OkiOki controleren — vereist goedgekeurde proeffactuur en OkiOki Smart met automatische UBL-verzending; geen echte factuur verstuurd.
+
 - [x] Admin ziet lopende taken met starttijd en Bezig-filter; lijst en kalender verversen automatisch iedere 10 seconden. Start/stop op aparte pagina gecontroleerd en tijdelijke taak verwijderd.
 
 - [x] Prijsloze werkbon als pdf-bijlage in plaats van mailtekst; pdf-structuur, pagina's en Outlook-bijlage getest, voorbeeld-pdf gecontroleerd
