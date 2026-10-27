@@ -1,5 +1,12 @@
 # Roadmap
 
+- [ ] Projectnaam uit mail mee uitlezen, koppelen aan klant, selecteerbaar bij inplannen
+- [ ] Offerteruimte: offertes maken, versturen met ondertekenlink, na akkoord omzetten in taak
+- [ ] Producten kunnen markeren als enkel-voor-admin (onzichtbaar voor ploegen)
+- [ ] Creditnota's: maken en verzenden, in facturenlijst, zelfde nummering
+- [ ] Knop: alle facturen als UBL in één mail naar de boekhouder
+
+
 - [x] Knop ‘Geselecteerde verwijderen’ bij ‘Te factureren’, met bevestiging; vier tests geslaagd en annuleren/verwijderen/herladen gecontroleerd op tijdelijke proefbon.
 
 - [x] Factuur-PDF naar klant en voor bedrijven (ingevuld btw-nummer) aparte UBL-mail naar OkiOki; automatisch alleen volledig betaald; afzonderlijke mailstatussen en verzendlock. 11 tests geslaagd, facturenpagina als beheerder en opslagvelden gecontroleerd.
