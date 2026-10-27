@@ -5,8 +5,8 @@ const debtor = { name: "Riory bv", iban: "BE12 3456 7890 1234", bic: "GEBABEBB" 
 
 describe("isValidOgm", () => {
   it("aanvaardt een geldige OGM met mod-97", () => {
-    // 1234567890 % 97 = 74 → +++123/4567/89074+++
-    expect(isValidOgm("+++123/4567/89074+++")).toBe(true);
+    // 1234567890 % 97 = 2 → +++123/4567/89002+++
+    expect(isValidOgm("+++123/4567/89002+++")).toBe(true);
   });
   it("weigert een OGM met fout controlegetal", () => {
     expect(isValidOgm("+++123/4567/89012+++")).toBe(false);
@@ -20,7 +20,7 @@ describe("buildPain001", () => {
   it("groepeert betalingen per vervaldag met juiste totalen", () => {
     const xml = buildPain001(debtor, [
       { creditorName: "Desco", creditorIban: "BE71 0961 2345 6769", amount: 30.25, remittance: "factuur 2026-1042", executionDate: "2026-11-03", endToEndId: "PI-1" },
-      { creditorName: "Sonepar", creditorIban: "BE68 5390 0754 7034", amount: 100, remittance: "+++123/4567/89074+++", executionDate: "2026-11-03", endToEndId: "PI-2" },
+      { creditorName: "Sonepar", creditorIban: "BE68 5390 0754 7034", amount: 100, remittance: "+++123/4567/89002+++", executionDate: "2026-11-03", endToEndId: "PI-2" },
       { creditorName: "Gazet", creditorIban: "BE44 0000 0000 0000", amount: 10, remittance: null, executionDate: "2026-11-10", endToEndId: "PI-3" },
     ], "RIORY-20261027");
     expect(xml).toContain('xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03"');
@@ -30,7 +30,7 @@ describe("buildPain001", () => {
     expect(xml).toContain("<ReqdExctnDt>2026-11-03</ReqdExctnDt>");
     expect(xml).toContain("<ReqdExctnDt>2026-11-10</ReqdExctnDt>");
     expect(xml).toContain("<IBAN>BE71096123456769</IBAN>");
-    expect(xml).toContain("<Ref>+++123/4567/89074+++</Ref>");
+    expect(xml).toContain("<Ref>+++123/4567/89002+++</Ref>");
     expect(xml).toContain("<Ustrd>factuur 2026-1042</Ustrd>");
   });
 
