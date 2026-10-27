@@ -168,6 +168,20 @@ function Detail() {
               Heropenen
             </Button>
           )}
+          {isAdmin && !locked && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const q = await makeQuote({ data: { workOrderId: id } });
+                  toast.success(`Offerte ${q.number} aangemaakt — vul ze verder aan`);
+                  navigate({ to: "/offertes", search: { bewerk: q.id } });
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Offerte maken mislukt"); }
+              }}
+            >
+              Omzetten naar offerte
+            </Button>
+          )}
           {isAdmin && (
             <Button
               variant="destructive"
