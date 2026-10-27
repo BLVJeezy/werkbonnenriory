@@ -32,6 +32,7 @@ export function formatAddress(a: AddressParts): string | null {
 }
 
 /** Regels zoals op een envelop: "Kerkstraat 12" en "9000 Gent". Lege delen vallen weg. */
+// Used by the crew task list and task screen so an address is never cut off.
 export function addressLines(a: AddressParts): string[] {
   const line1 = [a.street, a.house_number].map((x) => (x ?? "").trim()).filter(Boolean).join(" ");
   const line2 = [a.postal_code, a.city].map((x) => (x ?? "").trim()).filter(Boolean).join(" ");
