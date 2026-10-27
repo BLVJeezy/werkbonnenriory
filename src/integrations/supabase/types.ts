@@ -339,6 +339,8 @@ export type Database = {
           signed_at: string | null
           signed_name: string | null
           site_city: string | null
+          site_contact_name: string | null
+          site_contact_phone: string | null
           site_house_number: string | null
           site_postal_code: string | null
           site_street: string | null
@@ -377,6 +379,8 @@ export type Database = {
           signed_at?: string | null
           signed_name?: string | null
           site_city?: string | null
+          site_contact_name?: string | null
+          site_contact_phone?: string | null
           site_house_number?: string | null
           site_postal_code?: string | null
           site_street?: string | null
@@ -415,6 +419,8 @@ export type Database = {
           signed_at?: string | null
           signed_name?: string | null
           site_city?: string | null
+          site_contact_name?: string | null
+          site_contact_phone?: string | null
           site_house_number?: string | null
           site_postal_code?: string | null
           site_street?: string | null
