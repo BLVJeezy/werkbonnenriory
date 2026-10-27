@@ -4,9 +4,9 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
 /** Peppol BIS Billing 3.0 UBL invoice with the PDF embedded, so the customer gets both. */
-export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId: string; pdfBase64: string }) {
+export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId: string | null; pdfBase64: string }) {
   const [sScheme, sId] = o.senderId.split(":");
-  const [rScheme, rId] = o.receiverId.split(":");
+  const [rScheme, rId] = o.receiverId?.split(":") ?? [];
   const cat = d.vatRate === 0 ? "AE" : "S";
   const c = d.customer;
   const open = Math.max(0, d.total - d.paidAmount);
@@ -41,7 +41,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
     <cac:PartyLegalEntity><cbc:RegistrationName>${esc(d.company.name)}</cbc:RegistrationName><cbc:CompanyID schemeID="0208">${sId}</cbc:CompanyID></cac:PartyLegalEntity>
   </cac:Party></cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty><cac:Party>
-    <cbc:EndpointID schemeID="${rScheme}">${rId}</cbc:EndpointID>
+    ${rScheme && rId ? `<cbc:EndpointID schemeID="${esc(rScheme)}">${esc(rId)}</cbc:EndpointID>` : ""}
     <cac:PostalAddress>${c.street ? `<cbc:StreetName>${esc(`${c.street} ${c.houseNumber ?? ""}`.trim())}</cbc:StreetName>` : ""}${c.city ? `<cbc:CityName>${esc(c.city)}</cbc:CityName>` : ""}${c.postalCode ? `<cbc:PostalZone>${esc(c.postalCode)}</cbc:PostalZone>` : ""}<cac:Country><cbc:IdentificationCode>BE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
     ${c.vatNumber ? `<cac:PartyTaxScheme><cbc:CompanyID>${esc(c.vatNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase())}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}
     <cac:PartyLegalEntity><cbc:RegistrationName>${esc(c.name)}</cbc:RegistrationName></cac:PartyLegalEntity>

@@ -5,6 +5,7 @@ import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
 import { getConnectionKeyForUser } from "@/lib/appUserConnections.server";
+import { deliverInvoice, invoiceMail, needsOkioki, OKIOKI_INVOICE_EMAIL } from "@/lib/invoice-delivery";
 
 type Ctx = { supabase: any; userId: string };
 const SENDER_PEPPOL_ID = "0208:0840931404";
@@ -30,53 +31,8 @@ async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
   };
 }
 
-// ---- Dokapi (Peppol) ----
-function dokapiConfig() {
-  const id = process.env["DOKAPI_CLIENT_ID"], secret = process.env["DOKAPI_CLIENT_SECRET"];
-  if (!id || !secret) return null;
-  return {
-    id, secret,
-    base: process.env["DOKAPI_BASE_URL"] || "https://peppol-api.dokapi.io/v1",
-    tokenUrl: process.env["DOKAPI_TOKEN_URL"] || "https://portal.dokapi.io/api/oauth2/token",
-  };
-}
-async function dokapiToken(c: NonNullable<ReturnType<typeof dokapiConfig>>) {
-  const res = await fetch(c.tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-    body: new URLSearchParams({ grant_type: "client_credentials", client_id: c.id, client_secret: c.secret }),
-  });
-  if (!res.ok) throw new Error(`Dokapi-aanmelding mislukt [${res.status}]: ${await res.text()}`);
-  return (await res.json()).access_token as string;
-}
-async function peppolReachable(c: NonNullable<ReturnType<typeof dokapiConfig>>, token: string, id: string) {
-  const res = await fetch(`${c.base}/participant-registrations/lookup?value=${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
-  if (res.status === 404) return false;
-  if (!res.ok) throw new Error(`Peppol-opzoeking mislukt [${res.status}]: ${await res.text()}`);
-  return true;
-}
-async function sendPeppol(c: NonNullable<ReturnType<typeof dokapiConfig>>, token: string, receiver: string, ref: string, xml: string) {
-  const res = await fetch(`${c.base}/outgoing-peppol-documents`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      sender: { value: SENDER_PEPPOL_ID, scheme: "iso6523-actorid-upis" },
-      receiver: { value: receiver, scheme: "iso6523-actorid-upis" },
-      c1CountryCode: "BE",
-      documentTypeIdentifier: { scheme: "busdox-docid-qns", value: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1" },
-      processIdentifier: { scheme: "cenbii-procid-ubl", value: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0" },
-      externalReference: ref,
-    }),
-  });
-  if (!res.ok) throw new Error(`Peppol-verzending mislukt [${res.status}]: ${await res.text()}`);
-  const body = await res.json();
-  if (!body.preSignedUploadUrl) throw new Error("Dokapi gaf geen upload-adres terug");
-  const up = await fetch(body.preSignedUploadUrl, { method: "PUT", headers: { "Content-Type": "application/xml" }, body: xml });
-  if (!up.ok) throw new Error(`Peppol-upload mislukt [${up.status}]: ${await up.text()}`);
-}
-
 // ---- Mail via info@riory.be ----
-async function sendMail(to: string, number: string, pdfBase64: string) {
+async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl") {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
   let key: string | null = null;
@@ -85,44 +41,52 @@ async function sendMail(to: string, number: string, pdfBase64: string) {
   const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
   const res = await callAsAppUser({
     gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
-    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: {
-      subject: `Factuur ${number} — Riory`,
-      body: { contentType: "Text", content: `Beste klant,\n\nIn de bijlage vindt u factuur ${number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory` },
-      toRecipients: [{ emailAddress: { address: to } }],
-      attachments: [{ "@odata.type": "#microsoft.graph.fileAttachment", name: `Factuur-${number}.pdf`, contentType: "application/pdf", contentBytes: pdfBase64 }],
-    } }) },
+    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(invoiceMail(to, number, contentBytes, format)) },
     requiredScopes: WERKBON_MAIL_SCOPES,
   });
   if (await appUserReconnectRequired(res)) throw new Error("Koppel de mailbox info@riory.be opnieuw");
-  if (!res.ok) throw new Error(`Mail versturen mislukt [${res.status}]: ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Factuurmail mislukt [${res.status}]: ${body}`);
+    throw new Error(`Mail versturen mislukt [${res.status}]: ${body}`);
+  }
 }
 
 async function sendOne(supabase: any, inv: any) {
+  if (inv.status === "verzonden") return { id: inv.id, ok: true as const, via: inv.sent_via };
+  const now = new Date().toISOString();
+  const { data: claimed, error: claimError } = await supabase.from("invoices")
+    .update({ delivery_lock_until: new Date(Date.now() + 300000).toISOString() })
+    .eq("id", inv.id).neq("status", "verzonden")
+    .or(`delivery_lock_until.is.null,delivery_lock_until.lt.${now}`).select("*").maybeSingle();
+  if (claimError) throw new Error(claimError.message);
+  if (!claimed) return { id: inv.id, ok: false as const, error: "Deze factuur wordt al verzonden; probeer later opnieuw" };
+  inv = claimed;
   try {
     const d = await pdfData(supabase, inv);
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
-    const peppolId = peppolIdFromVat(d.customer.vatNumber);
-    const dk = dokapiConfig();
-    let via: "peppol" | "email" | null = null, to = "";
-    if (peppolId && dk) {
-      const token = await dokapiToken(dk);
-      if (await peppolReachable(dk, token, peppolId)) {
+    await deliverInvoice({
+      customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at),
+      sendPdf: (to) => sendMail(to, d.number, pdf, "pdf"),
+      sendUbl: async (to) => {
         const { invoiceUbl } = await import("@/lib/invoice-ubl");
-        await sendPeppol(dk, token, peppolId, d.number, invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolId, pdfBase64: pdf }));
-        via = "peppol"; to = peppolId;
-      }
-    }
-    if (!via) {
-      if (!d.customer.email) throw new Error("Geen Peppol mogelijk en geen e-mailadres bij de klant");
-      await sendMail(d.customer.email, d.number, pdf);
-      via = "email"; to = d.customer.email;
-    }
-    await supabase.from("invoices").update({ status: "verzonden", sent_via: via, sent_to: to, sent_at: new Date().toISOString(), send_error: null }).eq("id", inv.id);
+        const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf });
+        await sendMail(to, d.number, b64(new TextEncoder().encode(xml)), "ubl");
+      },
+      record: async (leg) => {
+        const { error } = await supabase.from("invoices").update({ [leg === "pdf" ? "pdf_sent_at" : "okioki_sent_at"]: new Date().toISOString() }).eq("id", inv.id);
+        if (error) throw new Error(error.message);
+      },
+    });
+    const via = needsOkioki(d.customer) ? "okioki" : "email";
+    const to = needsOkioki(d.customer) ? `${d.customer.email}; ${OKIOKI_INVOICE_EMAIL}` : d.customer.email;
+    const { error } = await supabase.from("invoices").update({ status: "verzonden", sent_via: via, sent_to: to, sent_at: new Date().toISOString(), send_error: null, delivery_lock_until: null }).eq("id", inv.id);
+    if (error) throw new Error(error.message);
     return { id: inv.id, ok: true as const, via };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await supabase.from("invoices").update({ status: "fout", send_error: msg }).eq("id", inv.id);
+    await supabase.from("invoices").update({ status: "fout", send_error: msg, delivery_lock_until: null }).eq("id", inv.id);
     return { id: inv.id, ok: false as const, error: msg };
   }
 }
