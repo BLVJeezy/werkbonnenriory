@@ -137,10 +137,13 @@ function Offertes() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bewerk, quotes]);
 
-  async function preview(id: string) {
+  async function preview(id: string, win?: Window | null) {
+    const w = win ?? window.open("", "_blank");
     const r = await getPdf({ data: { quoteId: id } });
     const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
-    window.open(URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })), "_blank");
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    if (w) w.location.href = url;
+    else toast.error("Pop-up geblokkeerd — sta pop-ups toe voor deze site");
   }
 
   async function maak(e: React.FormEvent) {
@@ -156,6 +159,7 @@ function Offertes() {
     }
     if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
     setBusy(true);
+    const win = window.open("", "_blank");
     try {
       const saved = editId
         ? await update({ data: { quoteId: editId, customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } })
@@ -164,8 +168,11 @@ function Offertes() {
       const id = saved.id as string;
       closeForm();
       refresh();
-      await preview(id);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
+      await preview(id, win);
+    } catch (e) {
+      win?.close();
+      toast.error(e instanceof Error ? e.message : "Opslaan mislukt");
+    }
     setBusy(false);
   }
 
