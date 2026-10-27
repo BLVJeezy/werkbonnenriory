@@ -72,6 +72,17 @@ function Lijst() {
       return { techs: t.data ?? [], acts: a.data ?? [] };
     },
   });
+  const { data: customers = [] } = useQuery({
+    queryKey: ["customers"],
+    enabled: role === "admin",
+    queryFn: async () => (await supabase.from("customers").select("*").order("name")).data ?? [],
+  });
+  const customerLabel = (c: (typeof customers)[number]) => [c.name, [c.street, c.house_number].filter(Boolean).join(" "), c.city].filter(Boolean).join(" — ");
+  function pickCustomer(label: string) {
+    const c = customers.find((x) => customerLabel(x) === label);
+    if (!c) return;
+    setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", vat_number: c.vat_number ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
+  }
   const rows = filter === "alle" ? data : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
   if (role === "technician") return <TechList rows={data} />;
 
@@ -109,6 +120,11 @@ function Lijst() {
       toast.error(error?.message ?? "Aanmaken mislukt");
       return;
     }
+    await supabase.from("customers").upsert(
+      { name: form.name.trim(), street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, email: form.email || null, vat_number: form.vat_number.trim() || null },
+      { onConflict: "match_key" },
+    );
+    qc.invalidateQueries({ queryKey: ["customers"] });
     setForm(emptyForm);
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
@@ -153,6 +169,13 @@ function Lijst() {
               <div className="grid gap-1">
                 <Label htmlFor="nb-dag">Ingepland op</Label>
                 <Input id="nb-dag" type="date" value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })} />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="nb-klant">Bestaande klant kiezen</Label>
+                <Input id="nb-klant" list="nb-klanten" placeholder="Typ om te zoeken…" onChange={(e) => pickCustomer(e.target.value)} />
+                <datalist id="nb-klanten">
+                  {customers.map((c) => <option key={c.id} value={customerLabel(c)} />)}
+                </datalist>
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-name">Naam klant</Label>

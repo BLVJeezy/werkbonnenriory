@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
+import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
@@ -37,6 +38,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
   id: '/kalender',
   path: '/kalender',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedKlantenRoute = AuthenticatedKlantenRouteImport.update({
+  id: '/klanten',
+  path: '/klanten',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/kalender': typeof AuthenticatedKalenderRoute
+  '/klanten': typeof AuthenticatedKlantenRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/kalender': typeof AuthenticatedKalenderRoute
+  '/klanten': typeof AuthenticatedKlantenRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
+  '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/kalender'
+    | '/klanten'
     | '/producten'
     | '/tarieven'
     | '/technici'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/kalender'
+    | '/klanten'
     | '/producten'
     | '/tarieven'
     | '/technici'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/kalender'
+    | '/_authenticated/klanten'
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
     | '/_authenticated/technici'
@@ -180,6 +192,13 @@ declare module '@tanstack/react-router' {
       path: '/kalender'
       fullPath: '/kalender'
       preLoaderRoute: typeof AuthenticatedKalenderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/klanten': {
+      id: '/_authenticated/klanten'
+      path: '/klanten'
+      fullPath: '/klanten'
+      preLoaderRoute: typeof AuthenticatedKlantenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/producten': {
@@ -229,6 +248,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
+  AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
   AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
@@ -238,6 +258,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
+  AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
   AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
