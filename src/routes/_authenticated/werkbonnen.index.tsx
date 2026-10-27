@@ -27,6 +27,8 @@ import { crewStyle } from "@/lib/crew-color";
 import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
 import { vatRateForCustomer } from "@/lib/vat-number";
+import { RunningTask } from "@/components/RunningTask";
+import { activeTimeEntry } from "@/lib/time";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Werkbonnen — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -35,7 +37,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   component: Lijst,
 });
 
-const FILTERS = ["alle", "nieuw", "toegewezen", "afgetekend"] as const;
+const FILTERS = ["alle", "bezig", "nieuw", "toegewezen", "afgetekend"] as const;
 const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", vat_number: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "" };
 
 function Lijst() {
@@ -54,8 +56,9 @@ function Lijst() {
   const [saving, setSaving] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["work_orders"],
+    refetchInterval: 10000,
     queryFn: async () =>
-      (await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, ended_at)").order("created_at", { ascending: false })).data ?? [],
+      (await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, started_at, ended_at)").order("created_at", { ascending: false })).data ?? [],
   });
   const role = useRole();
   const { data: opts } = useQuery({
@@ -69,7 +72,7 @@ function Lijst() {
       return { techs: t.data ?? [], acts: a.data ?? [] };
     },
   });
-  const rows = filter === "alle" ? data : data.filter((w) => w.status === filter);
+  const rows = filter === "alle" ? data : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
   if (role === "technician") return <TechList rows={data} />;
 
   async function addToe(e: React.FormEvent) {
@@ -228,7 +231,7 @@ function Lijst() {
       <div className="flex gap-2">
         {FILTERS.map((f) => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)} className="capitalize">
-            {f}
+            {f === "bezig" ? `Bezig (${data.filter((w) => activeTimeEntry(w.time_entries)).length})` : f}
           </Button>
         ))}
       </div>
@@ -273,7 +276,7 @@ type Row = SiteAddressParts & {
   phone: string | null;
   description: string | null;
   status: string;
-  time_entries: { id: string; ended_at: string | null }[];
+  time_entries: { id: string; started_at: string; ended_at: string | null }[];
 };
 
 function TechList({ rows }: { rows: Row[] }) {
@@ -319,7 +322,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
             <p className="mt-1 text-sm italic opacity-80">Geen omschrijving</p>
           )}
         </div>
-        {running && <span className="font-mono text-sm font-bold text-primary">● tijd loopt</span>}
+        {running && <RunningTask entries={w.time_entries} />}
         {extra}
       </Link>
       {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} runningEntryId={running?.id ?? null} />}

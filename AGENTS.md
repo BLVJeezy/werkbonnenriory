@@ -11,6 +11,7 @@
 
 
 - Roles live in `user_roles` (admin|technician); RLS gives admins everything and technicians only rows of work orders assigned to them via `my_technician_id()`. Technician logins are created by `src/lib/technicians.functions.ts` (admin-checked server fn) because public sign-up is removed.
+- Running-task indicators derive from open time entries, not order status; the task list and calendar refetch every ten seconds while visible so admins see starts and stops from other devices without new permissions or subscriptions.
 - Work orders keep customer and optional worksite addresses separately in split fields; resolve the destination through the shared address helper, and invalidate cached driving distance through the database trigger on address changes.
 - Customer work-order emails use the pure price-free mail-data allowlist and Worker-compatible PDF generator; send the PDF as a private Outlook file attachment with only a short covering message so billing changes cannot expose prices or inline work-order details.
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, including failures, so a mail error cannot strand them on a completed task.

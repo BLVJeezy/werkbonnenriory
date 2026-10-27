@@ -1,5 +1,9 @@
 export type TimeEntry = { started_at: string; ended_at: string | null };
 
+export function activeTimeEntry(entries: TimeEntry[]): TimeEntry | undefined {
+  return entries.find((entry) => entry.ended_at === null);
+}
+
 export function totalSeconds(entries: TimeEntry[], now: number): number {
   return entries.reduce((sum, e) => {
     const end = e.ended_at ? new Date(e.ended_at).getTime() : now;

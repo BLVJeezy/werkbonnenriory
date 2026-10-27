@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Admin ziet lopende taken met starttijd in takenlijst en kalender; automatisch verversen en controleren
+
 - [x] Prijsloze werkbon als pdf-bijlage in plaats van mailtekst; pdf-structuur, pagina's en Outlook-bijlage getest, voorbeeld-pdf gecontroleerd
 - [ ] Echte ontvangst van pdf-bijlage controleren — vereist gekoppelde info-mailbox en een goedgekeurde testontvanger; geen klantmail als proef verstuurd
 
