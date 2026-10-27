@@ -240,15 +240,25 @@ function Detail() {
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
         <Field label="Project" value={wo.project_name ?? ""} disabled={infoLocked} onSave={(v) => update({ project_name: v.trim() || null })} />
         {(isAdmin || perms.showContact) && <Field label="Btw-nummer klant" value={wo.vat_number ?? ""} disabled={infoLocked} onSave={(v) => update({ vat_number: v.trim() || null, vat_rate: vatRateForCustomer(v, Number(wo.vat_rate)) })} />}
-        <div className="grid grid-cols-[1fr_6rem] gap-3">
-          <Field label="Straat" value={wo.street ?? (wo.house_number || wo.city ? "" : wo.address ?? "")} disabled={infoLocked} onSave={(v) => saveAddr({ street: v })} />
-          <Field label="Nr." value={wo.house_number ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ house_number: v })} />
-        </div>
-        <div className="grid grid-cols-[6rem_1fr] gap-3">
-          <Field label="Postcode" value={wo.postal_code ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ postal_code: v })} />
-          <Field label="Plaats" value={wo.city ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ city: v })} />
-        </div>
-        <SiteAddressFields value={wo} disabled={infoLocked} saveOnBlur onChange={(patch) => update("site_contact_name" in patch || "site_contact_phone" in patch ? patch : { ...patch, distance_km: null })} />
+        {isAdmin ? (
+          <>
+            <div className="grid grid-cols-[1fr_6rem] gap-3">
+              <Field label="Straat" value={wo.street ?? (wo.house_number || wo.city ? "" : wo.address ?? "")} onSave={(v) => saveAddr({ street: v })} />
+              <Field label="Nr." value={wo.house_number ?? ""} onSave={(v) => saveAddr({ house_number: v })} />
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] gap-3">
+              <Field label="Postcode" value={wo.postal_code ?? ""} onSave={(v) => saveAddr({ postal_code: v })} />
+              <Field label="Plaats" value={wo.city ?? ""} onSave={(v) => saveAddr({ city: v })} />
+            </div>
+            <SiteAddressFields
+              value={wo}
+              saveOnBlur
+              onChange={(patch) => update("site_contact_name" in patch || "site_contact_phone" in patch ? patch : { ...patch, distance_km: null })}
+            />
+          </>
+        ) : (
+          <ReadOnlyAddress wo={wo} />
+        )}
         {perms.showContact && <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />}
         {perms.showContact && <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />}
         {perms.showContact && <Field label="E-mail facturatie" value={wo.billing_email ?? ""} disabled={infoLocked} onSave={(v) => update({ billing_email: v.trim() || null })} />}
