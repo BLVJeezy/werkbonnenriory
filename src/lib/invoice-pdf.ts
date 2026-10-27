@@ -60,7 +60,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   y -= 28;
 
   // Lines table
-  const cols = { desc: M + 8, qty: W - M - 210, price: W - M - 100, amt: W - M - 8 };
+  const cols = { desc: M + 8, qty: W - M - 250, price: W - M - 100, amt: W - M - 8 };
   page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: ink });
   page.drawText("OMSCHRIJVING", { x: cols.desc, y, size: 8.5, font: bold, color: white });
   right("AANTAL", cols.qty + 40, y, 8.5, bold, white);
@@ -90,7 +90,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   };
   tot("Totaal excl. btw", money(d.net));
   tot(`Btw ${d.vatRate}%`, money(d.vat));
-  page.drawLine({ start: { x: W - M - 230, y: y + 10 }, end: { x: W - M, y: y + 10 }, thickness: 1.5, color: orange });
+  page.drawLine({ start: { x: W - M - 230, y: y + 14 }, end: { x: W - M, y: y + 14 }, thickness: 1.5, color: orange });
   tot("Totaal incl. btw", money(d.total), true);
   if (d.vatRate === 0 && c.vatNumber) {
     for (const l of wrap("Btw verlegd: verlegging van heffing, art. 20 KB nr. 1 (btw verschuldigd door de medecontractant).", 9, W - 2 * M)) { ensure(12); page.drawText(l, { x: M, y, size: 9, font, color: muted }); y -= 12; }
