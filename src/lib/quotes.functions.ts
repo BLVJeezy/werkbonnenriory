@@ -47,13 +47,14 @@ async function quotePdfData(supabase: any, q: any): Promise<QuotePdfData> {
     company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null },
     terms: s?.terms_text ?? null,
     signedName: q.signed_name, signedAt: q.signed_at,
+    intro: q.intro ?? null,
   };
 }
 
 export const createQuote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number }) => ({
-    customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate,
+  .inputValidator((i: { customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string }) => ({
+    customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null,
   }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -61,7 +62,54 @@ export const createQuote = createServerFn({ method: "POST" })
     const { data: number, error: ne } = await context.supabase.rpc("next_quote_number");
     if (ne) throw new Error(ne.message);
     const { data: row, error } = await context.supabase.from("quotes").insert({
-      number, customer: data.customer, lines: data.lines, vat_rate: data.vatRate, net: t.net, vat: t.vat, total: t.total,
+      number, customer: data.customer, lines: data.lines, vat_rate: data.vatRate, net: t.net, vat: t.vat, total: t.total, intro: data.intro,
+    }).select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+/** Updates a quote that is not yet approved; recomputes totals from the lines. */
+export const updateQuote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { quoteId: string; customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string }) => ({
+    quoteId: i.quoteId, customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null,
+  }))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: q } = await context.supabase.from("quotes").select("status").eq("id", data.quoteId).single();
+    if (!q) throw new Error("Offerte niet gevonden");
+    if (q.status === "akkoord") throw new Error("Een ondertekende offerte kan niet meer gewijzigd worden");
+    const t = quoteTotals(data.lines, data.vatRate);
+    const { data: row, error } = await context.supabase.from("quotes").update({
+      customer: data.customer, lines: data.lines, vat_rate: data.vatRate, net: t.net, vat: t.vat, total: t.total, intro: data.intro,
+    }).eq("id", data.quoteId).select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+/** Creates a draft quote from a task's customer data and description, ready to complete. */
+export const quoteFromTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { workOrderId: string }) => i)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: wo } = await context.supabase.from("work_orders").select("*").eq("id", data.workOrderId).single();
+    if (!wo) throw new Error("Taak niet gevonden");
+    const { quoteLine } = await import("@/lib/quote");
+    const customer: InvoiceCustomer = {
+      name: wo.customer_name, address: wo.address, siteAddress: wo.site_address ?? null,
+      vatNumber: wo.vat_number, email: wo.billing_email || wo.email,
+      street: wo.street, houseNumber: wo.house_number, postalCode: wo.postal_code, city: wo.city,
+    };
+    const lines = (wo.description ?? "").trim()
+      ? [quoteLine((wo.description as string).trim().split("\n")[0]!, 1, "forfait", 0)]
+      : [];
+    const t = quoteTotals(lines, Number(wo.vat_rate));
+    const { data: number, error: ne } = await context.supabase.rpc("next_quote_number");
+    if (ne) throw new Error(ne.message);
+    const { data: row, error } = await context.supabase.from("quotes").insert({
+      number, customer, lines, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
+      intro: wo.project_name ? `Betreft: ${wo.project_name}` : null,
     }).select("*").single();
     if (error) throw new Error(error.message);
     return row;
