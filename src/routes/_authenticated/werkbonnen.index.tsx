@@ -354,7 +354,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
         <div className="min-w-0 flex-1">
           <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
-          <div className="truncate text-sm opacity-80">{destinationAddress(w) ?? "Geen adres"}</div>
+          <AddressBlock w={w} />
           {w.description ? (
             <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm leading-snug">{w.description}</p>
           ) : (
