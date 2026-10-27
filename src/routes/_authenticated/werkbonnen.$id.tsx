@@ -554,11 +554,11 @@ function Detail() {
   );
 }
 
-function Field({ label, value, disabled, onSave }: { label: string; value: string; disabled: boolean; onSave: (v: string) => void }) {
+function Field({ label, value, disabled, onSave }: { label: string; value: string; disabled?: boolean; onSave: (v: string) => void }) {
   return (
     <div className="space-y-1">
       <Label>{label}</Label>
-      <Input defaultValue={value} disabled={disabled} onBlur={(e) => e.target.value !== value && onSave(e.target.value)} />
+      <Input key={value} defaultValue={value} disabled={disabled} onBlur={(e) => e.target.value !== value && onSave(e.target.value)} />
     </div>
   );
 }
