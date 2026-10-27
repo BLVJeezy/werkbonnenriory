@@ -4,6 +4,7 @@ type MailWorkOrder = SiteAddressParts & {
   number: number; customer_name: string; address: string | null;
   description: string | null; signed_at: string | null; signed_name: string | null;
   distance_km: number | null; warranty: boolean;
+  vat_number?: string | null; signature?: string | null;
 };
 
 /** Explicit allowlist: customer mail never receives financial fields. */
@@ -12,6 +13,7 @@ export function werkbonMailData(wo: MailWorkOrder, activity: string | null, seco
     number: wo.number, customer: wo.customer_name, address: wo.address,
     siteAddress: wo.use_site_address ? formatSiteAddress(wo) : null,
     description: wo.description, signedAt: wo.signed_at, signedName: wo.signed_name,
+    vatNumber: wo.vat_number ?? null, signature: wo.signature ?? null,
     activity, seconds, distanceKm: wo.distance_km, warranty: wo.warranty,
     materials: materials.map(({ name, quantity, unit }) => ({ name, quantity, unit })),
   };
