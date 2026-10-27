@@ -59,12 +59,35 @@ function Offertes() {
     queryKey: ["products"],
     queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [],
   });
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => (await supabase.from("settings").select("km_rate, base_address").eq("id", 1).single()).data,
+  });
+  const kmRate = Number(settings?.km_rate ?? 0);
   const refresh = () => qc.invalidateQueries({ queryKey: ["quotes"] });
 
-  const parsedLines: InvoiceLine[] = lines
-    .filter((l) => l.description.trim())
-    .map((l) => quoteLine(l.description.trim(), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0));
+  const parsedLines: InvoiceLine[] = [
+    ...lines
+      .filter((l) => l.description.trim())
+      .map((l) => quoteLine(l.description.trim(), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
+    ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
+  ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
+
+  async function toggleKm(on: boolean) {
+    setKmOn(on);
+    if (!on) { setKm(null); return; }
+    const c = editCustomer ?? customers.find((x) => x.id === customerId) ?? null;
+    const address = c ? formatAddress(c) : "";
+    if (!address) { toast.error("De klant heeft geen adres"); setKmOn(false); return; }
+    setKmBusy(true);
+    try {
+      const r = await calcKm({ data: { address } });
+      if (r.km == null) { toast.error("Afstand niet gevonden voor dit adres"); setKmOn(false); }
+      else setKm(r.km);
+    } catch { toast.error("Afstand berekenen mislukt"); setKmOn(false); }
+    setKmBusy(false);
+  }
 
   function setLine(i: number, patch: Partial<Line>) {
     setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)));
