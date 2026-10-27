@@ -39,3 +39,5 @@
 
 - [x] Automatisch afpunten via Ponto: client ID/secret versleuteld in instellingen, uurlijkse controle (cron) + knop "Betalingen controleren" op Facturen; match op bedrag + factuurnummer in mededeling; factuur krijgt Betaald-badge met datum. 7 matchtests geslaagd, typecheck en build OK.
 - [ ] Open: beheerder moet in het Ponto-dashboard een eigen integratie aanmaken (scope rekeninginformatie + bankrekening) en client ID/secret in de app plakken; echte betalingsmatching daarna met een echte betaling controleren — nog niet getest.
+
+- [ ] (uitgesteld door gebruiker, 27 okt 2026) Mailtaken-app (Mail Assist AI) samenvoegen in Riory Werkbonnen — beide apps blijven voorlopig apart
