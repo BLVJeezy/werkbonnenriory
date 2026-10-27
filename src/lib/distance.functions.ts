@@ -29,6 +29,20 @@ async function geocode(q: string): Promise<[number, number] | null> {
   return null;
 }
 
+/** Round-trip driving km from the base address to a destination address. */
+async function roundTripKm(destination: string, baseAddress: string): Promise<number | null> {
+  const [a, b] = await Promise.all([geocode(baseAddress), geocode(destination)]);
+  if (!a || !b) return null;
+  const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${a.join(",")};${b.join(",")}?overview=false`, {
+    headers: { "User-Agent": UA },
+  });
+  if (!r.ok) return null;
+  const j = (await r.json()) as { routes?: { distance: number }[] };
+  const meters = j.routes?.[0]?.distance;
+  if (meters == null) return null;
+  return Math.round((meters * 2) / 100) / 10;
+}
+
 /** Round-trip driving km from the base address to the customer, stored on the work order. */
 export const computeDistance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -38,16 +52,19 @@ export const computeDistance = createServerFn({ method: "POST" })
     const { data: s } = await context.supabase.from("settings").select("base_address").eq("id", 1).single();
     const destination = wo ? destinationAddress(wo) : null;
     if (!destination || !s) return { km: null };
-    const [a, b] = await Promise.all([geocode(s.base_address), geocode(destination)]);
-    if (!a || !b) return { km: null };
-    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${a.join(",")};${b.join(",")}?overview=false`, {
-      headers: { "User-Agent": UA },
-    });
-    if (!r.ok) return { km: null };
-    const j = (await r.json()) as { routes?: { distance: number }[] };
-    const meters = j.routes?.[0]?.distance;
-    if (meters == null) return { km: null };
-    const km = Math.round((meters * 2) / 100) / 10;
-    await context.supabase.from("work_orders").update({ distance_km: km }).eq("id", data.id);
+    const km = await roundTripKm(destination, s.base_address);
+    if (km != null) await context.supabase.from("work_orders").update({ distance_km: km }).eq("id", data.id);
     return { km };
+  });
+
+/** Round-trip driving km to an arbitrary address, for quotes (nothing is stored). */
+export const quoteDistance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ address: z.string().min(3) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Alleen voor beheerder");
+    const { data: s } = await context.supabase.from("settings").select("base_address").eq("id", 1).single();
+    if (!s) return { km: null };
+    return { km: await roundTripKm(data.address, s.base_address) };
   });

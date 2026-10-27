@@ -13,6 +13,7 @@ import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
+import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
 
 export const Route = createFileRoute("/_authenticated/offertes")({
@@ -33,6 +34,7 @@ function Offertes() {
   const send = useServerFn(sendQuote);
   const getPdf = useServerFn(quotePdf);
   const convert = useServerFn(convertQuoteToTask);
+  const calcKm = useServerFn(quoteDistance);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -41,6 +43,9 @@ function Offertes() {
   const [vatRate, setVatRate] = useState("21");
   const [intro, setIntro] = useState("");
   const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
+  const [kmOn, setKmOn] = useState(false);
+  const [km, setKm] = useState<number | null>(null);
+  const [kmBusy, setKmBusy] = useState(false);
 
   const { data: quotes = [] } = useQuery({
     queryKey: ["quotes"],
@@ -54,12 +59,42 @@ function Offertes() {
     queryKey: ["products"],
     queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [],
   });
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => (await supabase.from("settings").select("km_rate, base_address").eq("id", 1).single()).data,
+  });
+  const kmRate = Number(settings?.km_rate ?? 0);
   const refresh = () => qc.invalidateQueries({ queryKey: ["quotes"] });
 
-  const parsedLines: InvoiceLine[] = lines
-    .filter((l) => l.description.trim())
-    .map((l) => quoteLine(l.description.trim(), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0));
+  const parsedLines: InvoiceLine[] = [
+    ...lines
+      .filter((l) => l.description.trim())
+      .map((l) => quoteLine(l.description.trim(), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
+    ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
+  ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
+
+  async function toggleKm(on: boolean) {
+    setKmOn(on);
+    if (!on) { setKm(null); return; }
+    const c = (editCustomer ?? customers.find((x) => x.id === customerId) ?? null) as Record<string, string | null | undefined> | null;
+    const address = c
+      ? formatAddress({
+          street: c["street"] ?? null,
+          house_number: c["house_number"] ?? c["houseNumber"] ?? null,
+          postal_code: c["postal_code"] ?? c["postalCode"] ?? null,
+          city: c["city"] ?? null,
+        })
+      : null;
+    if (!address) { toast.error("De klant heeft geen adres"); setKmOn(false); return; }
+    setKmBusy(true);
+    try {
+      const r = await calcKm({ data: { address } });
+      if (r.km == null) { toast.error("Afstand niet gevonden voor dit adres"); setKmOn(false); }
+      else setKm(r.km);
+    } catch { toast.error("Afstand berekenen mislukt"); setKmOn(false); }
+    setKmBusy(false);
+  }
 
   function setLine(i: number, patch: Partial<Line>) {
     setLines((ls) => ls.map((l, n) => (n === i ? { ...l, ...patch } : l)));
@@ -74,7 +109,11 @@ function Offertes() {
     setEditCustomer(q.customer as InvoiceCustomer);
     setVatRate(String(q.vat_rate));
     setIntro(q.intro ?? "");
-    const ls = (q.lines as InvoiceLine[]).map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
+    const all = q.lines as InvoiceLine[];
+    const kmLine = all.find((l) => l.unit === "km");
+    setKmOn(!!kmLine);
+    setKm(kmLine ? kmLine.quantity : null);
+    const ls = all.filter((l) => l.unit !== "km").map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
   }
@@ -85,6 +124,8 @@ function Offertes() {
     setCustomerId("");
     setIntro("");
     setLines([{ ...emptyLine }]);
+    setKmOn(false);
+    setKm(null);
     if (bewerk) navigate({ to: "/offertes", search: {}, replace: true });
   }
 
@@ -174,6 +215,8 @@ function Offertes() {
               ) : (
                 <select required className="h-10 w-full rounded-md border bg-background px-2" value={customerId} onChange={(e) => {
                   setCustomerId(e.target.value);
+                  setKm(null);
+                  if (kmOn) setKmOn(false);
                   const c = customers.find((x) => x.id === e.target.value);
                   if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate))));
                 }}>
@@ -211,6 +254,12 @@ function Offertes() {
             <Label>Betreft (tekst bovenaan de offerte)</Label>
             <Textarea rows={2} placeholder="bv. Betreft: renovatie badkamer — zoals besproken op de werf" value={intro} onChange={(e) => setIntro(e.target.value)} />
           </div>
+          <label className="flex items-center gap-2 text-sm font-bold">
+            <input type="checkbox" checked={kmOn} disabled={kmBusy} onChange={(e) => void toggleKm(e.target.checked)} />
+            Kilometers aanrekenen (heen en terug vanaf {settings?.base_address ?? "het vertrekadres"})
+            {kmBusy && <span className="font-normal text-muted-foreground">berekenen…</span>}
+            {kmOn && km != null && <span className="font-mono font-normal">{km} km × {euro(kmRate)} = {euro(km * kmRate)}</span>}
+          </label>
           <p className="font-mono text-sm">Totaal: {euro(totals.net)} excl. btw · {euro(totals.total)} incl. btw</p>
           <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
         </form>
