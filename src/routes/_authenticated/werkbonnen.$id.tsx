@@ -233,6 +233,7 @@ function Detail() {
         <SiteAddressFields value={wo} disabled={infoLocked} saveOnBlur onChange={(patch) => update("site_contact_name" in patch || "site_contact_phone" in patch ? patch : { ...patch, distance_km: null })} />
         {perms.showContact && <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />}
         {perms.showContact && <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />}
+        {perms.showContact && <Field label="E-mail facturatie" value={wo.billing_email ?? ""} disabled={infoLocked} onSave={(v) => update({ billing_email: v.trim() || null })} />}
         <div className="space-y-1 sm:col-span-2">
           <Label>Omschrijving</Label>
           <Textarea

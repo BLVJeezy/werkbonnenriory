@@ -64,6 +64,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          billing_email: string | null
           city: string | null
           created_at: string
           email: string | null
@@ -77,6 +78,7 @@ export type Database = {
           vat_number: string | null
         }
         Insert: {
+          billing_email?: string | null
           city?: string | null
           created_at?: string
           email?: string | null
@@ -90,6 +92,7 @@ export type Database = {
           vat_number?: string | null
         }
         Update: {
+          billing_email?: string | null
           city?: string | null
           created_at?: string
           email?: string | null
@@ -319,6 +322,7 @@ export type Database = {
         Row: {
           activity_id: string | null
           address: string | null
+          billing_email: string | null
           city: string | null
           created_at: string
           customer_name: string
@@ -359,6 +363,7 @@ export type Database = {
         Insert: {
           activity_id?: string | null
           address?: string | null
+          billing_email?: string | null
           city?: string | null
           created_at?: string
           customer_name?: string
@@ -399,6 +404,7 @@ export type Database = {
         Update: {
           activity_id?: string | null
           address?: string | null
+          billing_email?: string | null
           city?: string | null
           created_at?: string
           customer_name?: string

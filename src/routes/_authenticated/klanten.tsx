@@ -56,7 +56,7 @@ function Klanten() {
         </label>
       </div>
       <p className="text-sm text-muted-foreground">
-        Kolommen: Naam, Straat, Nr., Postcode, Plaats, Telefoon, E-mail, Btw-nummer. Bestaande klanten (zelfde naam en postcode) worden bijgewerkt. Nieuwe taken bewaren de klant automatisch.
+        Kolommen: Naam, Straat, Nr., Postcode, Plaats, Telefoon, E-mail, E-mail facturatie, Btw-nummer. Bestaande klanten (zelfde naam en postcode) worden bijgewerkt. Nieuwe taken bewaren de klant automatisch.
       </p>
       <Input placeholder="Zoeken…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="divide-y rounded-md border bg-card">
@@ -67,7 +67,7 @@ function Klanten() {
               <div className="font-bold">{c.name}</div>
               <div className="text-sm text-muted-foreground">{formatAddress(c) || "Geen adres"}</div>
             </div>
-            <div className="text-sm">{[c.phone, c.email, c.vat_number].filter(Boolean).join(" · ")}</div>
+            <div className="text-sm">{[c.phone, c.email, c.billing_email && `factuur: ${c.billing_email}`, c.vat_number].filter(Boolean).join(" · ")}</div>
             <Button size="sm" variant="ghost" onClick={async () => {
               if (!confirm(`${c.name} verwijderen uit klanten?`)) return;
               await supabase.from("customers").delete().eq("id", c.id);
