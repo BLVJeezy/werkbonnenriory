@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { destinationAddress, formatAddress } from "./address";
+import { addressLines, destinationLabel, destinationLines, destinationAddress, formatAddress } from "./address";
 
 describe("formatAddress", () => {
   it("joins street, number, postal code and city", () => {
