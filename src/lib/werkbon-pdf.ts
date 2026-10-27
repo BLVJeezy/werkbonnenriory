@@ -1,3 +1,4 @@
+import { appendTermsPdf } from "./terms-pdf";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { werkbonMailData } from "./werkbon-mail";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
@@ -140,6 +141,7 @@ export async function createWerkbonPdf(data: WerkbonData): Promise<Uint8Array> {
   }
   ensure(16);
   page.drawText(printable(data.signedName ? `Afgetekend door ${data.signedName}` : "Afgesloten na betaling."), { x: M, y, size: 10.5, font, color: ink });
+  await appendTermsPdf(doc);
   return doc.save();
 }
 

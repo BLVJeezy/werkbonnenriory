@@ -1,3 +1,4 @@
+import { appendTermsPdf } from "./terms-pdf";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
@@ -118,13 +119,6 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   }
   y -= 64;
 
-  // General terms
-  if (d.terms?.trim()) {
-    page = doc.addPage([W, H]);
-    chrome(false);
-    page.drawText("ALGEMENE VOORWAARDEN", { x: M, y, size: 12, font: bold, color: ink });
-    y -= 22;
-    for (const l of wrap(d.terms, 8.5, W - 2 * M)) { ensure(11); page.drawText(l, { x: M, y, size: 8.5, font, color: ink }); y -= 11; }
-  }
+  await appendTermsPdf(doc);
   return doc.save();
 }
