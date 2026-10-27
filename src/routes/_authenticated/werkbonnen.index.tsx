@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
 });
 
 const FILTERS = ["alle", "bezig", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", vat_number: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", billing_email: "", vat_number: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -81,7 +81,7 @@ function Lijst() {
   function pickCustomer(label: string) {
     const c = customers.find((x) => customerLabel(x) === label);
     if (!c) return;
-    setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", vat_number: c.vat_number ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
+    setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
   }
   const rows = filter === "alle" ? data : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
   if (role === "technician") return <TechList rows={data} />;
@@ -107,6 +107,7 @@ function Lijst() {
         site_contact_phone: form.site_contact_phone || null,
         phone: form.phone || null,
         email: form.email || null,
+        billing_email: form.billing_email || null,
         vat_number: form.vat_number.trim() || null,
         description: form.description || null,
         technician_id: form.technician_id || null,
@@ -123,7 +124,7 @@ function Lijst() {
       return;
     }
     await supabase.from("customers").upsert(
-      { name: form.name.trim(), street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, email: form.email || null, vat_number: form.vat_number.trim() || null },
+      { name: form.name.trim(), street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, email: form.email || null, billing_email: form.billing_email || null, vat_number: form.vat_number.trim() || null },
       { onConflict: "match_key" },
     );
     qc.invalidateQueries({ queryKey: ["customers"] });
@@ -213,6 +214,10 @@ function Lijst() {
                   <Label htmlFor="nb-email">E-mail</Label>
                   <Input id="nb-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 </div>
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="nb-billing">E-mail facturatie</Label>
+                <Input id="nb-billing" type="email" value={form.billing_email} onChange={(e) => setForm({ ...form, billing_email: e.target.value })} />
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-vat-number">Btw-nummer klant</Label>

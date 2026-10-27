@@ -6,6 +6,7 @@ export type CustomerRow = {
   city: string | null;
   phone: string | null;
   email: string | null;
+  billing_email: string | null;
   vat_number: string | null;
 };
 
@@ -17,6 +18,7 @@ const ALIASES: Record<keyof CustomerRow, string[]> = {
   city: ["plaats", "gemeente", "stad", "city", "woonplaats"],
   phone: ["telefoon", "tel", "tel.", "gsm", "phone", "telefoonnummer", "mobiel"],
   email: ["e-mail", "email", "mail", "e-mailadres", "emailadres"],
+  billing_email: ["facturatie", "e-mail facturatie", "factuur e-mail", "facturatiemail", "billing email", "e-mail factuur"],
   vat_number: ["btw", "btw-nummer", "btw nummer", "btwnummer", "vat", "ondernemingsnummer"],
 };
 
