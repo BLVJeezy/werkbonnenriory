@@ -8,6 +8,7 @@ export type CustomerRow = {
   email: string | null;
   billing_email: string | null;
   vat_number: string | null;
+  project_name: string | null;
 };
 
 const ALIASES: Record<keyof CustomerRow, string[]> = {
@@ -20,6 +21,7 @@ const ALIASES: Record<keyof CustomerRow, string[]> = {
   email: ["e-mail", "email", "mail", "e-mailadres", "emailadres"],
   billing_email: ["facturatie", "e-mail facturatie", "factuur e-mail", "facturatiemail", "billing email", "e-mail factuur"],
   vat_number: ["btw", "btw-nummer", "btw nummer", "btwnummer", "vat", "ondernemingsnummer"],
+  project_name: ["project", "projectnaam", "naam project", "site", "bouw"],
 };
 
 const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
