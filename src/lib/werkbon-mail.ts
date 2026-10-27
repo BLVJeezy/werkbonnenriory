@@ -5,9 +5,10 @@ type MailWorkOrder = SiteAddressParts & {
   description: string | null; signed_at: string | null; signed_name: string | null;
   distance_km: number | null; warranty: boolean;
   vat_number?: string | null; signature?: string | null;
+  paid_at?: string | null; paid_amount?: number | null; paid_method?: string | null;
 };
 
-/** Explicit allowlist: customer mail never receives financial fields. */
+/** Explicit allowlist: no rates, line prices or totals; only the amount actually paid, once payment was recorded. */
 export function werkbonMailData(wo: MailWorkOrder, activity: string | null, seconds: number, materials: { name: string; quantity: number; unit: string }[]) {
   return {
     number: wo.number, customer: wo.customer_name, address: wo.address,
@@ -15,6 +16,7 @@ export function werkbonMailData(wo: MailWorkOrder, activity: string | null, seco
     description: wo.description, signedAt: wo.signed_at, signedName: wo.signed_name,
     vatNumber: wo.vat_number ?? null, signature: wo.signature ?? null,
     activity, seconds, distanceKm: wo.distance_km, warranty: wo.warranty,
+    paid: wo.paid_at && wo.paid_amount != null ? { amount: Number(wo.paid_amount), method: wo.paid_method ?? null, at: wo.paid_at } : null,
     materials: materials.map(({ name, quantity, unit }) => ({ name, quantity, unit })),
   };
 }
