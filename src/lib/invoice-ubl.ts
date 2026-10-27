@@ -3,17 +3,19 @@ import type { InvoicePdfData } from "./invoice-pdf";
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
-/** Peppol BIS Billing 3.0 UBL invoice with the PDF embedded, so the customer gets both. */
-export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId: string | null; pdfBase64: string }) {
+/** Peppol BIS Billing 3.0 UBL invoice (or credit note) with the PDF embedded, so the customer gets both. Pass an empty pdfBase64 to omit the attachment (bulk accountant mail). */
+export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId: string | null; pdfBase64: string; creditNote?: boolean }) {
   const [sScheme, sId] = o.senderId.split(":");
   const [rScheme, rId] = o.receiverId?.split(":") ?? [];
   const cat = d.vatRate === 0 ? "AE" : "S";
   const c = d.customer;
   const open = Math.max(0, d.total - d.paidAmount);
+  const root = o.creditNote ? "CreditNote" : "Invoice";
+  const qtyTag = o.creditNote ? "CreditedQuantity" : "InvoicedQuantity";
   const lines = d.lines.map((l, i) => `
-  <cac:InvoiceLine>
+  <cac:${o.creditNote ? "CreditNoteLine" : "InvoiceLine"}>
     <cbc:ID>${i + 1}</cbc:ID>
-    <cbc:InvoicedQuantity unitCode="${l.unit === "u" ? "HUR" : l.unit === "km" ? "KMT" : "C62"}">${l.quantity}</cbc:InvoicedQuantity>
+    <cbc:${qtyTag} unitCode="${l.unit === "u" ? "HUR" : l.unit === "km" ? "KMT" : "C62"}">${Math.abs(l.quantity)}</cbc:${qtyTag}>
     <cbc:LineExtensionAmount currencyID="EUR">${a(l.amount)}</cbc:LineExtensionAmount>
     <cac:Item><cbc:Name>${esc(l.description.slice(0, 200))}</cbc:Name>
       <cac:ClassifiedTaxCategory><cbc:ID>${cat}</cbc:ID><cbc:Percent>${d.vatRate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory>
