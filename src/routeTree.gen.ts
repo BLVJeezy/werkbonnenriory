@@ -23,6 +23,7 @@ import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
+import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
 
 const IndexRoute = IndexRouteImport.update({
@@ -97,6 +98,12 @@ const ApiOauthMicrosoft_outlookReturnRoute =
     path: '/api/oauth/microsoft_outlook/return',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAankoopfacturenImportRoute =
+  ApiPublicAankoopfacturenImportRouteImport.update({
+    id: '/api/public/aankoopfacturen/import',
+    path: '/api/public/aankoopfacturen/import',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPontoSyncRoute = ApiPublicPontoSyncRouteImport.update({
   id: '/api/public/ponto/sync',
   path: '/api/public/ponto/sync',
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
+  '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
 export interface FileRoutesByTo {
@@ -133,6 +141,7 @@ export interface FileRoutesByTo {
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
+  '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
 export interface FileRoutesById {
@@ -151,6 +160,7 @@ export interface FileRoutesById {
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
+  '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
 export interface FileRouteTypes {
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/werkbonnen/$id'
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
+    | '/api/public/aankoopfacturen/import'
     | '/api/public/ponto/sync'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/werkbonnen/$id'
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
+    | '/api/public/aankoopfacturen/import'
     | '/api/public/ponto/sync'
   id:
     | '__root__'
@@ -202,6 +214,7 @@ export interface FileRouteTypes {
     | '/_authenticated/werkbonnen/$id'
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
+    | '/api/public/aankoopfacturen/import'
     | '/api/public/ponto/sync'
   fileRoutesById: FileRoutesById
 }
@@ -211,6 +224,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
+  ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
 }
 
@@ -314,6 +328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOauthMicrosoft_outlookReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/aankoopfacturen/import': {
+      id: '/api/public/aankoopfacturen/import'
+      path: '/api/public/aankoopfacturen/import'
+      fullPath: '/api/public/aankoopfacturen/import'
+      preLoaderRoute: typeof ApiPublicAankoopfacturenImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/ponto/sync': {
       id: '/api/public/ponto/sync'
       path: '/api/public/ponto/sync'
@@ -357,6 +378,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   OfferteTokenRoute: OfferteTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
+  ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
 }
 export const routeTree = rootRouteImport
