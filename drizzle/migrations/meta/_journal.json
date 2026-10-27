@@ -141,6 +141,20 @@
       "when": 1793104239599,
       "tag": "0019_invoice_okioki_delivery",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793116194160,
+      "tag": "0020_quotes_creditnotes_projectname",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793116739445,
+      "tag": "0021_invoices_work_order_not_unique",
+      "breakpoints": true
     }
   ]
 }

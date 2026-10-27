@@ -15,9 +15,11 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
+import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
+import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
@@ -51,6 +53,11 @@ const AuthenticatedKlantenRoute = AuthenticatedKlantenRouteImport.update({
   path: '/klanten',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOffertesRoute = AuthenticatedOffertesRouteImport.update({
+  id: '/offertes',
+  path: '/offertes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
   id: '/producten',
   path: '/producten',
@@ -65,6 +72,11 @@ const AuthenticatedTechniciRoute = AuthenticatedTechniciRouteImport.update({
   id: '/technici',
   path: '/technici',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const OfferteTokenRoute = OfferteTokenRouteImport.update({
+  id: '/offerte/$token',
+  path: '/offerte/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedWerkbonnenIndexRoute =
   AuthenticatedWerkbonnenIndexRouteImport.update({
@@ -91,9 +103,11 @@ export interface FileRoutesByFullPath {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
+  '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
@@ -104,9 +118,11 @@ export interface FileRoutesByTo {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
+  '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
@@ -119,9 +135,11 @@ export interface FileRoutesById {
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
+  '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
+  '/offerte/$token': typeof OfferteTokenRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
@@ -134,9 +152,11 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/kalender'
     | '/klanten'
+    | '/offertes'
     | '/producten'
     | '/tarieven'
     | '/technici'
+    | '/offerte/$token'
     | '/werkbonnen/$id'
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
@@ -147,9 +167,11 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/kalender'
     | '/klanten'
+    | '/offertes'
     | '/producten'
     | '/tarieven'
     | '/technici'
+    | '/offerte/$token'
     | '/werkbonnen/$id'
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
@@ -161,9 +183,11 @@ export interface FileRouteTypes {
     | '/_authenticated/facturen'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
+    | '/_authenticated/offertes'
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
     | '/_authenticated/technici'
+    | '/offerte/$token'
     | '/_authenticated/werkbonnen/$id'
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
@@ -173,6 +197,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  OfferteTokenRoute: typeof OfferteTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
 }
 
@@ -220,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKlantenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/offertes': {
+      id: '/_authenticated/offertes'
+      path: '/offertes'
+      fullPath: '/offertes'
+      preLoaderRoute: typeof AuthenticatedOffertesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/producten': {
       id: '/_authenticated/producten'
       path: '/producten'
@@ -240,6 +272,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/technici'
       preLoaderRoute: typeof AuthenticatedTechniciRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/offerte/$token': {
+      id: '/offerte/$token'
+      path: '/offerte/$token'
+      fullPath: '/offerte/$token'
+      preLoaderRoute: typeof OfferteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/werkbonnen/': {
       id: '/_authenticated/werkbonnen/'
@@ -269,6 +308,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
+  AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
   AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
@@ -280,6 +320,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
+  AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
   AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
@@ -294,6 +335,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  OfferteTokenRoute: OfferteTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
 }
 export const routeTree = rootRouteImport

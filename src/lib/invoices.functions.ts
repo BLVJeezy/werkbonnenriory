@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { addDays, buildInvoice, isFullyPaid, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
+import { addDays, buildCreditNote, buildInvoice, isFullyPaid, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
 import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
@@ -22,17 +22,23 @@ async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
     supabase.from("settings").select("*").eq("id", 1).single(),
     supabase.from("work_orders").select("number").eq("id", inv.work_order_id).single(),
   ]);
+  let extra: { title: string; reference: string } | null = null;
+  if (inv.kind === "creditnota") {
+    const { data: orig } = inv.credit_for ? await supabase.from("invoices").select("number").eq("id", inv.credit_for).maybeSingle() : { data: null };
+    extra = { title: "CREDITNOTA", reference: `Creditnota voor factuur ${orig?.number ?? "onbekend"}` };
+  }
   return {
     number: inv.number, issueDate: inv.issue_date, dueDate: inv.due_date, workOrderNumber: wo?.number ?? 0,
     customer: inv.customer as InvoiceCustomer, lines: inv.lines as InvoiceLine[], vatRate: Number(inv.vat_rate),
     net: Number(inv.net), vat: Number(inv.vat), total: Number(inv.total), paidAmount: Number(inv.paid_amount),
     company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null },
     terms: s?.terms_text ?? null,
+    ...(extra ?? {}),
   };
 }
 
 // ---- Mail via info@riory.be ----
-async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl") {
+async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur") {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
   let key: string | null = null;
@@ -41,7 +47,7 @@ async function sendMail(to: string, number: string, contentBytes: string, format
   const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
   const res = await callAsAppUser({
     gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
-    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(invoiceMail(to, number, contentBytes, format)) },
+    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(invoiceMail(to, number, contentBytes, format, label)) },
     requiredScopes: WERKBON_MAIL_SCOPES,
   });
   if (await appUserReconnectRequired(res)) throw new Error("Koppel de mailbox info@riory.be opnieuw");
@@ -64,15 +70,16 @@ async function sendOne(supabase: any, inv: any) {
   inv = claimed;
   try {
     const d = await pdfData(supabase, inv);
+    const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
     await deliverInvoice({
       customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at),
-      sendPdf: (to) => sendMail(to, d.number, pdf, "pdf"),
+      sendPdf: (to) => sendMail(to, d.number, pdf, "pdf", label),
       sendUbl: async (to) => {
         const { invoiceUbl } = await import("@/lib/invoice-ubl");
-        const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf });
-        await sendMail(to, d.number, b64(new TextEncoder().encode(xml)), "ubl");
+        const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" });
+        await sendMail(to, d.number, b64(new TextEncoder().encode(xml)), "ubl", label);
       },
       record: async (leg) => {
         const { error } = await supabase.from("invoices").update({ [leg === "pdf" ? "pdf_sent_at" : "okioki_sent_at"]: new Date().toISOString() }).eq("id", inv.id);
@@ -148,4 +155,68 @@ export const invoicePdf = createServerFn({ method: "POST" })
     if (!inv) throw new Error("Factuur niet gevonden");
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     return { number: inv.number as string, base64: b64(await createInvoicePdf(await pdfData(context.supabase, inv))) };
+  });
+
+/** Credit note that reverses an existing invoice; it follows the same invoice numbering. */
+export const createCreditNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { invoiceId: string }) => i)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabase } = context;
+    const { data: inv } = await supabase.from("invoices").select("*").eq("id", data.invoiceId).single();
+    if (!inv) throw new Error("Factuur niet gevonden");
+    if (inv.kind === "creditnota") throw new Error("Dit is al een creditnota");
+    const { data: existing } = await supabase.from("invoices").select("id").eq("credit_for", inv.id).maybeSingle();
+    if (existing) throw new Error("Er bestaat al een creditnota voor deze factuur");
+    const cn = buildCreditNote({ lines: inv.lines as InvoiceLine[], vatRate: Number(inv.vat_rate), net: Number(inv.net), vat: Number(inv.vat), total: Number(inv.total) });
+    const { data: number, error: ne } = await supabase.rpc("next_invoice_number");
+    if (ne) throw new Error(ne.message);
+    const issue = new Date().toISOString().slice(0, 10);
+    const { data: row, error } = await supabase.from("invoices").insert({
+      number, work_order_id: inv.work_order_id, issue_date: issue, due_date: issue,
+      customer: inv.customer, lines: cn.lines, vat_rate: cn.vatRate, net: cn.net, vat: cn.vat, total: cn.total, paid_amount: 0,
+      kind: "creditnota", credit_for: inv.id,
+    }).select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+/** Sends every invoice and credit note as a UBL attachment in one mail to the accountant. */
+export const sendAllToAccountant = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabase } = context;
+    const { data: s } = await supabase.from("settings").select("*").eq("id", 1).single();
+    const to = s?.accountant_email?.trim();
+    if (!to) throw new Error("Vul eerst het e-mailadres van de boekhouder in");
+    const { data: rows } = await supabase.from("invoices").select("*").order("number");
+    if (!rows?.length) throw new Error("Er zijn nog geen facturen");
+    const { invoiceUbl } = await import("@/lib/invoice-ubl");
+    const attachments = [];
+    for (const inv of rows) {
+      const d = await pdfData(supabase, inv);
+      const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: "", creditNote: inv.kind === "creditnota" });
+      attachments.push({ "@odata.type": "#microsoft.graph.fileAttachment", name: `${inv.kind === "creditnota" ? "Creditnota" : "Factuur"}-${inv.number}.xml`, contentType: "application/xml", contentBytes: b64(new TextEncoder().encode(xml)) });
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
+    let key: string | null = null;
+    for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, WERKBON_MAILBOX_KEY); if (key) break; }
+    if (!key) throw new Error("Koppel eerst de mailbox info@riory.be");
+    const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
+    const res = await callAsAppUser({
+      gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
+      init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: {
+        subject: `Alle facturen en creditnota's (${rows.length}) in UBL — Riory`,
+        body: { contentType: "Text", content: `In de bijlage vindt u ${rows.length} factuur-/creditnotabestanden in UBL-formaat voor de boekhouding van Riory.` },
+        toRecipients: [{ emailAddress: { address: to } }],
+        attachments,
+      } }) },
+      requiredScopes: WERKBON_MAIL_SCOPES,
+    });
+    if (await appUserReconnectRequired(res)) throw new Error("Koppel de mailbox info@riory.be opnieuw");
+    if (!res.ok) throw new Error(`Mail versturen mislukt [${res.status}]: ${await res.text()}`);
+    return { sent: rows.length, to };
   });

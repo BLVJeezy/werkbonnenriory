@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
 });
 
 const FILTERS = ["alle", "bezig", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", billing_email: "", vat_number: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", billing_email: "", vat_number: "", project_name: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -81,7 +81,7 @@ function Lijst() {
   function pickCustomer(label: string) {
     const c = customers.find((x) => customerLabel(x) === label);
     if (!c) return;
-    setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
+    setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", project_name: c.project_name ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
   }
   const rows = filter === "alle" ? data : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
   if (role === "technician") return <TechList rows={data} />;
@@ -109,6 +109,7 @@ function Lijst() {
         email: form.email || null,
         billing_email: form.billing_email || null,
         vat_number: form.vat_number.trim() || null,
+        project_name: form.project_name.trim() || null,
         description: form.description || null,
         technician_id: form.technician_id || null,
         status: form.technician_id ? "toegewezen" : "nieuw",
@@ -124,7 +125,7 @@ function Lijst() {
       return;
     }
     await supabase.from("customers").upsert(
-      { name: form.name.trim(), street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, email: form.email || null, billing_email: form.billing_email || null, vat_number: form.vat_number.trim() || null },
+      { name: form.name.trim(), street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, email: form.email || null, billing_email: form.billing_email || null, vat_number: form.vat_number.trim() || null, project_name: form.project_name.trim() || null },
       { onConflict: "match_key" },
     );
     qc.invalidateQueries({ queryKey: ["customers"] });
@@ -222,6 +223,13 @@ function Lijst() {
               <div className="grid gap-1">
                 <Label htmlFor="nb-vat-number">Btw-nummer klant</Label>
                 <Input id="nb-vat-number" value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value, vat_rate: String(vatRateForCustomer(e.target.value, Number(form.vat_rate))) })} />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="nb-project">Project</Label>
+                <Input id="nb-project" list="nb-projecten" placeholder="Naam van het project…" value={form.project_name} onChange={(e) => setForm({ ...form, project_name: e.target.value })} />
+                <datalist id="nb-projecten">
+                  {[...new Set([...customers.map((c) => c.project_name), ...data.map((w) => w.project_name)].filter((x): x is string => !!x))].map((p) => <option key={p} value={p} />)}
+                </datalist>
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-desc">Omschrijving</Label>

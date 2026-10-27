@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
-import { createInvoices, invoicePdf, sendInvoices } from "@/lib/invoices.functions";
+import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoices } from "@/lib/invoices.functions";
 import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 
@@ -26,6 +26,8 @@ function Facturen() {
   const create = useServerFn(createInvoices);
   const send = useServerFn(sendInvoices);
   const getPdf = useServerFn(invoicePdf);
+  const creditNote = useServerFn(createCreditNote);
+  const toAccountant = useServerFn(sendAllToAccountant);
   const [selWo, setSelWo] = useState<string[]>([]);
   const [selInv, setSelInv] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -74,6 +76,25 @@ function Facturen() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden mislukt"); }
     setBusy(false);
     refresh();
+  }
+  async function makeCreditNote(id: string) {
+    if (!confirm("Creditnota aanmaken die deze factuur volledig terugdraait?")) return;
+    setBusy(true);
+    try {
+      await creditNote({ data: { invoiceId: id } });
+      toast.success("Creditnota aangemaakt");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Creditnota mislukt"); }
+    setBusy(false);
+    refresh();
+  }
+  async function sendToAccountant() {
+    if (!confirm(`Alle facturen en creditnota's als UBL in één mail naar ${s?.accountant_email ?? "de boekhouder"} sturen?`)) return;
+    setBusy(true);
+    try {
+      const r = await toAccountant();
+      toast.success(`${r.sent} UBL-bestanden gemaild naar ${r.to}`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden mislukt"); }
+    setBusy(false);
   }
   async function download(id: string) {
     const r = await getPdf({ data: { invoiceId: id } });
@@ -127,9 +148,10 @@ function Facturen() {
       <section className="space-y-3 rounded-md border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-black uppercase">Facturen</h2>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setSelInv(selInv.length ? [] : openIds)}>{selInv.length ? "Niets selecteren" : "Alle openstaande"}</Button>
             <Button size="sm" disabled={!selInv.length || busy} onClick={() => sendSel(selInv)}>Verzenden ({selInv.length})</Button>
+            <Button variant="outline" size="sm" disabled={busy || !data.invoices.length} onClick={sendToAccountant}>Alles naar boekhouder (UBL)</Button>
           </div>
         </div>
         <ul className="divide-y">
@@ -137,6 +159,7 @@ function Facturen() {
             <li key={i.id} className="flex flex-wrap items-center gap-3 py-2">
               <input type="checkbox" disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} />
               <span className="font-mono font-bold">{i.number}</span>
+              {i.kind === "creditnota" && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
               <span className="flex-1">{(i.customer as { name?: string }).name}</span>
               <span className="font-mono">{euro(Number(i.total))}</span>
               <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>
@@ -145,6 +168,7 @@ function Facturen() {
               {i.pdf_sent_at && <span className="text-xs text-muted-foreground">PDF gemaild</span>}
               {i.okioki_sent_at && <span className="text-xs text-muted-foreground">UBL naar OkiOki gemaild</span>}
               <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
+              {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
               {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
               {i.send_error && <p className="w-full text-xs text-destructive">{i.send_error}</p>}
             </li>
@@ -168,6 +192,8 @@ function Facturen() {
             <Input defaultValue={s.company_iban ?? ""} onBlur={(e) => e.target.value !== (s.company_iban ?? "") && saveSetting({ company_iban: e.target.value || null })} /></div>
           <div className="space-y-1"><Label>BIC</Label>
             <Input defaultValue={s.company_bic ?? ""} onBlur={(e) => e.target.value !== (s.company_bic ?? "") && saveSetting({ company_bic: e.target.value || null })} /></div>
+          <div className="space-y-1"><Label>E-mail boekhouder (voor UBL-verzending)</Label>
+            <Input type="email" defaultValue={s.accountant_email} onBlur={(e) => e.target.value !== s.accountant_email && saveSetting({ accountant_email: e.target.value })} /></div>
           <div className="space-y-1 sm:col-span-2"><Label>Algemene voorwaarden (komen achteraan op elke factuur)</Label>
             <Textarea rows={10} defaultValue={s.terms_text ?? ""} onBlur={(e) => e.target.value !== (s.terms_text ?? "") && saveSetting({ terms_text: e.target.value || null })} /></div>
         </section>

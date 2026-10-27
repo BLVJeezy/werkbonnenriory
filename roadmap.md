@@ -1,10 +1,12 @@
 # Roadmap
 
-- [ ] Projectnaam uit mail mee uitlezen, koppelen aan klant, selecteerbaar bij inplannen
-- [ ] Offerteruimte: offertes maken, versturen met ondertekenlink, na akkoord omzetten in taak
-- [ ] Producten kunnen markeren als enkel-voor-admin (onzichtbaar voor ploegen)
-- [ ] Creditnota's: maken en verzenden, in facturenlijst, zelfde nummering
-- [ ] Knop: alle facturen als UBL in één mail naar de boekhouder
+- [x] Projectnaam uit mail mee uitlezen, op klant en taak, selecteerbaar bij inplannen (datalist)
+- [x] Offerteruimte: offertes maken (OFF-nummering), versturen met ondertekenlink, digitale handtekening op publieke pagina, na akkoord omzetten in taak — volledig getest in de app (proefofferte OFF-1 ondertekend en omgezet, daarna opgeruimd)
+- [x] Producten markeren als enkel-voor-admin; ploegen zien ze niet (RLS + interface)
+- [x] Creditnota's vanaf bestaande factuur, negatieve bedragen, zelfde factuurnummering, eigen PDF/UBL (type 381) — aangemaakt in de app en proefcreditnota opgeruimd
+- [x] Knop "Alles naar boekhouder (UBL)": alle facturen/creditnota's als UBL-bijlagen in één mail naar peter@trivisio.be (instelbaar)
+- [ ] Echte offertemail en boekhoudermail controleren — vereist gekoppelde info-mailbox; geen echte mails verstuurd
+
 
 
 - [x] Knop ‘Geselecteerde verwijderen’ bij ‘Te factureren’, met bevestiging; vier tests geslaagd en annuleren/verwijderen/herladen gecontroleerd op tijdelijke proefbon.

@@ -38,6 +38,12 @@ export function buildInvoice(o: {
   return { lines, customer, vatRate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total, paidAmount: paid };
 }
 
+/** Pure: credit note that reverses an existing invoice (negative lines and totals, same numbering sequence). */
+export function buildCreditNote(inv: { lines: InvoiceLine[]; vatRate: number; net: number; vat: number; total: number }) {
+  const lines = inv.lines.map((l) => ({ ...l, amount: -Math.abs(l.amount) }));
+  return { lines, vatRate: inv.vatRate, net: -Math.abs(inv.net), vat: -Math.abs(inv.vat), total: -Math.abs(inv.total) };
+}
+
 /** Fully paid invoices may go out automatically; open ones always wait for a manual send. */
 export function isFullyPaid(total: number, paidAmount: number) {
   return paidAmount > 0 && paidAmount + 0.005 >= total;

@@ -17,6 +17,7 @@ function Producten() {
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("st");
   const [price, setPrice] = useState("");
+  const [adminOnly, setAdminOnly] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [],
@@ -24,7 +25,7 @@ function Producten() {
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = await supabase.from("products").insert({ name, unit: unit || "st", price: Number(price) || 0 });
+    const { error } = await supabase.from("products").insert({ name, unit: unit || "st", price: Number(price) || 0, admin_only: adminOnly });
     if (error) {
       toast.error(error.message);
       return;
@@ -32,6 +33,7 @@ function Producten() {
     setName("");
     setUnit("st");
     setPrice("");
+    setAdminOnly(false);
     qc.invalidateQueries({ queryKey: ["products"] });
   }
 
@@ -42,6 +44,10 @@ function Producten() {
         <Input placeholder="Productnaam" required value={name} onChange={(e) => setName(e.target.value)} className="min-w-48 flex-1" />
         <Input placeholder="Eenheid" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-24" />
         <Input placeholder="Prijs € excl. btw" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-36" />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" className="h-5 w-5 accent-primary" checked={adminOnly} onChange={(e) => setAdminOnly(e.target.checked)} />
+          Enkel voor beheerder
+        </label>
         <Button>Toevoegen</Button>
       </form>
       <ul className="divide-y rounded-md border bg-card">
@@ -50,7 +56,15 @@ function Producten() {
           <li key={p.id} className="flex items-center justify-between p-4">
             <div>
               <span className="font-bold">{p.name}</span> <span className="font-mono text-sm text-muted-foreground">({p.unit}) · {euro(Number(p.price))}</span>
+              {p.admin_only && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs font-bold">Enkel beheerder</span>}
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-5 w-5 accent-primary" checked={p.admin_only} onChange={async (e) => {
+                await supabase.from("products").update({ admin_only: e.target.checked }).eq("id", p.id);
+                qc.invalidateQueries({ queryKey: ["products"] });
+              }} />
+              Enkel beheerder
+            </label>
             <Button
               variant="ghost"
               size="sm"
