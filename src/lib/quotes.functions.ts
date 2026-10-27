@@ -96,8 +96,11 @@ export const quoteFromTask = createServerFn({ method: "POST" })
     const { data: wo } = await context.supabase.from("work_orders").select("*").eq("id", data.workOrderId).single();
     if (!wo) throw new Error("Taak niet gevonden");
     const { quoteLine } = await import("@/lib/quote");
+    const siteAddress = wo.use_site_address
+      ? [wo.site_street && `${wo.site_street} ${wo.site_house_number ?? ""}`.trim(), [wo.site_postal_code, wo.site_city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null
+      : null;
     const customer: InvoiceCustomer = {
-      name: wo.customer_name, address: wo.address, siteAddress: wo.site_address ?? null,
+      name: wo.customer_name, address: wo.address, siteAddress,
       vatNumber: wo.vat_number, email: wo.billing_email || wo.email,
       street: wo.street, houseNumber: wo.house_number, postalCode: wo.postal_code, city: wo.city,
     };

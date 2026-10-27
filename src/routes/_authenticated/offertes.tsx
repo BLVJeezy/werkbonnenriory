@@ -16,7 +16,7 @@ import { convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } fro
 import { vatRateForCustomer } from "@/lib/vat-number";
 
 export const Route = createFileRoute("/_authenticated/offertes")({
-  validateSearch: (s: Record<string, unknown>) => ({ bewerk: typeof s.bewerk === "string" ? s.bewerk : undefined }),
+  validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
   head: () => ({ meta: [{ title: "Offertes — Riory Werkbonnen" }, { name: "description", content: "Riory-offertes maken, versturen ter ondertekening en omzetten in taken." }, { property: "og:title", content: "Offertes — Riory Werkbonnen" }, { property: "og:description", content: "Riory-offertes maken, versturen ter ondertekening en omzetten in taken." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Offertes,
 });
