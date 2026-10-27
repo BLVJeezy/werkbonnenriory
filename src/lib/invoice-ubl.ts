@@ -50,19 +50,19 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   </cac:Party></cac:AccountingCustomerParty>
   ${d.company.iban ? `<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cbc:PaymentID>${esc(d.number)}</cbc:PaymentID><cac:PayeeFinancialAccount><cbc:ID>${esc(d.company.iban.replace(/\s/g, ""))}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>` : ""}
   <cac:TaxTotal>
-    <cbc:TaxAmount currencyID="EUR">${a(d.vat)}</cbc:TaxAmount>
+    <cbc:TaxAmount currencyID="EUR">${a(Math.abs(d.vat))}</cbc:TaxAmount>
     <cac:TaxSubtotal>
-      <cbc:TaxableAmount currencyID="EUR">${a(d.net)}</cbc:TaxableAmount>
-      <cbc:TaxAmount currencyID="EUR">${a(d.vat)}</cbc:TaxAmount>
+      <cbc:TaxableAmount currencyID="EUR">${a(Math.abs(d.net))}</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">${a(Math.abs(d.vat))}</cbc:TaxAmount>
       <cac:TaxCategory><cbc:ID>${cat}</cbc:ID><cbc:Percent>${d.vatRate}</cbc:Percent>${cat === "AE" ? "<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode>" : ""}<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
     </cac:TaxSubtotal>
   </cac:TaxTotal>
   <cac:LegalMonetaryTotal>
-    <cbc:LineExtensionAmount currencyID="EUR">${a(d.net)}</cbc:LineExtensionAmount>
-    <cbc:TaxExclusiveAmount currencyID="EUR">${a(d.net)}</cbc:TaxExclusiveAmount>
-    <cbc:TaxInclusiveAmount currencyID="EUR">${a(d.total)}</cbc:TaxInclusiveAmount>
-    <cbc:PrepaidAmount currencyID="EUR">${a(Math.min(d.paidAmount, d.total))}</cbc:PrepaidAmount>
-    <cbc:PayableAmount currencyID="EUR">${a(open)}</cbc:PayableAmount>
+    <cbc:LineExtensionAmount currencyID="EUR">${a(Math.abs(d.net))}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">${a(Math.abs(d.net))}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">${a(Math.abs(d.total))}</cbc:TaxInclusiveAmount>
+    <cbc:PrepaidAmount currencyID="EUR">${a(Math.max(0, Math.min(d.paidAmount, d.total)))}</cbc:PrepaidAmount>
+    <cbc:PayableAmount currencyID="EUR">${a(o.creditNote ? Math.abs(d.total) : open)}</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>${lines}
-</Invoice>`;
+</${root}>`;
 }
