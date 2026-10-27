@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,7 +73,7 @@ function Facturen() {
     a.href = url; a.download = `Factuur-${r.number}.pdf`; a.click();
     URL.revokeObjectURL(url);
   }
-  async function saveSetting(patch: Record<string, unknown>) {
+  async function saveSetting(patch: Database["public"]["Tables"]["settings"]["Update"]) {
     const { error } = await supabase.from("settings").update(patch).eq("id", 1);
     if (error) toast.error(error.message); else toast.success("Opgeslagen");
     refresh();
