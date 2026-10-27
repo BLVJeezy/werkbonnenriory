@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
-import { createInvoices, invoicePdf, sendInvoices } from "@/lib/invoices.functions";
+import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoices } from "@/lib/invoices.functions";
 import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 
@@ -26,6 +26,8 @@ function Facturen() {
   const create = useServerFn(createInvoices);
   const send = useServerFn(sendInvoices);
   const getPdf = useServerFn(invoicePdf);
+  const creditNote = useServerFn(createCreditNote);
+  const toAccountant = useServerFn(sendAllToAccountant);
   const [selWo, setSelWo] = useState<string[]>([]);
   const [selInv, setSelInv] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -74,6 +76,25 @@ function Facturen() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden mislukt"); }
     setBusy(false);
     refresh();
+  }
+  async function makeCreditNote(id: string) {
+    if (!confirm("Creditnota aanmaken die deze factuur volledig terugdraait?")) return;
+    setBusy(true);
+    try {
+      await creditNote({ data: { invoiceId: id } });
+      toast.success("Creditnota aangemaakt");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Creditnota mislukt"); }
+    setBusy(false);
+    refresh();
+  }
+  async function sendToAccountant() {
+    if (!confirm(`Alle facturen en creditnota's als UBL in één mail naar ${s?.accountant_email ?? "de boekhouder"} sturen?`)) return;
+    setBusy(true);
+    try {
+      const r = await toAccountant();
+      toast.success(`${r.sent} UBL-bestanden gemaild naar ${r.to}`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden mislukt"); }
+    setBusy(false);
   }
   async function download(id: string) {
     const r = await getPdf({ data: { invoiceId: id } });
