@@ -1,7 +1,9 @@
 # Roadmap
 
-- [ ] Btw-nummer uit mail uitlezen en op taak invullen/bewerken
-- [ ] Na aftekenen of afrekenen terug naar beginscherm voor ploegen; testen
+- [x] Btw-nummer toegevoegd aan mailuitlezing en taak; aanmaken/bewerken/herladen in app gecontroleerd
+- [x] Na aftekenen of afrekenen terug naar beginscherm voor ploegen; beide paden en mailfout getest
+- [ ] Echte mailimport met btw-nummer controleren — vereist een geschikte nieuwe mail
+- [ ] Terugkeer in ploegsessie end-to-end controleren — huidige testsessie is beheerder; ploegaanmelding nodig
 
 - [x] Werkbonmail zonder prijzen of betaalbedragen
 - [x] Apart aanvinkbaar werfadres bij aanmaken/bewerken en mailimport; gebruiken voor route en kilometers
