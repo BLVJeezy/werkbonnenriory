@@ -210,6 +210,8 @@ function Offertes() {
               ) : (
                 <select required className="h-10 w-full rounded-md border bg-background px-2" value={customerId} onChange={(e) => {
                   setCustomerId(e.target.value);
+                  setKm(null);
+                  if (kmOn) setKmOn(false);
                   const c = customers.find((x) => x.id === e.target.value);
                   if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate))));
                 }}>
@@ -247,6 +249,12 @@ function Offertes() {
             <Label>Betreft (tekst bovenaan de offerte)</Label>
             <Textarea rows={2} placeholder="bv. Betreft: renovatie badkamer — zoals besproken op de werf" value={intro} onChange={(e) => setIntro(e.target.value)} />
           </div>
+          <label className="flex items-center gap-2 text-sm font-bold">
+            <input type="checkbox" checked={kmOn} disabled={kmBusy} onChange={(e) => void toggleKm(e.target.checked)} />
+            Kilometers aanrekenen (heen en terug vanaf {settings?.base_address ?? "het vertrekadres"})
+            {kmBusy && <span className="font-normal text-muted-foreground">berekenen…</span>}
+            {kmOn && km != null && <span className="font-mono font-normal">{km} km × {euro(kmRate)} = {euro(km * kmRate)}</span>}
+          </label>
           <p className="font-mono text-sm">Totaal: {euro(totals.net)} excl. btw · {euro(totals.total)} incl. btw</p>
           <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
         </form>
