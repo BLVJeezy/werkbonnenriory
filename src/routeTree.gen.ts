@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
@@ -40,6 +41,12 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAankoopfacturenRoute =
+  AuthenticatedAankoopfacturenRouteImport.update({
+    id: '/aankoopfacturen',
+    path: '/aankoopfacturen',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFacturenRoute = AuthenticatedFacturenRouteImport.update({
   id: '/facturen',
   path: '/facturen',
@@ -113,6 +120,7 @@ const ApiPublicPontoSyncRoute = ApiPublicPontoSyncRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
@@ -130,6 +138,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
@@ -149,6 +158,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/aankoopfacturen'
     | '/facturen'
     | '/kalender'
     | '/klanten'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/aankoopfacturen'
     | '/facturen'
     | '/kalender'
     | '/klanten'
@@ -203,6 +215,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/aankoopfacturen'
     | '/_authenticated/facturen'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/aankoopfacturen': {
+      id: '/_authenticated/aankoopfacturen'
+      path: '/aankoopfacturen'
+      fullPath: '/aankoopfacturen'
+      preLoaderRoute: typeof AuthenticatedAankoopfacturenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/facturen': {
       id: '/_authenticated/facturen'
@@ -346,6 +366,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAankoopfacturenRoute: typeof AuthenticatedAankoopfacturenRoute
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
@@ -358,6 +379,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAankoopfacturenRoute: AuthenticatedAankoopfacturenRoute,
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
