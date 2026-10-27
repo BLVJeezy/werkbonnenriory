@@ -87,7 +87,8 @@ function Detail() {
   }, [needKm, woAddr]);
 
   if (!data?.wo) return <p className="text-muted-foreground">Laden…</p>;
-  const { wo, times, mats, techs, prods, acts, settings } = data;
+  const { wo, times, mats, techs, acts, settings } = data;
+  const prods = data.prods.filter((p) => isAdmin || !p.admin_only);
   const locked = wo.status === "afgetekend";
   const isAdmin = role === "admin";
   const infoLocked = !isAdmin;
@@ -221,6 +222,7 @@ function Detail() {
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
+        <Field label="Project" value={wo.project_name ?? ""} disabled={infoLocked} onSave={(v) => update({ project_name: v.trim() || null })} />
         {(isAdmin || perms.showContact) && <Field label="Btw-nummer klant" value={wo.vat_number ?? ""} disabled={infoLocked} onSave={(v) => update({ vat_number: v.trim() || null, vat_rate: vatRateForCustomer(v, Number(wo.vat_rate)) })} />}
         <div className="grid grid-cols-[1fr_6rem] gap-3">
           <Field label="Straat" value={wo.street ?? (wo.house_number || wo.city ? "" : wo.address ?? "")} disabled={infoLocked} onSave={(v) => saveAddr({ street: v })} />
