@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Prijsloze werkbon als pdf-bijlage in plaats van mailtekst; pdf-structuur, pagina's en Outlook-bijlage getest, voorbeeld-pdf gecontroleerd
+- [ ] Echte ontvangst van pdf-bijlage controleren — vereist gekoppelde info-mailbox en een goedgekeurde testontvanger; geen klantmail als proef verstuurd
+
 - [x] Btw-nummer toegevoegd aan mailuitlezing en taak; aanmaken/bewerken/herladen in app gecontroleerd
 - [x] Na aftekenen of afrekenen terug naar beginscherm voor ploegen; beide paden en mailfout getest
 - [ ] Echte mailimport met btw-nummer controleren — vereist een geschikte nieuwe mail

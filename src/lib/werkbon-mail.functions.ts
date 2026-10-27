@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { renderWerkbonMail, werkbonMailData } from "@/lib/werkbon-mail";
+import { werkbonMailData } from "@/lib/werkbon-mail";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
 import { getConnectionKeyForUser } from "@/lib/appUserConnections.server";
@@ -45,8 +45,13 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
       0,
     );
     const activity = (acts.data ?? []).find((a) => a.id === wo.activity_id);
-    const html = renderWerkbonMail(werkbonMailData(wo, activity?.name ?? null, seconds,
-      (m.data ?? []).map((x) => ({ name: x.name, quantity: Number(x.quantity), unit: x.unit }))));
+    const mailData = werkbonMailData(wo, activity?.name ?? null, seconds,
+      (m.data ?? []).map((x) => ({ name: x.name, quantity: Number(x.quantity), unit: x.unit })));
+    const { createWerkbonPdf, werkbonPdfMessage } = await import("@/lib/werkbon-pdf");
+    const pdf = await createWerkbonPdf(mailData);
+    let binary = "";
+    for (const byte of pdf) binary += String.fromCharCode(byte);
+    const message = werkbonPdfMessage(mailData, wo.email, btoa(binary));
 
     const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
     const res = await callAsAppUser({
@@ -58,11 +63,7 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: {
-            subject: `Werkbon #${wo.number} — ${wo.customer_name}`,
-            body: { contentType: "HTML", content: html },
-            toRecipients: [{ emailAddress: { address: wo.email } }],
-          },
+          message,
         }),
       },
       requiredScopes: WERKBON_MAIL_SCOPES,
