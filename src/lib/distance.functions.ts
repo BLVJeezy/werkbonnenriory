@@ -6,7 +6,7 @@ import { destinationAddress } from "@/lib/address";
 
 const UA = "RioryWerkbonnen/1.0 (info@riory.be)";
 
-async function geocode(q: string): Promise<[number, number] | null> {
+async function geocodeOnce(q: string): Promise<[number, number] | null> {
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=be,nl&q=${encodeURIComponent(q)}`,
     { headers: { "User-Agent": UA } },
@@ -14,6 +14,19 @@ async function geocode(q: string): Promise<[number, number] | null> {
   if (!r.ok) return null;
   const j = (await r.json()) as { lat: string; lon: string }[];
   return j[0] ? [Number(j[0].lon), Number(j[0].lat)] : null;
+}
+
+/** Tries the full address, then without "bus/bte" suffixes, then without house number, then just postcode + city. */
+async function geocode(q: string): Promise<[number, number] | null> {
+  const noBus = q.replace(/\s*(bus|bte|boîte|box)\s*\S+/gi, "").replace(/(\d+)\s*[a-z]?\s*\/\s*\S+/gi, "$1");
+  const [street, ...rest] = noBus.split(",");
+  const city = rest.join(",").trim();
+  const noNumber = `${street.replace(/\s*\d+\S*\s*$/, "")}, ${city}`;
+  for (const c of [...new Set([q, noBus, noNumber, city].filter(Boolean))]) {
+    const hit = await geocodeOnce(c);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 /** Round-trip driving km from the base address to the customer, stored on the work order. */
