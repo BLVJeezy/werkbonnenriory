@@ -77,8 +77,10 @@ function Offertes() {
   async function toggleKm(on: boolean) {
     setKmOn(on);
     if (!on) { setKm(null); return; }
-    const c = editCustomer ?? customers.find((x) => x.id === customerId) ?? null;
-    const address = c ? formatAddress(c) : "";
+    const c = (editCustomer ?? customers.find((x) => x.id === customerId) ?? null) as Record<string, string | null> | null;
+    const address = c
+      ? formatAddress({ street: c.street, house_number: c.house_number ?? c.houseNumber, postal_code: c.postal_code ?? c.postalCode, city: c.city })
+      : null;
     if (!address) { toast.error("De klant heeft geen adres"); setKmOn(false); return; }
     setKmBusy(true);
     try {
