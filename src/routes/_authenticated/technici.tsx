@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { createTechnicianLogin, deleteTechnician } from "@/lib/technicians.functions";
 
 export const Route = createFileRoute("/_authenticated/technici")({
-  head: () => ({ meta: [{ title: "Ploegen — Riory Werkbonnen" }] }),
+  head: () => ({ meta: [{ title: "Ploegen — Riory Werkbonnen" }, { name: "description", content: "Beheer Riory-ploegen, hun toegang en persoonlijke weergave." }, { property: "og:title", content: "Ploegen — Riory Werkbonnen" }, { property: "og:description", content: "Beheer Riory-ploegen, hun toegang en persoonlijke weergave." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Technici,
 });
 

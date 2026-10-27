@@ -28,7 +28,7 @@ import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
-  head: () => ({ meta: [{ title: "Werkbonnen — Riory" }] }),
+  head: () => ({ meta: [{ title: "Werkbonnen — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Werkbonnen — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>): { dag?: string } =>
     typeof s["dag"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["dag"]) ? { dag: s["dag"] } : {},
   component: Lijst,

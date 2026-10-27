@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { euro } from "@/lib/billing";
 
 export const Route = createFileRoute("/_authenticated/tarieven")({
-  head: () => ({ meta: [{ title: "Tarieven — Riory Werkbonnen" }] }),
+  head: () => ({ meta: [{ title: "Tarieven — Riory Werkbonnen" }, { name: "description", content: "Beheer Riory-activiteiten, uurtarieven en kilometerinstellingen." }, { property: "og:title", content: "Tarieven — Riory Werkbonnen" }, { property: "og:description", content: "Beheer Riory-activiteiten, uurtarieven en kilometerinstellingen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Tarieven,
 });
 

@@ -21,7 +21,7 @@ import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
-  head: () => ({ meta: [{ title: "Werkbon — Riory" }] }),
+  head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Detail,
 });
 

@@ -11,7 +11,7 @@ import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
-  head: () => ({ meta: [{ title: "Kalender — Riory" }] }),
+  head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Kalender,
 });
 
