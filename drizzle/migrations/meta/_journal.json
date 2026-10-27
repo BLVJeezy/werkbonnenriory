@@ -169,6 +169,13 @@
       "when": 1793117871952,
       "tag": "0023_quote_intro",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793118404496,
+      "tag": "0024_purchase_invoices",
+      "breakpoints": true
     }
   ]
 }
