@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Prijsloze werkbon als pdf-bijlage sturen in plaats van in de mailtekst; pdf en verzendbericht testen
+
 - [x] Btw-nummer toegevoegd aan mailuitlezing en taak; aanmaken/bewerken/herladen in app gecontroleerd
 - [x] Na aftekenen of afrekenen terug naar beginscherm voor ploegen; beide paden en mailfout getest
 - [ ] Echte mailimport met btw-nummer controleren — vereist een geschikte nieuwe mail
