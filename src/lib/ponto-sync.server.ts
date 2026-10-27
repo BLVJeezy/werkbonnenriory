@@ -58,7 +58,7 @@ export async function syncPontoPayments(supabase: any) {
   const { data: invoices } = await supabase.from("invoices").select("id, number, total, paid_amount").neq("kind", "creditnota");
   const open = (invoices ?? [])
     .map((i: any) => ({ id: i.id as string, number: i.number as string, total: Number(i.total), paidAmount: Number(i.paid_amount) }))
-    .filter((i) => i.total > 0 && i.paidAmount + 0.005 < i.total);
+    .filter((i: { total: number; paidAmount: number }) => i.total > 0 && i.paidAmount + 0.005 < i.total);
   if (!open.length) return { checked: 0, matched: [] as string[] };
 
   const matched: string[] = [];
