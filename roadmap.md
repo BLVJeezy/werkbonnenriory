@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Btw-nummer uit mail uitlezen en op taak invullen/bewerken
+- [ ] Na aftekenen of afrekenen terug naar beginscherm voor ploegen; testen
+
 - [x] Werkbonmail zonder prijzen of betaalbedragen
 - [x] Apart aanvinkbaar werfadres bij aanmaken/bewerken en mailimport; gebruiken voor route en kilometers
 - [x] Tests en controle in de app (aanmaken, bewerken, herladen en route gecontroleerd)

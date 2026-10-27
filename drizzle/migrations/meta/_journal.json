@@ -92,6 +92,13 @@
       "when": 1793087837587,
       "tag": "0012_optional_worksite_address",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793088203196,
+      "tag": "0013_work_order_customer_vat_number",
+      "breakpoints": true
     }
   ]
 }
