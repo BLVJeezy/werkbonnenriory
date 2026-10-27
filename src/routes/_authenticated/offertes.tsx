@@ -69,24 +69,62 @@ function Offertes() {
     if (p) setLine(i, { description: p.name, unit: p.unit, unitPrice: String(p.price) });
   }
 
+  function openEdit(q: (typeof quotes)[number]) {
+    setEditId(q.id);
+    setEditCustomer(q.customer as InvoiceCustomer);
+    setVatRate(String(q.vat_rate));
+    setIntro(q.intro ?? "");
+    const ls = (q.lines as InvoiceLine[]).map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
+    setLines(ls.length ? ls : [{ ...emptyLine }]);
+    setShowForm(true);
+  }
+  function closeForm() {
+    setShowForm(false);
+    setEditId(null);
+    setEditCustomer(null);
+    setCustomerId("");
+    setIntro("");
+    setLines([{ ...emptyLine }]);
+    if (bewerk) navigate({ to: "/offertes", search: {}, replace: true });
+  }
+
+  // Open the quote for editing when arriving from a task (?bewerk=<id>)
+  useEffect(() => {
+    if (!bewerk || editId === bewerk) return;
+    const q = quotes.find((x) => x.id === bewerk);
+    if (q) openEdit(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bewerk, quotes]);
+
+  async function preview(id: string) {
+    const r = await getPdf({ data: { quoteId: id } });
+    const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
+    window.open(URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })), "_blank");
+  }
+
   async function maak(e: React.FormEvent) {
     e.preventDefault();
-    const c = customers.find((x) => x.id === customerId);
-    if (!c) { toast.error("Kies een klant"); return; }
-    if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
-    setBusy(true);
-    try {
-      const customer: InvoiceCustomer = {
+    let customer: InvoiceCustomer | null = editCustomer;
+    if (!editId) {
+      const c = customers.find((x) => x.id === customerId);
+      if (!c) { toast.error("Kies een klant"); return; }
+      customer = {
         name: c.name, address: formatAddress(c) || null, siteAddress: null, vatNumber: c.vat_number, email: c.billing_email || c.email,
         street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city,
       };
-      await create({ data: { customer, lines: parsedLines, vatRate: Number(vatRate) } });
-      toast.success("Offerte aangemaakt");
-      setShowForm(false);
-      setCustomerId("");
-      setLines([{ ...emptyLine }]);
+    }
+    if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
+    setBusy(true);
+    try {
+      const saved = editId
+        ? await update({ data: { quoteId: editId, customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } })
+        : await create({ data: { customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } });
+      toast.success(editId ? "Offerte bijgewerkt" : "Offerte aangemaakt");
+      const id = saved.id as string;
+      closeForm();
       refresh();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Aanmaken mislukt"); }
+      await preview(id);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
     setBusy(false);
   }
 
