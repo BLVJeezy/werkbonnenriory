@@ -280,7 +280,7 @@ function Detail() {
           type="checkbox"
           className="h-6 w-6 accent-[var(--primary)]"
           checked={wo.warranty}
-          disabled={locked || !!wo.paid_at}
+          disabled={!isAdmin && (locked || !!wo.paid_at)}
           onChange={(e) => update({ warranty: e.target.checked })}
         />
         Onder garantie
@@ -297,7 +297,7 @@ function Detail() {
             </Button>
           )}
         </div>
-        {times.length > 0 && (
+        {times.length > 0 && !isAdmin && (
           <ul className="mt-3 space-y-1 font-mono text-sm text-muted-foreground">
             {times.map((t) => (
               <li key={t.id}>
@@ -307,6 +307,62 @@ function Detail() {
               </li>
             ))}
           </ul>
+        )}
+        {isAdmin && (
+          <div className="mt-3 space-y-2">
+            {times.map((t) => (
+              <div key={t.id + t.started_at + (t.ended_at ?? "")} className="flex flex-wrap items-center gap-2 font-mono text-sm">
+                <Input
+                  type="datetime-local"
+                  className="w-56"
+                  defaultValue={toLocalInput(t.started_at)}
+                  onBlur={async (e) => {
+                    if (!e.target.value || e.target.value === toLocalInput(t.started_at)) return;
+                    const { error } = await supabase.from("time_entries").update({ started_at: new Date(e.target.value).toISOString() }).eq("id", t.id);
+                    if (error) toast.error(error.message);
+                    refresh();
+                  }}
+                />
+                →
+                <Input
+                  type="datetime-local"
+                  className="w-56"
+                  defaultValue={t.ended_at ? toLocalInput(t.ended_at) : ""}
+                  onBlur={async (e) => {
+                    if (!e.target.value || (t.ended_at && e.target.value === toLocalInput(t.ended_at))) return;
+                    const { error } = await supabase.from("time_entries").update({ ended_at: new Date(e.target.value).toISOString() }).eq("id", t.id);
+                    if (error) toast.error(error.message);
+                    refresh();
+                  }}
+                />
+                <span className="text-muted-foreground">({formatDuration(totalSeconds([t], now))})</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={async () => {
+                    if (!confirm("Deze tijdregistratie verwijderen?")) return;
+                    await supabase.from("time_entries").delete().eq("id", t.id);
+                    refresh();
+                  }}
+                >
+                  ✕
+                </Button>
+              </div>
+            ))}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                const end = new Date();
+                const start = new Date(end.getTime() - 3600_000);
+                const { error } = await supabase.from("time_entries").insert({ work_order_id: id, started_at: start.toISOString(), ended_at: end.toISOString() });
+                if (error) toast.error(error.message);
+                refresh();
+              }}
+            >
+              + Tijd toevoegen
+            </Button>
+          </div>
         )}
       </section>
 
@@ -402,10 +458,45 @@ function Detail() {
           <dd className="text-right text-lg font-black">{euro(totals.total)}</dd>
         </dl>}
         {perms.showPrices && <p className="mt-2 text-xs text-muted-foreground">Eerste uur volledig, daarna per begonnen kwartier.</p>}
+        {isAdmin && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <Field
+              label="Kilometers (heen en terug)"
+              value={wo.distance_km == null ? "" : String(wo.distance_km)}
+              onSave={(v) => update({ distance_km: v.trim() === "" ? null : Number(v.replace(",", ".")) })}
+            />
+            {wo.paid_at && (
+              <>
+                <Field
+                  label="Betaald bedrag (€)"
+                  value={String(wo.paid_amount ?? "")}
+                  onSave={(v) => update({ paid_amount: Number(v.replace(",", ".")) || 0 })}
+                />
+                <div className="space-y-1">
+                  <Label>Betaalwijze</Label>
+                  <select
+                    className="h-9 w-full rounded-md border bg-background px-2"
+                    value={wo.paid_method ?? ""}
+                    onChange={(e) => update({ paid_method: e.target.value })}
+                  >
+                    {["cash", "Bancontact", "overschrijving"].map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+        )}
         <div className="mt-4 space-y-2">
           {!perms.canPayment ? null : wo.paid_at ? (
             <p className="rounded bg-accent p-3 font-bold text-accent-foreground">
               Betaald: {euro(Number(wo.paid_amount))} via {wo.paid_method} op {new Date(wo.paid_at).toLocaleString("nl-BE")}
+              {isAdmin && Math.abs(Number(wo.paid_amount) - totals.total) > 0.005 && (
+                <Button size="sm" variant="outline" className="ml-3" onClick={() => update({ paid_amount: totals.total })}>
+                  Bedrag gelijkzetten aan totaal ({euro(totals.total)})
+                </Button>
+              )}
             </p>
           ) : !locked ? (
             <>
