@@ -27,14 +27,14 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
   const o = (raw ?? {}) as Record<string, unknown>;
   const lines: PurchaseLine[] = (Array.isArray(o["lines"]) ? o["lines"] : []).slice(0, 200).map((l) => {
     const lo = (l ?? {}) as Record<string, unknown>;
-    const quantity = num(lo.quantity) || 1;
-    const unitPrice = num(lo.unitPrice);
+    const quantity = num(lo["quantity"]) || 1;
+    const unitPrice = num(lo["unitPrice"]);
     return {
-      description: str(lo.description) ?? "Lijn",
+      description: str(lo["description"]) ?? "Lijn",
       quantity,
-      unit: str(lo.unit) ?? "st",
+      unit: str(lo["unit"]) ?? "st",
       unitPrice,
-      amount: r2(num(lo.amount) || quantity * unitPrice),
+      amount: r2(num(lo["amount"]) || quantity * unitPrice),
     };
   });
   const linesNet = r2(lines.reduce((s, l) => s + l.amount, 0));
