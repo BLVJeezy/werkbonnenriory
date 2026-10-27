@@ -62,6 +62,48 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          city: string | null
+          created_at: string
+          email: string | null
+          house_number: string | null
+          id: string
+          match_key: string | null
+          name: string
+          phone: string | null
+          postal_code: string | null
+          street: string | null
+          vat_number: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          house_number?: string | null
+          id?: string
+          match_key?: string | null
+          name: string
+          phone?: string | null
+          postal_code?: string | null
+          street?: string | null
+          vat_number?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          house_number?: string | null
+          id?: string
+          match_key?: string | null
+          name?: string
+          phone?: string | null
+          postal_code?: string | null
+          street?: string | null
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
       materials: {
         Row: {
           created_at: string

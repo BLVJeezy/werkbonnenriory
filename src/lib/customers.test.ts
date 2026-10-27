@@ -1,0 +1,15 @@
+import { describe, expect, it } from "vitest";
+import { customerKey, rowsToCustomers } from "./customers";
+
+describe("rowsToCustomers", () => {
+  it("leest Nederlandse kolomkoppen", () => {
+    const [c] = rowsToCustomers([{ Naam: "Jan Peeters", Straat: "Kerkstraat", "Nr.": 5, Postcode: 3740, Plaats: "Bilzen", GSM: "0470", "E-mail": "j@x.be", "BTW-nummer": "BE0123" }]);
+    expect(c).toEqual({ name: "Jan Peeters", street: "Kerkstraat", house_number: "5", postal_code: "3740", city: "Bilzen", phone: "0470", email: "j@x.be", vat_number: "BE0123" });
+  });
+  it("slaat rijen zonder naam over", () => {
+    expect(rowsToCustomers([{ Straat: "x" }])).toEqual([]);
+  });
+  it("sleutel op naam en postcode", () => {
+    expect(customerKey({ name: " Jan ", postal_code: "3740" })).toBe("jan|3740");
+  });
+});
