@@ -102,7 +102,11 @@ function Offertes() {
     setEditCustomer(q.customer as InvoiceCustomer);
     setVatRate(String(q.vat_rate));
     setIntro(q.intro ?? "");
-    const ls = (q.lines as InvoiceLine[]).map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
+    const all = q.lines as InvoiceLine[];
+    const kmLine = all.find((l) => l.unit === "km");
+    setKmOn(!!kmLine);
+    setKm(kmLine ? kmLine.quantity : null);
+    const ls = all.filter((l) => l.unit !== "km").map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
   }
@@ -113,6 +117,8 @@ function Offertes() {
     setCustomerId("");
     setIntro("");
     setLines([{ ...emptyLine }]);
+    setKmOn(false);
+    setKm(null);
     if (bewerk) navigate({ to: "/offertes", search: {}, replace: true });
   }
 
