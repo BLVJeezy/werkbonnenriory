@@ -137,10 +137,13 @@ function Offertes() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bewerk, quotes]);
 
-  async function preview(id: string) {
+  async function preview(id: string, win?: Window | null) {
+    const w = win ?? window.open("", "_blank");
     const r = await getPdf({ data: { quoteId: id } });
     const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
-    window.open(URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })), "_blank");
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    if (w) w.location.href = url;
+    else toast.error("Pop-up geblokkeerd — sta pop-ups toe voor deze site");
   }
 
   async function maak(e: React.FormEvent) {
