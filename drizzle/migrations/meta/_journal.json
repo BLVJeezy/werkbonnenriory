@@ -176,6 +176,13 @@
       "when": 1793118404496,
       "tag": "0024_purchase_invoices",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793118415350,
+      "tag": "0025_aankoopfacturen_storage_rls",
+      "breakpoints": true
     }
   ]
 }
