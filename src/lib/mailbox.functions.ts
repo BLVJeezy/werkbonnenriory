@@ -31,13 +31,15 @@ type Extracted = {
   phone: string | null;
   email: string | null;
   vat_number: string | null;
+  customer_type: "private" | "business" | "unknown";
+  home_older_than_ten_years: boolean | null;
   description: string | null;
 };
 
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "phone", "email", "vat_number", "description"],
+  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "phone", "email", "vat_number", "customer_type", "home_older_than_ten_years", "description"],
   properties: {
     customer_name: { type: "string" },
     street: { type: ["string", "null"] },
@@ -51,6 +53,8 @@ const schema = {
     phone: { type: ["string", "null"] },
     email: { type: ["string", "null"] },
     vat_number: { type: ["string", "null"] },
+    customer_type: { type: "string", enum: ["private", "business", "unknown"] },
+    home_older_than_ten_years: { type: ["boolean", "null"] },
     description: { type: ["string", "null"] },
   },
 };
@@ -71,7 +75,7 @@ async function extractWithAI(apiKey: string, msg: GraphMessage): Promise<Extract
       reasoning: { effort: "low" },
       instructions:
         "Je leest een afspraakaanvraag-mail van een klant. Haal de klantgegevens eruit: naam (persoon of bedrijf), klantadres opgesplitst in straat, huisnummer (incl. bus), postcode en plaats, en een eventueel apart werfadres in site_street, site_house_number, site_postal_code en site_city, telefoonnummer, e-mailadres en een korte omschrijving van het gevraagde werk in het Nederlands. Houd klantadres en werfadres strikt gescheiden als beide genoemd zijn. Als enkel een werfadres vermeld staat, zet het uitsluitend in de site-velden; als enkel een algemeen adres vermeld staat, gebruik de klantadresvelden. Vul de site-velden alleen bij een expliciet werfadres, interventieadres of werkplek. Gebruik null als iets ontbreekt. Gebruik het afzenderadres als e-mail als er geen ander staat.",
-      input: text + "\n\nExtra extractieregel: lees het btw-nummer van de klant uit in vat_number (bijvoorbeeld BE 0123.456.789), indien expliciet aanwezig in de mail. Behoud de landcode en nummernotatie. Gebruik null als het ontbreekt. Gebruik nooit het btw-nummer van Riory uit een geciteerde afzenderhandtekening als klantnummer en verwar dit niet met het btw-percentage.",
+      input: text + "\n\nExtra extractieregel: lees het btw-nummer van de klant uit in vat_number (bijvoorbeeld BE 0123.456.789), indien expliciet aanwezig in de mail. Behoud de landcode en nummernotatie. Gebruik null als het ontbreekt. Gebruik nooit het btw-nummer van Riory uit een geciteerde afzenderhandtekening als klantnummer en verwar dit niet met het btw-percentage. Bepaal customer_type: private bij een duidelijk particuliere aanvraag voor de eigen woning, business bij een bedrijf of zakelijke aanvraag, anders unknown. Een ontbrekend btw-nummer op zichzelf bewijst niet dat iemand particulier is. Lees home_older_than_ten_years: true alleen als expliciet staat dat de woning ouder dan 10 jaar is (ook meer dan tien jaar of een expliciete leeftijd boven 10); false bij een expliciete leeftijd van 10 jaar of jonger; null als dit ontbreekt of onduidelijk is. Leid de leeftijd niet af uit het adres. Behoud de vermelde woningouderdom en het particuliere karakter ook in de omschrijving zodat de beheerder de btw-keuze kan controleren.",
       text: { format: { type: "json_schema", name: "klant", strict: true, schema } },
     }),
   });
@@ -162,7 +166,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           phone: x.phone,
           email: x.email ?? m.from?.emailAddress?.address ?? null,
           vat_number: customerVatNumber(x.vat_number),
-          vat_rate: vatRateForCustomer(x.vat_number, 21),
+          vat_rate: vatRateForCustomer(x.vat_number, 21, { customerType: x.customer_type, olderThanTenYears: x.home_older_than_ten_years }),
           description: x.description,
           source_message_id: m.id,
           source_subject: m.subject ?? null,
