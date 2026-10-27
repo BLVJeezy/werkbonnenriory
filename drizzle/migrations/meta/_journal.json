@@ -162,6 +162,13 @@
       "when": 1793117433351,
       "tag": "0022_ponto_reconciliation",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793117871952,
+      "tag": "0023_quote_intro",
+      "breakpoints": true
     }
   ]
 }

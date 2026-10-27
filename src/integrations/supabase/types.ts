@@ -279,6 +279,7 @@ export type Database = {
           created_at: string
           customer: Json
           id: string
+          intro: string | null
           lines: Json
           net: number
           number: string
@@ -297,6 +298,7 @@ export type Database = {
           created_at?: string
           customer: Json
           id?: string
+          intro?: string | null
           lines: Json
           net: number
           number: string
@@ -315,6 +317,7 @@ export type Database = {
           created_at?: string
           customer?: Json
           id?: string
+          intro?: string | null
           lines?: Json
           net?: number
           number?: string
