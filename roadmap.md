@@ -43,3 +43,7 @@
 - [ ] (uitgesteld door gebruiker, 27 okt 2026) Mailtaken-app (Mail Assist AI) samenvoegen in Riory Werkbonnen — beide apps blijven voorlopig apart
 
 - [x] Taak omzetten naar offerte: knop op taakpagina (admin), offerte opent meteen ter aanvulling op Offertes; offertes bewerkbaar tot ondertekening; bij opslaan opent afdrukvoorbeeld in nieuw tabblad; PDF vernieuwd (klantpaneel, Betreft-blok, Riory-huisstijl). In de app getest met proefofferte OFF-2 (daarna opgeruimd); typecheck, 74 tests en build OK.
+
+- [x] Aankoopfacturen: nieuwe pagina "Aankoop"; inlezen vanuit map "Aankoopfacturen" in info@riory.be (uurlijkse cron + knop "Nu inlezen"), PDF-tekst + AI leest leverancier, IBAN, nummer, datums, lijnen en bedragen uit; admin controleert met waarschuwingen bij afwijkingen, keurt goed en maakt één SEPA-betaalbestand (pain.001) dat elke factuur op zijn vervaldag betaalt; daarna status Betaald. 12 tests geslaagd, pagina in app geopend.
+- [ ] Open: echte inlezing testen met een echte factuur-PDF in de map (vereist gekoppelde info@-mailbox); scans zonder tekstlaag worden nu geweigerd ("geen leesbare tekst").
+- [ ] Uitgesteld: Peppol-ontvangst van aankoopfacturen — loopt nu via Simpla (offline); opnieuw bekijken zodra Simpla/OkiOki API-toegang geregeld is.
