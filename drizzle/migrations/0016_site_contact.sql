@@ -1,0 +1,1 @@
+ALTER TABLE public.work_orders ADD COLUMN site_contact_name text, ADD COLUMN site_contact_phone text;
