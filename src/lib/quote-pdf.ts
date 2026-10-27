@@ -6,7 +6,7 @@ export type QuotePdfData = {
   number: string; issueDate: string; validUntil: string;
   customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; net: number; vat: number; total: number;
   company: { name: string; vat: string; iban: string | null; bic: string | null }; terms: string | null;
-  signedName?: string | null; signedAt?: string | null;
+  signedName?: string | null; signedAt?: string | null; intro?: string | null;
 };
 
 const W = 595.28, H = 841.89, M = 48;
@@ -49,14 +49,27 @@ export async function createQuotePdf(d: QuotePdfData): Promise<Uint8Array> {
   right(`Datum ${date(d.issueDate)}`, W - M, H - 84, 9.5, font, muted);
   right(`Geldig tot ${date(d.validUntil)}`, W - M, H - 97, 9.5, font, muted);
 
-  page.drawText("OFFERTE VOOR", { x: M, y, size: 8.5, font: bold, color: muted });
-  y -= 15;
+  // Customer block on a soft orange panel
   const c = d.customer;
   const cust = [c.name, c.street ? `${c.street} ${c.houseNumber ?? ""}`.trim() : c.address ?? "", [c.postalCode, c.city].filter(Boolean).join(" "), c.vatNumber ? `Btw ${c.vatNumber}` : ""].filter(Boolean);
-  cust.forEach((l, i) => page.drawText(pr(l), { x: M, y: y - i * 14, size: i === 0 ? 11.5 : 10.5, font: i === 0 ? bold : font, color: ink }));
-  y -= cust.length * 14 + 6;
-  if (c.siteAddress) { page.drawText(pr(`Werfadres: ${c.siteAddress}`), { x: M, y, size: 9.5, font, color: muted }); y -= 14; }
-  y -= 22;
+  const panelH = cust.length * 14 + (c.siteAddress ? 14 : 0) + 26;
+  page.drawRectangle({ x: M, y: y - panelH + 10, width: W - 2 * M, height: panelH, color: soft });
+  page.drawRectangle({ x: M, y: y - panelH + 10, width: 4, height: panelH, color: orange });
+  page.drawText("OFFERTE VOOR", { x: M + 14, y: y - 4, size: 8.5, font: bold, color: muted });
+  cust.forEach((l, i) => page.drawText(pr(l), { x: M + 14, y: y - 18 - i * 14, size: i === 0 ? 11.5 : 10.5, font: i === 0 ? bold : font, color: ink }));
+  if (c.siteAddress) page.drawText(pr(`Werfadres: ${c.siteAddress}`), { x: M + 14, y: y - 18 - cust.length * 14, size: 9.5, font, color: muted });
+  y -= panelH + 14;
+
+  if (d.intro?.trim()) {
+    const ls = wrap(d.intro, 10.5, W - 2 * M - 24);
+    ensure(ls.length * 14 + 26);
+    page.drawText("BETREFT", { x: M, y, size: 8.5, font: bold, color: orange });
+    y -= 15;
+    ls.forEach((t) => { page.drawText(t, { x: M, y, size: 10.5, font, color: ink }); y -= 14; });
+    y -= 12;
+  } else {
+    y -= 8;
+  }
 
   const cols = { desc: M + 8, qty: W - M - 250, price: W - M - 100, amt: W - M - 8 };
   page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: ink });

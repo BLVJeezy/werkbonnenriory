@@ -1,20 +1,22 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
-import { convertQuoteToTask, createQuote, quotePdf, sendQuote } from "@/lib/quotes.functions";
+import { convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
 
 export const Route = createFileRoute("/_authenticated/offertes")({
+  validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
   head: () => ({ meta: [{ title: "Offertes — Riory Werkbonnen" }, { name: "description", content: "Riory-offertes maken, versturen ter ondertekening en omzetten in taken." }, { property: "og:title", content: "Offertes — Riory Werkbonnen" }, { property: "og:description", content: "Riory-offertes maken, versturen ter ondertekening en omzetten in taken." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Offertes,
 });
@@ -25,14 +27,19 @@ const emptyLine: Line = { description: "", quantity: "1", unit: "st", unitPrice:
 function Offertes() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { bewerk } = Route.useSearch();
   const create = useServerFn(createQuote);
+  const update = useServerFn(updateQuote);
   const send = useServerFn(sendQuote);
   const getPdf = useServerFn(quotePdf);
   const convert = useServerFn(convertQuoteToTask);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editCustomer, setEditCustomer] = useState<InvoiceCustomer | null>(null);
   const [customerId, setCustomerId] = useState("");
   const [vatRate, setVatRate] = useState("21");
+  const [intro, setIntro] = useState("");
   const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
 
   const { data: quotes = [] } = useQuery({
@@ -62,24 +69,62 @@ function Offertes() {
     if (p) setLine(i, { description: p.name, unit: p.unit, unitPrice: String(p.price) });
   }
 
+  function openEdit(q: (typeof quotes)[number]) {
+    setEditId(q.id);
+    setEditCustomer(q.customer as InvoiceCustomer);
+    setVatRate(String(q.vat_rate));
+    setIntro(q.intro ?? "");
+    const ls = (q.lines as InvoiceLine[]).map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
+    setLines(ls.length ? ls : [{ ...emptyLine }]);
+    setShowForm(true);
+  }
+  function closeForm() {
+    setShowForm(false);
+    setEditId(null);
+    setEditCustomer(null);
+    setCustomerId("");
+    setIntro("");
+    setLines([{ ...emptyLine }]);
+    if (bewerk) navigate({ to: "/offertes", search: {}, replace: true });
+  }
+
+  // Open the quote for editing when arriving from a task (?bewerk=<id>)
+  useEffect(() => {
+    if (!bewerk || editId === bewerk) return;
+    const q = quotes.find((x) => x.id === bewerk);
+    if (q) openEdit(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bewerk, quotes]);
+
+  async function preview(id: string) {
+    const r = await getPdf({ data: { quoteId: id } });
+    const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
+    window.open(URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })), "_blank");
+  }
+
   async function maak(e: React.FormEvent) {
     e.preventDefault();
-    const c = customers.find((x) => x.id === customerId);
-    if (!c) { toast.error("Kies een klant"); return; }
-    if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
-    setBusy(true);
-    try {
-      const customer: InvoiceCustomer = {
+    let customer: InvoiceCustomer | null = editCustomer;
+    if (!editId) {
+      const c = customers.find((x) => x.id === customerId);
+      if (!c) { toast.error("Kies een klant"); return; }
+      customer = {
         name: c.name, address: formatAddress(c) || null, siteAddress: null, vatNumber: c.vat_number, email: c.billing_email || c.email,
         street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city,
       };
-      await create({ data: { customer, lines: parsedLines, vatRate: Number(vatRate) } });
-      toast.success("Offerte aangemaakt");
-      setShowForm(false);
-      setCustomerId("");
-      setLines([{ ...emptyLine }]);
+    }
+    if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
+    setBusy(true);
+    try {
+      const saved = editId
+        ? await update({ data: { quoteId: editId, customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } })
+        : await create({ data: { customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } });
+      toast.success(editId ? "Offerte bijgewerkt" : "Offerte aangemaakt");
+      const id = saved.id as string;
+      closeForm();
       refresh();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Aanmaken mislukt"); }
+      await preview(id);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
     setBusy(false);
   }
 
@@ -116,7 +161,7 @@ function Offertes() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-black uppercase">Offertes</h1>
-        <Button className="ml-auto" variant="outline" onClick={() => setShowForm((v) => !v)}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
+        <Button className="ml-auto" variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
       </div>
 
       {showForm && (
@@ -124,14 +169,18 @@ function Offertes() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>Klant</Label>
-              <select required className="h-10 w-full rounded-md border bg-background px-2" value={customerId} onChange={(e) => {
-                setCustomerId(e.target.value);
-                const c = customers.find((x) => x.id === e.target.value);
-                if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate))));
-              }}>
-                <option value="">— Kies klant —</option>
-                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.city ? ` (${c.city})` : ""}</option>)}
-              </select>
+              {editId ? (
+                <p className="flex h-10 items-center rounded-md border bg-muted px-2 font-bold">{editCustomer?.name}</p>
+              ) : (
+                <select required className="h-10 w-full rounded-md border bg-background px-2" value={customerId} onChange={(e) => {
+                  setCustomerId(e.target.value);
+                  const c = customers.find((x) => x.id === e.target.value);
+                  if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate))));
+                }}>
+                  <option value="">— Kies klant —</option>
+                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.city ? ` (${c.city})` : ""}</option>)}
+                </select>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Btw</Label>
@@ -158,8 +207,12 @@ function Offertes() {
             <datalist id="offerte-producten">{products.map((p) => <option key={p.id} value={p.name} />)}</datalist>
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
           </div>
+          <div className="space-y-1">
+            <Label>Betreft (tekst bovenaan de offerte)</Label>
+            <Textarea rows={2} placeholder="bv. Betreft: renovatie badkamer — zoals besproken op de werf" value={intro} onChange={(e) => setIntro(e.target.value)} />
+          </div>
           <p className="font-mono text-sm">Totaal: {euro(totals.net)} excl. btw · {euro(totals.total)} incl. btw</p>
-          <Button disabled={busy}>{busy ? "Opslaan…" : "Offerte aanmaken"}</Button>
+          <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
         </form>
       )}
 
@@ -176,7 +229,9 @@ function Offertes() {
                 {QUOTE_STATUS[q.status] ?? q.status}
               </span>
               {q.signed_name && <span className="text-xs text-muted-foreground">door {q.signed_name}</span>}
+              <Button variant="outline" size="sm" onClick={() => preview(q.id)}>Voorbeeld</Button>
               <Button variant="outline" size="sm" onClick={() => download(q.id)}>PDF</Button>
+              {q.status !== "akkoord" && <Button variant="outline" size="sm" disabled={busy} onClick={() => openEdit(q)}>Bewerken</Button>}
               {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}
               {q.status === "akkoord" && !q.work_order_id && <Button size="sm" disabled={busy} onClick={() => naarTaak(q.id)}>Omzetten in taak</Button>}
               {q.work_order_id && <span className="text-xs text-muted-foreground">Taak aangemaakt</span>}

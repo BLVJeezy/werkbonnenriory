@@ -18,6 +18,7 @@ import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
+import { quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { vatRateForCustomer } from "@/lib/vat-number";
@@ -74,6 +75,7 @@ function Detail() {
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
+  const makeQuote = useServerFn(quoteFromTask);
   const [kmTried, setKmTried] = useState<string | null>(null);
   const woAddr = data?.wo ? destinationAddress(data.wo) : null;
   const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
@@ -164,6 +166,20 @@ function Detail() {
           {isAdmin && locked && (
             <Button variant="outline" onClick={() => confirm("Handtekening wissen en opnieuw openen als taak?") && update({ status: wo.technician_id ? "toegewezen" : "nieuw", signature: null, signed_name: null, signed_at: null })}>
               Heropenen
+            </Button>
+          )}
+          {isAdmin && !locked && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const q = await makeQuote({ data: { workOrderId: id } });
+                  toast.success(`Offerte ${q.number} aangemaakt — vul ze verder aan`);
+                  navigate({ to: "/offertes", search: { bewerk: q.id } });
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Offerte maken mislukt"); }
+              }}
+            >
+              Omzetten naar offerte
             </Button>
           )}
           {isAdmin && (
