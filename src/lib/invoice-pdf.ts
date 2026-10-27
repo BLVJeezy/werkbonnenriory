@@ -6,6 +6,10 @@ export type InvoicePdfData = {
   number: string; issueDate: string; dueDate: string; workOrderNumber: number;
   customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; net: number; vat: number; total: number; paidAmount: number;
   company: { name: string; vat: string; iban: string | null; bic: string | null }; terms: string | null;
+  /** Document title, defaults to FACTUUR; credit notes pass CREDITNOTA. */
+  title?: string;
+  /** Reference line under the customer block, defaults to the work order number. */
+  reference?: string;
 };
 
 const W = 595.28, H = 841.89, M = 48;
@@ -43,7 +47,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   const right = (t: string, x: number, yy: number, size: number, f = font, color = ink) => page.drawText(pr(t), { x: x - f.widthOfTextAtSize(pr(t), size), y: yy, size, font: f, color });
   chrome(true);
 
-  right("FACTUUR", W - M, H - 50, 22, bold);
+  right(d.title ?? "FACTUUR", W - M, H - 50, 22, bold);
   right(d.number, W - M, H - 68, 14, bold, orange);
   right(`Factuurdatum ${date(d.issueDate)}`, W - M, H - 84, 9.5, font, muted);
   right(`Vervaldatum ${date(d.dueDate)}`, W - M, H - 97, 9.5, font, muted);
@@ -56,7 +60,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   cust.forEach((l, i) => page.drawText(pr(l), { x: M, y: y - i * 14, size: i === 0 ? 11.5 : 10.5, font: i === 0 ? bold : font, color: ink }));
   y -= cust.length * 14 + 6;
   if (c.siteAddress) { page.drawText(pr(`Werfadres: ${c.siteAddress}`), { x: M, y, size: 9.5, font, color: muted }); y -= 14; }
-  page.drawText(pr(`Betreft werkbon #${d.workOrderNumber}`), { x: M, y, size: 9.5, font, color: muted });
+  page.drawText(pr(d.reference ?? `Betreft werkbon #${d.workOrderNumber}`), { x: M, y, size: 9.5, font, color: muted });
   y -= 28;
 
   // Lines table
@@ -104,7 +108,9 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   y -= 8;
   const open = Math.max(0, Math.round((d.total - d.paidAmount) * 100) / 100);
   page.drawRectangle({ x: M, y: y - 44, width: W - 2 * M, height: 56, color: soft, borderColor: orange, borderWidth: 1.5 });
-  if (open <= 0.005) {
+  if (d.total < 0) {
+    page.drawText(pr(`Terugbetaling aan de klant: ${money(-d.total)}.`), { x: M + 12, y: y - 8, size: 10.5, font: bold, color: ink });
+  } else if (open <= 0.005) {
     page.drawText(pr(`Reeds betaald: ${money(d.paidAmount)}. Niets meer te betalen.`), { x: M + 12, y: y - 8, size: 10.5, font: bold, color: ink });
   } else {
     page.drawText(pr(`Te betalen: ${money(open)} vóór ${date(d.dueDate)}`), { x: M + 12, y: y - 6, size: 11, font: bold, color: ink });
