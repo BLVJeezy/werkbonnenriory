@@ -112,7 +112,8 @@ function Lijst() {
     setForm(emptyForm);
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
-    navigate({ to: "/werkbonnen/$id", params: { id: created.id } });
+    toast.success("Taak aangemaakt");
+    if (dag) navigate({ to: "/kalender" });
   }
 
   async function doImport() {
@@ -142,11 +143,11 @@ function Lijst() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline">+ Werkbon toevoegen</Button>
+            <Button variant="outline">+ Taak toevoegen</Button>
           </DialogTrigger>
           <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Handmatig werkbon toevoegen</DialogTitle>
+              <DialogTitle>Nieuwe taak inplannen</DialogTitle>
             </DialogHeader>
             <form onSubmit={addToe} className="grid gap-3">
               <div className="grid gap-1">
@@ -219,7 +220,7 @@ function Lijst() {
                 </div>
               </div>
               <Button type="submit" disabled={saving}>
-                {saving ? "Opslaan…" : "Werkbon aanmaken"}
+                {saving ? "Opslaan…" : "Taak aanmaken"}
               </Button>
             </form>
           </DialogContent>
