@@ -207,8 +207,12 @@ function Offertes() {
             <datalist id="offerte-producten">{products.map((p) => <option key={p.id} value={p.name} />)}</datalist>
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
           </div>
+          <div className="space-y-1">
+            <Label>Betreft (tekst bovenaan de offerte)</Label>
+            <Textarea rows={2} placeholder="bv. Betreft: renovatie badkamer — zoals besproken op de werf" value={intro} onChange={(e) => setIntro(e.target.value)} />
+          </div>
           <p className="font-mono text-sm">Totaal: {euro(totals.net)} excl. btw · {euro(totals.total)} incl. btw</p>
-          <Button disabled={busy}>{busy ? "Opslaan…" : "Offerte aanmaken"}</Button>
+          <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
         </form>
       )}
 
@@ -225,7 +229,9 @@ function Offertes() {
                 {QUOTE_STATUS[q.status] ?? q.status}
               </span>
               {q.signed_name && <span className="text-xs text-muted-foreground">door {q.signed_name}</span>}
+              <Button variant="outline" size="sm" onClick={() => preview(q.id)}>Voorbeeld</Button>
               <Button variant="outline" size="sm" onClick={() => download(q.id)}>PDF</Button>
+              {q.status !== "akkoord" && <Button variant="outline" size="sm" disabled={busy} onClick={() => openEdit(q)}>Bewerken</Button>}
               {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}
               {q.status === "akkoord" && !q.work_order_id && <Button size="sm" disabled={busy} onClick={() => naarTaak(q.id)}>Omzetten in taak</Button>}
               {q.work_order_id && <span className="text-xs text-muted-foreground">Taak aangemaakt</span>}
