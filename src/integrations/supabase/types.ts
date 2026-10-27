@@ -307,6 +307,7 @@ export type Database = {
           street: string | null
           technician_id: string | null
           use_site_address: boolean
+          vat_number: string | null
           vat_rate: number
           warranty: boolean
         }
@@ -343,6 +344,7 @@ export type Database = {
           street?: string | null
           technician_id?: string | null
           use_site_address?: boolean
+          vat_number?: string | null
           vat_rate?: number
           warranty?: boolean
         }
@@ -379,6 +381,7 @@ export type Database = {
           street?: string | null
           technician_id?: string | null
           use_site_address?: boolean
+          vat_number?: string | null
           vat_rate?: number
           warranty?: boolean
         }

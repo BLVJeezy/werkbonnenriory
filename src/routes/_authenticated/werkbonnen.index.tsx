@@ -35,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
 });
 
 const FILTERS = ["alle", "nieuw", "toegewezen", "afgetekend"] as const;
-const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "" };
+const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", vat_number: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "" };
 
 function Lijst() {
   const qc = useQueryClient();
@@ -90,6 +90,7 @@ function Lijst() {
         site_city: form.site_city || null,
         phone: form.phone || null,
         email: form.email || null,
+        vat_number: form.vat_number.trim() || null,
         description: form.description || null,
         technician_id: form.technician_id || null,
         status: form.technician_id ? "toegewezen" : "nieuw",
@@ -182,6 +183,10 @@ function Lijst() {
                   <Label htmlFor="nb-email">E-mail</Label>
                   <Input id="nb-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 </div>
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="nb-vat-number">Btw-nummer klant</Label>
+                <Input id="nb-vat-number" value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value })} />
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-desc">Omschrijving</Label>
