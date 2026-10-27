@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { customerKey, rowsToCustomers } from "./customers";
+import { customerKey, customerPatch, rowsToCustomers } from "./customers";
 
 describe("rowsToCustomers", () => {
   it("leest Nederlandse kolomkoppen", () => {

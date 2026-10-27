@@ -48,3 +48,23 @@ export function rowsToCustomers(rows: Record<string, unknown>[]): CustomerRow[] 
 /** Zelfde sleutel als de database: naam + postcode, hoofdletterongevoelig. */
 export const customerKey = (c: { name: string; postal_code?: string | null }) =>
   `${c.name.trim().toLowerCase()}|${(c.postal_code ?? "").trim().toLowerCase()}`;
+
+/**
+ * Waarden uit een bewerkingsformulier klaarzetten voor de database:
+ * spaties weg, lege velden wissen de gegevens, en een lege naam laten we staan
+ * ( naam mag nooit leeg worden).
+ */
+export function customerPatch(input: Partial<CustomerRow>): Partial<CustomerRow> {
+  const out: Partial<CustomerRow> = {};
+  for (const f of Object.keys(ALIASES) as (keyof CustomerRow)[]) {
+    const v = input[f];
+    if (v === undefined) continue;
+    const t = v.trim();
+    if (f === "name") {
+      if (t) out.name = t;
+      continue;
+    }
+    out[f] = t || null;
+  }
+  return out;
+}
