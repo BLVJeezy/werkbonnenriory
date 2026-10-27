@@ -1,20 +1,22 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
-import { convertQuoteToTask, createQuote, quotePdf, sendQuote } from "@/lib/quotes.functions";
+import { convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
 
 export const Route = createFileRoute("/_authenticated/offertes")({
+  validateSearch: (s: Record<string, unknown>) => ({ bewerk: typeof s.bewerk === "string" ? s.bewerk : undefined }),
   head: () => ({ meta: [{ title: "Offertes — Riory Werkbonnen" }, { name: "description", content: "Riory-offertes maken, versturen ter ondertekening en omzetten in taken." }, { property: "og:title", content: "Offertes — Riory Werkbonnen" }, { property: "og:description", content: "Riory-offertes maken, versturen ter ondertekening en omzetten in taken." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Offertes,
 });
@@ -25,14 +27,19 @@ const emptyLine: Line = { description: "", quantity: "1", unit: "st", unitPrice:
 function Offertes() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { bewerk } = Route.useSearch();
   const create = useServerFn(createQuote);
+  const update = useServerFn(updateQuote);
   const send = useServerFn(sendQuote);
   const getPdf = useServerFn(quotePdf);
   const convert = useServerFn(convertQuoteToTask);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editCustomer, setEditCustomer] = useState<InvoiceCustomer | null>(null);
   const [customerId, setCustomerId] = useState("");
   const [vatRate, setVatRate] = useState("21");
+  const [intro, setIntro] = useState("");
   const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
 
   const { data: quotes = [] } = useQuery({
