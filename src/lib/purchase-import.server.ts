@@ -85,7 +85,7 @@ export async function importPurchaseInvoicesFromMail(supabase: any, connectionKe
   const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
   const { WERKBON_MAIL_SCOPES } = await import("@/lib/outlook-scopes");
   const graph: Graph = (path, init) =>
-    callAsAppUser({ gatewayBaseUrl: GATEWAY, connectionAPIKey: connectionKey, connectorId: "microsoft_outlook", path, init, requiredScopes: WERKBON_MAIL_SCOPES });
+    callAsAppUser({ gatewayBaseUrl: GATEWAY, connectionAPIKey: connectionKey, connectorId: "microsoft_outlook", path, ...(init ? { init } : {}), requiredScopes: WERKBON_MAIL_SCOPES });
 
   // Find (or create) the folder
   const folders = await graph(`/me/mailFolders?$filter=displayName eq '${FOLDER_NAME}'&$select=id,displayName`);
