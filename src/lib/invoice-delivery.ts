@@ -6,14 +6,14 @@ export function needsOkioki(customer: Pick<InvoiceCustomer, "vatNumber">) {
   return Boolean(customer.vatNumber?.trim());
 }
 
-export function invoiceMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl") {
+export function invoiceMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur") {
   return { message: {
-    subject: `Factuur ${number} — Riory`,
+    subject: `${label} ${number} — Riory`,
     body: { contentType: "Text", content: format === "pdf"
-      ? `Beste klant,\n\nIn de bijlage vindt u factuur ${number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`
-      : `Factuur ${number} in UBL-formaat voor verwerking via OkiOki.` },
+      ? `Beste klant,\n\nIn de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`
+      : `${label} ${number} in UBL-formaat voor verwerking via OkiOki.` },
     toRecipients: [{ emailAddress: { address: to } }],
-    attachments: [{ "@odata.type": "#microsoft.graph.fileAttachment", name: `Factuur-${number}.${format === "pdf" ? "pdf" : "xml"}`, contentType: format === "pdf" ? "application/pdf" : "application/xml", contentBytes }],
+    attachments: [{ "@odata.type": "#microsoft.graph.fileAttachment", name: `${label}-${number}.${format === "pdf" ? "pdf" : "xml"}`, contentType: format === "pdf" ? "application/pdf" : "application/xml", contentBytes }],
   } };
 }
 

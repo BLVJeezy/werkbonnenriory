@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
+import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
@@ -50,6 +51,11 @@ const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
 const AuthenticatedKlantenRoute = AuthenticatedKlantenRouteImport.update({
   id: '/klanten',
   path: '/klanten',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOffertesRoute = AuthenticatedOffertesRouteImport.update({
+  id: '/offertes',
+  path: '/offertes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
+  '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
+  '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
+  '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/kalender'
     | '/klanten'
+    | '/offertes'
     | '/producten'
     | '/tarieven'
     | '/technici'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/kalender'
     | '/klanten'
+    | '/offertes'
     | '/producten'
     | '/tarieven'
     | '/technici'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/_authenticated/facturen'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
+    | '/_authenticated/offertes'
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
     | '/_authenticated/technici'
@@ -233,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKlantenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/offertes': {
+      id: '/_authenticated/offertes'
+      path: '/offertes'
+      fullPath: '/offertes'
+      preLoaderRoute: typeof AuthenticatedOffertesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/producten': {
       id: '/_authenticated/producten'
       path: '/producten'
@@ -289,6 +308,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
+  AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
   AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
@@ -300,6 +320,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
+  AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
   AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
