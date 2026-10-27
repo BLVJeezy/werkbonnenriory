@@ -117,6 +117,25 @@ function Facturen() {
     if (error) toast.error(error.message); else toast.success("Opgeslagen");
     refresh();
   }
+  async function connectPonto() {
+    setBusy(true);
+    try {
+      await savePonto({ data: { clientId: pontoId, clientSecret: pontoSecret } });
+      setPontoId(""); setPontoSecret("");
+      toast.success("Ponto gekoppeld");
+      qc.invalidateQueries({ queryKey: ["ponto"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Koppelen mislukt"); }
+    setBusy(false);
+  }
+  async function checkPonto() {
+    setBusy(true);
+    try {
+      const r = await syncPonto();
+      toast.success(r.matched.length ? `${r.matched.length} factuur/facturen afgepunt: ${r.matched.join(", ")}` : `${r.checked} openstaande facturen gecontroleerd, geen nieuwe betalingen gevonden`);
+      refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Controle mislukt"); }
+    setBusy(false);
+  }
 
   if (!data) return <p className="text-muted-foreground">Laden…</p>;
   const s = data.settings;
@@ -170,6 +189,9 @@ function Facturen() {
               {i.kind === "creditnota" && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
               <span className="flex-1">{(i.customer as { name?: string }).name}</span>
               <span className="font-mono">{euro(Number(i.total))}</span>
+              {Number(i.paid_amount) + 0.005 >= Number(i.total) && i.kind !== "creditnota" && (
+                <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Betaald{i.paid_at ? ` ${new Date(i.paid_at).toLocaleDateString("nl-BE")}` : ""}</span>
+              )}
               <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>
                 {STATUS[i.status] ?? i.status}{i.sent_via ? ` · ${i.sent_via === "okioki" ? "PDF + OkiOki" : i.sent_via === "peppol" ? "Peppol" : "e-mail"}` : ""}
               </span>
