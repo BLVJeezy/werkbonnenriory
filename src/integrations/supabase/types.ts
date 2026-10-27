@@ -107,6 +107,77 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          created_at: string
+          customer: Json
+          due_date: string
+          id: string
+          issue_date: string
+          lines: Json
+          net: number
+          number: string
+          paid_amount: number
+          send_error: string | null
+          sent_at: string | null
+          sent_to: string | null
+          sent_via: string | null
+          status: string
+          total: number
+          vat: number
+          vat_rate: number
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer: Json
+          due_date: string
+          id?: string
+          issue_date?: string
+          lines: Json
+          net: number
+          number: string
+          paid_amount?: number
+          send_error?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
+          sent_via?: string | null
+          status?: string
+          total: number
+          vat: number
+          vat_rate: number
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          customer?: Json
+          due_date?: string
+          id?: string
+          issue_date?: string
+          lines?: Json
+          net?: number
+          number?: string
+          paid_amount?: number
+          send_error?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
+          sent_via?: string | null
+          status?: string
+          total?: number
+          vat?: number
+          vat_rate?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       materials: {
         Row: {
           created_at: string
@@ -182,18 +253,42 @@ export type Database = {
       settings: {
         Row: {
           base_address: string
+          company_bic: string | null
+          company_iban: string | null
+          company_name: string
+          company_vat: string
           id: number
+          invoice_prefix: string
           km_rate: number
+          next_invoice_number: number
+          payment_days: number
+          terms_text: string | null
         }
         Insert: {
           base_address?: string
+          company_bic?: string | null
+          company_iban?: string | null
+          company_name?: string
+          company_vat?: string
           id?: number
+          invoice_prefix?: string
           km_rate?: number
+          next_invoice_number?: number
+          payment_days?: number
+          terms_text?: string | null
         }
         Update: {
           base_address?: string
+          company_bic?: string | null
+          company_iban?: string | null
+          company_name?: string
+          company_vat?: string
           id?: number
+          invoice_prefix?: string
           km_rate?: number
+          next_invoice_number?: number
+          payment_days?: number
+          terms_text?: string | null
         }
         Relationships: []
       }
@@ -473,6 +568,7 @@ export type Database = {
       }
       my_crew_sees_signed: { Args: never; Returns: boolean }
       my_technician_id: { Args: never; Returns: string }
+      next_invoice_number: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "admin" | "technician"
