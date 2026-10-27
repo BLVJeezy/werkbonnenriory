@@ -49,17 +49,20 @@ export function rowsToCustomers(rows: Record<string, unknown>[]): CustomerRow[] 
 export const customerKey = (c: { name: string; postal_code?: string | null }) =>
   `${c.name.trim().toLowerCase()}|${(c.postal_code ?? "").trim().toLowerCase()}`;
 
+/** Waarden zoals een bewerkingsformulier ze aanlevert: elk veld mag ontbreken, leeg of null zijn. */
+export type CustomerFormValues = { [K in keyof CustomerRow]?: string | null | undefined };
+
 /**
  * Waarden uit een bewerkingsformulier klaarzetten voor de database:
  * spaties weg, lege velden wissen de gegevens, en een lege naam laten we staan
- * ( naam mag nooit leeg worden).
+ * (naam mag nooit leeg worden).
  */
-export function customerPatch(input: Partial<CustomerRow>): Partial<CustomerRow> {
+export function customerPatch(input: CustomerFormValues): Partial<CustomerRow> {
   const out: Partial<CustomerRow> = {};
   for (const f of Object.keys(ALIASES) as (keyof CustomerRow)[]) {
     const v = input[f];
     if (v === undefined) continue;
-    const t = v.trim();
+    const t = (v ?? "").trim();
     if (f === "name") {
       if (t) out.name = t;
       continue;
