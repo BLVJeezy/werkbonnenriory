@@ -41,3 +41,5 @@
 - [ ] Open: beheerder moet in het Ponto-dashboard een eigen integratie aanmaken (scope rekeninginformatie + bankrekening) en client ID/secret in de app plakken; echte betalingsmatching daarna met een echte betaling controleren — nog niet getest.
 
 - [ ] (uitgesteld door gebruiker, 27 okt 2026) Mailtaken-app (Mail Assist AI) samenvoegen in Riory Werkbonnen — beide apps blijven voorlopig apart
+
+- [x] Taak omzetten naar offerte: knop op taakpagina (admin), offerte opent meteen ter aanvulling op Offertes; offertes bewerkbaar tot ondertekening; bij opslaan opent afdrukvoorbeeld in nieuw tabblad; PDF vernieuwd (klantpaneel, Betreft-blok, Riory-huisstijl). In de app getest met proefofferte OFF-2 (daarna opgeruimd); typecheck, 74 tests en build OK.
