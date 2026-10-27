@@ -16,26 +16,26 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   <cac:${o.creditNote ? "CreditNoteLine" : "InvoiceLine"}>
     <cbc:ID>${i + 1}</cbc:ID>
     <cbc:${qtyTag} unitCode="${l.unit === "u" ? "HUR" : l.unit === "km" ? "KMT" : "C62"}">${Math.abs(l.quantity)}</cbc:${qtyTag}>
-    <cbc:LineExtensionAmount currencyID="EUR">${a(l.amount)}</cbc:LineExtensionAmount>
+    <cbc:LineExtensionAmount currencyID="EUR">${a(Math.abs(l.amount))}</cbc:LineExtensionAmount>
     <cac:Item><cbc:Name>${esc(l.description.slice(0, 200))}</cbc:Name>
       <cac:ClassifiedTaxCategory><cbc:ID>${cat}</cbc:ID><cbc:Percent>${d.vatRate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory>
     </cac:Item>
-    <cac:Price><cbc:PriceAmount currencyID="EUR">${a(l.unitPrice)}</cbc:PriceAmount></cac:Price>
-  </cac:InvoiceLine>`).join("");
+    <cac:Price><cbc:PriceAmount currencyID="EUR">${a(Math.abs(l.unitPrice))}</cbc:PriceAmount></cac:Price>
+  </cac:${o.creditNote ? "CreditNoteLine" : "InvoiceLine"}>`).join("");
   return `<?xml version="1.0" encoding="UTF-8"?>
-<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+<${root} xmlns="urn:oasis:names:specification:ubl:schema:xsd:${root}-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
   <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
   <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
   <cbc:ID>${esc(d.number)}</cbc:ID>
   <cbc:IssueDate>${d.issueDate}</cbc:IssueDate>
   <cbc:DueDate>${d.dueDate}</cbc:DueDate>
-  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:${root}TypeCode>${o.creditNote ? "381" : "380"}</cbc:${root}TypeCode>
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
-  <cbc:BuyerReference>${esc(`Werkbon ${d.workOrderNumber}`)}</cbc:BuyerReference>
-  <cac:AdditionalDocumentReference>
+  <cbc:BuyerReference>${esc(d.reference ?? `Werkbon ${d.workOrderNumber}`)}</cbc:BuyerReference>
+  ${o.pdfBase64 ? `<cac:AdditionalDocumentReference>
     <cbc:ID>${esc(d.number)}</cbc:ID>
     <cac:Attachment><cbc:EmbeddedDocumentBinaryObject mimeCode="application/pdf" filename="Factuur-${esc(d.number)}.pdf">${o.pdfBase64}</cbc:EmbeddedDocumentBinaryObject></cac:Attachment>
-  </cac:AdditionalDocumentReference>
+  </cac:AdditionalDocumentReference>` : ""}
   <cac:AccountingSupplierParty><cac:Party>
     <cbc:EndpointID schemeID="${sScheme}">${sId}</cbc:EndpointID>
     <cac:PostalAddress><cbc:StreetName>Natveld 47</cbc:StreetName><cbc:CityName>Bilzen</cbc:CityName><cbc:PostalZone>3740</cbc:PostalZone><cac:Country><cbc:IdentificationCode>BE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
