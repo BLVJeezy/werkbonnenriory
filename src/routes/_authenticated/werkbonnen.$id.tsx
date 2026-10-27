@@ -18,6 +18,7 @@ import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
+import { quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { vatRateForCustomer } from "@/lib/vat-number";
@@ -74,6 +75,7 @@ function Detail() {
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
+  const makeQuote = useServerFn(quoteFromTask);
   const [kmTried, setKmTried] = useState<string | null>(null);
   const woAddr = data?.wo ? destinationAddress(data.wo) : null;
   const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
