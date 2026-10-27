@@ -15,8 +15,8 @@ type Props = {
   id: string;
   address: string | null;
   phone: string | null;
-  contactPhone?: string | null;
-  contactName?: string | null;
+  contactPhone?: string | null | undefined;
+  contactName?: string | null | undefined;
   runningEntryId: string | null;
   showTimer?: boolean;
 };
