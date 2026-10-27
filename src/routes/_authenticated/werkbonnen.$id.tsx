@@ -583,6 +583,37 @@ function Detail() {
   );
 }
 
+/**
+ * Adres voor de ploeg: volledig en leesbaar, in regels zoals op een envelop,
+ * met de contactpersoon ter plaatse en het klantadres als dat afwijkt.
+ */
+function ReadOnlyAddress({ wo }: { wo: AddressParts & SiteAddressParts & { address?: string | null } }) {
+  const lines = destinationLines(wo);
+  const klant = formatAddress(wo);
+  const bestemming = destinationAddress(wo);
+  return (
+    <div className="rounded-md border-2 border-primary bg-muted/30 p-3 sm:col-span-2">
+      <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{destinationLabel(wo)}</div>
+      {lines.length ? (
+        <div className="break-words text-lg font-bold leading-snug">{lines.map((l) => <div key={l}>{l}</div>)}</div>
+      ) : (
+        <div className="text-lg font-bold text-muted-foreground">Geen adres ingevuld</div>
+      )}
+      {wo.use_site_address && !!wo.site_contact_name?.trim() && (
+        <div className="mt-2 text-sm">
+          Contactpersoon werf: <span className="font-semibold">{wo.site_contact_name}</span>
+          {!!wo.site_contact_phone?.trim() && ` · ${wo.site_contact_phone}`}
+        </div>
+      )}
+      {wo.use_site_address && !!klant && klant !== bestemming && (
+        <div className="mt-1 text-sm text-muted-foreground">
+          Klantadres: <span className="break-words">{klant}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Field({ label, value, disabled, onSave }: { label: string; value: string; disabled?: boolean; onSave: (v: string) => void }) {
   return (
     <div className="space-y-1">
