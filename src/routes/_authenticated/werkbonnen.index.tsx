@@ -26,6 +26,7 @@ import { deleteTask } from "@/lib/delete-task";
 import { crewStyle } from "@/lib/crew-color";
 import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
+import { vatRateForCustomer } from "@/lib/vat-number";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Werkbonnen — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -186,7 +187,7 @@ function Lijst() {
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-vat-number">Btw-nummer klant</Label>
-                <Input id="nb-vat-number" value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value })} />
+                <Input id="nb-vat-number" value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value, vat_rate: String(vatRateForCustomer(e.target.value, Number(form.vat_rate))) })} />
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-desc">Omschrijving</Label>

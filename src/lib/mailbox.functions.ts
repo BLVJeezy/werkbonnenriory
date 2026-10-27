@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { formatAddress, formatSiteAddress } from "@/lib/address";
-import { customerVatNumber } from "@/lib/vat-number";
+import { customerVatNumber, vatRateForCustomer } from "@/lib/vat-number";
 
 export const MAILBOX_ADDRESS = "afspraak@riory.be";
 const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev";
@@ -162,6 +162,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           phone: x.phone,
           email: x.email ?? m.from?.emailAddress?.address ?? null,
           vat_number: customerVatNumber(x.vat_number),
+          vat_rate: vatRateForCustomer(x.vat_number, 21),
           description: x.description,
           source_message_id: m.id,
           source_subject: m.subject ?? null,
