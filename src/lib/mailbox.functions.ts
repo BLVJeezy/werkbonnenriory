@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { formatAddress, formatSiteAddress } from "@/lib/address";
+import { customerVatNumber } from "@/lib/vat-number";
 
 export const MAILBOX_ADDRESS = "afspraak@riory.be";
 const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev";
@@ -29,13 +30,14 @@ type Extracted = {
   site_city: string | null;
   phone: string | null;
   email: string | null;
+  vat_number: string | null;
   description: string | null;
 };
 
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "phone", "email", "description"],
+  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "phone", "email", "vat_number", "description"],
   properties: {
     customer_name: { type: "string" },
     street: { type: ["string", "null"] },
@@ -48,6 +50,7 @@ const schema = {
     site_city: { type: ["string", "null"] },
     phone: { type: ["string", "null"] },
     email: { type: ["string", "null"] },
+    vat_number: { type: ["string", "null"] },
     description: { type: ["string", "null"] },
   },
 };
@@ -68,7 +71,7 @@ async function extractWithAI(apiKey: string, msg: GraphMessage): Promise<Extract
       reasoning: { effort: "low" },
       instructions:
         "Je leest een afspraakaanvraag-mail van een klant. Haal de klantgegevens eruit: naam (persoon of bedrijf), klantadres opgesplitst in straat, huisnummer (incl. bus), postcode en plaats, en een eventueel apart werfadres in site_street, site_house_number, site_postal_code en site_city, telefoonnummer, e-mailadres en een korte omschrijving van het gevraagde werk in het Nederlands. Houd klantadres en werfadres strikt gescheiden als beide genoemd zijn. Als enkel een werfadres vermeld staat, zet het uitsluitend in de site-velden; als enkel een algemeen adres vermeld staat, gebruik de klantadresvelden. Vul de site-velden alleen bij een expliciet werfadres, interventieadres of werkplek. Gebruik null als iets ontbreekt. Gebruik het afzenderadres als e-mail als er geen ander staat.",
-      input: text,
+      input: text + "\n\nExtra extractieregel: lees het btw-nummer van de klant uit in vat_number (bijvoorbeeld BE 0123.456.789), indien expliciet aanwezig in de mail. Behoud de landcode en nummernotatie. Gebruik null als het ontbreekt. Gebruik nooit het btw-nummer van Riory uit een geciteerde afzenderhandtekening als klantnummer en verwar dit niet met het btw-percentage.",
       text: { format: { type: "json_schema", name: "klant", strict: true, schema } },
     }),
   });
@@ -158,6 +161,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           site_city: x.site_city,
           phone: x.phone,
           email: x.email ?? m.from?.emailAddress?.address ?? null,
+          vat_number: customerVatNumber(x.vat_number),
           description: x.description,
           source_message_id: m.id,
           source_subject: m.subject ?? null,

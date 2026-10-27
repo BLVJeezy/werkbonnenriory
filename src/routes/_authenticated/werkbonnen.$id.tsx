@@ -19,6 +19,7 @@ import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 import { useServerFn } from "@tanstack/react-start";
+import { completeTask } from "@/lib/task-completion";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -131,6 +132,20 @@ function Detail() {
     refresh();
   }
 
+  async function finishTask(patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
+    try {
+      await completeTask({
+        save: () => update(patch),
+        mail: mailNaarKlant,
+        afterSaved: async () => {
+          if (role === "technician") await navigate({ to: "/werkbonnen", search: {} });
+        },
+      });
+    } catch {
+      toast.error("Taak afgerond, maar de werkbonmail kon niet verstuurd worden");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Link to="/werkbonnen" className="no-print text-sm text-muted-foreground underline">
@@ -205,7 +220,7 @@ function Detail() {
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
-        <div />
+        {(isAdmin || perms.showContact) && <Field label="Btw-nummer klant" value={wo.vat_number ?? ""} disabled={infoLocked} onSave={(v) => update({ vat_number: v.trim() || null })} />}
         <div className="grid grid-cols-[1fr_6rem] gap-3">
           <Field label="Straat" value={wo.street ?? (wo.house_number || wo.city ? "" : wo.address ?? "")} disabled={infoLocked} onSave={(v) => saveAddr({ street: v })} />
           <Field label="Nr." value={wo.house_number ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ house_number: v })} />
@@ -391,8 +406,7 @@ function Detail() {
                     disabled={!!running}
                     onClick={async () => {
                       if (!confirm(`${euro(totals.total)} ontvangen via ${m}? De taak wordt dan afgesloten als werkbon.`)) return;
-                      if (await update({ paid_method: m, paid_amount: totals.total, paid_at: new Date().toISOString(), status: "afgetekend", signed_at: new Date().toISOString() }))
-                        await mailNaarKlant();
+                      await finishTask({ paid_method: m, paid_amount: totals.total, paid_at: new Date().toISOString(), status: "afgetekend", signed_at: new Date().toISOString() });
                     }}
                   >
                     Betaald met {m}
@@ -424,8 +438,7 @@ function Detail() {
               size="lg"
               disabled={!signature || !signedName || !!running}
               onClick={async () => {
-                if (await update({ signature, signed_name: signedName, signed_at: new Date().toISOString(), status: "afgetekend" }))
-                  await mailNaarKlant();
+                await finishTask({ signature, signed_name: signedName, signed_at: new Date().toISOString(), status: "afgetekend" });
               }}
             >
               Aftekenen → werkbon
