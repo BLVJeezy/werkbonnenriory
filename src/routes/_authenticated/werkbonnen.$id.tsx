@@ -11,7 +11,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
 import { SiteAddressFields } from "@/components/SiteAddressFields";
-import { destinationAddress, formatAddress } from "@/lib/address";
+import { destinationAddress, destinationLabel, destinationLines, formatAddress, type AddressParts, type SiteAddressParts } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";
@@ -240,15 +240,25 @@ function Detail() {
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
         <Field label="Project" value={wo.project_name ?? ""} disabled={infoLocked} onSave={(v) => update({ project_name: v.trim() || null })} />
         {(isAdmin || perms.showContact) && <Field label="Btw-nummer klant" value={wo.vat_number ?? ""} disabled={infoLocked} onSave={(v) => update({ vat_number: v.trim() || null, vat_rate: vatRateForCustomer(v, Number(wo.vat_rate)) })} />}
-        <div className="grid grid-cols-[1fr_6rem] gap-3">
-          <Field label="Straat" value={wo.street ?? (wo.house_number || wo.city ? "" : wo.address ?? "")} disabled={infoLocked} onSave={(v) => saveAddr({ street: v })} />
-          <Field label="Nr." value={wo.house_number ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ house_number: v })} />
-        </div>
-        <div className="grid grid-cols-[6rem_1fr] gap-3">
-          <Field label="Postcode" value={wo.postal_code ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ postal_code: v })} />
-          <Field label="Plaats" value={wo.city ?? ""} disabled={infoLocked} onSave={(v) => saveAddr({ city: v })} />
-        </div>
-        <SiteAddressFields value={wo} disabled={infoLocked} saveOnBlur onChange={(patch) => update("site_contact_name" in patch || "site_contact_phone" in patch ? patch : { ...patch, distance_km: null })} />
+        {isAdmin ? (
+          <>
+            <div className="grid grid-cols-[1fr_6rem] gap-3">
+              <Field label="Straat" value={wo.street ?? (wo.house_number || wo.city ? "" : wo.address ?? "")} onSave={(v) => saveAddr({ street: v })} />
+              <Field label="Nr." value={wo.house_number ?? ""} onSave={(v) => saveAddr({ house_number: v })} />
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] gap-3">
+              <Field label="Postcode" value={wo.postal_code ?? ""} onSave={(v) => saveAddr({ postal_code: v })} />
+              <Field label="Plaats" value={wo.city ?? ""} onSave={(v) => saveAddr({ city: v })} />
+            </div>
+            <SiteAddressFields
+              value={wo}
+              saveOnBlur
+              onChange={(patch) => update("site_contact_name" in patch || "site_contact_phone" in patch ? patch : { ...patch, distance_km: null })}
+            />
+          </>
+        ) : (
+          <ReadOnlyAddress wo={wo} />
+        )}
         {perms.showContact && <Field label="Telefoon" value={wo.phone ?? ""} disabled={infoLocked} onSave={(v) => update({ phone: v })} />}
         {perms.showContact && <Field label="E-mail" value={wo.email ?? ""} disabled={infoLocked} onSave={(v) => update({ email: v })} />}
         {perms.showContact && <Field label="E-mail facturatie" value={wo.billing_email ?? ""} disabled={infoLocked} onSave={(v) => update({ billing_email: v.trim() || null })} />}
@@ -569,6 +579,37 @@ function Detail() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Adres voor de ploeg: volledig en leesbaar, in regels zoals op een envelop,
+ * met de contactpersoon ter plaatse en het klantadres als dat afwijkt.
+ */
+function ReadOnlyAddress({ wo }: { wo: AddressParts & SiteAddressParts & { address?: string | null } }) {
+  const lines = destinationLines(wo);
+  const klant = formatAddress(wo);
+  const bestemming = destinationAddress(wo);
+  return (
+    <div className="rounded-md border-2 border-primary bg-muted/30 p-3 sm:col-span-2">
+      <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{destinationLabel(wo)}</div>
+      {lines.length ? (
+        <div className="break-words text-lg font-bold leading-snug">{lines.map((l) => <div key={l}>{l}</div>)}</div>
+      ) : (
+        <div className="text-lg font-bold text-muted-foreground">Geen adres ingevuld</div>
+      )}
+      {wo.use_site_address && !!wo.site_contact_name?.trim() && (
+        <div className="mt-2 text-sm">
+          Contactpersoon werf: <span className="font-semibold">{wo.site_contact_name}</span>
+          {!!wo.site_contact_phone?.trim() && ` · ${wo.site_contact_phone}`}
+        </div>
+      )}
+      {wo.use_site_address && !!klant && klant !== bestemming && (
+        <div className="mt-1 text-sm text-muted-foreground">
+          Klantadres: <span className="break-words">{klant}</span>
+        </div>
+      )}
     </div>
   );
 }

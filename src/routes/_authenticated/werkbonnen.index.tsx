@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SiteAddressFields } from "@/components/SiteAddressFields";
-import { destinationAddress, formatAddress, type SiteAddressParts } from "@/lib/address";
+import { destinationAddress, destinationLabel, destinationLines, formatAddress, type SiteAddressParts } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 import { MailboxConnect, WerkbonMailboxConnect } from "@/components/MailboxConnect";
@@ -354,7 +354,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
         <div className="min-w-0 flex-1">
           <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
-          <div className="truncate text-sm opacity-80">{destinationAddress(w) ?? "Geen adres"}</div>
+          <AddressBlock w={w} />
           {w.description ? (
             <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm leading-snug">{w.description}</p>
           ) : (
@@ -365,6 +365,21 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         {extra}
       </Link>
       {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} />}
+    </div>
+  );
+}
+
+/** Het adres waar de ploeg naartoe gaat, volledig en in regels zoals op een envelop. */
+function AddressBlock({ w }: { w: Row }) {
+  const lines = destinationLines(w);
+  return (
+    <div className="mt-0.5">
+      <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{destinationLabel(w)}</div>
+      {lines.length ? (
+        <div className="break-words font-medium leading-snug">{lines.map((l) => <div key={l}>{l}</div>)}</div>
+      ) : (
+        <div className="text-muted-foreground">Geen adres</div>
+      )}
     </div>
   );
 }
