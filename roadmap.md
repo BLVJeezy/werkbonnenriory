@@ -36,3 +36,6 @@
   - [x] Manuele knop "Mail naar klant" op afgetekende werkbon
   - [ ] Open: beheerder moet info@riory.be eenmalig koppelen via de knop op de Werkbonnen-pagina (vereist Microsoft-aanmelding van de gebruiker)
 - [x] (afgezegd door gebruiker) Afzenderdomein/Lovable-e-mail — niet doen
+
+- [x] Automatisch afpunten via Ponto: client ID/secret versleuteld in instellingen, uurlijkse controle (cron) + knop "Betalingen controleren" op Facturen; match op bedrag + factuurnummer in mededeling; factuur krijgt Betaald-badge met datum. 7 matchtests geslaagd, typecheck en build OK.
+- [ ] Open: beheerder moet in het Ponto-dashboard een eigen integratie aanmaken (scope rekeninginformatie + bankrekening) en client ID/secret in de app plakken; echte betalingsmatching daarna met een echte betaling controleren — nog niet getest.

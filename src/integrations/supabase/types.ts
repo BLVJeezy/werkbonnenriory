@@ -125,6 +125,7 @@ export type Database = {
           number: string
           okioki_sent_at: string | null
           paid_amount: number
+          paid_at: string | null
           pdf_sent_at: string | null
           send_error: string | null
           sent_at: string | null
@@ -150,6 +151,7 @@ export type Database = {
           number: string
           okioki_sent_at?: string | null
           paid_amount?: number
+          paid_at?: string | null
           pdf_sent_at?: string | null
           send_error?: string | null
           sent_at?: string | null
@@ -175,6 +177,7 @@ export type Database = {
           number?: string
           okioki_sent_at?: string | null
           paid_amount?: number
+          paid_at?: string | null
           pdf_sent_at?: string | null
           send_error?: string | null
           sent_at?: string | null
@@ -342,6 +345,8 @@ export type Database = {
           next_invoice_number: number
           next_quote_number: number
           payment_days: number
+          ponto_client_ciphertext: string | null
+          ponto_last_sync: string | null
           terms_text: string | null
         }
         Insert: {
@@ -357,6 +362,8 @@ export type Database = {
           next_invoice_number?: number
           next_quote_number?: number
           payment_days?: number
+          ponto_client_ciphertext?: string | null
+          ponto_last_sync?: string | null
           terms_text?: string | null
         }
         Update: {
@@ -372,6 +379,8 @@ export type Database = {
           next_invoice_number?: number
           next_quote_number?: number
           payment_days?: number
+          ponto_client_ciphertext?: string | null
+          ponto_last_sync?: string | null
           terms_text?: string | null
         }
         Relationships: []

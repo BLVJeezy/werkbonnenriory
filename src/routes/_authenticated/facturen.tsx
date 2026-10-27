@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoices } from "@/lib/invoices.functions";
+import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
 import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 
@@ -28,9 +29,16 @@ function Facturen() {
   const getPdf = useServerFn(invoicePdf);
   const creditNote = useServerFn(createCreditNote);
   const toAccountant = useServerFn(sendAllToAccountant);
+  const savePonto = useServerFn(savePontoCredentials);
+  const dropPonto = useServerFn(disconnectPonto);
+  const getPontoStatus = useServerFn(pontoStatus);
+  const syncPonto = useServerFn(syncPontoNow);
   const [selWo, setSelWo] = useState<string[]>([]);
   const [selInv, setSelInv] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [pontoId, setPontoId] = useState("");
+  const [pontoSecret, setPontoSecret] = useState("");
+  const { data: ponto } = useQuery({ queryKey: ["ponto"], queryFn: () => getPontoStatus() });
   const { data } = useQuery({
     queryKey: ["facturen"],
     queryFn: async () => {
@@ -109,6 +117,25 @@ function Facturen() {
     if (error) toast.error(error.message); else toast.success("Opgeslagen");
     refresh();
   }
+  async function connectPonto() {
+    setBusy(true);
+    try {
+      await savePonto({ data: { clientId: pontoId, clientSecret: pontoSecret } });
+      setPontoId(""); setPontoSecret("");
+      toast.success("Ponto gekoppeld");
+      qc.invalidateQueries({ queryKey: ["ponto"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Koppelen mislukt"); }
+    setBusy(false);
+  }
+  async function checkPonto() {
+    setBusy(true);
+    try {
+      const r = await syncPonto();
+      toast.success(r.matched.length ? `${r.matched.length} factuur/facturen afgepunt: ${r.matched.join(", ")}` : `${r.checked} openstaande facturen gecontroleerd, geen nieuwe betalingen gevonden`);
+      refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Controle mislukt"); }
+    setBusy(false);
+  }
 
   if (!data) return <p className="text-muted-foreground">Laden…</p>;
   const s = data.settings;
@@ -162,6 +189,9 @@ function Facturen() {
               {i.kind === "creditnota" && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
               <span className="flex-1">{(i.customer as { name?: string }).name}</span>
               <span className="font-mono">{euro(Number(i.total))}</span>
+              {Number(i.paid_amount) + 0.005 >= Number(i.total) && i.kind !== "creditnota" && (
+                <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Betaald{i.paid_at ? ` ${new Date(i.paid_at).toLocaleDateString("nl-BE")}` : ""}</span>
+              )}
               <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>
                 {STATUS[i.status] ?? i.status}{i.sent_via ? ` · ${i.sent_via === "okioki" ? "PDF + OkiOki" : i.sent_via === "peppol" ? "Peppol" : "e-mail"}` : ""}
               </span>
@@ -198,6 +228,34 @@ function Facturen() {
             <Textarea rows={10} defaultValue={s.terms_text ?? ""} onBlur={(e) => e.target.value !== (s.terms_text ?? "") && saveSetting({ terms_text: e.target.value || null })} /></div>
         </section>
       )}
+
+      <section className="space-y-3 rounded-md border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-black uppercase">Automatisch afpunten via Ponto</h2>
+          {ponto?.connected && (
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {ponto.lastSync && <span className="text-xs text-muted-foreground">Laatste controle: {new Date(ponto.lastSync).toLocaleString("nl-BE")}</span>}
+              <Button size="sm" disabled={busy} onClick={checkPonto}>Betalingen controleren</Button>
+              <Button variant="outline" size="sm" disabled={busy} onClick={async () => { if (confirm("Ponto-koppeling verwijderen?")) { await dropPonto(); qc.invalidateQueries({ queryKey: ["ponto"] }); } }}>Loskoppelen</Button>
+            </div>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Openstaande facturen worden elk uur automatisch als betaald gemarkeerd wanneer een bankbetaling met hetzelfde bedrag én het factuurnummer in de mededeling binnenkomt.
+        </p>
+        {ponto?.connected ? (
+          <p className="text-sm font-bold text-accent-foreground">Ponto is gekoppeld. De client ID en het secret zijn versleuteld opgeslagen en worden hier niet getoond.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              Maak in je Ponto-dashboard (myponto.com) een eigen integratie aan met scope "Rekeninginformatie", selecteer je bankrekening en plak hier de client ID en het client secret (wordt maar één keer getoond).
+            </p>
+            <div className="space-y-1"><Label>Client ID</Label><Input value={pontoId} onChange={(e) => setPontoId(e.target.value)} autoComplete="off" /></div>
+            <div className="space-y-1"><Label>Client secret</Label><Input type="password" value={pontoSecret} onChange={(e) => setPontoSecret(e.target.value)} autoComplete="new-password" /></div>
+            <div className="sm:col-span-2"><Button size="sm" disabled={busy || !pontoId.trim() || !pontoSecret.trim()} onClick={connectPonto}>Ponto koppelen</Button></div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
