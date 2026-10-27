@@ -56,6 +56,9 @@ function Layout() {
                 <Link to="/facturen" className={navCls} activeProps={active}>
                   Facturen
                 </Link>
+                <Link to="/aankoopfacturen" className={navCls} activeProps={active}>
+                  Aankoop
+                </Link>
                 <Link to="/klanten" className={navCls} activeProps={active}>
                   Klanten
                 </Link>
