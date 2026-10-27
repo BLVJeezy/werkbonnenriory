@@ -65,7 +65,7 @@ export async function syncPontoPayments(supabase: any) {
   for (const accountId of accountIds) {
     const txs = await recentTransactions(token, accountId);
     for (const tx of txs) {
-      const inv = matchInvoice(tx, open.filter((o) => !matched.includes(o.number)));
+      const inv = matchInvoice(tx, open.filter((o: { number: string }) => !matched.includes(o.number)));
       if (!inv) continue;
       const { error } = await supabase.from("invoices").update({ paid_amount: inv.total, paid_at: tx.executionDate ?? new Date().toISOString() }).eq("id", inv.id);
       if (error) throw new Error(error.message);
