@@ -25,7 +25,7 @@ const isoDate = (v: unknown) => {
 /** Pure: normalizes raw AI output into a clean purchase invoice; never trusts the AI's totals blindly. */
 export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
   const o = (raw ?? {}) as Record<string, unknown>;
-  const lines: PurchaseLine[] = (Array.isArray(o.lines) ? o.lines : []).slice(0, 200).map((l) => {
+  const lines: PurchaseLine[] = (Array.isArray(o["lines"]) ? o["lines"] : []).slice(0, 200).map((l) => {
     const lo = (l ?? {}) as Record<string, unknown>;
     const quantity = num(lo.quantity) || 1;
     const unitPrice = num(lo.unitPrice);
@@ -38,22 +38,22 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
     };
   });
   const linesNet = r2(lines.reduce((s, l) => s + l.amount, 0));
-  const total = r2(num(o.total));
-  const vat = r2(num(o.vat));
+  const total = r2(num(o["total"]));
+  const vat = r2(num(o["vat"]));
   // Prefer the invoice's own total; fall back to the sum of the lines.
-  const net = r2(num(o.net)) || (total ? r2(total - vat) : linesNet);
+  const net = r2(num(o["net"])) || (total ? r2(total - vat) : linesNet);
   return {
-    supplierName: str(o.supplierName) ?? "Onbekend",
-    supplierVat: str(o.supplierVat),
-    supplierIban: str(o.supplierIban),
-    invoiceNumber: str(o.invoiceNumber),
-    invoiceDate: isoDate(o.invoiceDate),
-    dueDate: isoDate(o.dueDate),
+    supplierName: str(o["supplierName"]) ?? "Onbekend",
+    supplierVat: str(o["supplierVat"]),
+    supplierIban: str(o["supplierIban"]),
+    invoiceNumber: str(o["invoiceNumber"]),
+    invoiceDate: isoDate(o["invoiceDate"]),
+    dueDate: isoDate(o["dueDate"]),
     lines,
     net,
     vat,
     total: total || r2(net + vat),
-    paymentRef: str(o.paymentRef),
+    paymentRef: str(o["paymentRef"]),
   };
 }
 
