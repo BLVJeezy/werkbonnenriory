@@ -48,7 +48,7 @@ async function sendMail(to: string, number: string, contentBytes: string, format
   const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
   const res = await callAsAppUser({
     gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
-    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(invoiceMail(to, number, contentBytes, format)) },
+    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(invoiceMail(to, number, contentBytes, format, label)) },
     requiredScopes: WERKBON_MAIL_SCOPES,
   });
   if (await appUserReconnectRequired(res)) throw new Error("Koppel de mailbox info@riory.be opnieuw");
@@ -71,15 +71,16 @@ async function sendOne(supabase: any, inv: any) {
   inv = claimed;
   try {
     const d = await pdfData(supabase, inv);
+    const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
     await deliverInvoice({
       customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at),
-      sendPdf: (to) => sendMail(to, d.number, pdf, "pdf"),
+      sendPdf: (to) => sendMail(to, d.number, pdf, "pdf", label),
       sendUbl: async (to) => {
         const { invoiceUbl } = await import("@/lib/invoice-ubl");
-        const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf });
-        await sendMail(to, d.number, b64(new TextEncoder().encode(xml)), "ubl");
+        const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" });
+        await sendMail(to, d.number, b64(new TextEncoder().encode(xml)), "ubl", label);
       },
       record: async (leg) => {
         const { error } = await supabase.from("invoices").update({ [leg === "pdf" ? "pdf_sent_at" : "okioki_sent_at"]: new Date().toISOString() }).eq("id", inv.id);
