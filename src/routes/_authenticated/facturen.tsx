@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoices } from "@/lib/invoices.functions";
+import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
 import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 
@@ -28,9 +29,16 @@ function Facturen() {
   const getPdf = useServerFn(invoicePdf);
   const creditNote = useServerFn(createCreditNote);
   const toAccountant = useServerFn(sendAllToAccountant);
+  const savePonto = useServerFn(savePontoCredentials);
+  const dropPonto = useServerFn(disconnectPonto);
+  const getPontoStatus = useServerFn(pontoStatus);
+  const syncPonto = useServerFn(syncPontoNow);
   const [selWo, setSelWo] = useState<string[]>([]);
   const [selInv, setSelInv] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [pontoId, setPontoId] = useState("");
+  const [pontoSecret, setPontoSecret] = useState("");
+  const { data: ponto } = useQuery({ queryKey: ["ponto"], queryFn: () => getPontoStatus() });
   const { data } = useQuery({
     queryKey: ["facturen"],
     queryFn: async () => {
