@@ -159,6 +159,7 @@ function Offertes() {
     }
     if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
     setBusy(true);
+    const win = window.open("", "_blank");
     try {
       const saved = editId
         ? await update({ data: { quoteId: editId, customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } })
@@ -167,8 +168,11 @@ function Offertes() {
       const id = saved.id as string;
       closeForm();
       refresh();
-      await preview(id);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
+      await preview(id, win);
+    } catch (e) {
+      win?.close();
+      toast.error(e instanceof Error ? e.message : "Opslaan mislukt");
+    }
     setBusy(false);
   }
 
