@@ -1,0 +1,1 @@
+ALTER TABLE public.work_orders ADD COLUMN billing_email text; ALTER TABLE public.customers ADD COLUMN billing_email text;
