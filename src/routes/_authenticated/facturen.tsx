@@ -228,6 +228,34 @@ function Facturen() {
             <Textarea rows={10} defaultValue={s.terms_text ?? ""} onBlur={(e) => e.target.value !== (s.terms_text ?? "") && saveSetting({ terms_text: e.target.value || null })} /></div>
         </section>
       )}
+
+      <section className="space-y-3 rounded-md border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-black uppercase">Automatisch afpunten via Ponto</h2>
+          {ponto?.connected && (
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {ponto.lastSync && <span className="text-xs text-muted-foreground">Laatste controle: {new Date(ponto.lastSync).toLocaleString("nl-BE")}</span>}
+              <Button size="sm" disabled={busy} onClick={checkPonto}>Betalingen controleren</Button>
+              <Button variant="outline" size="sm" disabled={busy} onClick={async () => { if (confirm("Ponto-koppeling verwijderen?")) { await dropPonto(); qc.invalidateQueries({ queryKey: ["ponto"] }); } }}>Loskoppelen</Button>
+            </div>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Openstaande facturen worden elk uur automatisch als betaald gemarkeerd wanneer een bankbetaling met hetzelfde bedrag én het factuurnummer in de mededeling binnenkomt.
+        </p>
+        {ponto?.connected ? (
+          <p className="text-sm font-bold text-accent-foreground">Ponto is gekoppeld. De client ID en het secret zijn versleuteld opgeslagen en worden hier niet getoond.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              Maak in je Ponto-dashboard (myponto.com) een eigen integratie aan met scope "Rekeninginformatie", selecteer je bankrekening en plak hier de client ID en het client secret (wordt maar één keer getoond).
+            </p>
+            <div className="space-y-1"><Label>Client ID</Label><Input value={pontoId} onChange={(e) => setPontoId(e.target.value)} autoComplete="off" /></div>
+            <div className="space-y-1"><Label>Client secret</Label><Input type="password" value={pontoSecret} onChange={(e) => setPontoSecret(e.target.value)} autoComplete="new-password" /></div>
+            <div className="sm:col-span-2"><Button size="sm" disabled={busy || !pontoId.trim() || !pontoSecret.trim()} onClick={connectPonto}>Ponto koppelen</Button></div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
