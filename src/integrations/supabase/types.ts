@@ -74,6 +74,7 @@ export type Database = {
           name: string
           phone: string | null
           postal_code: string | null
+          project_name: string | null
           street: string | null
           vat_number: string | null
         }
@@ -88,6 +89,7 @@ export type Database = {
           name: string
           phone?: string | null
           postal_code?: string | null
+          project_name?: string | null
           street?: string | null
           vat_number?: string | null
         }
@@ -102,6 +104,7 @@ export type Database = {
           name?: string
           phone?: string | null
           postal_code?: string | null
+          project_name?: string | null
           street?: string | null
           vat_number?: string | null
         }
@@ -110,11 +113,13 @@ export type Database = {
       invoices: {
         Row: {
           created_at: string
+          credit_for: string | null
           customer: Json
           delivery_lock_until: string | null
           due_date: string
           id: string
           issue_date: string
+          kind: string
           lines: Json
           net: number
           number: string
@@ -133,11 +138,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          credit_for?: string | null
           customer: Json
           delivery_lock_until?: string | null
           due_date: string
           id?: string
           issue_date?: string
+          kind?: string
           lines: Json
           net: number
           number: string
@@ -156,11 +163,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          credit_for?: string | null
           customer?: Json
           delivery_lock_until?: string | null
           due_date?: string
           id?: string
           issue_date?: string
+          kind?: string
           lines?: Json
           net?: number
           number?: string
@@ -237,6 +246,7 @@ export type Database = {
       }
       products: {
         Row: {
+          admin_only: boolean
           created_at: string
           id: string
           name: string
@@ -244,6 +254,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          admin_only?: boolean
           created_at?: string
           id?: string
           name: string
@@ -251,6 +262,7 @@ export type Database = {
           unit?: string
         }
         Update: {
+          admin_only?: boolean
           created_at?: string
           id?: string
           name?: string
@@ -259,8 +271,66 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          created_at: string
+          customer: Json
+          id: string
+          lines: Json
+          net: number
+          number: string
+          sent_at: string | null
+          signature: string | null
+          signed_at: string | null
+          signed_name: string | null
+          status: string
+          token: string
+          total: number
+          vat: number
+          vat_rate: number
+          work_order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer: Json
+          id?: string
+          lines: Json
+          net: number
+          number: string
+          sent_at?: string | null
+          signature?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          status?: string
+          token?: string
+          total: number
+          vat: number
+          vat_rate?: number
+          work_order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer?: Json
+          id?: string
+          lines?: Json
+          net?: number
+          number?: string
+          sent_at?: string | null
+          signature?: string | null
+          signed_at?: string | null
+          signed_name?: string | null
+          status?: string
+          token?: string
+          total?: number
+          vat?: number
+          vat_rate?: number
+          work_order_id?: string | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
+          accountant_email: string
           base_address: string
           company_bic: string | null
           company_iban: string | null
@@ -270,10 +340,12 @@ export type Database = {
           invoice_prefix: string
           km_rate: number
           next_invoice_number: number
+          next_quote_number: number
           payment_days: number
           terms_text: string | null
         }
         Insert: {
+          accountant_email?: string
           base_address?: string
           company_bic?: string | null
           company_iban?: string | null
@@ -283,10 +355,12 @@ export type Database = {
           invoice_prefix?: string
           km_rate?: number
           next_invoice_number?: number
+          next_quote_number?: number
           payment_days?: number
           terms_text?: string | null
         }
         Update: {
+          accountant_email?: string
           base_address?: string
           company_bic?: string | null
           company_iban?: string | null
@@ -296,6 +370,7 @@ export type Database = {
           invoice_prefix?: string
           km_rate?: number
           next_invoice_number?: number
+          next_quote_number?: number
           payment_days?: number
           terms_text?: string | null
         }
@@ -441,6 +516,7 @@ export type Database = {
           paid_method: string | null
           phone: string | null
           postal_code: string | null
+          project_name: string | null
           received_at: string | null
           scheduled_date: string | null
           signature: string | null
@@ -482,6 +558,7 @@ export type Database = {
           paid_method?: string | null
           phone?: string | null
           postal_code?: string | null
+          project_name?: string | null
           received_at?: string | null
           scheduled_date?: string | null
           signature?: string | null
@@ -523,6 +600,7 @@ export type Database = {
           paid_method?: string | null
           phone?: string | null
           postal_code?: string | null
+          project_name?: string | null
           received_at?: string | null
           scheduled_date?: string | null
           signature?: string | null
@@ -578,6 +656,7 @@ export type Database = {
       my_crew_sees_signed: { Args: never; Returns: boolean }
       my_technician_id: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
+      next_quote_number: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "admin" | "technician"
