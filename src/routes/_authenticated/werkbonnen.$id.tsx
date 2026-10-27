@@ -76,7 +76,7 @@ function Detail() {
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const [kmTried, setKmTried] = useState<string | null>(null);
   const woAddr = data?.wo ? destinationAddress(data.wo) : null;
-  const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
+  const needKm = !!data?.wo && data.wo.distance_km == null && !!woAddr;
   useEffect(() => {
     if (!needKm || kmTried === woAddr) return;
     setKmTried(woAddr);
