@@ -14,7 +14,7 @@ export type SiteAddressParts = {
 };
 
 export function formatSiteAddress(a: SiteAddressParts): string | null {
-  return formatAddress({ street: a.site_street, house_number: a.site_house_number, postal_code: a.site_postal_code, city: a.site_city });
+  return formatAddress({ street: a.site_street ?? null, house_number: a.site_house_number ?? null, postal_code: a.site_postal_code ?? null, city: a.site_city ?? null });
 }
 
 export function destinationAddress(a: AddressParts & SiteAddressParts & { address?: string | null }): string | null {
