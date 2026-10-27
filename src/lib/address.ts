@@ -5,6 +5,22 @@ export type AddressParts = {
   city?: string | null;
 };
 
+export type SiteAddressParts = {
+  use_site_address?: boolean;
+  site_street?: string | null;
+  site_house_number?: string | null;
+  site_postal_code?: string | null;
+  site_city?: string | null;
+};
+
+export function formatSiteAddress(a: SiteAddressParts): string | null {
+  return formatAddress({ street: a.site_street, house_number: a.site_house_number, postal_code: a.site_postal_code, city: a.site_city });
+}
+
+export function destinationAddress(a: AddressParts & SiteAddressParts & { address?: string | null }): string | null {
+  return a.use_site_address ? formatSiteAddress(a) : a.address || formatAddress(a);
+}
+
 /** "Kerkstraat 12, 9000 Gent" — empty parts are skipped; null when nothing is filled in. */
 export function formatAddress(a: AddressParts): string | null {
   const line1 = [a.street, a.house_number].filter((x) => x && x.trim()).join(" ").trim();
