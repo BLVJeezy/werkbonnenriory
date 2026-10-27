@@ -22,17 +22,24 @@ async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
     supabase.from("settings").select("*").eq("id", 1).single(),
     supabase.from("work_orders").select("number").eq("id", inv.work_order_id).single(),
   ]);
+  let title: string | undefined, reference: string | undefined;
+  if (inv.kind === "creditnota") {
+    title = "CREDITNOTA";
+    const { data: orig } = inv.credit_for ? await supabase.from("invoices").select("number").eq("id", inv.credit_for).maybeSingle() : { data: null };
+    reference = `Creditnota voor factuur ${orig?.number ?? "onbekend"}`;
+  }
   return {
     number: inv.number, issueDate: inv.issue_date, dueDate: inv.due_date, workOrderNumber: wo?.number ?? 0,
     customer: inv.customer as InvoiceCustomer, lines: inv.lines as InvoiceLine[], vatRate: Number(inv.vat_rate),
     net: Number(inv.net), vat: Number(inv.vat), total: Number(inv.total), paidAmount: Number(inv.paid_amount),
     company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null },
     terms: s?.terms_text ?? null,
+    title, reference,
   };
 }
 
 // ---- Mail via info@riory.be ----
-async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl") {
+async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur") {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
   let key: string | null = null;
