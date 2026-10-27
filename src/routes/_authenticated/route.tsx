@@ -50,6 +50,9 @@ function Layout() {
                 <Link to="/kalender" className={navCls} activeProps={active}>
                   Kalender
                 </Link>
+                <Link to="/klanten" className={navCls} activeProps={active}>
+                  Klanten
+                </Link>
                 <Link to="/technici" className={navCls} activeProps={active}>
                   Ploegen
                 </Link>
