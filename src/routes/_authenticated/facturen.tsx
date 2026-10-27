@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
 import { createInvoices, invoicePdf, sendInvoices } from "@/lib/invoices.functions";
+import { Trash2 } from "lucide-react";
+import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -52,6 +54,14 @@ function Facturen() {
     setBusy(false);
     refresh();
   }
+  async function removeSelected() {
+    setBusy(true);
+    try {
+      const ids = selWo.filter((id) => data?.todo.some((w) => w.id === id));
+      if (await deleteSelectedWorkOrders(qc, ids)) setSelWo([]);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Verwijderen mislukt"); }
+    finally { setBusy(false); }
+  }
   async function sendSel(ids: string[]) {
     if (!confirm(`${ids.length} factuur/facturen nu verzenden? De klant krijgt de PDF; bij een ingevuld btw-nummer gaat een aparte UBL-mail naar BE0840931404701144@okioki.app.`)) return;
     setBusy(true);
@@ -91,10 +101,11 @@ function Facturen() {
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-black uppercase">Te factureren</h2>
           <span className="text-sm text-muted-foreground">({data.todo.length} afgetekende werkbonnen)</span>
-          <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setSelWo(selWo.length === data.todo.length ? [] : data.todo.map((w) => w.id))}>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => setSelWo(selWo.length === data.todo.length ? [] : data.todo.map((w) => w.id))}>
               {selWo.length === data.todo.length && selWo.length ? "Niets selecteren" : "Alles selecteren"}
             </Button>
+            <Button variant="destructive" size="sm" disabled={!selWo.length || busy} onClick={removeSelected}><Trash2 className="h-4 w-4" />Geselecteerde verwijderen ({selWo.length})</Button>
             <Button size="sm" disabled={!selWo.length || busy} onClick={convert}>Omzetten naar factuur ({selWo.length})</Button>
           </div>
         </div>
@@ -102,7 +113,7 @@ function Facturen() {
         <ul className="divide-y">
           {data.todo.map((w) => (
             <li key={w.id} className="flex items-center gap-3 py-2">
-              <input type="checkbox" className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} />
+              <input type="checkbox" aria-label={`Selecteer werkbon #${w.number}`} disabled={busy} className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} />
               <Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">#{w.number}</Link>
               <span className="flex-1">{w.customer_name}</span>
               {w.vat_number && <span className="text-xs text-muted-foreground">{w.vat_number}</span>}

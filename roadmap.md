@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Knop ‘Geselecteerde verwijderen’ bij ‘Te factureren’, met bevestiging en controle op tijdelijke proefbon.
+
 - [x] Factuur-PDF naar klant en voor bedrijven (ingevuld btw-nummer) aparte UBL-mail naar OkiOki; automatisch alleen volledig betaald; afzonderlijke mailstatussen en verzendlock. 11 tests geslaagd, facturenpagina als beheerder en opslagvelden gecontroleerd.
 - [ ] Echte factuurontvangst en Peppol-aflevering via OkiOki controleren — vereist goedgekeurde proeffactuur en OkiOki Smart met automatische UBL-verzending; geen echte factuur verstuurd.
 
