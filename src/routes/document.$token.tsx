@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { mayOpenDocument, tokenHash } from '@/lib/document-tracking';
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/document/$token')({
   head: () => ({ meta: [{ title: 'Document openen — Riory' }, { name: 'description', content: 'Uw beveiligde Riory-document openen.' }, { property: 'og:title', content: 'Document openen — Riory' }, { property: 'og:description', content: 'Uw beveiligde Riory-document openen.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }, { name: 'robots', content: 'noindex,nofollow' }] }),
+  component: DocumentOpening,
   server: { handlers: {
-    GET: async () => new Response(`<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Document openen — Riory</title><body><main><h1>Riory · Document</h1><p>Bij het openen wordt het tijdstip geregistreerd voor documentopvolging. Er worden geen cookies, IP-adressen of apparaatgegevens bewaard.</p><form method="post"><button type="submit">Document openen</button></form><p>Bewaar deze persoonlijke link zorgvuldig.</p></main></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow', 'Content-Security-Policy': "default-src 'none'; form-action 'self'; frame-ancestors 'none'" } }),
     POST: async ({ params }) => {
       if (!/^[a-f0-9-]{72}$/.test(params.token)) return new Response('Documentlink ongeldig.', { status: 404 });
       const hash = await tokenHash(params.token);
@@ -17,3 +18,7 @@ export const Route = createFileRoute('/document/$token')({
     },
   } },
 });
+function DocumentOpening() {
+  const { token } = Route.useParams();
+  return <main className="mx-auto max-w-xl space-y-6 py-12"><h1 className="text-3xl font-black uppercase">Riory · Document</h1><p className="text-muted-foreground">Bij het openen wordt het tijdstip geregistreerd voor documentopvolging. We bewaren hierbij geen cookies, IP-adressen of apparaatgegevens.</p><form method="post" action={`/document/${encodeURIComponent(token)}`}><Button type="submit">Document openen</Button></form><p className="text-sm text-muted-foreground">Bewaar deze persoonlijke link zorgvuldig.</p></main>;
+}
