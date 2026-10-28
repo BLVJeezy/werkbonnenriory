@@ -27,7 +27,7 @@ it("keeps BE-prefixed customers at 0%", () => {
 it("always assigns 21% to a Dutch private customer recognised by NL postcode format", () => {
   expect(vatRateForCustomer(null, 6, undefined, { postalCode: "6211 AB" })).toBe(21);
   expect(vatRateForCustomer(null, 21, undefined, { postalCode: "1015 CJ" })).toBe(21);
-  expect(vatRateForCustomer(" ", 12, undefined, { postalCode: "3740Bilzen" })).toBe(21);
+  expect(vatRateForCustomer(" ", 12, undefined, { postalCode: "1234AB" })).toBe(21);
 });
 
 it("does not treat Belgian postcodes as Dutch", () => {
