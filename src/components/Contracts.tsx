@@ -21,6 +21,8 @@ export function Contracts({ opts }: { opts: Opts }) {
   const [f, setF] = useState(empty);
   const [editingId, setEditingId] = useState<string | null>(null);
   const planned = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  function openForm() { setOpen(true); setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }
   const { data: contracts = [] } = useQuery({
     queryKey: ["contracts"],
     queryFn: async () => (await supabase.from("contracts").select("*, technicians(name)").order("name")).data ?? [],
