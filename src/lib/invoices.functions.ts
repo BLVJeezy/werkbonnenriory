@@ -26,6 +26,8 @@ async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
   if (inv.kind === "creditnota") {
     const { data: orig } = inv.credit_for ? await supabase.from("invoices").select("number").eq("id", inv.credit_for).maybeSingle() : { data: null };
     extra = { title: "CREDITNOTA", reference: `Creditnota voor factuur ${orig?.number ?? "onbekend"}` };
+  } else if (inv.contract_reference) {
+    extra = { title: 'FACTUUR', reference: inv.contract_reference };
   }
   return {
     number: inv.number, issueDate: inv.issue_date, dueDate: inv.due_date, workOrderNumber: wo?.number ?? 0,
@@ -58,8 +60,9 @@ async function sendMail(to: string, number: string, contentBytes: string, format
   }
 }
 
-async function sendOne(supabase: any, inv: any) {
+export async function sendOne(supabase: any, inv: any) {
   if (inv.status === "verzonden") return { id: inv.id, ok: true as const, via: inv.sent_via };
+  if (inv.contract_id && inv.auto_send_started_at && !inv.pdf_sent_at) return { id: inv.id, ok: false as const, error: 'Verzending onzeker: controleer Verzonden items in Outlook vóór opnieuw verzenden.' };
   const now = new Date().toISOString();
   const { data: claimed, error: claimError } = await supabase.from("invoices")
     .update({ delivery_lock_until: new Date(Date.now() + 300000).toISOString() })
@@ -77,7 +80,13 @@ async function sendOne(supabase: any, inv: any) {
     const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
     await deliverInvoice({
       customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at),
-      sendWithCc: (to) => sendMail(to, d.number, pdf, "pdf", label, invoiceMailWithCc(to, d.number, pdf, ubl, label)),
+      sendWithCc: async (to) => {
+        if (inv.contract_id) {
+          const {error}=await supabase.from('invoices').update({auto_send_started_at:new Date().toISOString()}).eq('id',inv.id);
+          if(error) throw error;
+        }
+        await sendMail(to, d.number, pdf, "pdf", label, invoiceMailWithCc(to, d.number, pdf, ubl, label));
+      },
       sendUbl: (to) => sendMail(to, d.number, ubl, "ubl", label),
       record: async (leg) => {
         const { error } = await supabase.from("invoices").update({ [leg === "pdf" ? "pdf_sent_at" : "okioki_sent_at"]: new Date().toISOString() }).eq("id", inv.id);

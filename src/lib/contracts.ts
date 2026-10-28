@@ -43,7 +43,8 @@ export async function planContracts(sb: SupabaseClient<Database>) {
       if (!e) created++;
       else if (e.code !== "23505") throw e;
     }
-    await sb.from("contracts").update({ next_date: next, active: !c.end_date || next <= c.end_date }).eq("id", c.id).eq("next_date", c.next_date);
+    const { error: advanceError } = await sb.from("contracts").update({ next_date: next }).eq("id", c.id).eq("next_date", c.next_date);
+    if (advanceError) throw advanceError;
   }
   return created;
 }

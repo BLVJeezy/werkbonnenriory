@@ -2,6 +2,7 @@ import { appendTermsPdf } from "./terms-pdf";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
+import { invoiceTaxGroups } from './contract-billing';
 
 export type InvoicePdfData = {
   number: string; issueDate: string; dueDate: string; workOrderNumber: number;
@@ -73,7 +74,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   right("BEDRAG", cols.amt, y, 8.5, bold, white);
   y -= 22;
   d.lines.forEach((l, i) => {
-    const ls = wrap(l.description, 10, cols.qty - cols.desc - 20);
+    const ls = wrap(`${l.description}${l.vatRate !== undefined ? ` (btw ${l.vatRate}%)` : ''}${l.discount ? ` — korting ${l.discount}%` : ''}`, 10, cols.qty - cols.desc - 20);
     const h = ls.length * 13 + 8;
     ensure(h);
     if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
@@ -94,7 +95,9 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
     y -= strong ? 22 : 16;
   };
   tot("Totaal excl. btw", money(d.net));
-  tot(`Btw ${d.vatRate}%`, money(d.vat));
+  if (d.lines.some(l=>l.vatRate !== undefined)) {
+    for (const g of invoiceTaxGroups(d.lines,d.vatRate)) { ensure(20); tot(`Btw ${g.rate}%`,money(g.vat)); }
+  } else tot(`Btw ${d.vatRate}%`, money(d.vat));
   page.drawLine({ start: { x: W - M - 230, y: y + 14 }, end: { x: W - M, y: y + 14 }, thickness: 1.5, color: orange });
   tot("Totaal incl. btw", money(d.total), true);
   if (d.vatRate === 0 && c.vatNumber) {
