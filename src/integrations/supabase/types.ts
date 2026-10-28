@@ -840,6 +840,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      reconcile_sales_payment: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_id: string
+          p_key: string
+          p_ref: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "technician"
