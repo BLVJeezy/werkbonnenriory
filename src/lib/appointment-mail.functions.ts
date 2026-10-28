@@ -22,7 +22,7 @@ export const processAppointmentMails = createServerFn({ method: "POST" })
       return res;
     };
     // Mails no longer found in the inbox (e.g. moved by hand) are parked so they never block the queue.
-    const notParked = `last_error.is.null,last_error.not.like.${NOT_FOUND}*`;
+    const notParked = `last_error.is.null,last_error.not.like."${NOT_FOUND}*"`;
     const { data: jobs, error } = await sb.from("appointment_mail_moves").select("*").is("moved_at", null).or(`user_id.eq.${context.userId},user_id.is.null`).or(notParked).order("user_id", { nullsFirst: false }).order("created_at").limit(25);
     if (error) throw error;
     let moved = 0;
