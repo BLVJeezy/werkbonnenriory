@@ -38,8 +38,8 @@ export function NewInvoice({ onCreated }: { onCreated: () => void }) {
     setCustomerLabel(label);
     const c = customers.find((x: any) => lab(x) === label);
     if (!c) return;
-    // BE-btw-nummer verlegt de heffing (0%); particulier met oudere woning krijgt 6%.
-    const def = vatRateForCustomer(c.vat_number, c.customer_type, c.house_older_than_10y);
+    // BE-btw-nummer verlegt de heffing (0%); particulier met woning ouder dan 10 jaar krijgt 6%.
+    const def = vatRateForCustomer(c.vat_number, 21, { customerType: c.customer_type ?? "unknown", olderThanTenYears: c.house_older_than_10y ?? null });
     if (def != null) setLines((ls) => ls.map((l) => ({ ...l, vatRate: String(def) })));
   }
 
