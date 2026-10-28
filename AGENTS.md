@@ -23,8 +23,8 @@
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, including failures, so a mail error cannot strand them on a completed task.
 - Billing math lives in `src/lib/billing.ts` (pure, tested); the UI computes totals live and stores only the paid amount when payment is recorded.
 - Work-order payment removal uses an authenticated admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
-- Driving distance uses Nominatim + OSRM in `distance.functions.ts`; cached distance resets on address change.
-- Newsletters: email-bound consent, append-only audit, admin RPCs, hashed-token unsubscribe POSTs; draft-only until delivery linked.
+- Distance: Nominatim + OSRM; address changes clear cache.
+- Newsletters: email-bound audited consent, hashed-token unsubscribe POSTs; draft-only until delivery linked. Admin server AI creates unsaved suggestions; provider denials persist in settings.
 - PDF/UBL share invoice-vat-notices for all line rates; preserve tax treatment and sent snapshots.
 - Crews log in with name + password; `src/lib/login.ts` maps a name to an internal non-mailable email. Per-crew visibility flags live on `technicians` (signed orders enforced in RLS, the rest hidden in the UI).
 - Mail import reads the inbox through a per-admin Microsoft Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox account signs in itself without Exchange delegation.
