@@ -1,0 +1,1 @@
+ALTER TABLE public.invoices ALTER COLUMN work_order_id DROP NOT NULL;

@@ -539,7 +539,7 @@ export type Database = {
           total: number
           vat: number
           vat_rate: number
-          work_order_id: string
+          work_order_id: string | null
         }
         Insert: {
           auto_send_started_at?: string | null
@@ -568,7 +568,7 @@ export type Database = {
           total: number
           vat: number
           vat_rate: number
-          work_order_id: string
+          work_order_id?: string | null
         }
         Update: {
           auto_send_started_at?: string | null
@@ -597,7 +597,7 @@ export type Database = {
           total?: number
           vat?: number
           vat_rate?: number
-          work_order_id?: string
+          work_order_id?: string | null
         }
         Relationships: [
           {
