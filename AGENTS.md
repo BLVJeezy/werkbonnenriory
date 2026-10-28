@@ -18,7 +18,7 @@
 
 
 - Roles live in `user_roles` (admin|technician); RLS gives admins everything and technicians only rows of work orders assigned to them via `my_technician_id()`. Technician logins are created by `src/lib/technicians.functions.ts` (admin-checked server fn) because public sign-up is removed.
-- Running-task indicators derive from open time entries, not order status; the task list and calendar refetch every ten seconds while visible so admins see starts and stops from other devices without new permissions or subscriptions.
+- Running indicators use open time entries, not task status; lists and calendars refetch every ten seconds while visible to show other devices' starts/stops.
 - Work orders keep customer and optional worksite addresses separately in split fields; resolve the destination through the shared address helper, and invalidate cached driving distance through the database trigger on address changes.
 - Customer work-order emails use the pure price-free mail-data allowlist and Worker-compatible PDF generator; send the PDF as a private Outlook file attachment with only a short covering message so billing changes cannot expose prices or inline work-order details.
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, including failures, so a mail error cannot strand them on a completed task.
@@ -37,4 +37,4 @@
 - The accountant UBL mail (`sendAllToAccountant`) sends every invoice and credit note as separate UBL attachments in one Outlook mail to `settings.accountant_email`, without embedded PDFs to stay under mail size limits.
 - External crews have no auth account; tokens expose a price-free DTO. Forwarding uses quote descriptions/quantities (no prices/km) or task text. JSON slot options/customer alternatives use a service-only atomic RPC; chosen scalar slot preserves scheduling guards and mail retries.
 
-- Quotes track their source task separately from the approved output task; insertion atomically archives the source as status offerte, which task lists and calendars exclude, preserving history without deleting task data.
+- Quotes keep source and approved output tasks separate; insertion atomically sets the source status to offerte, excluded from lists/calendars without deleting history.
