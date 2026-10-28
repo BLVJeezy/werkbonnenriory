@@ -15,12 +15,12 @@ function Form({ submit }: { submit: (slots: AppointmentSlot[]) => void }) {
 it('bewaart Belgische datum en uren bij invoeren en versturen van meerdere tijdsvakken', () => {
   let result: AppointmentSlot[] = [];
   render(<Form submit={slots => { result = slots; }} />);
-  for (const [label, value] of [['Datum 1', '29-10-2026'], ['Vanaf 1', '12.30'], ['Tot 1', '14:30:00']]) {
+  for (const [label, value] of [['Datum 1', '29-10-2026'], ['Vanaf 1', '12.30'], ['Tot 1', '14:30:00']] as const) {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
     expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(value);
   }
   fireEvent.click(screen.getByRole('button', { name: 'Tijdsvak toevoegen' }));
-  for (const [label, value] of [['Datum 2', '30/10/2026'], ['Vanaf 2', '9u00'], ['Tot 2', '11:00']]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  for (const [label, value] of [['Datum 2', '30/10/2026'], ['Vanaf 2', '9u00'], ['Tot 2', '11:00']] as const) fireEvent.change(screen.getByLabelText(label), { target: { value } });
   fireEvent.submit(screen.getByRole('button', { name: 'Versturen' }).closest('form') as HTMLFormElement);
   expect(result).toEqual([{ date: '2026-10-29', from: '12:30', until: '14:30' }, { date: '2026-10-30', from: '09:00', until: '11:00' }]);
 });
@@ -30,7 +30,7 @@ it('verstuurt geen ontbrekend of achteruitlopend tijdsvak', () => {
   const form = screen.getByRole('button', { name: 'Versturen' }).closest('form') as HTMLFormElement;
   fireEvent.submit(form);
   expect(count).toBe(0);
-  for (const [label, value] of [['Datum 1', '29-10-2026'], ['Vanaf 1', '14:00'], ['Tot 1', '12:00']]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  for (const [label, value] of [['Datum 1', '29-10-2026'], ['Vanaf 1', '14:00'], ['Tot 1', '12:00']] as const) fireEvent.change(screen.getByLabelText(label), { target: { value } });
   fireEvent.submit(form);
   expect(count).toBe(0);
 });
