@@ -418,7 +418,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
           <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
           <AddressBlock w={w} />
           {w.description ? (
-            <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm leading-snug">{w.description}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">{w.description}</p>
           ) : (
             <p className="mt-1 text-sm italic opacity-80">Geen omschrijving</p>
           )}

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { useState } from 'react';
@@ -27,7 +27,7 @@ function Suppliers() {
     catch(e) { toast.error(e instanceof Error ? e.message : 'Opslaan mislukt'); } finally { setBusy(false); }
   }
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black uppercase">Leveranciers</h1><Button asChild variant="outline" className="ml-auto"><Link to="/aankoopfacturen">Aankoopfacturen</Link></Button></div>
+    <div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black uppercase">Leveranciers</h1></div>
     <Input aria-label="Leverancier zoeken" placeholder="Leverancier zoeken" value={search} onChange={e=>setSearch(e.target.value)} />
     <ul className="divide-y border rounded-md">{rows.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())).map(r=><li key={r.id} className="flex flex-wrap items-center gap-3 p-3"><span className="font-bold">{r.name}</span><span className="text-sm text-muted-foreground">{r.vat_number}</span><span className="text-sm">{PAYMENT_METHODS[r.payment_method as keyof typeof PAYMENT_METHODS]} · {VAT_RULES[r.vat_rule as keyof typeof VAT_RULES]} · {r.vat_deductible_percent}% aftrekbaar</span><Button variant="outline" className="ml-auto" onClick={()=>setEdit(r)}>Bewerken</Button></li>)}</ul>
     {edit && <section className="space-y-4 border-t pt-4"><h2 className="text-xl font-bold">{edit.name}</h2><div className="grid gap-4 sm:grid-cols-2">
