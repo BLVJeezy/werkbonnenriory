@@ -9,8 +9,9 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Simpla sales sync is retired; enqueue is a no-op, compatibility endpoints make no calls; purchase imports stay read-only.
-- Document links use hashed per-send tokens, private PDF snapshots and POST opens; admin reports count link opens, not reading.
+- Simpla sales sync is retired; enqueue does nothing; purchase imports stay read-only.
+- Mailtaken sales feed requires a shared server token and stable source IDs to prevent duplicate accounting imports.
+- Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery uses the public /reset-password route and auth recovery sessions; never generate or disclose account passwords in chat.
 - Purchase payments use a separate tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes are excluded from outgoing payment files. Original purchase PDFs are private attachments, never reconstructed as evidence.
 - Purchase suppliers are linked by a DB trigger; new documents snapshot supplier defaults without rewriting source amounts. Receipt AI runs server-side, originals private, hash dedup; mobile scanning stops camera tracks on capture/close/unmount.

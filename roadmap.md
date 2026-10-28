@@ -1,8 +1,9 @@
 # Roadmap
 - [x] Simpla-verkoopfacturatiesync en overzicht uitgeschakeld; facturen uitsluitend in deze app, aankoopinlezing behouden. Geen oproep bij afronden, databasewachtrij gestopt; facturenpagina als beheerder gecontroleerd en 12 tests geslaagd.
 
-- [ ] Verslag per verzonden factuur, creditnota, offerte, werkbon en herinnering met openingsmomenten en aantallen — meetbare documentlinks versus niet-meetbare PDF-bijlagen eerst afstemmen; werkelijk lezen is niet bewijsbaar.
-- [ ] Verkoopfacturen beschikbaar maken voor boekhouding in Mailtaken — ontvangende app kan vanuit deze chat alleen gelezen worden; wijziging in Mailtaken zelf vereist.
+- [x] Verslag bij facturen/creditnota's, offertes en werkbonnen, inclusief herinneringen; beveiligde link naast PDF, private exacte snapshot en tijdstippen zonder IP/cookies. GET telt niet; expliciete POST opent PDF; twee openingen en adminverslag teruggelezen, 35 tests geslaagd, proefgegevens verwijderd. Niet gelijk aan lezen/identiteit/aflevering; bestaande mails niet retroactief meetbaar.
+- [x] Beveiligde gepagineerde verkoopfactuurfeed voor Mailtaken voorbereid, gedeeld token veilig opgeslagen; bevoegde toegang en anonieme weigering gecontroleerd. Implementatieoverdracht in .lovable/mailtaken-sales-integration.md.
+- [ ] Mailtaken daadwerkelijk automatisch laten inlezen — alleen leesrechten vanuit deze chat; ontvangende import/bedrijfskeuze en hetzelfde gedeelde token moeten in Mailtaken-chat worden ingesteld. Publicatie van deze app vereist voor bronfeed en documentlinks; geen echte klantmail als proef verstuurd.
 
 - [x] Aparte Contracten-pagina met bewerken/plannen, gecontroleerde factuurregels/kortingen/btw en expliciete automatische beurtfacturatie. Afronding maakt duurzame wachtrij; atomische unieke factuur met contractverwijzing; elke 5 minuten verwerking/verzending, onzekere verzending geblokkeerd. Adminbeheer, queue, eenmalige factuur/herverwerking, Facturen en PDF met 6%/21% gecontroleerd; tijdelijke gegevens verwijderd, geen mail verstuurd. Bestaande contractfacturatie staat uit tot bedragen per beurt bevestigd zijn.
 - [ ] Echte automatische contractmail/ontvangst controleren — vereist publicatie van nieuwe verwerking en afgesproken proeffactuur; geen echte klantmail als test verstuurd.
