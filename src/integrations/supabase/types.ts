@@ -67,8 +67,10 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           crew_email: string
+          crew_slots: Json
           crew_token: string
           customer_email: string
+          customer_slots: Json
           customer_token: string
           expires_at: string
           id: string
@@ -89,8 +91,10 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           crew_email: string
+          crew_slots?: Json
           crew_token?: string
           customer_email: string
+          customer_slots?: Json
           customer_token?: string
           expires_at?: string
           id?: string
@@ -111,8 +115,10 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           crew_email?: string
+          crew_slots?: Json
           crew_token?: string
           customer_email?: string
+          customer_slots?: Json
           customer_token?: string
           expires_at?: string
           id?: string
@@ -1105,6 +1111,15 @@ export type Database = {
           p_from?: string
           p_token: string
           p_until?: string
+        }
+        Returns: string
+      }
+      respond_appointment_options: {
+        Args: {
+          p_action: string
+          p_choice?: number
+          p_slots?: Json
+          p_token: string
         }
         Returns: string
       }

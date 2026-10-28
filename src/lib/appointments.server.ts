@@ -1,6 +1,7 @@
 import type { Database } from '@/integrations/supabase/types';
 import { getConnectionKeyForUser } from '@/lib/appUserConnections.server';
 import { WERKBON_MAIL_SCOPES } from '@/lib/outlook-scopes';
+import { appointmentSlots,slotLabel } from './appointments';
 type RequestRow=Database['public']['Tables']['appointment_requests']['Row'];
 export async function deliverAppointment(r:RequestRow){
  const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
@@ -19,7 +20,9 @@ export async function deliverAppointment(r:RequestRow){
   const address=destinationAddress(w)??'Adres niet ingevuld';
   const slot=`${r.proposed_date??''} tussen ${r.time_from?.slice(0,5)??''} en ${r.time_until?.slice(0,5)??''}`;
   const customer=r.mail_pending==='customer';
-  const body=customer?`Beste ${w.customer_name},\n\nWij stellen uw afspraak voor op ${slot}.\nAdres: ${address}\n\nBevestig of kies dat dit moment niet past:\n${base}/afspraak/klant/${r.customer_token}\n\nMet vriendelijke groeten,\nRiory`:r.mail_pending==='confirmed'?`Afspraak bevestigd door ${w.customer_name}.\n${slot}\nAdres: ${address}\n\n${r.instruction}\n\nRiory`:`${r.mail_pending==='rejected'?'Het voorgestelde moment past niet voor de klant. Kies een nieuw moment.':'Kies een datum en tijdsvak voor deze afspraak.'}\nKlant: ${w.customer_name}\nAdres: ${address}\n${r.instruction}\n\n${base}/afspraak/ploeg/${r.crew_token}\n\nRiory`;
+  const proposed=appointmentSlots(r.crew_slots).map(slotLabel).join('\n')||slot;
+  const alternatives=appointmentSlots(r.customer_slots).map(slotLabel).join('\n');
+  const body=customer?`Beste ${w.customer_name},\n\nKies uw afspraak uit deze mogelijkheden:\n${proposed}\nAdres: ${address}\n\nBevestig een tijdsvak of geef uw eigen mogelijkheden door:\n${base}/afspraak/klant/${r.customer_token}\n\nMet vriendelijke groeten,\nRiory`:r.mail_pending==='confirmed'?`Afspraak bevestigd door ${w.customer_name}.\n${slot}\nAdres: ${address}\n\n${r.instruction}\n\nRiory`:`${r.mail_pending==='rejected'?`De voorgestelde momenten passen niet voor de klant.${alternatives?`\nMogelijkheden van de klant:\n${alternatives}`:''}\nStel nieuwe tijdsvakken voor.`:'Kies een of meerdere tijdsvakken voor deze afspraak.'}\nKlant: ${w.customer_name}\nAdres: ${address}\n${r.instruction}\n\n${base}/afspraak/ploeg/${r.crew_token}\n\nRiory`;
   const {callAsAppUser,appUserReconnectRequired}=await import('@/integrations/lovable/appUserConnector');
   const res=await callAsAppUser({gatewayBaseUrl:'https://connector-gateway.lovable.dev',connectionAPIKey:key,connectorId:'microsoft_outlook',path:'/me/sendMail',requiredScopes:WERKBON_MAIL_SCOPES,init:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:{subject:customer?'Riory — voorgestelde afspraak':r.mail_pending==='confirmed'?'Riory — afspraak bevestigd':'Riory — afspraak inplannen',body:{contentType:'Text',content:body},toRecipients:[{emailAddress:{address:customer?r.customer_email:r.crew_email}}]}})}});
   if(await appUserReconnectRequired(res))throw new Error('Koppel info@riory.be opnieuw');
