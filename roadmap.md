@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Simpla-verkoopfacturatiesync en overzicht verwijderen/uitschakelen; facturen uitsluitend in deze app, aankoopinlezing behouden.
+- [x] Simpla-verkoopfacturatiesync en overzicht uitgeschakeld; facturen uitsluitend in deze app, aankoopinlezing behouden. Geen oproep bij afronden, databasewachtrij gestopt; facturenpagina als beheerder gecontroleerd en 12 tests geslaagd.
 
 - [ ] Verslag per verzonden factuur, creditnota, offerte, werkbon en herinnering met openingsmomenten en aantallen — meetbare documentlinks versus niet-meetbare PDF-bijlagen eerst afstemmen; werkelijk lezen is niet bewijsbaar.
 - [ ] Verkoopfacturen beschikbaar maken voor boekhouding in Mailtaken — ontvangende app kan vanuit deze chat alleen gelezen worden; wijziging in Mailtaken zelf vereist.
@@ -38,8 +38,7 @@
 - [x] Wachtwoordherstel voor beheerder: herstelknop en publieke pagina voor nieuw wachtwoord; formulier en toegelaten terugkeeradres gecontroleerd.
 
 - [x] Simpla-token veilig ingesteld; bestaande Mailtaken-leescode en GET customer gecontroleerd (HTTP 200, OK).
-- [x] Nieuwe afgeronde werkbonnen duurzaam in Simpla-wachtrij; fouten en herproberen in Facturen-overzicht; klantmatch getest.
-- [ ] Automatische Simpla-verkoopfactuur met arbeid/km/materialen/btw — lege POST bill_sale geeft HTTP 403: schrijftoegang niet actief, vereist Simpla API-abonnement €15/maand. Na activering aanmaakcontract/idempotentie bevestigen; geen echte facturen aangemaakt.
+- [x] Simpla-verkoopfacturatie op verzoek beëindigd: historische wachtrij behouden, geen nieuwe werkbonnen toegevoegd en geen herproberen meer. Facturen uitsluitend in deze app.
 
 - [x] Projectnaam uit mail mee uitlezen, op klant en taak, selecteerbaar bij inplannen (datalist)
 - [x] Offerteruimte: offertes maken (OFF-nummering), versturen met ondertekenlink, digitale handtekening op publieke pagina, na akkoord omzetten in taak — volledig getest in de app (proefofferte OFF-1 ondertekend en omgezet, daarna opgeruimd)
