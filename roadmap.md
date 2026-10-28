@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Nieuw inlogwachtwoord veilig laten instellen; account en herstelmogelijkheid controleren.
+
 - [ ] Simpla-token veilig instellen en bestaande Mailtaken-koppeling controleren.
 - [ ] Afgeronde werkbonnen automatisch doorgeven met klant, arbeid, kilometers, materialen en btw; fouten en herproberen in adminoverzicht.
 - [ ] Simpla-aanmaakcontract controleren; geen onbevestigde writes automatisch herhalen.
