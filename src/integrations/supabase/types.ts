@@ -1108,6 +1108,7 @@ export type Database = {
           id: number
           invoice_prefix: string
           km_rate: number
+          newsletter_ai_denial: Json | null
           next_invoice_number: number
           next_quote_number: number
           payment_days: number
@@ -1125,6 +1126,7 @@ export type Database = {
           id?: number
           invoice_prefix?: string
           km_rate?: number
+          newsletter_ai_denial?: Json | null
           next_invoice_number?: number
           next_quote_number?: number
           payment_days?: number
@@ -1142,6 +1144,7 @@ export type Database = {
           id?: number
           invoice_prefix?: string
           km_rate?: number
+          newsletter_ai_denial?: Json | null
           next_invoice_number?: number
           next_quote_number?: number
           payment_days?: number
