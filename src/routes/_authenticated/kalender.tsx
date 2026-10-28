@@ -100,7 +100,7 @@ function Kalender() {
         <span className="rounded bg-foreground px-1 font-bold text-background">Afgewerkt</span>
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="min-w-0 flex-1 truncate font-bold underline">#{w.number} {w.customer_name}</Link>
       </div>
-      <p className="truncate opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, w.use_site_address ? w.site_city : w.city, w.technicians?.name].filter(Boolean).join(" · ")}</p>
+      <p className="break-words opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, destinationLines(w).join(", ") || "Geen adres", w.technicians?.name].filter(Boolean).join(" · ")}</p>
     </div>
   ) : (
     <div key={w.id} draggable onPointerDown={(e) => { e.currentTarget.draggable = !(e.target as HTMLElement).closest("input,select,button,a,textarea"); }} onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
@@ -112,16 +112,16 @@ function Kalender() {
       </div>
       <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />
       {w.scheduled_from && <p className="font-bold">{w.scheduled_from.slice(0,5)}–{w.scheduled_until?.slice(0,5)}</p>}
-      <div className="flex items-center gap-1 text-xs opacity-80">
+      {!horizontal && <div className="flex items-start gap-1 text-xs opacity-90">
         {list && i !== undefined && <span className="font-mono font-bold">{i + 1}.</span>}
-        <span className="flex-1">{(w.use_site_address ? w.site_city : w.city) ?? ""}</span>
+        <span className="min-w-0 flex-1 break-words">{destinationLabel(w)}: {destinationLines(w).join(", ") || "Geen adres ingevuld"}</span>
         {list && i !== undefined && (
           <>
             <Button type="button" variant="ghost" size="icon" title="Eerder" disabled={i === 0} className="h-6 w-6" onClick={() => move(list, i, -1)}>▲</Button>
             <Button type="button" variant="ghost" size="icon" title="Later" disabled={i === list.length - 1} className="h-6 w-6" onClick={() => move(list, i, 1)}>▼</Button>
           </>
         )}
-      </div>
+      </div>}
       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-snug">{w.description || "Geen omschrijving"}</p>
       {horizontal && <>
         <p className="mt-2 font-medium">{destinationLabel(w)}: {destinationLines(w).join(" · ") || "Niet ingevuld"}</p>
