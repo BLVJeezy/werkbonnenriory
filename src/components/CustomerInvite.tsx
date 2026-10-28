@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { inviteCustomer, retryAppointmentMail } from '@/lib/appointments.functions';
 import { appointmentStatuses } from '@/lib/appointments';
 import { SLOT_PARTS, inviteBlock, inviteDayLabel, inviteDays, inviteKey, inviteSlotLabel, inviteSlots } from '@/lib/invite-slots';
@@ -77,12 +77,10 @@ export function CustomerInvite({ task, size = 'sm', className }: { task: InviteT
   if (role !== 'admin') return null;
   return (
     <>
+      <Button type="button" size={size} variant="outline" className={className} disabled={!!block} title={block || `Klant uitnodigen: ${task.customer_name}`} onClick={(e) => { e.stopPropagation(); setOpen(true); }}>
+        Klant uitnodigen
+      </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button type="button" size={size} variant="outline" className={className} disabled={!!block} title={block || `Klant uitnodigen: ${task.customer_name}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-            Klant uitnodigen
-          </Button>
-        </DialogTrigger>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Klant uitnodigen: {task.customer_name}</DialogTitle>
