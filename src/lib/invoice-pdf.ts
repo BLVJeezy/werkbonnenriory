@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
 import { invoiceTaxGroups } from './contract-billing';
+import { invoiceVatNotices } from './invoice-vat-notices';
 
 export type InvoicePdfData = {
   number: string; issueDate: string; dueDate: string; workOrderNumber: number;
@@ -100,11 +101,14 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   } else tot(`Btw ${d.vatRate}%`, money(d.vat));
   page.drawLine({ start: { x: W - M - 230, y: y + 14 }, end: { x: W - M, y: y + 14 }, thickness: 1.5, color: orange });
   tot("Totaal incl. btw", money(d.total), true);
-  if (d.vatRate === 0 && c.vatNumber) {
-    for (const l of wrap("Btw verlegd: verlegging van heffing, art. 20 KB nr. 1 (btw verschuldigd door de medecontractant).", 9, W - 2 * M)) { ensure(12); page.drawText(l, { x: M, y, size: 9, font, color: muted }); y -= 12; }
-  }
-  if (d.vatRate === 6) {
-    for (const l of wrap("Btw-tarief 6%: woning ouder dan 10 jaar, privégebruik, attest van de klant.", 9, W - 2 * M)) { ensure(12); page.drawText(l, { x: M, y, size: 9, font, color: muted }); y -= 12; }
+  for (const notice of invoiceVatNotices(d)) {
+    const lines = wrap(notice.text, 9, W - 2 * M);
+    ensure(24 + lines.length * 12);
+    y -= 8;
+    page.drawText(pr(notice.title), { x: M, y, size: 9.5, font: bold, color: ink });
+    y -= 15;
+    for (const line of lines) { ensure(12); page.drawText(line, { x: M, y, size: 9, font, color: ink }); y -= 12; }
+    y -= 6;
   }
 
   // Payment box

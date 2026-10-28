@@ -1,5 +1,6 @@
 import type { InvoicePdfData } from "./invoice-pdf";
 import { invoiceTaxGroups } from './contract-billing';
+import { invoiceVatNotices } from './invoice-vat-notices';
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
@@ -39,6 +40,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   <cbc:IssueDate>${d.issueDate}</cbc:IssueDate>
   <cbc:DueDate>${d.dueDate}</cbc:DueDate>
   <cbc:${root}TypeCode>${o.creditNote ? "381" : "380"}</cbc:${root}TypeCode>
+  ${invoiceVatNotices(d).map(notice => `<cbc:Note>${esc(notice.text)}</cbc:Note>`).join('\n  ')}
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
   <cbc:BuyerReference>${esc(d.reference ?? `Werkbon ${d.workOrderNumber}`)}</cbc:BuyerReference>
   ${o.pdfBase64 ? `<cac:AdditionalDocumentReference>
