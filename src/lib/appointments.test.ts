@@ -1,5 +1,7 @@
 import { expect,it } from 'vitest';
-import { appointmentView,proposalInput } from './appointments';
+import { appointmentInstruction,appointmentView,proposalInput } from './appointments';
+it('neemt offerteomschrijvingen automatisch over zonder prijzen of kilometerpost',()=>{expect(appointmentInstruction('Oude taaktekst',[{description:'Camera-inspectie',quantity:1,unit:'st',unitPrice:150,amount:150},{description:'Verplaatsing',quantity:20,unit:'km',unitPrice:1.45,amount:29}])).toBe('- Camera-inspectie: 1 st');});
+it('gebruikt de taakomschrijving wanneer geen offerte gekoppeld is',()=>{expect(appointmentInstruction(' Riool reinigen ',undefined)).toBe('Riool reinigen');});
 it('vereist een datum en geldig oplopend tijdsvak',()=>{const i={token:'11111111-1111-4111-8111-111111111111',date:'2026-10-30',from:'09:00',until:'12:00'};expect(proposalInput.safeParse(i).success).toBe(true);expect(proposalInput.safeParse({...i,until:'08:00'}).success).toBe(false);});
 it('geeft nooit prijzen of offertes mee aan externe ploeg',()=>{const r={status:'crew_pending',proposed_date:null,time_from:null,time_until:null,instruction:'Reiniging',price:165,quotes:[123]};expect(appointmentView(r,{customer_name:'Klant',address:'Straat 1'},true)).toEqual({status:'crew_pending',date:null,from:null,until:null,instruction:'Reiniging',customer:'Klant',address:'Straat 1'});});
 it('klantpagina bevat geen interne werkomschrijving',()=>{expect(appointmentView({status:'customer_pending',proposed_date:'2026-10-30',time_from:'09:00:00',time_until:'12:00:00',instruction:'Intern'},{customer_name:'Klant',address:'Straat 1'},false)).not.toHaveProperty('instruction');});
