@@ -32,7 +32,7 @@ import { activeTimeEntry } from "@/lib/time";
 import { allCustomers, customerKey } from '@/lib/customers';
 import { quoteFromTask } from '@/lib/quotes.functions';
 import { FilePenLine } from 'lucide-react';
-import { taskListRows } from '@/lib/task-list';
+import { taskListRows, newTaskRows, plannedTaskRows } from '@/lib/task-list';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 import type { Database } from '@/integrations/supabase/types';
 import { AppointmentMailSync } from '@/components/AppointmentMailSync';
@@ -44,7 +44,8 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   component: Lijst,
 });
 
-const FILTERS = ["alle", "bezig", "nieuw", "toegewezen", "afgetekend"] as const;
+const FILTERS = ["nieuw", "ingepland", "bezig", "afgetekend", "alle"] as const;
+const FILTER_LABELS = { nieuw: "Nieuwe taken", ingepland: "Ingepland", bezig: "Bezig", afgetekend: "Afgewerkt", alle: "Alle" };
 const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", billing_email: "", vat_number: "", project_name: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
 
 function Lijst() {
@@ -54,7 +55,7 @@ function Lijst() {
   const makeQuote = useServerFn(quoteFromTask);
   const [quotingId, setQuotingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("alle");
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("nieuw");
   const { dag } = Route.useSearch();
   const [open, setOpenState] = useState(!!dag);
   const [form, setForm] = useState({ ...emptyForm, scheduled_date: dag ?? "" });
@@ -95,7 +96,7 @@ function Lijst() {
     if (!c) return;
     setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", project_name: c.project_name ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
   }
-  const filtered = filter === "alle" ? data : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
+  const filtered = filter === "alle" ? data : filter === "nieuw" ? newTaskRows(data) : filter === "ingepland" ? plannedTaskRows(data) : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
   const rows = [...filtered].sort((a, b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
   async function patch(id: string, p: Database["public"]["Tables"]["work_orders"]["Update"]) {
     const { error } = await supabase.from("work_orders").update(p).eq("id", id);
@@ -284,10 +285,10 @@ function Lijst() {
         </Button>
       </div>
       <AppointmentMailSync />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)} className="capitalize">
-            {f === "bezig" ? `Bezig (${data.filter((w) => activeTimeEntry(w.time_entries)).length})` : f}
+            {FILTER_LABELS[f]} ({f === "nieuw" ? newTaskRows(data).length : f === "ingepland" ? plannedTaskRows(data).length : f === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)).length : f === "alle" ? data.length : data.filter(w => w.status === f).length})
           </Button>
         ))}
       </div>
