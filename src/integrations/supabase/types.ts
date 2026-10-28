@@ -247,6 +247,51 @@ export type Database = {
           },
         ]
       }
+      ponto_reconciliations: {
+        Row: {
+          amount: number
+          created_at: string
+          invoice_id: string | null
+          paid_at: string
+          payment_ref: string | null
+          purchase_invoice_id: string | null
+          transaction_key: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          invoice_id?: string | null
+          paid_at: string
+          payment_ref?: string | null
+          purchase_invoice_id?: string | null
+          transaction_key: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          invoice_id?: string | null
+          paid_at?: string
+          payment_ref?: string | null
+          purchase_invoice_id?: string | null
+          transaction_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ponto_reconciliations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ponto_reconciliations_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           admin_only: boolean
@@ -279,15 +324,19 @@ export type Database = {
       }
       purchase_invoices: {
         Row: {
+          bank_payment_ref: string | null
+          bank_transaction_key: string | null
           created_at: string
           due_date: string | null
           email_message_id: string | null
           id: string
           invoice_date: string | null
           invoice_number: string | null
+          kind: string
           lines: Json
           net: number
           paid_at: string | null
+          payment_file_at: string | null
           payment_ref: string | null
           pdf_path: string | null
           simpla_bill_id: number | null
@@ -300,15 +349,19 @@ export type Database = {
           vat: number
         }
         Insert: {
+          bank_payment_ref?: string | null
+          bank_transaction_key?: string | null
           created_at?: string
           due_date?: string | null
           email_message_id?: string | null
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
+          kind?: string
           lines?: Json
           net?: number
           paid_at?: string | null
+          payment_file_at?: string | null
           payment_ref?: string | null
           pdf_path?: string | null
           simpla_bill_id?: number | null
@@ -321,15 +374,19 @@ export type Database = {
           vat?: number
         }
         Update: {
+          bank_payment_ref?: string | null
+          bank_transaction_key?: string | null
           created_at?: string
           due_date?: string | null
           email_message_id?: string | null
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
+          kind?: string
           lines?: Json
           net?: number
           paid_at?: string | null
+          payment_file_at?: string | null
           payment_ref?: string | null
           pdf_path?: string | null
           simpla_bill_id?: number | null
@@ -773,6 +830,16 @@ export type Database = {
       my_technician_id: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
+      reconcile_purchase_payment: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_id: string
+          p_key: string
+          p_ref: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "technician"
