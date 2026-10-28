@@ -274,11 +274,15 @@ function Detail() {
         {perms.showContact && <Field label="E-mail facturatie" value={wo.billing_email ?? ""} disabled={infoLocked} onSave={(v) => update({ billing_email: v.trim() || null })} />}
         <div className="space-y-1 sm:col-span-2">
           <Label>Omschrijving</Label>
-          <Textarea
-            defaultValue={wo.description ?? ""}
-            disabled={infoLocked}
-            onBlur={(e) => e.target.value !== (wo.description ?? "") && update({ description: e.target.value })}
-          />
+          {isAdmin ? (
+            <Textarea
+              defaultValue={wo.description ?? ""}
+              disabled={infoLocked}
+              onBlur={(e) => e.target.value !== (wo.description ?? "") && update({ description: e.target.value })}
+            />
+          ) : (
+            <p className="whitespace-pre-wrap break-words text-base leading-relaxed [overflow-wrap:anywhere]">{wo.description || "Geen omschrijving"}</p>
+          )}
         </div>
         <div className="space-y-1 sm:col-span-2">
           <Label>Uitgevoerde werken (door de ploeg)</Label>
