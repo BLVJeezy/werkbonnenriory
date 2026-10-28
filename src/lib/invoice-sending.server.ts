@@ -78,10 +78,8 @@ export async function sendOne(supabase: any, inv: any) {
           if(error) throw error;
         }
         const { prepareDocument } = await import('./document-tracking.server');
-        const { linkText } = await import('./document-tracking');
         const tracking = await prepareDocument(inv.kind === 'creditnota' ? 'creditnota' : 'factuur', inv.id, `${label} ${d.number}`, to, pdf);
-        const payload = invoiceMailWithCc(to, d.number, pdf, ubl, label);
-        payload.message.body.content = linkText(payload.message.body.content, tracking.url);
+        const payload = invoiceMailWithCc(to, d.number, pdf, ubl, label, tracking.url);
         await tracking.send(() => sendMail(to, d.number, pdf, "pdf", label, payload));
       },
       sendUbl: (to) => sendMail(to, d.number, ubl, "ubl", label),
