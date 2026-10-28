@@ -19,6 +19,7 @@ import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
 import { Route as AuthenticatedLeveranciersRouteImport } from './routes/_authenticated/leveranciers'
+import { Route as AuthenticatedNieuwsbrievenRouteImport } from './routes/_authenticated/nieuwsbrieven'
 import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
@@ -29,6 +30,7 @@ import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
 import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.$token'
 import { Route as AfspraakPloegTokenRouteImport } from './routes/afspraak.ploeg.$token'
+import { Route as NieuwsbriefUitschrijvenTokenRouteImport } from './routes/nieuwsbrief.uitschrijven.$token'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
 import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/public/bookkeeping/sales'
@@ -86,6 +88,12 @@ const AuthenticatedLeveranciersRoute =
     path: '/leveranciers',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedNieuwsbrievenRoute =
+  AuthenticatedNieuwsbrievenRouteImport.update({
+    id: '/nieuwsbrieven',
+    path: '/nieuwsbrieven',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOffertesRoute = AuthenticatedOffertesRouteImport.update({
   id: '/offertes',
   path: '/offertes',
@@ -138,6 +146,12 @@ const AfspraakPloegTokenRoute = AfspraakPloegTokenRouteImport.update({
   path: '/afspraak/ploeg/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NieuwsbriefUitschrijvenTokenRoute =
+  NieuwsbriefUitschrijvenTokenRouteImport.update({
+    id: '/nieuwsbrief/uitschrijven/$token',
+    path: '/nieuwsbrief/uitschrijven/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiOauthMicrosoft_outlookReturnRoute =
   ApiOauthMicrosoft_outlookReturnRouteImport.update({
     id: '/api/oauth/microsoft_outlook/return',
@@ -178,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
   '/leveranciers': typeof AuthenticatedLeveranciersRoute
+  '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
@@ -187,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
+  '/nieuwsbrief/uitschrijven/$token': typeof NieuwsbriefUitschrijvenTokenRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
@@ -204,6 +220,7 @@ export interface FileRoutesByTo {
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
   '/leveranciers': typeof AuthenticatedLeveranciersRoute
+  '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
@@ -213,6 +230,7 @@ export interface FileRoutesByTo {
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
+  '/nieuwsbrief/uitschrijven/$token': typeof NieuwsbriefUitschrijvenTokenRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
@@ -232,6 +250,7 @@ export interface FileRoutesById {
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
   '/_authenticated/leveranciers': typeof AuthenticatedLeveranciersRoute
+  '/_authenticated/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
@@ -241,6 +260,7 @@ export interface FileRoutesById {
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
+  '/nieuwsbrief/uitschrijven/$token': typeof NieuwsbriefUitschrijvenTokenRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
@@ -260,6 +280,7 @@ export interface FileRouteTypes {
     | '/kalender'
     | '/klanten'
     | '/leveranciers'
+    | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
     | '/tarieven'
@@ -269,6 +290,7 @@ export interface FileRouteTypes {
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
+    | '/nieuwsbrief/uitschrijven/$token'
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
@@ -286,6 +308,7 @@ export interface FileRouteTypes {
     | '/kalender'
     | '/klanten'
     | '/leveranciers'
+    | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
     | '/tarieven'
@@ -295,6 +318,7 @@ export interface FileRouteTypes {
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
+    | '/nieuwsbrief/uitschrijven/$token'
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
@@ -313,6 +337,7 @@ export interface FileRouteTypes {
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
     | '/_authenticated/leveranciers'
+    | '/_authenticated/nieuwsbrieven'
     | '/_authenticated/offertes'
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
@@ -322,6 +347,7 @@ export interface FileRouteTypes {
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
+    | '/nieuwsbrief/uitschrijven/$token'
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
@@ -339,6 +365,7 @@ export interface RootRouteChildren {
   OfferteTokenRoute: typeof OfferteTokenRoute
   AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
+  NieuwsbriefUitschrijvenTokenRoute: typeof NieuwsbriefUitschrijvenTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
   ApiPublicBookkeepingSalesRoute: typeof ApiPublicBookkeepingSalesRoute
@@ -418,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLeveranciersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/nieuwsbrieven': {
+      id: '/_authenticated/nieuwsbrieven'
+      path: '/nieuwsbrieven'
+      fullPath: '/nieuwsbrieven'
+      preLoaderRoute: typeof AuthenticatedNieuwsbrievenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/offertes': {
       id: '/_authenticated/offertes'
       path: '/offertes'
@@ -488,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AfspraakPloegTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nieuwsbrief/uitschrijven/$token': {
+      id: '/nieuwsbrief/uitschrijven/$token'
+      path: '/nieuwsbrief/uitschrijven/$token'
+      fullPath: '/nieuwsbrief/uitschrijven/$token'
+      preLoaderRoute: typeof NieuwsbriefUitschrijvenTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/oauth/microsoft_outlook/return': {
       id: '/api/oauth/microsoft_outlook/return'
       path: '/api/oauth/microsoft_outlook/return'
@@ -533,6 +574,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
   AuthenticatedLeveranciersRoute: typeof AuthenticatedLeveranciersRoute
+  AuthenticatedNieuwsbrievenRoute: typeof AuthenticatedNieuwsbrievenRoute
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
@@ -548,6 +590,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
   AuthenticatedLeveranciersRoute: AuthenticatedLeveranciersRoute,
+  AuthenticatedNieuwsbrievenRoute: AuthenticatedNieuwsbrievenRoute,
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
@@ -568,6 +611,7 @@ const rootRouteChildren: RootRouteChildren = {
   OfferteTokenRoute: OfferteTokenRoute,
   AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
+  NieuwsbriefUitschrijvenTokenRoute: NieuwsbriefUitschrijvenTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
   ApiPublicBookkeepingSalesRoute: ApiPublicBookkeepingSalesRoute,
