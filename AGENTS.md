@@ -23,7 +23,8 @@
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, including failures, so a mail error cannot strand them on a completed task.
 - Billing math lives in `src/lib/billing.ts` (pure, tested); the UI computes totals live and stores only the paid amount when payment is recorded.
 - Work-order payment removal uses an authenticated admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
-- Driving distance uses free OpenStreetMap services (Nominatim + OSRM) in `src/lib/distance.functions.ts`, cached on `work_orders.distance_km` and reset when the address changes.
+- Driving distance uses Nominatim + OSRM in `distance.functions.ts`; cached distance resets on address change.
+- Newsletters use email-bound consent, append-only audit and admin atomic RPCs; hashed-token public POSTs revoke consent. Campaigns stay drafts until a delivery service is linked.
 - Crews log in with name + password; `src/lib/login.ts` maps a name to an internal non-mailable email. Per-crew visibility flags live on `technicians` (signed orders enforced in RLS, the rest hidden in the UI).
 - Mail import reads the inbox through a per-admin Microsoft Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox account signs in itself without Exchange delegation.
 - Per-crew accessibility flags (like `technicians.large_text`) are admin-set on the Ploegen page, read through `src/lib/use-role.ts`, and applied as a class on `<html>` so rem-based Tailwind scales everywhere; a crew can override the flag locally via `src/lib/text-size.ts` (shared tablets).
@@ -36,4 +37,4 @@
 - Invoices/credit notes use a separate, sender-verified Outlook connection; other mails retain theirs. Accountant exports attach UBL only.
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.
 - Quotes keep source/output tasks separate; DB-enforced quote_pending hides sources and unapproved outputs. Scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
-- Contracten owns planning/billing. Confirmed per-visit lines invoice future completions via queue/unique RPC every five minutes; informational tasks skip normal invoicing/Simpla. Imports intact; activation explicit. Sending helpers stay server-only; uncertain mail never auto-retries.
+- Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.
