@@ -5,7 +5,7 @@ import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
 import { getConnectionKeyForUser } from "@/lib/appUserConnections.server";
-import { deliverInvoice, invoiceMail, needsOkioki, OKIOKI_INVOICE_EMAIL } from "@/lib/invoice-delivery";
+import { deliverInvoice, invoiceMail, invoiceMailWithCc, OKIOKI_INVOICE_EMAIL } from "@/lib/invoice-delivery";
 
 type Ctx = { supabase: any; userId: string };
 const SENDER_PEPPOL_ID = "0208:0840931404";
