@@ -14,6 +14,7 @@
 - Purchase payments use a separate tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes are excluded from outgoing payment files. Original purchase PDFs are private attachments, never reconstructed as evidence.
 - Purchase suppliers are linked by a database trigger across all imports; new documents snapshot supplier payment and VAT defaults without rewriting source amounts. SEPA exports only transfers; receipt AI runs server-side with originals in private storage and hash deduplication.
 - Mobile scanning uses explicit camera permission and photo review before the existing receipt import; camera tracks stop on capture, close and unmount, preserving private purchase access.
+- Customers use normalized name/full-address identity, preserve source codes including aliases, and are linked by a work-order trigger; projects belong to customer IDs and customer lists are paginated to avoid truncated imports.
 
 
 - Roles live in `user_roles` (admin|technician); RLS gives admins everything and technicians only rows of work orders assigned to them via `my_technician_id()`. Technician logins are created by `src/lib/technicians.functions.ts` (admin-checked server fn) because public sign-up is removed.

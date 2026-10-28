@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatAddress } from "@/lib/address";
-import { customerKey, customerPatch, rowsToCustomers, type CustomerRow } from "@/lib/customers";
+import { allCustomers, customerKey, customerPatch, rowsToCustomers, type CustomerRow } from "@/lib/customers";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   head: () => ({ meta: [{ title: "Klanten — Riory Werkbonnen" }, { name: "description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:title", content: "Klanten — Riory Werkbonnen" }, { property: "og:description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -35,9 +35,10 @@ function Klanten() {
   const [saving, setSaving] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["customers"],
-    queryFn: async () => (await supabase.from("customers").select("*").order("name")).data ?? [],
+    queryFn: () => allCustomers(supabase),
   });
-  const rows = data.filter((c) => !q || `${c.name} ${c.city ?? ""} ${c.email ?? ""} ${c.phone ?? ""}`.toLowerCase().includes(q.toLowerCase()));
+  const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
+  const rows = data.filter((c) => !q || `${c.customer_number ?? ''} ${(c.customer_numbers??[]).join(' ')} ${c.name} ${c.city ?? ""} ${c.email ?? ""} ${c.phone ?? ""}`.toLowerCase().includes(q.toLowerCase()));
 
   function openEdit(c: (typeof data)[number]) {
     setEditing(editing === c.id ? null : c.id);
@@ -54,7 +55,7 @@ function Klanten() {
     const { error } = await supabase.from("customers").update(patch).eq("id", c.id);
     setSaving(false);
     if (error) {
-      toast.error(error.code === "23505" ? "Er bestaat al een klant met deze naam en postcode." : error.message);
+      toast.error(error.code === "23505" ? "Er bestaat al een klant met deze naam en adres." : error.message);
       return;
     }
     toast.success(`${patch.name} bijgewerkt`);
@@ -67,14 +68,16 @@ function Klanten() {
     try {
       const XLSX = await import("xlsx");
       const wb = XLSX.read(await file.arrayBuffer());
-      const sheet = wb.Sheets[wb.SheetNames[0]!]!;
+      const first = wb.SheetNames[0];
+      const sheet = first ? wb.Sheets[first] : undefined;
+      if(!sheet) throw new Error('Geen werkblad gevonden');
       const parsed = rowsToCustomers(XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" }));
       const unique = [...new Map(parsed.map((c) => [customerKey(c), c])).values()];
       if (!unique.length) {
         toast.error("Geen klanten gevonden. Zorg voor een kolom 'Naam'.");
         return;
       }
-      const { error } = await supabase.from("customers").upsert(unique, { onConflict: "match_key" });
+      const { error } = await supabase.from("customers").upsert(unique, { onConflict: "identity_key" });
       if (error) throw error;
       toast.success(`${unique.length} klant(en) ingelezen`);
       qc.invalidateQueries({ queryKey: ["customers"] });
@@ -94,9 +97,6 @@ function Klanten() {
           <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
         </label>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Kolommen: Naam, Straat, Nr., Postcode, Plaats, Telefoon, E-mail, E-mail facturatie, Btw-nummer. Bestaande klanten (zelfde naam en postcode) worden bijgewerkt. Nieuwe taken bewaren de klant automatisch. Klik bij een klant op <strong>Bewerken</strong> om gegevens te verbeteren.
-      </p>
       <Input placeholder="Zoeken…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="divide-y rounded-md border bg-card">
         {rows.length === 0 && <p className="p-4 text-muted-foreground">Geen klanten.</p>}
@@ -104,7 +104,8 @@ function Klanten() {
           <div key={c.id} className="p-3">
             <div className="flex flex-wrap items-center gap-3">
               <div className="min-w-48 flex-1">
-                <div className="font-bold">{c.name}{c.project_name && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs font-bold">{c.project_name}</span>}</div>
+                <div className="font-bold"><span className="mr-2 font-mono text-sm text-muted-foreground">{c.customer_number}</span>{c.name}</div>
+                {c.customer_numbers?.length>1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                 <div className="text-sm text-muted-foreground">{formatAddress(c) || "Geen adres"}</div>
               </div>
               <div className="text-sm">{[c.phone, c.email, c.billing_email && `factuur: ${c.billing_email}`, c.vat_number].filter(Boolean).join(" · ")}</div>
@@ -117,6 +118,7 @@ function Klanten() {
                 }}>Verwijderen</Button>
               </div>
             </div>
+            {projects.filter(p=>p.customer_id===c.id).map(p=><div key={p.id} className="mt-2 border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
             {editing === c.id && (
               <div className="mt-3 space-y-2 rounded-md border bg-muted/30 p-3">
                 <div className="flex flex-wrap gap-2">

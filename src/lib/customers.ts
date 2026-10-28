@@ -45,9 +45,25 @@ export function rowsToCustomers(rows: Record<string, unknown>[]): CustomerRow[] 
   return out;
 }
 
-/** Zelfde sleutel als de database: naam + postcode, hoofdletterongevoelig. */
-export const customerKey = (c: { name: string; postal_code?: string | null }) =>
-  `${c.name.trim().toLowerCase()}|${(c.postal_code ?? "").trim().toLowerCase()}`;
+const identityPart = (s: string | null | undefined) => (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+/** Naam en volledig adres; postcode voorkomt verschillen door gemeentefusies. */
+export const customerKey = (c: { name: string; street?: string | null; house_number?: string | null; postal_code?: string | null; city?: string | null }) =>
+  `${identityPart(c.name)}|${identityPart((c.street ?? '') + (c.house_number ?? ''))}|${identityPart(c.postal_code)}${c.postal_code?.trim() ? '' : `|${identityPart(c.city)}`}`;
+
+export function splitCustomerAddress(value: string) {
+  const m = value.trim().match(/^(.*?)\s+(\d+[\s\S]*)$/);
+  return { street: m ? m[1].trim().replace(/[,\s]+$/,'') : value.trim(), house_number: m ? m[2].trim() : '' };
+}
+
+export async function allCustomers(client: any) {
+  const rows: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const {data,error} = await client.from('customers').select('*').order('name').order('id').range(offset,offset+999);
+    if(error) throw new Error(error.message);
+    rows.push(...(data ?? [])); if(!data || data.length<1000) break;
+  }
+  return rows;
+}
 
 /** Waarden zoals een bewerkingsformulier ze aanlevert: elk veld mag ontbreken, leeg of null zijn. */
 export type CustomerFormValues = { [K in keyof CustomerRow]?: string | null | undefined };
