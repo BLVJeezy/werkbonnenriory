@@ -148,7 +148,8 @@ function Kalender() {
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
-              {dayList(k).map((w, i, l) => card(w, i, l))}
+              {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
+              {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
             </div>
           );
         })}
