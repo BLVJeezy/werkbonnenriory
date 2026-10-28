@@ -1,3 +1,4 @@
+import { brandedBody } from "./mail-html";
 import type { InvoiceCustomer } from "./invoice";
 
 export const OKIOKI_INVOICE_EMAIL = "BE0840931404701144@okioki.app";
@@ -13,9 +14,9 @@ const file = (a: Att) => ({ "@odata.type": "#microsoft.graph.fileAttachment", ..
 export function invoiceMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur") {
   return { message: {
     subject: `${label} ${number} — Riory`,
-    body: { contentType: "Text", content: format === "pdf"
-      ? `Beste klant,\n\nIn de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`
-      : `${label} ${number} in UBL-formaat voor verwerking via OkiOki.` },
+    body: format === "pdf"
+      ? brandedBody(`Beste klant,\n\nIn de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`)
+      : { contentType: "Text", content: `${label} ${number} in UBL-formaat voor verwerking via OkiOki.` },
     toRecipients: [{ emailAddress: { address: to } }],
     attachments: [file({ name: `${label}-${number}.${format === "pdf" ? "pdf" : "xml"}`, contentType: format === "pdf" ? "application/pdf" : "application/xml", contentBytes })],
   } };

@@ -1,3 +1,4 @@
+import { brandedBody } from './mail-html';
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
@@ -69,7 +70,7 @@ export const sendPaymentReminder = createServerFn({ method: 'POST' }).middleware
     await tracking.send(async () => {
     const res = await callAsAppUser({ gatewayBaseUrl: 'https://connector-gateway.lovable.dev', connectionAPIKey: key, connectorId: 'microsoft_outlook', path: '/me/sendMail', requiredScopes: WERKBON_MAIL_SCOPES,
       init: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: {
-        subject: document.subject, body: { contentType: 'Text', content: linkText(document.body, tracking.url) },
+        subject: document.subject, body: brandedBody(linkText(document.body, tracking.url)),
         toRecipients: [{ emailAddress: { address: document.recipient } }],
         attachments: [
           { '@odata.type': '#microsoft.graph.fileAttachment', name: `Herinnering-${data.stage}-${document.number}.pdf`, contentType: 'application/pdf', contentBytes: pdf },

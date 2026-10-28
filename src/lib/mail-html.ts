@@ -32,7 +32,7 @@ export function brandedMailHtml(text: string) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${SOFT};padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden">
 <tr><td style="background:${ORANGE};height:6px;font-size:0;line-height:0">&nbsp;</td></tr>
-<tr><td style="padding:22px 28px 6px"><span style="font-size:26px;font-weight:800;letter-spacing:1px;color:${INK}">RIORY</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:2px">Riolering &amp; ontstopping</span></td></tr>
+<tr><td style="padding:22px 28px 6px"><span style="font-size:26px;font-weight:800;letter-spacing:1px;color:${INK}">RIORY</span></td></tr>
 <tr><td style="padding:14px 28px 24px">${parts.join('\n')}</td></tr>
 <tr><td style="background:${INK};padding:16px 28px;color:#ffffff;font-size:12px;line-height:1.6">Riory bv · Natveld 47, 3740 Bilzen · BTW BE 0840.931.404<br><a href="https://www.riory.be" style="color:${ORANGE};text-decoration:none">www.riory.be</a> · <a href="mailto:info@riory.be" style="color:${ORANGE};text-decoration:none">info@riory.be</a></td></tr>
 </table></td></tr></table></body></html>`;

@@ -1,3 +1,4 @@
+import { brandedBody } from "./mail-html";
 import { appendTermsPdf } from "./terms-pdf";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { werkbonMailData } from "./werkbon-mail";
@@ -149,7 +150,7 @@ export async function createWerkbonPdf(data: WerkbonData): Promise<Uint8Array> {
 export function werkbonPdfMessage(data: WerkbonData, recipient: string, pdfBase64: string) {
   return {
     subject: `Werkbon #${data.number} — ${data.customer}`,
-    body: { contentType: "Text", content: `Beste klant,\n\nIn de bijlage vindt u uw werkbon #${data.number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory` },
+    body: brandedBody(`Beste klant,\n\nIn de bijlage vindt u uw werkbon #${data.number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`),
     toRecipients: [{ emailAddress: { address: recipient } }],
     attachments: [{ "@odata.type": "#microsoft.graph.fileAttachment", name: `Werkbon-${data.number}.pdf`, contentType: "application/pdf", contentBytes: pdfBase64 }],
   };
