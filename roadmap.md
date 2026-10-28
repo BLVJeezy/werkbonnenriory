@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Verslag per verzonden factuur, creditnota, offerte, werkbon en herinnering met openingsmomenten en aantallen — meetbare documentlinks versus niet-meetbare PDF-bijlagen eerst afstemmen; werkelijk lezen is niet bewijsbaar.
+- [ ] Verkoopfacturen beschikbaar maken voor boekhouding in Mailtaken — ontvangende app kan vanuit deze chat alleen gelezen worden; wijziging in Mailtaken zelf vereist.
+
 - [x] Aparte Contracten-pagina met bewerken/plannen, gecontroleerde factuurregels/kortingen/btw en expliciete automatische beurtfacturatie. Afronding maakt duurzame wachtrij; atomische unieke factuur met contractverwijzing; elke 5 minuten verwerking/verzending, onzekere verzending geblokkeerd. Adminbeheer, queue, eenmalige factuur/herverwerking, Facturen en PDF met 6%/21% gecontroleerd; tijdelijke gegevens verwijderd, geen mail verstuurd. Bestaande contractfacturatie staat uit tot bedragen per beurt bevestigd zijn.
 - [ ] Echte automatische contractmail/ontvangst controleren — vereist publicatie van nieuwe verwerking en afgesproken proeffactuur; geen echte klantmail als test verstuurd.
 
