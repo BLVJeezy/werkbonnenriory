@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
-import { importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
+import { importPurchaseInvoices, importPurchasesFromSimpla, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
   head: () => ({ meta: [{ title: "Aankoopfacturen — Riory Werkbonnen" }, { name: "description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:title", content: "Aankoopfacturen — Riory Werkbonnen" }, { property: "og:description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -29,6 +29,13 @@ const d = (s: string | null) => (s ? new Date(`${s}T12:00:00Z`).toLocaleDateStri
 function Aankoopfacturen() {
   const qc = useQueryClient();
   const doImport = useServerFn(importPurchaseInvoices);
+  const doSimpla = useServerFn(importPurchasesFromSimpla);
+  async function vanSimpla() {
+    setBusy(true);
+    try { const r = await doSimpla(); toast.success(`${r.imported} openstaande factuur/facturen uit Simpla ingelezen${r.skipped ? `, ${r.skipped} al aanwezig` : ""}`); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Simpla inlezen mislukt"); }
+    setBusy(false); refresh();
+  }
   const update = useServerFn(updatePurchaseInvoice);
   const setStatus = useServerFn(setPurchaseInvoiceStatus);
   const payFile = useServerFn(paymentFile);
@@ -119,6 +126,7 @@ function Aankoopfacturen() {
         <h1 className="text-3xl font-black uppercase">Aankoopfacturen</h1>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Nu inlezen vanuit mail"}</Button>
+          <Button variant="outline" disabled={busy} onClick={vanSimpla}>Inlezen uit Simpla</Button>
           <Button variant="outline" disabled={!sel.length || busy} onClick={() => markeer("goedgekeurd")}>Goedkeuren ({sel.length})</Button>
           <Button disabled={!sel.length || busy} onClick={betaal}>Betaalbestand maken</Button>
         </div>

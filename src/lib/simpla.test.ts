@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchSimplaCustomer } from "./simpla";
+import { matchSimplaCustomer, mapSimplaPurchases } from "./simpla";
 describe("Simpla klantkoppeling", () => {
   it("koppelt op e-mail met voorrang boven naam", () => {
     expect(matchSimplaCustomer([{ customerId: 1, customerName: "Riory" }, { customerId: 2, customerEmail: " INFO@RIORY.BE " }], "Riory", "info@riory.be")?.customerId).toBe(2);
@@ -12,7 +12,7 @@ describe("Simpla klantkoppeling", () => {
     expect(matchSimplaCustomer([{ customerName: "Klant", isBlocked: true }], "Klant", null)).toBeNull();
   });
 });
-import { mapSimplaPurchases } from "./simpla";
+
 describe("mapSimplaPurchases", () => {
   it("skips paid bills and maps supplier and lines", () => {
     const r = mapSimplaPurchases(
