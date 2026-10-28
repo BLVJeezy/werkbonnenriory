@@ -37,7 +37,7 @@ export const retrySimpla = createServerFn({ method: "POST" })
           const result = await response.json() as { status?: string; data?: SimplaCustomer[] };
           if (result.status !== "OK" || !Array.isArray(result.data)) message = "Simpla gaf geen geldig klantenantwoord.";
           else if (!matchSimplaCustomer(result.data, wo.customer_name, wo.billing_email || wo.email)) message = "Geen unieke Simpla-klant gevonden op naam of e-mail.";
-          else message = "Klant gevonden. Wacht op Simpla: schrijftoegang is niet actief (HTTP 403 bij controle op 28/10/2026). Simpla vraagt een API-abonnement van €15/maand; daarna moet factuuraanmaak bevestigd worden. Er is niets aangemaakt.";
+          else message = "Klant gevonden. Het aanmaken van de factuur in Simpla kon niet voltooid worden (HTTP 403 bij controle op 28/10/2026). Er is niets aangemaakt.";
         }
       } catch { message = "Simpla is niet bereikbaar of gaf een onleesbaar antwoord. Er is niets aangemaakt."; }
     }

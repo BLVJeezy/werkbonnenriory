@@ -19,7 +19,6 @@ export function SimplaSync() {
   }
   return <section className="space-y-3 border-t pt-6">
     <h2 className="text-lg font-black uppercase">Simpla</h2>
-    <p className="text-sm text-muted-foreground">{data?.configured ? "Token ingesteld · Simpla weigert schrijftoegang (HTTP 403). Activeer het Simpla API-abonnement (€15/maand) om factuuraanmaak verder te koppelen." : "Simpla-token nog niet ingesteld."}</p>
     {error && <p className="text-destructive">Overzicht ophalen mislukt.</p>}
     <ul className="divide-y">{data?.rows.map((row) => <li key={row.work_order_id} className="flex flex-wrap items-center gap-3 py-3">
       <span className="font-mono font-bold">#{row.work_orders?.number}</span><span className="flex-1">{row.work_orders?.customer_name}</span>
