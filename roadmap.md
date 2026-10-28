@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Zelfplannende ploegen: admin zet afspraak door, ploeg kiest datum en tijdsvak, klant bevestigt per link, daarna automatisch agenda en ploegbevestiging; alleen deze ploegen nooit prijzen/offertes. Veilige toegang, ongeldige/verouderde links en mailfouten testen.
+
 - [x] Excel-import: 2.975 unieke klanten uit 3.001 bronregels, 335 unieke projecten uit 337 bronregels, alle projecten gekoppeld; bestaande klanten op naam/volledig adres hergebruikt, codes/aliascodes behouden. Klantenkeuze toont alle 2.978 klanten; project/werfadreskeuze en herhaalde afspraakkoppeling getest, 7 tests geslaagd. Broncode 001475 hoort bij twee verschillende klanten en is bij beide behouden; geen willekeurige hernummering.
 
 - [x] Mobiele OCR-scanner met camera, foto kiezen, draaien en controle vóór aankoopinlezing; cameraflow met proefbeeld en echte OCR gecontroleerd, camera stopt bij sluiten, foto-fallback getest, mobiele/desktopweergave gecontroleerd en proefgegevens verwijderd. Fysieke telefooncamera niet getest.
