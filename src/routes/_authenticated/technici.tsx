@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createTechnicianLogin, deleteTechnician } from "@/lib/technicians.functions";
+import { createExternalCrew } from '@/lib/appointments.functions';
 
 export const Route = createFileRoute("/_authenticated/technici")({
   head: () => ({ meta: [{ title: "Ploegen — Riory Werkbonnen" }, { name: "description", content: "Beheer Riory-ploegen, hun toegang en persoonlijke weergave." }, { property: "og:title", content: "Ploegen — Riory Werkbonnen" }, { property: "og:description", content: "Beheer Riory-ploegen, hun toegang en persoonlijke weergave." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -18,6 +19,8 @@ const empty = { name: "", phone: "", password: "" };
 function Technici() {
   const qc = useQueryClient();
   const create = useServerFn(createTechnicianLogin);
+  const createExternal=useServerFn(createExternalCrew);
+  const [external,setExternal]=useState({name:'',email:''});
   const remove = useServerFn(deleteTechnician);
   const [f, setF] = useState(empty);
   const [busy, setBusy] = useState(false);
@@ -44,6 +47,7 @@ function Technici() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-black uppercase">Ploegen</h1>
+      <form className="grid gap-3 border-b pb-5 sm:grid-cols-2" onSubmit={async e=>{e.preventDefault();setBusy(true);try{await createExternal({data:external});setExternal({name:'',email:''});qc.invalidateQueries({queryKey:['technicians']});toast.success('Externe ploeg toegevoegd zonder login');}catch(e){toast.error(e instanceof Error?e.message:'Aanmaken mislukt');}finally{setBusy(false);}}}><Input aria-label="Naam externe ploeg" placeholder="Naam externe ploeg" required value={external.name} onChange={e=>setExternal({...external,name:e.target.value})}/><Input aria-label="E-mailadres externe ploeg" type="email" placeholder="E-mailadres externe ploeg" required value={external.email} onChange={e=>setExternal({...external,email:e.target.value})}/><Button disabled={busy}>Externe ploeg toevoegen</Button></form>
       <form onSubmit={add} className="grid gap-2 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Input placeholder="Naam ploeg (= loginnaam)" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <Input placeholder="Telefoon" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
@@ -72,7 +76,7 @@ function Technici() {
                 {t.name}
               </div>
               <div className="text-sm text-muted-foreground">
-                {[t.user_id ? `login: ${t.name}` : "geen login", t.phone].filter(Boolean).join(" · ")}
+                {[t.external_planning ? `Externe ploeg · ${t.email} · geen systeemtoegang` : t.user_id ? `login: ${t.name}` : "geen login", t.phone].filter(Boolean).join(" · ")}
               </div>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                 {(
@@ -89,6 +93,7 @@ function Technici() {
                       type="checkbox"
                       className="accent-primary"
                       checked={t[k]}
+                      disabled={t.external_planning && (k==='show_prices' || k==='can_payment')}
                       onChange={async (e) => {
                         await supabase.from("technicians").update({ [k]: e.target.checked } as { show_prices: boolean }).eq("id", t.id);
                         qc.invalidateQueries({ queryKey: ["technicians"] });
