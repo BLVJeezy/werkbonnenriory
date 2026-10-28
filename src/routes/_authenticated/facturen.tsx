@@ -17,6 +17,7 @@ import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 import { PaymentReminders } from "@/components/PaymentReminders";
 import { NewInvoice } from "@/components/NewInvoice";
 import { DocumentReport } from '@/components/DocumentReport';
+import { InvoiceMailboxConnect } from '@/components/MailboxConnect';
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -147,6 +148,10 @@ function Facturen() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-black uppercase">Facturen</h1>
+      <div className="space-y-2">
+        <h2 className="text-sm font-bold">Afzender facturen en creditnota’s: boekhouding@riory.be</h2>
+        <InvoiceMailboxConnect />
+      </div>
 
       <section className="space-y-3 rounded-md border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">

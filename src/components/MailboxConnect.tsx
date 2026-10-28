@@ -12,6 +12,7 @@ import {
   werkbonMailboxStatus,
 } from "@/lib/werkbon-mailbox.functions";
 import { MAILBOX_ADDRESS } from "@/lib/mailbox.functions";
+import { completeInvoiceMailboxConnect, disconnectInvoiceMailbox, startInvoiceMailboxConnect, INVOICE_MAILBOX_ADDRESS, invoiceMailboxStatus } from "@/lib/invoice-mailbox.functions";
 
 function waitForCode(popup: Window) {
   return new Promise<string | null>((resolve, reject) => {
@@ -125,4 +126,8 @@ export function WerkbonMailboxConnect() {
       fns={{ status: werkbonMailboxStatus, start: startWerkbonMailboxConnect, complete: completeWerkbonMailboxConnect, disconnect: disconnectWerkbonMailbox }}
     />
   );
+}
+
+export function InvoiceMailboxConnect() {
+  return <MailboxConnectCard mailbox={INVOICE_MAILBOX_ADDRESS} queryKey="invoice_mailbox_status" fns={{ status: invoiceMailboxStatus, start: startInvoiceMailboxConnect, complete: completeInvoiceMailboxConnect, disconnect: disconnectInvoiceMailbox }} />;
 }

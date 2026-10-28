@@ -33,7 +33,7 @@
 - Quote signing emails use the canonical published app URL through the tested signing-link helper, never the request origin, because preview and internal hosts are inaccessible to customers.
 - Credit notes are `invoices` rows with `kind = 'creditnota'` and `credit_for` to the original; same numbering, reversed by tested `buildCreditNote`. `work_order_id` is nullable and not unique: credit notes share it, manual invoices (`createManualInvoice`, tested `buildManualInvoice`) have none and reuse `contract_reference` as reference.
 - Products can be flagged `admin_only`; the read policy excludes them for non-admins and the material picker filters them too, so crews cannot select them even via the API.
-- Accountant mail sends all invoices/credit notes as separate UBL attachments in one Outlook mail, without embedded PDFs to limit size.
+- Invoices/credit notes use a separate, sender-verified Outlook connection; other mails retain theirs. Accountant exports attach UBL only.
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.
 - Quotes keep source/output tasks separate; DB-enforced quote_pending hides sources and unapproved outputs. Scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracten owns planning/billing. Confirmed per-visit lines invoice future completions via queue/unique RPC every five minutes; informational tasks skip normal invoicing/Simpla. Imports intact; activation explicit. Sending helpers stay server-only; uncertain mail never auto-retries.
