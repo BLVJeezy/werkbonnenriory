@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from '@/components/ui/checkbox';
+import { ReceiptScanner } from '@/components/ReceiptScanner';
 import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from '@/lib/supplier-rules';
 import { Link } from '@tanstack/react-router';
 import { pontoStatus, syncPontoNow } from '@/lib/ponto.functions';
@@ -62,8 +63,8 @@ function Aankoopfacturen() {
   const [edit, setEdit] = useState<Row | null>(null);
 
   async function leesTicket(file: File | undefined) {
-    if (!file) return;
-    if (file.size > 10000000) { toast.error('Maximaal 10 MB per document'); return; }
+    if (!file) return false;
+    if (file.size > 10000000) { toast.error('Maximaal 10 MB per document'); return false; }
     setBusy(true);
     try {
       const base64 = await new Promise<string>((resolve,reject)=> { const reader = new FileReader(); reader.onload=()=>resolve(String(reader.result).split(',')[1]??''); reader.onerror=reject; reader.readAsDataURL(file); });
@@ -72,7 +73,8 @@ function Aankoopfacturen() {
       const {data: row} = await supabase.from('purchase_invoices').select('*').eq('id',r.id).single();
       if (row) await openControle({...row, kind: row.kind === 'creditnota' ? 'creditnota' : 'factuur', lines: row.lines as PurchaseLine[]});
       toast.success(r.duplicate ? 'Dit document was al ingelezen' : 'Kasticket ingelezen — te controleren');
-    } catch(e) { toast.error(e instanceof Error ? e.message : 'Inlezen mislukt'); }
+      return true;
+    } catch(e) { toast.error(e instanceof Error ? e.message : 'Inlezen mislukt'); return false; }
     finally { setBusy(false); }
   }
 
@@ -191,7 +193,7 @@ function Aankoopfacturen() {
           <Button disabled={!sel.length || busy} onClick={betaal}>Betaalbestand maken</Button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-y py-4"><Label htmlFor="receipt-upload">Kasticket of aankoopdocument inlezen</Label><Input id="receipt-upload" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={busy} className="max-w-sm" onChange={e=>{void leesTicket(e.target.files?.[0]);e.target.value='';}}/><Input aria-label="Foto van kasticket nemen" type="file" accept="image/jpeg,image/png" capture="environment" disabled={busy} className="max-w-sm" onChange={e=>{void leesTicket(e.target.files?.[0]);e.target.value='';}}/>{busy && <span role="status">Document wordt verwerkt…</span>}</div>
+      <div className="flex flex-wrap items-center gap-3 border-y py-4"><ReceiptScanner disabled={busy} onScan={leesTicket}/><Label htmlFor="receipt-upload">Kasticket of aankoopdocument inlezen</Label><Input id="receipt-upload" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={busy} className="max-w-sm" onChange={e=>{void leesTicket(e.target.files?.[0]);e.target.value='';}}/>{busy && <span role="status">Document wordt verwerkt…</span>}</div>
       {ponto?.lastSync && <p className="text-sm text-muted-foreground">Laatste betalingscontrole: {new Date(ponto.lastSync).toLocaleString('nl-BE')}</p>}
 
       <ul className="divide-y rounded-md border bg-card">
