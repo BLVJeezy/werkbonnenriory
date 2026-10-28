@@ -1,4 +1,5 @@
 import type { InvoicePdfData } from "./invoice-pdf";
+import { invoiceTaxGroups } from './contract-billing';
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
@@ -7,21 +8,29 @@ const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId: string | null; pdfBase64: string; creditNote?: boolean }) {
   const [sScheme, sId] = o.senderId.split(":");
   const [rScheme, rId] = o.receiverId?.split(":") ?? [];
-  const cat = d.vatRate === 0 ? "AE" : "S";
   const c = d.customer;
   const open = Math.max(0, d.total - d.paidAmount);
   const root = o.creditNote ? "CreditNote" : "Invoice";
   const qtyTag = o.creditNote ? "CreditedQuantity" : "InvoicedQuantity";
-  const lines = d.lines.map((l, i) => `
+  const lines = d.lines.map((l, i) => {
+    const rate = l.vatRate ?? d.vatRate;
+    const lineCat = rate === 0 ? (c.vatNumber ? 'AE' : 'Z') : 'S';
+    return `
   <cac:${o.creditNote ? "CreditNoteLine" : "InvoiceLine"}>
     <cbc:ID>${i + 1}</cbc:ID>
     <cbc:${qtyTag} unitCode="${l.unit === "u" ? "HUR" : l.unit === "km" ? "KMT" : "C62"}">${Math.abs(l.quantity)}</cbc:${qtyTag}>
     <cbc:LineExtensionAmount currencyID="EUR">${a(Math.abs(l.amount))}</cbc:LineExtensionAmount>
     <cac:Item><cbc:Name>${esc(l.description.slice(0, 200))}</cbc:Name>
-      <cac:ClassifiedTaxCategory><cbc:ID>${cat}</cbc:ID><cbc:Percent>${d.vatRate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory>
+      <cac:ClassifiedTaxCategory><cbc:ID>${lineCat}</cbc:ID><cbc:Percent>${rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory>
     </cac:Item>
-    <cac:Price><cbc:PriceAmount currencyID="EUR">${a(Math.abs(l.unitPrice))}</cbc:PriceAmount></cac:Price>
-  </cac:${o.creditNote ? "CreditNoteLine" : "InvoiceLine"}>`).join("");
+    <cac:Price><cbc:PriceAmount currencyID="EUR">${Math.abs(l.unitPrice).toFixed(6)}</cbc:PriceAmount></cac:Price>
+  </cac:${o.creditNote ? "CreditNoteLine" : "InvoiceLine"}>`;
+  }).join("");
+  const groups = invoiceTaxGroups(d.lines,d.vatRate);
+  const subtotals = groups.map(g=>{
+    const category = g.rate === 0 ? (c.vatNumber ? 'AE' : 'Z') : 'S';
+    return `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${a(Math.abs(g.net))}</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">${a(Math.abs(g.vat))}</cbc:TaxAmount><cac:TaxCategory><cbc:ID>${category}</cbc:ID><cbc:Percent>${g.rate}</cbc:Percent>${category==='AE'?'<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode>':''}<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`;
+  }).join('');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <${root} xmlns="urn:oasis:names:specification:ubl:schema:xsd:${root}-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
   <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
@@ -51,11 +60,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   ${d.company.iban ? `<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cbc:PaymentID>${esc(d.number)}</cbc:PaymentID><cac:PayeeFinancialAccount><cbc:ID>${esc(d.company.iban.replace(/\s/g, ""))}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>` : ""}
   <cac:TaxTotal>
     <cbc:TaxAmount currencyID="EUR">${a(Math.abs(d.vat))}</cbc:TaxAmount>
-    <cac:TaxSubtotal>
-      <cbc:TaxableAmount currencyID="EUR">${a(Math.abs(d.net))}</cbc:TaxableAmount>
-      <cbc:TaxAmount currencyID="EUR">${a(Math.abs(d.vat))}</cbc:TaxAmount>
-      <cac:TaxCategory><cbc:ID>${cat}</cbc:ID><cbc:Percent>${d.vatRate}</cbc:Percent>${cat === "AE" ? "<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode>" : ""}<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
-    </cac:TaxSubtotal>
+    ${subtotals}
   </cac:TaxTotal>
   <cac:LegalMonetaryTotal>
     <cbc:LineExtensionAmount currencyID="EUR">${a(Math.abs(d.net))}</cbc:LineExtensionAmount>

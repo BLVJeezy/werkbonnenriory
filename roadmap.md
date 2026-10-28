@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Aparte Contracten-pagina; factuur volgens contractregels na elke uitgevoerde beurt, automatisch mailen, beheer/controle en tests.
+- [x] Aparte Contracten-pagina met bewerken/plannen, gecontroleerde factuurregels/kortingen/btw en expliciete automatische beurtfacturatie. Afronding maakt duurzame wachtrij; atomische unieke factuur met contractverwijzing; elke 5 minuten verwerking/verzending, onzekere verzending geblokkeerd. Adminbeheer, queue, eenmalige factuur/herverwerking, Facturen en PDF met 6%/21% gecontroleerd; tijdelijke gegevens verwijderd, geen mail verstuurd. Bestaande contractfacturatie staat uit tot bedragen per beurt bevestigd zijn.
+- [ ] Echte automatische contractmail/ontvangst controleren — vereist publicatie van nieuwe verwerking en afgesproken proeffactuur; geen echte klantmail als test verstuurd.
 
 - [x] Drie betalingsherinneringen met adminvoorbeeld/PDF, Belgische consumentenwachttijd en forfaits volgens artikel 11, expliciet klanttype en vooraf overeengekomen voorwaarden; geen interest/gestapelde kosten. Saldo minus betalingen/creditnota's, éénmalige verzendclaim en exacte historiek; 28 tests en adminvoorbeeld/PDF/herladen gecontroleerd. Geen echte herinnering verzonden.
 - [ ] Echte ontvangst betalingsherinnering controleren — vereist afgesproken proefontvanger; juridische afdwingbaarheid per dossier blijft te beoordelen door jurist.

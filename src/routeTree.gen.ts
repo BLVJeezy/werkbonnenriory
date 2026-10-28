@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
+import { Route as AuthenticatedContractenRouteImport } from './routes/_authenticated/contracten'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
@@ -29,6 +30,7 @@ import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.
 import { Route as AfspraakPloegTokenRouteImport } from './routes/afspraak.ploeg.$token'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
+import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
 
 const IndexRoute = IndexRouteImport.update({
@@ -56,6 +58,11 @@ const AuthenticatedAankoopfacturenRoute =
     path: '/aankoopfacturen',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedContractenRoute = AuthenticatedContractenRouteImport.update({
+  id: '/contracten',
+  path: '/contracten',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedFacturenRoute = AuthenticatedFacturenRouteImport.update({
   id: '/facturen',
   path: '/facturen',
@@ -136,6 +143,12 @@ const ApiPublicAankoopfacturenImportRoute =
     path: '/api/public/aankoopfacturen/import',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicContractsProcessRoute =
+  ApiPublicContractsProcessRouteImport.update({
+    id: '/api/public/contracts/process',
+    path: '/api/public/contracts/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPontoSyncRoute = ApiPublicPontoSyncRouteImport.update({
   id: '/api/public/ponto/sync',
   path: '/api/public/ponto/sync',
@@ -147,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/contracten': typeof AuthenticatedContractenRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
@@ -162,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
 export interface FileRoutesByTo {
@@ -169,6 +184,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/contracten': typeof AuthenticatedContractenRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
@@ -184,6 +200,7 @@ export interface FileRoutesByTo {
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
 export interface FileRoutesById {
@@ -193,6 +210,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/_authenticated/contracten': typeof AuthenticatedContractenRoute
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
@@ -208,6 +226,7 @@ export interface FileRoutesById {
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
 export interface FileRouteTypes {
@@ -217,6 +236,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/aankoopfacturen'
+    | '/contracten'
     | '/facturen'
     | '/kalender'
     | '/klanten'
@@ -232,6 +252,7 @@ export interface FileRouteTypes {
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -239,6 +260,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/aankoopfacturen'
+    | '/contracten'
     | '/facturen'
     | '/kalender'
     | '/klanten'
@@ -254,6 +276,7 @@ export interface FileRouteTypes {
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   id:
     | '__root__'
@@ -262,6 +285,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/aankoopfacturen'
+    | '/_authenticated/contracten'
     | '/_authenticated/facturen'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
@@ -277,6 +301,7 @@ export interface FileRouteTypes {
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   fileRoutesById: FileRoutesById
 }
@@ -290,6 +315,7 @@ export interface RootRouteChildren {
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
+  ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
 }
 
@@ -328,6 +354,13 @@ declare module '@tanstack/react-router' {
       path: '/aankoopfacturen'
       fullPath: '/aankoopfacturen'
       preLoaderRoute: typeof AuthenticatedAankoopfacturenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/contracten': {
+      id: '/_authenticated/contracten'
+      path: '/contracten'
+      fullPath: '/contracten'
+      preLoaderRoute: typeof AuthenticatedContractenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/facturen': {
@@ -435,6 +468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAankoopfacturenImportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/contracts/process': {
+      id: '/api/public/contracts/process'
+      path: '/api/public/contracts/process'
+      fullPath: '/api/public/contracts/process'
+      preLoaderRoute: typeof ApiPublicContractsProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/ponto/sync': {
       id: '/api/public/ponto/sync'
       path: '/api/public/ponto/sync'
@@ -447,6 +487,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAankoopfacturenRoute: typeof AuthenticatedAankoopfacturenRoute
+  AuthenticatedContractenRoute: typeof AuthenticatedContractenRoute
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
@@ -461,6 +502,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAankoopfacturenRoute: AuthenticatedAankoopfacturenRoute,
+  AuthenticatedContractenRoute: AuthenticatedContractenRoute,
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
@@ -486,6 +528,7 @@ const rootRouteChildren: RootRouteChildren = {
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
+  ApiPublicContractsProcessRoute: ApiPublicContractsProcessRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
 }
 export const routeTree = rootRouteImport
