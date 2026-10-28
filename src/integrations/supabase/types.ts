@@ -738,6 +738,115 @@ export type Database = {
           },
         ]
       }
+      newsletter_campaigns: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      newsletter_consent_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          customer_id: string | null
+          email: string
+          evidence: string
+          id: string
+          status: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          email: string
+          evidence: string
+          id?: string
+          status: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          email?: string
+          evidence?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_consent_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_consents: {
+        Row: {
+          consent_at: string | null
+          customer_id: string
+          email: string
+          evidence: string
+          status: string
+          unsubscribe_hash: string
+          updated_at: string
+        }
+        Insert: {
+          consent_at?: string | null
+          customer_id: string
+          email: string
+          evidence?: string
+          status: string
+          unsubscribe_hash: string
+          updated_at?: string
+        }
+        Update: {
+          consent_at?: string | null
+          customer_id?: string
+          email?: string
+          evidence?: string
+          status?: string
+          unsubscribe_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_consents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ponto_reconciliations: {
         Row: {
           amount: number
@@ -1488,6 +1597,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_newsletter_consent: {
+        Args: {
+          p_customer_id: string
+          p_evidence: string
+          p_hash: string
+          p_status: string
+        }
+        Returns: undefined
+      }
       respond_appointment: {
         Args: {
           p_accept?: boolean
@@ -1507,6 +1625,7 @@ export type Database = {
         }
         Returns: string
       }
+      unsubscribe_newsletter: { Args: { p_hash: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "technician"
