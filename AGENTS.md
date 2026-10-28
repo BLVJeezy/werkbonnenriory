@@ -9,7 +9,7 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Simpla completion sync uses a database-triggered queue independent of invoice mail statuses; only verified read calls are enabled until the provider confirms creation and idempotency, preventing duplicate legal invoices.
+- Simpla sales synchronization is retired: completion enqueue is a no-op and compatibility endpoints never call Simpla or mutate its queue; purchase imports remain read-only, preventing duplicate legal invoices.
 - Password recovery uses the public /reset-password route and auth recovery sessions; never generate or disclose account passwords in chat.
 - Purchase payments use a separate tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes are excluded from outgoing payment files. Original purchase PDFs are private attachments, never reconstructed as evidence.
 - Purchase suppliers are linked by a DB trigger; new documents snapshot supplier defaults without rewriting source amounts. Receipt AI runs server-side, originals private, hash dedup; mobile scanning stops camera tracks on capture/close/unmount.
