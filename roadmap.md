@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Drie officiële betalingsherinneringen: voorwaarden/wetgeving controleren, veilige bedragen/termijnen, adminvoorbeeld/verzending en historiek, tests en controle.
+- [x] Drie betalingsherinneringen met adminvoorbeeld/PDF, Belgische consumentenwachttijd en forfaits volgens artikel 11, expliciet klanttype en vooraf overeengekomen voorwaarden; geen interest/gestapelde kosten. Saldo minus betalingen/creditnota's, éénmalige verzendclaim en exacte historiek; 28 tests en adminvoorbeeld/PDF/herladen gecontroleerd. Geen echte herinnering verzonden.
+- [ ] Echte ontvangst betalingsherinnering controleren — vereist afgesproken proefontvanger; juridische afdwingbaarheid per dossier blijft te beoordelen door jurist.
 
 - [x] Offerteaanvragen verborgen uit Taken/Kalender via DB-gecontroleerde koppeling; proefomzetting en herladen getest. Nog in te plannen horizontaal met omschrijving, volledig adres en contact; screenshot gecontroleerd. Mailverplaatsing naar Uitgevoerd in duurzame, beveiligde wachtrij met stabiele ID/herproberen; 5 tests geslaagd.
 - [ ] Afspraakmails daadwerkelijk naar Uitgevoerd verplaatsen — Microsoft vraagt nieuwe toestemming; gebruiker moet afspraak@riory.be opnieuw koppelen. 16 bestaande verwerkte afspraakmails wachten; geen echte mail verplaatst tijdens controle.
