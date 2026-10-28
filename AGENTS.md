@@ -12,7 +12,7 @@
 - Simpla sales sync is retired; enqueue does nothing; purchase imports stay read-only.
 - Mailtaken sales feed requires a shared server token and stable source IDs to prevent duplicate accounting imports.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
-- Password recovery uses the public /reset-password route and auth recovery sessions; never generate or disclose account passwords in chat.
+- Password recovery: public /reset-password and recovery sessions; never disclose passwords.
 - Purchase payments use a separate tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes are excluded from outgoing payment files. Original purchase PDFs are private attachments, never reconstructed as evidence.
 - Purchase suppliers are linked by a DB trigger; new documents snapshot supplier defaults without rewriting source amounts. Receipt AI runs server-side, originals private, hash dedup; mobile scanning stops camera tracks on capture/close/unmount.
 - Customers use normalized name/full-address identity, preserve source codes including aliases, and are linked by a work-order trigger; projects belong to customer IDs and customer lists are paginated to avoid truncated imports.
@@ -24,7 +24,8 @@
 - Billing math lives in `src/lib/billing.ts` (pure, tested); the UI computes totals live and stores only the paid amount when payment is recorded.
 - Work-order payment removal uses an authenticated admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
 - Driving distance uses Nominatim + OSRM in `distance.functions.ts`; cached distance resets on address change.
-- Newsletters use email-bound consent, append-only audit and admin atomic RPCs; hashed-token public POSTs revoke consent. Campaigns stay drafts until a delivery service is linked.
+- Newsletters: email-bound consent, append-only audit, admin RPCs, hashed-token unsubscribe POSTs; draft-only until delivery linked.
+- PDF/UBL share invoice-vat-notices for all line rates; preserve tax treatment and sent snapshots.
 - Crews log in with name + password; `src/lib/login.ts` maps a name to an internal non-mailable email. Per-crew visibility flags live on `technicians` (signed orders enforced in RLS, the rest hidden in the UI).
 - Mail import reads the inbox through a per-admin Microsoft Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox account signs in itself without Exchange delegation.
 - Per-crew accessibility flags (like `technicians.large_text`) are admin-set on the Ploegen page, read through `src/lib/use-role.ts`, and applied as a class on `<html>` so rem-based Tailwind scales everywhere; a crew can override the flag locally via `src/lib/text-size.ts` (shared tablets).
