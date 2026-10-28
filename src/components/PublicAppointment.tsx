@@ -35,7 +35,17 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
   });
   async function submit(accept?: boolean) {
     if (busy) return;
-    const slots = rawSlots.map(normalizeSlot);
+    const field = (id: string, fallback: string) => {
+      const el = typeof document !== "undefined" ? document.getElementById(id) : null;
+      return el instanceof HTMLInputElement && el.value ? el.value : fallback;
+    };
+    const slots = rawSlots.map((s, i) =>
+      normalizeSlot({
+        date: field(`slot-date-${i}`, s.date),
+        from: field(`slot-from-${i}`, s.from),
+        until: field(`slot-until-${i}`, s.until),
+      }),
+    );
     if (crew || accept === false) {
       const result = appointmentSlotsInput.safeParse(slots);
       if (!result.success) {
