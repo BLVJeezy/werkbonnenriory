@@ -9,7 +9,8 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Simpla sales synchronization is retired: completion enqueue is a no-op and compatibility endpoints never call Simpla or mutate its queue; purchase imports remain read-only, preventing duplicate legal invoices.
+- Simpla sales sync is retired; enqueue is a no-op, compatibility endpoints make no calls; purchase imports stay read-only.
+- Document links use hashed per-send tokens, private PDF snapshots and POST opens; admin reports count link opens, not reading.
 - Password recovery uses the public /reset-password route and auth recovery sessions; never generate or disclose account passwords in chat.
 - Purchase payments use a separate tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes are excluded from outgoing payment files. Original purchase PDFs are private attachments, never reconstructed as evidence.
 - Purchase suppliers are linked by a DB trigger; new documents snapshot supplier defaults without rewriting source amounts. Receipt AI runs server-side, originals private, hash dedup; mobile scanning stops camera tracks on capture/close/unmount.
@@ -31,7 +32,7 @@
 - Quote signing emails use the canonical published app URL through the tested signing-link helper, never the request origin, because preview and internal hosts are inaccessible to customers.
 - Credit notes are `invoices` rows with `kind = 'creditnota'` and `credit_for` to the original; same numbering, reversed by tested `buildCreditNote`. `work_order_id` is nullable and not unique: credit notes share it, manual invoices (`createManualInvoice`, tested `buildManualInvoice`) have none and reuse `contract_reference` as reference.
 - Products can be flagged `admin_only`; the read policy excludes them for non-admins and the material picker filters them too, so crews cannot select them even via the API.
-- The accountant UBL mail (`sendAllToAccountant`) sends every invoice and credit note as separate UBL attachments in one Outlook mail to `settings.accountant_email`, without embedded PDFs to stay under mail size limits.
+- Accountant mail sends all invoices/credit notes as separate UBL attachments in one Outlook mail, without embedded PDFs to limit size.
 - External crews have no auth account; tokens expose a price-free DTO. Forwarding uses quote descriptions/quantities (no prices/km) or task text; slot options/alternatives use a service-only atomic RPC that preserves scheduling guards and mail retries.
 - Quotes keep source/output tasks separate; DB-enforced quote_pending hides sources and unapproved outputs. Scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracten owns planning/billing. Confirmed per-visit lines invoice future completions via queue/unique RPC every five minutes; informational tasks skip normal invoicing/Simpla. Imports intact; activation explicit. Sending helpers stay server-only; uncertain mail never auto-retries.
