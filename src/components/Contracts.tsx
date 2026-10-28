@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { allCustomers } from "@/lib/customers";
 import { planContracts, PLAN_AHEAD_DAYS } from "@/lib/contracts";
-import { REPEAT_PRESETS, repeatLabel, nthWeekdayOfMonth, WEEKDAYS, ORDINALS, type RepeatUnit } from "@/lib/recurrence";
+import { REPEAT_PRESETS, repeatLabel, nthWeekdayOfMonth, addInterval, WEEKDAYS, ORDINALS, type RepeatUnit } from "@/lib/recurrence";
 import { ContractBilling } from './ContractBilling';
 
 type Opts = { techs: { id: string; name: string }[]; acts: { id: string; name: string }[] } | undefined;
@@ -44,10 +44,22 @@ export function Contracts({ opts }: { opts: Opts }) {
     e.preventDefault();
     const c = customers.find((x) => label(x) === f.customer);
     if (!c) { toast.error("Kies een bestaande klant uit de lijst"); return; }
+    const useOrdinal = f.mode === "weekdag" && f.unit !== "week";
+    const ordinal = useOrdinal ? Number(f.ordinal) : null;
+    const weekday = useOrdinal ? Number(f.weekday) : null;
+    let nextDate = f.next_date;
+    if (useOrdinal) {
+      const [y, m] = f.next_date.split("-").map(Number) as [number, number];
+      let cand = nthWeekdayOfMonth(y, m, ordinal!, weekday!);
+      let guard = 0;
+      while (cand < f.next_date && guard++ < 500) cand = addInterval(cand, Number(f.every), f.unit, ordinal, weekday);
+      nextDate = cand;
+    }
     const values = {
       customer_id: c.id, customer_name: c.name, name: f.name || c.name, description: f.description || null,
       technician_id: f.technician_id || null, activity_id: f.activity_id || null,
-      repeat_every: Number(f.every), repeat_unit: f.unit, next_date: f.next_date, end_date: f.end_date || null,
+      repeat_every: Number(f.every), repeat_unit: f.unit, next_date: nextDate, end_date: f.end_date || null,
+      repeat_ordinal: ordinal, repeat_weekday: weekday,
       scheduling_ready: true,
     };
     const { error } = editingId
