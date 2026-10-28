@@ -68,7 +68,7 @@ export function Contracts({ opts }: { opts: Opts }) {
         <Button size="sm" variant="outline" onClick={() => plan()}>Nu inplannen</Button>
         <Button size="sm" onClick={() => { setOpen((v) => !v); setEditingId(null); setF(empty); }}>{open ? "Sluiten" : "+ Terugkerende opdracht"}</Button>
       </div>
-      <p className="text-sm text-muted-foreground">Beurten worden automatisch {PLAN_AHEAD_DAYS / 7} weken vooruit in de agenda gezet. Werkbonnen van een contract zijn enkel ter info en worden niet gefactureerd.</p>
+      <p className="text-sm text-muted-foreground">Contractbeurten · {PLAN_AHEAD_DAYS / 7} weken vooruit gepland · Werkbonnen enkel ter info</p>
       {open && (
         <form onSubmit={save} className="grid gap-3 border-y py-4 sm:grid-cols-2">
           <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-klant">Klant</Label>
