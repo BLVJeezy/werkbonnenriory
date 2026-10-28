@@ -408,8 +408,9 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
   const running = w.time_entries?.find((t) => !t.ended_at);
   const signed = w.status === "afgetekend";
   return (
-    <div style={crewStyle(w.technicians?.color)} className={`space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm ${isUrgentOpen(w) ? URGENT_RING : ""}`}>
+    <div style={crewStyle(w.technicians?.color)} className={`space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
       {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
+      {running && <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />}
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex flex-wrap items-center gap-4">
         <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
         <div className="min-w-0 flex-1">
@@ -421,7 +422,6 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
             <p className="mt-1 text-sm italic opacity-80">Geen omschrijving</p>
           )}
         </div>
-        {running && <RunningTask entries={w.time_entries} />}
         {extra}
       </Link>
       {below}
