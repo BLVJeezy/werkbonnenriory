@@ -1,4 +1,6 @@
 # Roadmap
+- [x] Nieuwsbrieven: adminpagina met opgeslagen concepten, Riory-mailvoorbeeld/logo, emailgebonden toestemming/bewijs/historiek en persoonlijke uitschrijflink. Opslaan/herladen, anoniem uitschrijven en teruglezen getest met tijdelijke proefklant; zes regels getest, geen mails verstuurd.
+- [ ] Nieuwsbrieven verzenden — gebruiker kiest voorlopig geen nieuwsbriefdienst; verzending blijft uitgeschakeld tot koppeling.
 - [x] Facturen, creditnota’s en boekhouder-UBL via aparte boekhouding-mailbox; overige communicatie via info behouden. Afzendercontrole en mailcontact aangepast; 11 tests geslaagd en koppelknop als beheerder gecontroleerd.
 - [ ] Boekhouding-mailbox koppelen en echte factuurverzending controleren — vereist Microsoft-aanmelding met boekhouding@riory.be en afgesproken proefontvanger.
 - [x] Klant uitnodigen vanuit taak, kalender en taakdetail met standaardvakken ochtend 08:00–12:00 en namiddag 13:00–17:00 op vijf werkdagen; klant kiest via maillink en de bevestiging plant atomisch in de agenda. Keuzescherm, aanklikbare vakken en samenvatting gecontroleerd (24 tests geslaagd, build OK, geen consolefouten); overlappende kalenderkaarten hersteld. Geen echte klantmail verstuurd — uitnodigingsmail en klantbevestiging nog live te testen na publicatie.
