@@ -44,6 +44,22 @@ export function buildCreditNote(inv: { lines: InvoiceLine[]; vatRate: number; ne
   return { lines, vatRate: inv.vatRate, net: -Math.abs(inv.net), vat: -Math.abs(inv.vat), total: -Math.abs(inv.total) };
 }
 
+/** Pure: free-form manual invoice lines with per-line VAT; used by the "Nieuwe factuur" form. */
+export function buildManualInvoice(lines: { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number }[]) {
+  const rows: InvoiceLine[] = [];
+  let net = 0, vat = 0;
+  for (const l of lines) {
+    const qty = Number(l.quantity) || 0;
+    const price = Number(l.unitPrice) || 0;
+    const rate = Number(l.vatRate) || 0;
+    const amount = r2(qty * price);
+    rows.push({ description: l.description.trim(), quantity: qty, unit: l.unit.trim() || "st", unitPrice: price, amount, vatRate: rate });
+    net = r2(net + amount);
+    vat = r2(vat + r2((amount * rate) / 100));
+  }
+  return { lines: rows, vatRate: rows[0]?.vatRate ?? 21, net, vat, total: r2(net + vat) };
+}
+
 /** Fully paid invoices may go out automatically; open ones always wait for a manual send. */
 export function isFullyPaid(total: number, paidAmount: number) {
   return paidAmount > 0 && paidAmount + 0.005 >= total;

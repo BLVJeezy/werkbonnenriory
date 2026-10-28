@@ -10,7 +10,7 @@ const b64 = (bytes: Uint8Array) => { let s = ""; for (const b of bytes) s += Str
 export async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
   const [{ data: s }, { data: wo }] = await Promise.all([
     supabase.from("settings").select("*").eq("id", 1).single(),
-    supabase.from("work_orders").select("number").eq("id", inv.work_order_id).single(),
+    inv.work_order_id ? supabase.from("work_orders").select("number").eq("id", inv.work_order_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   let extra: { title: string; reference: string } | null = null;
   if (inv.kind === "creditnota") {
@@ -18,6 +18,8 @@ export async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> 
     extra = { title: "CREDITNOTA", reference: `Creditnota voor factuur ${orig?.number ?? "onbekend"}` };
   } else if (inv.contract_reference) {
     extra = { title: 'FACTUUR', reference: inv.contract_reference };
+  } else if (!wo) {
+    extra = { title: 'FACTUUR', reference: 'Directe factuur' };
   }
   return {
     number: inv.number, issueDate: inv.issue_date, dueDate: inv.due_date, workOrderNumber: wo?.number ?? 0,
