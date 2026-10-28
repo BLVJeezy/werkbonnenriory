@@ -1,0 +1,2 @@
+ALTER TABLE public.settings ADD COLUMN newsletter_ai_denial jsonb;
+COMMENT ON COLUMN public.settings.newsletter_ai_denial IS 'Durable terminal provider-access denial for newsletter generation; clear only after provider access has been restored.';

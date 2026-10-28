@@ -365,6 +365,13 @@
       "when": 1793208069585,
       "tag": "0051_newsletter_drafts_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793209107886,
+      "tag": "0052_newsletter_ai_denial_state",
+      "breakpoints": true
     }
   ]
 }
