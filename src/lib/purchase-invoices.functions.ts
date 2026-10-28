@@ -28,10 +28,11 @@ export const importPurchaseInvoices = createServerFn({ method: "POST" })
 /** Admin corrects the parsed values before approving. */
 export const updatePurchaseInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; kind?: 'factuur' | 'creditnota' } & Partial<ParsedPurchaseInvoice>) => i)
+  .inputValidator((i: { id: string; kind?: 'factuur' | 'creditnota'; paymentMethod?: string } & Partial<ParsedPurchaseInvoice>) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     if (data.kind && !['factuur', 'creditnota'].includes(data.kind)) throw new Error('Ongeldig documenttype');
+    if (data.paymentMethod && !['overschrijving','domiciliering','kaart','cash'].includes(data.paymentMethod)) throw new Error('Ongeldige betaalwijze');
     const n = normalizePurchaseInvoice({
       supplierName: data.supplierName, supplierVat: data.supplierVat, supplierIban: data.supplierIban,
       invoiceNumber: data.invoiceNumber, invoiceDate: data.invoiceDate, dueDate: data.dueDate,
@@ -42,6 +43,7 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
       invoice_number: n.invoiceNumber, invoice_date: n.invoiceDate, due_date: n.dueDate,
       lines: n.lines, net: n.net, vat: n.vat, total: n.total, payment_ref: n.paymentRef,
       ...(data.kind ? { kind: data.kind } : {}),
+      ...(data.paymentMethod ? { payment_method: data.paymentMethod } : {}),
     }).eq("id", data.id).neq('status', 'betaald');
     if (error) throw new Error(error.message);
     return { ok: true as const };
@@ -107,6 +109,38 @@ export const attachPurchasePdf = createServerFn({ method: 'POST' })
     const { error: saveError } = await context.supabase.from('purchase_invoices').update({ pdf_path: path }).eq('id', data.id);
     if (saveError) { await storage.remove([path]); throw new Error('PDF koppelen mislukt'); }
     return { path };
+  });
+
+export const importReceipt = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((i: { base64: string; mime: string; filename: string }) => {
+    if (!i.base64 || i.base64.length > 14000000 || !['application/pdf','image/jpeg','image/png','image/webp'].includes(i.mime)) throw new Error('Kies een PDF, JPG, PNG of WebP van maximaal 10 MB.');
+    return i;
+  }).handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const bytes = Uint8Array.from(atob(data.base64), c => c.charCodeAt(0));
+    const prefix = new TextDecoder().decode(bytes.slice(0, 5));
+    const valid = data.mime === 'application/pdf' ? prefix === '%PDF-' : data.mime === 'image/jpeg' ? bytes[0] === 255 && bytes[1] === 216 : data.mime === 'image/png' ? bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71 : prefix.startsWith('RIFF') && new TextDecoder().decode(bytes.slice(8,12)) === 'WEBP';
+    if (!valid || bytes.length > 10000000) throw new Error('Bestandstype of bestandsgrootte ongeldig.');
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2,'0')).join('');
+    const { data: existing } = await context.supabase.from('purchase_invoices').select('id').eq('upload_hash', hash).maybeSingle();
+    if (existing) return { id: existing.id, duplicate: true };
+    const key = process.env['LOVABLE_API_KEY'];
+    if (!key) throw new Error('AI-koppeling ontbreekt');
+    const { extractReceipt } = await import('./receipt.server');
+    const n = await extractReceipt(key, data.base64, data.mime);
+    const ext = data.mime === 'application/pdf' ? 'pdf' : data.mime.split('/')[1];
+    const path = `tickets/${crypto.randomUUID()}.${ext}`;
+    const storage = context.supabase.storage.from('aankoopfacturen');
+    const { error: uploadError } = await storage.upload(path, bytes, { contentType: data.mime });
+    if (uploadError) throw new Error('Origineel document opslaan mislukt');
+    const { data: row, error } = await context.supabase.from('purchase_invoices').insert({
+      supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban,
+      invoice_number: n.invoiceNumber, invoice_date: n.invoiceDate, due_date: n.dueDate,
+      lines: n.lines, net: n.net, vat: n.vat, total: n.total, payment_ref: n.paymentRef,
+      source: 'kasticket', status: 'te_controleren', pdf_path: path, upload_hash: hash,
+    }).select('id').single();
+    if (error || !row) { await storage.remove([path]); throw new Error(error?.code === '23505' ? 'Dit kasticket is al ingelezen.' : 'Aankoopdocument opslaan mislukt'); }
+    return { id: row.id, duplicate: false };
   });
 
 /** Reads unpaid purchase bills from Simpla (read-only API) and adds new ones for admin review. */

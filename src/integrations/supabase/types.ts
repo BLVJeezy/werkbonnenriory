@@ -337,16 +337,21 @@ export type Database = {
           net: number
           paid_at: string | null
           payment_file_at: string | null
+          payment_method: string
           payment_ref: string | null
           pdf_path: string | null
           simpla_bill_id: number | null
           source: string
           status: string
           supplier_iban: string | null
+          supplier_id: string | null
           supplier_name: string
           supplier_vat: string | null
+          supplier_vat_rule: string
           total: number
+          upload_hash: string | null
           vat: number
+          vat_deductible_percent: number
         }
         Insert: {
           bank_payment_ref?: string | null
@@ -362,16 +367,21 @@ export type Database = {
           net?: number
           paid_at?: string | null
           payment_file_at?: string | null
+          payment_method?: string
           payment_ref?: string | null
           pdf_path?: string | null
           simpla_bill_id?: number | null
           source?: string
           status?: string
           supplier_iban?: string | null
+          supplier_id?: string | null
           supplier_name?: string
           supplier_vat?: string | null
+          supplier_vat_rule?: string
           total?: number
+          upload_hash?: string | null
           vat?: number
+          vat_deductible_percent?: number
         }
         Update: {
           bank_payment_ref?: string | null
@@ -387,18 +397,31 @@ export type Database = {
           net?: number
           paid_at?: string | null
           payment_file_at?: string | null
+          payment_method?: string
           payment_ref?: string | null
           pdf_path?: string | null
           simpla_bill_id?: number | null
           source?: string
           status?: string
           supplier_iban?: string | null
+          supplier_id?: string | null
           supplier_name?: string
           supplier_vat?: string | null
+          supplier_vat_rule?: string
           total?: number
+          upload_hash?: string | null
           vat?: number
+          vat_deductible_percent?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quotes: {
         Row: {
@@ -548,6 +571,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suppliers: {
+        Row: {
+          created_at: string
+          iban: string | null
+          id: string
+          match_key: string
+          name: string
+          payment_method: string
+          vat_deductible_percent: number
+          vat_number: string | null
+          vat_rule: string
+        }
+        Insert: {
+          created_at?: string
+          iban?: string | null
+          id?: string
+          match_key: string
+          name: string
+          payment_method?: string
+          vat_deductible_percent?: number
+          vat_number?: string | null
+          vat_rule?: string
+        }
+        Update: {
+          created_at?: string
+          iban?: string | null
+          id?: string
+          match_key?: string
+          name?: string
+          payment_method?: string
+          vat_deductible_percent?: number
+          vat_number?: string | null
+          vat_rule?: string
+        }
+        Relationships: []
       }
       technicians: {
         Row: {
