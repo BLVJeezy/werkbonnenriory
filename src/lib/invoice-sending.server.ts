@@ -1,7 +1,7 @@
 import { peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from './invoice';
 import type { InvoicePdfData } from './invoice-pdf';
 import { WERKBON_MAIL_SCOPES } from './outlook-scopes';
-import { WERKBON_MAILBOX_KEY } from './werkbon-mailbox.functions';
+import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from './mail-senders';
 import { getConnectionKeyForUser } from './appUserConnections.server';
 import { deliverInvoice,invoiceMail,invoiceMailWithCc,OKIOKI_INVOICE_EMAIL } from './invoice-delivery';
 const SENDER_PEPPOL_ID='0208:0840931404';
@@ -31,20 +31,24 @@ export async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> 
   };
 }
 
-// ---- Mail via info@riory.be ----
+// ---- Mail via the dedicated invoice mailbox ----
 async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur", payload?: unknown) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
   let key: string | null = null;
-  for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, WERKBON_MAILBOX_KEY); if (key) break; }
-  if (!key) throw new Error("Koppel eerst de mailbox info@riory.be");
+  for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, INVOICE_MAILBOX_KEY); if (key) break; }
+  if (!key) throw new Error(`Koppel eerst de mailbox ${INVOICE_MAILBOX_ADDRESS}`);
   const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
+  const profile = await callAsAppUser({ gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me?$select=mail,userPrincipalName", requiredScopes: WERKBON_MAIL_SCOPES });
+  if (await appUserReconnectRequired(profile)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
+  if (!profile.ok) throw new Error(`Mailbox controleren mislukt [${profile.status}]: ${await profile.text()}`);
+  assertInvoiceMailbox(await profile.json());
   const res = await callAsAppUser({
     gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
     init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload ?? invoiceMail(to, number, contentBytes, format, label)) },
     requiredScopes: WERKBON_MAIL_SCOPES,
   });
-  if (await appUserReconnectRequired(res)) throw new Error("Koppel de mailbox info@riory.be opnieuw");
+  if (await appUserReconnectRequired(res)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
   if (!res.ok) {
     const body = await res.text();
     console.error(`Factuurmail mislukt [${res.status}]: ${body}`);
