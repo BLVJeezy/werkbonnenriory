@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Excel-klanten en projecten importeren met originele klantcodes, projecten per klant en afspraakherkenning op naam/adres; dubbele broncodes veilig behandelen.
+
 - [x] Mobiele OCR-scanner met camera, foto kiezen, draaien en controle vóór aankoopinlezing; cameraflow met proefbeeld en echte OCR gecontroleerd, camera stopt bij sluiten, foto-fallback getest, mobiele/desktopweergave gecontroleerd en proefgegevens verwijderd. Fysieke telefooncamera niet getest.
 
 - [x] Leveranciers automatisch bewaren bij alle imports; betaalwijze, btw-regel en aftrekpercentage beheren. Kasticketten als foto/PDF inlezen met privé-origineel en duplicaatcontrole; foto/PDF, standaardkeuzes en herladen getest, 23 tests geslaagd, proefgegevens verwijderd.
