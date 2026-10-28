@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Aparte Contracten-pagina; factuur volgens contractregels na elke uitgevoerde beurt, automatisch mailen, beheer/controle en tests.
+
 - [x] Drie betalingsherinneringen met adminvoorbeeld/PDF, Belgische consumentenwachttijd en forfaits volgens artikel 11, expliciet klanttype en vooraf overeengekomen voorwaarden; geen interest/gestapelde kosten. Saldo minus betalingen/creditnota's, éénmalige verzendclaim en exacte historiek; 28 tests en adminvoorbeeld/PDF/herladen gecontroleerd. Geen echte herinnering verzonden.
 - [ ] Echte ontvangst betalingsherinnering controleren — vereist afgesproken proefontvanger; juridische afdwingbaarheid per dossier blijft te beoordelen door jurist.
 
