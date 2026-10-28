@@ -29,7 +29,10 @@ export const processAppointmentMails = createServerFn({ method: "POST" })
           // Legacy rows have no owner. Confirm the exact stored message exists in this user's mailbox first.
           const check = await graph(`/me/messages/${encodeURIComponent(job.source_message_id)}?$select=id`);
           if (check.status === 404) continue;
-          if (!check.ok) throw new Error("Afspraakmail controleren mislukt.");
+          if (!check.ok) {
+            console.error(`Appointment mail check failed [${check.status}]: ${await check.text()}`);
+            throw new Error(`Afspraakmail controleren mislukt (${check.status}).`);
+          }
         }
         const now = new Date().toISOString();
         const { data: claimed, error: ce } = await sb.from("appointment_mail_moves").update({ user_id: context.userId, lease_until: new Date(Date.now() + 120000).toISOString() }).eq("work_order_id", job.work_order_id).is("moved_at", null).or(`lease_until.is.null,lease_until.lt.${now}`).select("work_order_id").maybeSingle();
@@ -45,7 +48,8 @@ export const processAppointmentMails = createServerFn({ method: "POST" })
       } catch (e) {
         failure = e instanceof Error ? e.message : "Afspraakmail verplaatsen mislukt.";
         await sb.from("appointment_mail_moves").update({ last_error: failure, lease_until: null }).eq("work_order_id", job.work_order_id).or(`user_id.eq.${context.userId},user_id.is.null`);
-        break;
+        // Only a revoked/insufficient grant stops the batch; one bad mail must not block the others.
+        if (failure.startsWith("Koppel afspraak@riory.be")) break;
       }
     }
     const { count } = await sb.from("appointment_mail_moves").select("work_order_id", { count: "exact", head: true }).is("moved_at", null).or(`user_id.eq.${context.userId},user_id.is.null`);
