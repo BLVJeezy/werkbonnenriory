@@ -52,7 +52,7 @@ export const customerKey = (c: { name: string; street?: string | null; house_num
 
 export function splitCustomerAddress(value: string) {
   const m = value.trim().match(/^(.*?)\s+(\d+[\s\S]*)$/);
-  return { street: m ? m[1].trim().replace(/[,\s]+$/,'') : value.trim(), house_number: m ? m[2].trim() : '' };
+  return { street: m ? (m[1] ?? '').trim().replace(/[,\s]+$/,'') : value.trim(), house_number: m ? (m[2] ?? '').trim() : '' };
 }
 
 export async function allCustomers(client: any) {
