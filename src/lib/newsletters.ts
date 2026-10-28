@@ -5,7 +5,8 @@ export const campaignSchema = z.object({ id: z.string().uuid().optional(), name:
 export const normalizeNewsletterEmail = (email: string | null) => (email ?? '').trim().toLowerCase();
 export function eligibleNewsletterRecipient(customer: { email: string | null }, consent?: { email: string; status: string } | null) {
   const email = normalizeNewsletterEmail(customer.email);
-  return z.string().email().safeParse(email).success && consent?.status === 'subscribed' && normalizeNewsletterEmail(consent.email) === email;
+  const unsubscribed = consent?.status === 'unsubscribed' && normalizeNewsletterEmail(consent.email) === email;
+  return z.string().email().safeParse(email).success && !unsubscribed;
 }
 export async function newsletterTokenHash(token: string) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
