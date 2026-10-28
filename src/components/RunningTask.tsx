@@ -1,7 +1,7 @@
 import { Timer } from "lucide-react";
 import { activeTimeEntry, type TimeEntry } from "@/lib/time";
 
-export function RunningTask({ entries, crewName }: { entries: TimeEntry[]; crewName?: string | null }) {
+export function RunningTask({ entries, crewName }: { entries: TimeEntry[]; crewName?: string | null | undefined }) {
   const running = activeTimeEntry(entries);
   if (!running) return null;
   return (
