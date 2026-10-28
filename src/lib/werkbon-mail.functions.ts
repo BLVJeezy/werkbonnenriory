@@ -51,11 +51,9 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
     const pdf = await createWerkbonPdf(mailData);
     let binary = "";
     for (const byte of pdf) binary += String.fromCharCode(byte);
-    const message = werkbonPdfMessage(mailData, wo.email, btoa(binary));
     const { prepareDocument } = await import('./document-tracking.server');
-    const { linkText } = await import('./document-tracking');
     const tracking = await prepareDocument('werkbon', wo.id, `Werkbon #${wo.number}`, wo.email, btoa(binary));
-    message.body.content = linkText(message.body.content, tracking.url);
+    const message = werkbonPdfMessage(mailData, wo.email, btoa(binary), tracking.url);
 
     const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
     let result: SendWerkbonResult = { sent: true };

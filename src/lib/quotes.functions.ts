@@ -1,3 +1,4 @@
+import { brandedBody } from "./mail-html";
 import { createServerFn } from "@tanstack/react-start";
 import { quoteSigningLink } from "@/lib/quote-signing-link";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -28,7 +29,7 @@ async function sendMail(to: string, subject: string, body: string, attachment: {
     gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
     init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: {
       subject,
-      body: { contentType: "Text", content: body },
+      body: brandedBody(body),
       toRecipients: [{ emailAddress: { address: to } }],
       attachments: [{ "@odata.type": "#microsoft.graph.fileAttachment", ...attachment }],
     } }) },
