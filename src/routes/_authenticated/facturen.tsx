@@ -44,7 +44,7 @@ function Facturen() {
     queryKey: ["facturen"],
     queryFn: async () => {
       const [w, i, s] = await Promise.all([
-        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number").eq("status", "afgetekend").order("signed_at", { ascending: false }),
+        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
       ]);
