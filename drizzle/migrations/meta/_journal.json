@@ -316,6 +316,13 @@
       "when": 1793188956373,
       "tag": "0044_contract_completion_invoicing",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793189193687,
+      "tag": "0045_contract_invoice_atomic_numbering",
+      "breakpoints": true
     }
   ]
 }
