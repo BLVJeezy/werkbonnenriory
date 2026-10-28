@@ -17,7 +17,7 @@ export const Route = createFileRoute('/_authenticated/nieuwsbrieven')({
   head: () => ({ meta: [{ title: 'Nieuwsbrieven — Riory Werkbonnen' }, { name: 'description', content: 'Riory-nieuwsbriefconcepten en marketingtoestemming beheren.' }, { property: 'og:title', content: 'Nieuwsbrieven — Riory Werkbonnen' }, { property: 'og:description', content: 'Campagnes en klanttoestemming van Riory.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: Newsletters,
 });
-type Form = { id?: string; name: string; subject: string; body: string };
+type Form = { id?: string | undefined; name: string; subject: string; body: string };
 const empty: Form = { name: '', subject: '', body: '' };
 function Newsletters() {
   const { data } = useSuspenseQuery(options);
@@ -53,7 +53,7 @@ function Newsletters() {
     <div className="border-l-4 border-primary bg-muted px-4 py-3 text-sm">Geen nieuwsbriefdienst gekoppeld. Concepten en toestemming zijn beschikbaar; verzending staat uit.</div>
     <div className="flex gap-2 border-b pb-3"><Button variant={tab === 'campaigns' ? 'default' : 'outline'} onClick={() => setTab('campaigns')}>Campagnes</Button><Button variant={tab === 'consent' ? 'default' : 'outline'} onClick={() => setTab('consent')}>Toestemming</Button></div>
     {tab === 'campaigns' ? <div className="space-y-4">
-      <Button onClick={() => { setForm({ ...empty }); setHtml(''); setAiText(''); setSuggestion(null); setAiError(''); }}><Plus className="size-4" />Nieuwe campagne</Button>
+      <Button disabled={generating} onClick={() => { setForm({ ...empty }); setHtml(''); setAiText(''); setSuggestion(null); setAiError(''); }}><Plus className="size-4" />Nieuwe campagne</Button>
       {form && <form className="space-y-4 border-y py-5" onSubmit={e => { e.preventDefault(); void act(async () => { const parsed = campaignSchema.parse(form); const saved = await save({ data: parsed }); setForm({ ...parsed, id: saved.id }); await qc.invalidateQueries({ queryKey: options.queryKey }); toast.success('Concept opgeslagen'); }); }}>
         <div className="space-y-3 border-l-4 border-primary pl-4">
           <label className="block space-y-1"><span className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4 text-primary" />Jouw tekst voor de nieuwsbrief</span><Textarea value={aiText} maxLength={12000} disabled={generating} onChange={e => setAiText(e.target.value)} placeholder="Bijvoorbeeld: We willen klanten informeren over dieptereiniging van regenputten…" className="min-h-28" /></label>
