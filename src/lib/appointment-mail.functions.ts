@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { moveAppointmentMessage, OUTLOOK_MOVE_SCOPES } from "./appointment-mail";
 
+const NOT_FOUND = "Niet meer gevonden in de mailbox";
+
 export const processAppointmentMails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -57,6 +59,6 @@ export const processAppointmentMails = createServerFn({ method: "POST" })
         if (failure.startsWith("Koppel afspraak@riory.be")) break;
       }
     }
-    const { count } = await sb.from("appointment_mail_moves").select("work_order_id", { count: "exact", head: true }).is("moved_at", null).or(`user_id.eq.${context.userId},user_id.is.null`);
+    const { count } = await sb.from("appointment_mail_moves").select("work_order_id", { count: "exact", head: true }).is("moved_at", null).or(`user_id.eq.${context.userId},user_id.is.null`).or(notParked);
     return { moved, pending: count ?? 0, error: failure };
   });
