@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Aankoopcontrole: origineel PDF bij factuur tonen/ophalen, creditnota-keuze en Ponto-aflettering op echte bankbetalingen; betaalbestand is geen betalingsbevestiging.
+
 - [x] Wachtwoordherstel voor beheerder: herstelknop en publieke pagina voor nieuw wachtwoord; formulier en toegelaten terugkeeradres gecontroleerd.
 
 - [x] Simpla-token veilig ingesteld; bestaande Mailtaken-leescode en GET customer gecontroleerd (HTTP 200, OK).
