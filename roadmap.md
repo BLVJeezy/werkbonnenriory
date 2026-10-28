@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Meerdere tijdsvakken door ploeg voorstellen; klant kiest of geeft eigen mogelijkheden bij afwijzing. Keuze atomisch in agenda, alternatieven in ploegmail/link; testen en proefdata opruimen.
+- [x] Meerdere ploegvoorstellen en klantalternatieven bij afwijzing; ploeg kan alternatieven overnemen, klant kiest één tijdsvak dat atomisch in agenda komt. Volledige flow met twee voorstellen, afwijzing/twee alternatieven en tweede keuze na herladen getest; 7 tests geslaagd, proefdata verwijderd, geen echte mails verstuurd.
 
 - [x] Externe ploeg: gekoppelde offerteomschrijving automatisch overgenomen zonder prijzen/kilometerpost; doorzetten zonder opnieuw typen, opgeslagen omschrijving en anonieme ploeglink gecontroleerd; 5 tests geslaagd, proefdata verwijderd, geen echte mail verstuurd.
 
