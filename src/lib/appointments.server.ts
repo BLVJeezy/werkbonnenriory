@@ -8,6 +8,7 @@ export async function deliverAppointment(r:RequestRow){
  const {data:claimed}=await db.from('appointment_requests').update({mail_lock_until:new Date(Date.now()+120000).toISOString()}).eq('id',r.id).eq('version',r.version).eq('mail_pending',r.mail_pending).or(`mail_lock_until.is.null,mail_lock_until.lt.${new Date().toISOString()}`).select('id').maybeSingle();
  if(!claimed)return {sent:false,error:'Mail wordt al verstuurd'};
  try{
+  if([r.crew_email,r.customer_email].some(email=>email.toLowerCase().endsWith('.invalid')))throw new Error('Testadres: mail niet verstuurd');
   const {data:w}=await db.from('work_orders').select('*').eq('id',r.work_order_id).single();
   if(!w || w.technician_id!==r.technician_id || w.status==='afgetekend')throw new Error('Afspraak niet meer beschikbaar');
   const {data:admins}=await db.from('user_roles').select('user_id').eq('role','admin');
