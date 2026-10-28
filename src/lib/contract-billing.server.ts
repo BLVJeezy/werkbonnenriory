@@ -1,6 +1,6 @@
 import { contractTotals } from './contract-billing';
 import { formatAddress } from './address';
-import { sendOne } from './invoices.functions';
+import { sendOne } from './invoice-sending.server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/integrations/supabase/types';
 export async function processContractBilling(sb: SupabaseClient<Database>, send = true) {

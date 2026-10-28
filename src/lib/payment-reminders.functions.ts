@@ -53,7 +53,7 @@ export const sendPaymentReminder = createServerFn({ method: 'POST' }).middleware
   for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, WERKBON_MAILBOX_KEY); if (key) break; }
   if (!key) throw new Error('Koppel eerst de mailbox info@riory.be.');
   const [{ createReminderPdf }, { getInvoicePdfAttachment }, { callAsAppUser, appUserReconnectRequired }] = await Promise.all([
-    import('./payment-reminder-pdf'), import('./invoices.functions'), import('@/integrations/lovable/appUserConnector'),
+    import('./payment-reminder-pdf'), import('./invoice-sending.server'), import('@/integrations/lovable/appUserConnector'),
   ]);
   const pdf = b64(await createReminderPdf(document));
   const original = await getInvoicePdfAttachment(context.supabase, data.invoiceId);
