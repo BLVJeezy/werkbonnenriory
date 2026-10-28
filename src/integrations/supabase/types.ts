@@ -1063,6 +1063,10 @@ export type Database = {
         Args: { c: string; h: string; n: string; p: string; s: string }
         Returns: string
       }
+      forward_external_appointment: {
+        Args: { p_id: string; p_instruction: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
