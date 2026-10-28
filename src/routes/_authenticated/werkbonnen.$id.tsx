@@ -22,7 +22,6 @@ import { quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { vatRateForCustomer } from "@/lib/vat-number";
-import { retrySimpla } from "@/lib/simpla.functions";
 import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
 import { ReassignCustomer } from '@/components/ReassignCustomer';
@@ -80,7 +79,6 @@ function Detail() {
   const calcKm = useServerFn(computeDistance);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const makeQuote = useServerFn(quoteFromTask);
-  const syncSimpla = useServerFn(retrySimpla);
   const removePayment = useServerFn(removeWorkOrderPayment);
   const [removingPayment,setRemovingPayment] = useState(false);
   const [kmTried, setKmTried] = useState<string | null>(null);
@@ -147,13 +145,7 @@ function Detail() {
     try {
       await completeTask({
         save: () => update(patch),
-        mail: async () => {
-          try {
-            const result = await syncSimpla({ data: { workOrderId: id } });
-            if (!result.ok) toast.error("Werkbon opgeslagen; factuur wacht op Simpla.");
-          } catch { toast.error("Werkbon opgeslagen; Simpla wordt later opnieuw gecontroleerd."); }
-          await mailNaarKlant();
-        },
+        mail: mailNaarKlant,
         afterSaved: async () => {
           if (role === "technician") await navigate({ to: "/werkbonnen", search: {} });
         },

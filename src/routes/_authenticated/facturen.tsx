@@ -14,7 +14,6 @@ import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, send
 import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
 import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
-import { SimplaSync } from "@/components/SimplaSync";
 import { PaymentReminders } from "@/components/PaymentReminders";
 import { NewInvoice } from "@/components/NewInvoice";
 
@@ -147,7 +146,6 @@ function Facturen() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-black uppercase">Facturen</h1>
-      <SimplaSync />
 
       <section className="space-y-3 rounded-md border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -217,7 +215,7 @@ function Facturen() {
       {s && (
         <section className="grid gap-3 rounded-md border bg-card p-4 sm:grid-cols-2">
           <h2 className="text-lg font-black uppercase sm:col-span-2">Factuurinstellingen</h2>
-          <div className="space-y-1"><Label>Volgend factuurnummer (aansluitend op Simpla)</Label>
+          <div className="space-y-1"><Label>Volgend factuurnummer</Label>
             <Input type="number" defaultValue={s.next_invoice_number} onBlur={(e) => Number(e.target.value) !== s.next_invoice_number && saveSetting({ next_invoice_number: Number(e.target.value) })} /></div>
           <div className="space-y-1"><Label>Voorvoegsel (bv. 2026-)</Label>
             <Input defaultValue={s.invoice_prefix} onBlur={(e) => e.target.value !== s.invoice_prefix && saveSetting({ invoice_prefix: e.target.value })} /></div>
