@@ -1,6 +1,6 @@
 # Roadmap
-- [ ] Alleen aankoopfacturen verwijderen; leveranciers behouden en terug zichtbaar maken; automatische aankoopimport stoppen zodat facturen niet terugkomen.
-- [ ] Volledige taakomschrijving voor ploegen zichtbaar maken, zonder afgekorte regels.
+- [ ] Alleen aankoopfacturen verwijderen — verwijdering geweigerd; 22 aankoopfacturen blijven staan. 19 leveranciers behouden en terug zichtbaar; automatische aankoopimport gestopt.
+- [x] Volledige taakomschrijving zichtbaar in takenlijst en als vaste volledige tekst in ploegdetail; lijst met bestaande omschrijvingen gecontroleerd zonder afkapping.
 - [x] Aankoop voorlopig uit de navigatie gehaald; bestaande aankoopgegevens behouden. Als beheerder gecontroleerd dat Aankoop verborgen en Facturen bereikbaar is; build OK.
 - [x] Simpla-verkoopfacturatiesync en overzicht uitgeschakeld; facturen uitsluitend in deze app, aankoopinlezing behouden. Geen oproep bij afronden, databasewachtrij gestopt; facturenpagina als beheerder gecontroleerd en 12 tests geslaagd.
 
