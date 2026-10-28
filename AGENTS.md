@@ -23,6 +23,7 @@
 - Customer work-order emails use the pure price-free mail-data allowlist and Worker-compatible PDF generator; send the PDF as a private Outlook file attachment with only a short covering message so billing changes cannot expose prices or inline work-order details.
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, including failures, so a mail error cannot strand them on a completed task.
 - Billing math lives in `src/lib/billing.ts` (pure, tested); the UI computes totals live and stores only the paid amount when payment is recorded.
+- Work-order payment removal uses an authenticated admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
 - Driving distance uses free OpenStreetMap services (Nominatim + OSRM) in `src/lib/distance.functions.ts`, cached on `work_orders.distance_km` and reset when the address changes.
 - Crews log in with name + password; `src/lib/login.ts` maps a name to an internal non-mailable email. Per-crew visibility flags live on `technicians` (signed orders enforced in RLS, the rest hidden in the UI).
 - Mail import reads the inbox through a per-admin Microsoft Outlook App User Connector connection (encrypted key in `app_user_connections`, flow in `src/lib/outlook.functions.ts`), not the shared workspace connection — so the mailbox account itself signs in once without Exchange delegation.
