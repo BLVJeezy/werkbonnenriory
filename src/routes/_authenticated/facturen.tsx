@@ -15,6 +15,7 @@ import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from
 import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 import { SimplaSync } from "@/components/SimplaSync";
+import { PaymentReminders } from "@/components/PaymentReminders";
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -201,6 +202,7 @@ function Facturen() {
               {i.okioki_sent_at && <span className="text-xs text-muted-foreground">UBL naar OkiOki gemaild</span>}
               <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
               {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
+              {i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005 && <PaymentReminders invoiceId={i.id} />}
               {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
               {i.send_error && <p className="w-full text-xs text-destructive">{i.send_error}</p>}
             </li>
