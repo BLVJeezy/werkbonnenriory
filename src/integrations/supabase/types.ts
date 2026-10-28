@@ -193,10 +193,68 @@ export type Database = {
           },
         ]
       }
+      contract_billing_queue: {
+        Row: {
+          contract_id: string
+          created_at: string
+          error: string | null
+          invoice_id: string | null
+          lease_until: string | null
+          status: string
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          error?: string | null
+          invoice_id?: string | null
+          lease_until?: string | null
+          status?: string
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          error?: string | null
+          invoice_id?: string | null
+          lease_until?: string | null
+          status?: string
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_billing_queue_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_billing_queue_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_billing_queue_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           active: boolean
           activity_id: string | null
+          billing_enabled: boolean
+          billing_enabled_at: string | null
+          billing_lines: Json
           created_at: string
           customer_id: string | null
           customer_name: string
@@ -219,6 +277,9 @@ export type Database = {
         Insert: {
           active?: boolean
           activity_id?: string | null
+          billing_enabled?: boolean
+          billing_enabled_at?: string | null
+          billing_lines?: Json
           created_at?: string
           customer_id?: string | null
           customer_name: string
@@ -241,6 +302,9 @@ export type Database = {
         Update: {
           active?: boolean
           activity_id?: string | null
+          billing_enabled?: boolean
+          billing_enabled_at?: string | null
+          billing_lines?: Json
           created_at?: string
           customer_id?: string | null
           customer_name?: string
@@ -449,6 +513,9 @@ export type Database = {
       }
       invoices: {
         Row: {
+          auto_send_started_at: string | null
+          contract_id: string | null
+          contract_reference: string | null
           created_at: string
           credit_for: string | null
           customer: Json
@@ -475,6 +542,9 @@ export type Database = {
           work_order_id: string
         }
         Insert: {
+          auto_send_started_at?: string | null
+          contract_id?: string | null
+          contract_reference?: string | null
           created_at?: string
           credit_for?: string | null
           customer: Json
@@ -501,6 +571,9 @@ export type Database = {
           work_order_id: string
         }
         Update: {
+          auto_send_started_at?: string | null
+          contract_id?: string | null
+          contract_reference?: string | null
           created_at?: string
           credit_for?: string | null
           customer?: Json
@@ -527,6 +600,13 @@ export type Database = {
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_work_order_id_fkey"
             columns: ["work_order_id"]
@@ -1277,6 +1357,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_contract_completion_invoice: {
+        Args: {
+          p_customer: Json
+          p_lines: Json
+          p_net: number
+          p_reference: string
+          p_total: number
+          p_vat: number
+          p_vat_rate: number
+          p_work_order: string
+        }
+        Returns: string
+      }
       customer_identity: {
         Args: { c: string; h: string; n: string; p: string; s: string }
         Returns: string

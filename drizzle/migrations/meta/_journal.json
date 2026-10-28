@@ -309,6 +309,13 @@
       "when": 1793186122666,
       "tag": "0043_invoice_payment_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793188956373,
+      "tag": "0044_contract_completion_invoicing",
+      "breakpoints": true
     }
   ]
 }
