@@ -26,7 +26,7 @@ describe("invoice delivery", () => {
     const m = invoiceMailWithCc("klant@example.be", "2026-1", "JVBERg==", "PHhtbD4=");
     expect(m.message.toRecipients).toEqual([{ emailAddress: { address: "klant@example.be" } }]);
     expect(m.message.bccRecipients).toEqual([{ emailAddress: { address: "BE0840931404701144@okioki.app" } }]);
-    expect(m.message.ccRecipients).toBeUndefined();
+    expect(Object.keys(m.message)).not.toContain("ccRecipients");
     expect(m.message.attachments.map((a) => a.name)).toEqual(["Factuur-2026-1.pdf", "Factuur-2026-1.xml"]);
   });
 });
