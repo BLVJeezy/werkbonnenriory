@@ -34,3 +34,4 @@
 - Credit notes are rows in `invoices` with `kind = 'creditnota'` and `credit_for` pointing at the original; they follow the same `next_invoice_number()` sequence and reverse amounts via the pure, tested `buildCreditNote`. `invoices.work_order_id` is intentionally not unique so a credit note can share the work order.
 - Products can be flagged `admin_only`; the read policy excludes them for non-admins and the material picker filters them too, so crews cannot select them even via the API.
 - The accountant UBL mail (`sendAllToAccountant`) sends every invoice and credit note as separate UBL attachments in one Outlook mail to `settings.accountant_email`, without embedded PDFs to stay under mail size limits.
+- External crews have no auth account; separate expiring appointment tokens expose a narrow price-free DTO. Database RPCs atomically forward/confirm and invalidate stale assignment links; mail legs persist retry state through the existing Outlook mailbox.

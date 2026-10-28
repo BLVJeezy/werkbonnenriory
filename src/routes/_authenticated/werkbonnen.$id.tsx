@@ -23,6 +23,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { vatRateForCustomer } from "@/lib/vat-number";
 import { retrySimpla } from "@/lib/simpla.functions";
+import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
@@ -470,6 +471,7 @@ function Detail() {
       </section>
 
       <WorkOrderPhotos workOrderId={id} locked={matLocked} />
+      {isAdmin && !locked && <AppointmentPanel id={id} external={!!techs.find(t=>t.id===wo.technician_id)?.external_planning} scheduled={!!wo.scheduled_date} />}
 
       {(perms.showPrices || perms.canPayment) && <section className="rounded-md border bg-card p-4">
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>

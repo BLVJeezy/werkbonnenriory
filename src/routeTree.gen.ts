@@ -25,6 +25,8 @@ import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticat
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
+import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.$token'
+import { Route as AfspraakPloegTokenRouteImport } from './routes/afspraak.ploeg.$token'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
@@ -112,6 +114,16 @@ const AuthenticatedWerkbonnenIdRoute =
     path: '/werkbonnen/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AfspraakKlantTokenRoute = AfspraakKlantTokenRouteImport.update({
+  id: '/afspraak/klant/$token',
+  path: '/afspraak/klant/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AfspraakPloegTokenRoute = AfspraakPloegTokenRouteImport.update({
+  id: '/afspraak/ploeg/$token',
+  path: '/afspraak/ploeg/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOauthMicrosoft_outlookReturnRoute =
   ApiOauthMicrosoft_outlookReturnRouteImport.update({
     id: '/api/oauth/microsoft_outlook/return',
@@ -145,6 +157,8 @@ export interface FileRoutesByFullPath {
   '/technici': typeof AuthenticatedTechniciRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
+  '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
+  '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
@@ -165,6 +179,8 @@ export interface FileRoutesByTo {
   '/technici': typeof AuthenticatedTechniciRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
+  '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
+  '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
@@ -187,6 +203,8 @@ export interface FileRoutesById {
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
+  '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
+  '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
@@ -209,6 +227,8 @@ export interface FileRouteTypes {
     | '/technici'
     | '/offerte/$token'
     | '/werkbonnen/$id'
+    | '/afspraak/klant/$token'
+    | '/afspraak/ploeg/$token'
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
@@ -229,6 +249,8 @@ export interface FileRouteTypes {
     | '/technici'
     | '/offerte/$token'
     | '/werkbonnen/$id'
+    | '/afspraak/klant/$token'
+    | '/afspraak/ploeg/$token'
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
@@ -250,6 +272,8 @@ export interface FileRouteTypes {
     | '/_authenticated/technici'
     | '/offerte/$token'
     | '/_authenticated/werkbonnen/$id'
+    | '/afspraak/klant/$token'
+    | '/afspraak/ploeg/$token'
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
@@ -262,6 +286,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
+  AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
+  AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
@@ -381,6 +407,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWerkbonnenIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/afspraak/klant/$token': {
+      id: '/afspraak/klant/$token'
+      path: '/afspraak/klant/$token'
+      fullPath: '/afspraak/klant/$token'
+      preLoaderRoute: typeof AfspraakKlantTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/afspraak/ploeg/$token': {
+      id: '/afspraak/ploeg/$token'
+      path: '/afspraak/ploeg/$token'
+      fullPath: '/afspraak/ploeg/$token'
+      preLoaderRoute: typeof AfspraakPloegTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/oauth/microsoft_outlook/return': {
       id: '/api/oauth/microsoft_outlook/return'
       path: '/api/oauth/microsoft_outlook/return'
@@ -442,6 +482,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   OfferteTokenRoute: OfferteTokenRoute,
+  AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
+  AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,

@@ -1,0 +1,3 @@
+import {createFileRoute} from '@tanstack/react-router';
+import {PublicAppointment} from '@/components/PublicAppointment';
+export const Route=createFileRoute('/afspraak/ploeg/$token')({head:()=>({meta:[{title:'Afspraak inplannen — Riory'},{name:'description',content:'Stel een datum en tijdsvak voor deze Riory-afspraak voor.'},{property:'og:title',content:'Afspraak inplannen — Riory'},{property:'og:description',content:'Stel een datum en tijdsvak voor deze Riory-afspraak voor.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'},{name:'robots',content:'noindex, nofollow'},{name:'referrer',content:'no-referrer'}]}),component:()=>{const {token}=Route.useParams();return <PublicAppointment token={token} crew />;}});
