@@ -8,7 +8,11 @@ export async function moveAppointmentMessage(
   rememberId: (id: string) => Promise<void>,
 ) {
   const read = async (res: Response) => {
-    if (!res.ok) throw new Error("Afspraakmail verplaatsen mislukt. Koppel de afspraakmailbox opnieuw of probeer later opnieuw.");
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error(`Appointment mail move failed [${res.status}]: ${body}`);
+      throw new Error(`Afspraakmail verplaatsen mislukt (${res.status}). Probeer later opnieuw.`);
+    }
     return res.json();
   };
   const folders = await read(await graph(`/me/mailFolders?$filter=displayName eq '${PROCESSED_FOLDER}'&$select=id,displayName`));
