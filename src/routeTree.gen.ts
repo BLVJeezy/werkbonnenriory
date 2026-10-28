@@ -31,6 +31,7 @@ import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.
 import { Route as AfspraakPloegTokenRouteImport } from './routes/afspraak.ploeg.$token'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
+import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/public/bookkeeping/sales'
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
 
@@ -149,6 +150,12 @@ const ApiPublicAankoopfacturenImportRoute =
     path: '/api/public/aankoopfacturen/import',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBookkeepingSalesRoute =
+  ApiPublicBookkeepingSalesRouteImport.update({
+    id: '/api/public/bookkeeping/sales',
+    path: '/api/public/bookkeeping/sales',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicContractsProcessRoute =
   ApiPublicContractsProcessRouteImport.update({
     id: '/api/public/contracts/process',
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
@@ -208,6 +216,7 @@ export interface FileRoutesByTo {
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
@@ -235,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   fileRoutesByTo: FileRoutesByTo
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   id:
@@ -313,6 +325,7 @@ export interface FileRouteTypes {
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   fileRoutesById: FileRoutesById
@@ -328,6 +341,7 @@ export interface RootRouteChildren {
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
+  ApiPublicBookkeepingSalesRoute: typeof ApiPublicBookkeepingSalesRoute
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
 }
@@ -488,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAankoopfacturenImportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/bookkeeping/sales': {
+      id: '/api/public/bookkeeping/sales'
+      path: '/api/public/bookkeeping/sales'
+      fullPath: '/api/public/bookkeeping/sales'
+      preLoaderRoute: typeof ApiPublicBookkeepingSalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/contracts/process': {
       id: '/api/public/contracts/process'
       path: '/api/public/contracts/process'
@@ -549,6 +570,7 @@ const rootRouteChildren: RootRouteChildren = {
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
+  ApiPublicBookkeepingSalesRoute: ApiPublicBookkeepingSalesRoute,
   ApiPublicContractsProcessRoute: ApiPublicContractsProcessRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
 }
