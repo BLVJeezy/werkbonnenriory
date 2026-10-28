@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Aankoop voorlopig uit de navigatie gehaald; bestaande aankoopgegevens behouden. Als beheerder gecontroleerd dat Aankoop verborgen en Facturen bereikbaar is; build OK.
 - [x] Simpla-verkoopfacturatiesync en overzicht uitgeschakeld; facturen uitsluitend in deze app, aankoopinlezing behouden. Geen oproep bij afronden, databasewachtrij gestopt; facturenpagina als beheerder gecontroleerd en 12 tests geslaagd.
 
 - [x] Verslag bij facturen/creditnota's, offertes en werkbonnen, inclusief herinneringen; beveiligde link naast PDF, private exacte snapshot en tijdstippen zonder IP/cookies. GET telt niet; expliciete POST opent PDF; twee openingen en adminverslag teruggelezen, 35 tests geslaagd, proefgegevens verwijderd. Niet gelijk aan lezen/identiteit/aflevering; bestaande mails niet retroactief meetbaar.
