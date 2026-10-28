@@ -7,6 +7,7 @@ it('gebruikt de taakomschrijving wanneer geen offerte gekoppeld is',()=>{expect(
 it('vereist een datum en geldig oplopend tijdsvak',()=>{const i={token:'11111111-1111-4111-8111-111111111111',date:'2026-10-30',from:'09:00',until:'12:00'};expect(proposalInput.safeParse(i).success).toBe(true);expect(proposalInput.safeParse({...i,until:'08:00'}).success).toBe(false);});
 it('geeft nooit prijzen of offertes mee aan externe ploeg',()=>{const r={status:'crew_pending',proposed_date:null,time_from:null,time_until:null,instruction:'Reiniging',price:165,quotes:[123]};expect(appointmentView(r,{customer_name:'Klant',address:'Straat 1'},true)).toEqual({status:'crew_pending',date:null,from:null,until:null,slots:[],customerSlots:[],instruction:'Reiniging',customer:'Klant',address:'Straat 1'});});
 it('klantpagina bevat geen interne werkomschrijving',()=>{expect(appointmentView({status:'customer_pending',proposed_date:'2026-10-30',time_from:'09:00:00',time_until:'12:00:00',instruction:'Intern'},{customer_name:'Klant',address:'Straat 1'},false)).not.toHaveProperty('instruction');});
+import { describe } from 'vitest';
 import { normalizeSlot } from './appointments';
 describe('normalizeSlot', () => {
   it('zet een Belgische datum 28-10-2026 om naar 2026-10-28', () => {
