@@ -269,7 +269,9 @@ export type Database = {
           next_invoice_date: string | null
           number: string | null
           repeat_every: number
+          repeat_ordinal: number | null
           repeat_unit: string
+          repeat_weekday: number | null
           scheduling_ready: boolean
           source_data: Json | null
           technician_id: string | null
@@ -294,7 +296,9 @@ export type Database = {
           next_invoice_date?: string | null
           number?: string | null
           repeat_every?: number
+          repeat_ordinal?: number | null
           repeat_unit?: string
+          repeat_weekday?: number | null
           scheduling_ready?: boolean
           source_data?: Json | null
           technician_id?: string | null
@@ -319,7 +323,9 @@ export type Database = {
           next_invoice_date?: string | null
           number?: string | null
           repeat_every?: number
+          repeat_ordinal?: number | null
           repeat_unit?: string
+          repeat_weekday?: number | null
           scheduling_ready?: boolean
           source_data?: Json | null
           technician_id?: string | null
