@@ -17,6 +17,7 @@ import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_auth
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
+import { Route as AuthenticatedLeveranciersRouteImport } from './routes/_authenticated/leveranciers'
 import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
@@ -68,6 +69,12 @@ const AuthenticatedKlantenRoute = AuthenticatedKlantenRouteImport.update({
   path: '/klanten',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLeveranciersRoute =
+  AuthenticatedLeveranciersRouteImport.update({
+    id: '/leveranciers',
+    path: '/leveranciers',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOffertesRoute = AuthenticatedOffertesRouteImport.update({
   id: '/offertes',
   path: '/offertes',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
+  '/leveranciers': typeof AuthenticatedLeveranciersRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
@@ -150,6 +158,7 @@ export interface FileRoutesByTo {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
+  '/leveranciers': typeof AuthenticatedLeveranciersRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
@@ -171,6 +180,7 @@ export interface FileRoutesById {
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
+  '/_authenticated/leveranciers': typeof AuthenticatedLeveranciersRoute
   '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/kalender'
     | '/klanten'
+    | '/leveranciers'
     | '/offertes'
     | '/producten'
     | '/tarieven'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/kalender'
     | '/klanten'
+    | '/leveranciers'
     | '/offertes'
     | '/producten'
     | '/tarieven'
@@ -231,6 +243,7 @@ export interface FileRouteTypes {
     | '/_authenticated/facturen'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
+    | '/_authenticated/leveranciers'
     | '/_authenticated/offertes'
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKlantenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/leveranciers': {
+      id: '/_authenticated/leveranciers'
+      path: '/leveranciers'
+      fullPath: '/leveranciers'
+      preLoaderRoute: typeof AuthenticatedLeveranciersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/offertes': {
       id: '/_authenticated/offertes'
       path: '/offertes'
@@ -390,6 +410,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
+  AuthenticatedLeveranciersRoute: typeof AuthenticatedLeveranciersRoute
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
@@ -403,6 +424,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
+  AuthenticatedLeveranciersRoute: AuthenticatedLeveranciersRoute,
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
