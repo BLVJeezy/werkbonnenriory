@@ -288,6 +288,13 @@
       "when": 1793185360187,
       "tag": "0040_contract_import_source",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793185706229,
+      "tag": "0041_processed_appointment_mail",
+      "breakpoints": true
     }
   ]
 }

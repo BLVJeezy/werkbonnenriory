@@ -62,6 +62,47 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_mail_moves: {
+        Row: {
+          created_at: string
+          immutable_message_id: string | null
+          last_error: string | null
+          lease_until: string | null
+          moved_at: string | null
+          source_message_id: string
+          user_id: string | null
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          immutable_message_id?: string | null
+          last_error?: string | null
+          lease_until?: string | null
+          moved_at?: string | null
+          source_message_id: string
+          user_id?: string | null
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          immutable_message_id?: string | null
+          last_error?: string | null
+          lease_until?: string | null
+          moved_at?: string | null
+          source_message_id?: string
+          user_id?: string | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_mail_moves_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_requests: {
         Row: {
           confirmed_at: string | null
@@ -1018,6 +1059,7 @@ export type Database = {
           postal_code: string | null
           project_id: string | null
           project_name: string | null
+          quote_pending: boolean
           received_at: string | null
           scheduled_date: string | null
           scheduled_from: string | null
@@ -1032,6 +1074,7 @@ export type Database = {
           site_postal_code: string | null
           site_street: string | null
           sort_order: number
+          source_mailbox_user_id: string | null
           source_message_id: string | null
           source_subject: string | null
           status: string
@@ -1066,6 +1109,7 @@ export type Database = {
           postal_code?: string | null
           project_id?: string | null
           project_name?: string | null
+          quote_pending?: boolean
           received_at?: string | null
           scheduled_date?: string | null
           scheduled_from?: string | null
@@ -1080,6 +1124,7 @@ export type Database = {
           site_postal_code?: string | null
           site_street?: string | null
           sort_order?: number
+          source_mailbox_user_id?: string | null
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
@@ -1114,6 +1159,7 @@ export type Database = {
           postal_code?: string | null
           project_id?: string | null
           project_name?: string | null
+          quote_pending?: boolean
           received_at?: string | null
           scheduled_date?: string | null
           scheduled_from?: string | null
@@ -1128,6 +1174,7 @@ export type Database = {
           site_postal_code?: string | null
           site_street?: string | null
           sort_order?: number
+          source_mailbox_user_id?: string | null
           source_message_id?: string | null
           source_subject?: string | null
           status?: string
