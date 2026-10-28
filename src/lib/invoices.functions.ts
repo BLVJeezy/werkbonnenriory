@@ -5,7 +5,7 @@ import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
 import { getConnectionKeyForUser } from "@/lib/appUserConnections.server";
-import { deliverInvoice, invoiceMail, needsOkioki, OKIOKI_INVOICE_EMAIL } from "@/lib/invoice-delivery";
+import { deliverInvoice, invoiceMail, invoiceMailWithCc, OKIOKI_INVOICE_EMAIL } from "@/lib/invoice-delivery";
 
 type Ctx = { supabase: any; userId: string };
 const SENDER_PEPPOL_ID = "0208:0840931404";
@@ -38,7 +38,7 @@ async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
 }
 
 // ---- Mail via info@riory.be ----
-async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur") {
+async function sendMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur", payload?: unknown) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
   let key: string | null = null;
@@ -47,7 +47,7 @@ async function sendMail(to: string, number: string, contentBytes: string, format
   const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
   const res = await callAsAppUser({
     gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
-    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(invoiceMail(to, number, contentBytes, format, label)) },
+    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload ?? invoiceMail(to, number, contentBytes, format, label)) },
     requiredScopes: WERKBON_MAIL_SCOPES,
   });
   if (await appUserReconnectRequired(res)) throw new Error("Koppel de mailbox info@riory.be opnieuw");
@@ -73,21 +73,19 @@ async function sendOne(supabase: any, inv: any) {
     const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
+    const { invoiceUbl } = await import("@/lib/invoice-ubl");
+    const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
     await deliverInvoice({
       customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at),
-      sendPdf: (to) => sendMail(to, d.number, pdf, "pdf", label),
-      sendUbl: async (to) => {
-        const { invoiceUbl } = await import("@/lib/invoice-ubl");
-        const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" });
-        await sendMail(to, d.number, b64(new TextEncoder().encode(xml)), "ubl", label);
-      },
+      sendWithCc: (to) => sendMail(to, d.number, pdf, "pdf", label, invoiceMailWithCc(to, d.number, pdf, ubl, label)),
+      sendUbl: (to) => sendMail(to, d.number, ubl, "ubl", label),
       record: async (leg) => {
         const { error } = await supabase.from("invoices").update({ [leg === "pdf" ? "pdf_sent_at" : "okioki_sent_at"]: new Date().toISOString() }).eq("id", inv.id);
         if (error) throw new Error(error.message);
       },
     });
-    const via = needsOkioki(d.customer) ? "okioki" : "email";
-    const to = needsOkioki(d.customer) ? `${d.customer.email}; ${OKIOKI_INVOICE_EMAIL}` : d.customer.email;
+    const via = "okioki";
+    const to = `${d.customer.email}; cc ${OKIOKI_INVOICE_EMAIL}`;
     const { error } = await supabase.from("invoices").update({ status: "verzonden", sent_via: via, sent_to: to, sent_at: new Date().toISOString(), send_error: null, delivery_lock_until: null }).eq("id", inv.id);
     if (error) throw new Error(error.message);
     return { id: inv.id, ok: true as const, via };
