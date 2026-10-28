@@ -21,11 +21,11 @@ export function invoiceMail(to: string, number: string, contentBytes: string, fo
   } };
 }
 
-/** Customer mail with PDF + UBL, OkiOki in CC. */
+/** Customer mail with PDF + UBL, OkiOki in BCC so the customer cannot see it. */
 export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur") {
   const m = invoiceMail(to, number, pdfBytes, "pdf", label);
   return { message: { ...m.message,
-    ccRecipients: [{ emailAddress: { address: OKIOKI_INVOICE_EMAIL } }],
+    bccRecipients: [{ emailAddress: { address: OKIOKI_INVOICE_EMAIL } }],
     attachments: [...m.message.attachments, file({ name: `${label}-${number}.xml`, contentType: "application/xml", contentBytes: ublBytes })],
   } };
 }
