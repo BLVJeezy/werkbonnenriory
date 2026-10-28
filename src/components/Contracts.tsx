@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { allCustomers } from "@/lib/customers";
 import { planContracts, PLAN_AHEAD_DAYS } from "@/lib/contracts";
-import { REPEAT_PRESETS, repeatLabel, type RepeatUnit } from "@/lib/recurrence";
+import { REPEAT_PRESETS, repeatLabel, nthWeekdayOfMonth, WEEKDAYS, ORDINALS, type RepeatUnit } from "@/lib/recurrence";
 import { ContractBilling } from './ContractBilling';
 
 type Opts = { techs: { id: string; name: string }[]; acts: { id: string; name: string }[] } | undefined;
 const sel = "h-10 w-full rounded-md border bg-background px-2";
-const empty = { customer: "", name: "", description: "", technician_id: "", activity_id: "", every: "1", unit: "maand" as RepeatUnit, next_date: "", end_date: "" };
+const empty = { customer: "", name: "", description: "", technician_id: "", activity_id: "", every: "1", unit: "maand" as RepeatUnit, next_date: "", end_date: "", mode: "datum" as "datum" | "weekdag", ordinal: "1", weekday: "0" };
 
 export function Contracts({ opts }: { opts: Opts }) {
   const qc = useQueryClient();
