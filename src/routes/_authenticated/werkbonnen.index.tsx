@@ -32,6 +32,7 @@ import { activeTimeEntry } from "@/lib/time";
 import { allCustomers, customerKey } from '@/lib/customers';
 import { quoteFromTask } from '@/lib/quotes.functions';
 import { FilePenLine } from 'lucide-react';
+import { taskListRows } from '@/lib/task-list';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -63,7 +64,7 @@ function Lijst() {
     queryKey: ["work_orders"],
     refetchInterval: 10000,
     queryFn: async () =>
-      (await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, started_at, ended_at)").neq("status", "offerte").order("created_at", { ascending: false })).data ?? [],
+      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, started_at, ended_at)").neq("status", "offerte").order("created_at", { ascending: false })).data ?? []),
   });
   const role = useRole();
   const { data: opts } = useQuery({
