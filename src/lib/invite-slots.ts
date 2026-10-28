@@ -33,12 +33,16 @@ export function inviteSlots(dates: string[], picked: Record<string, boolean>): A
   );
 }
 
+/** "di 29/10" */
+export function inviteDayLabel(date: string): string {
+  const d = new Date(`${date}T12:00:00`);
+  return `${DAY_NAMES[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+}
+
 /** "di 29/10 · ochtend 08:00–12:00" */
 export function inviteSlotLabel(s: AppointmentSlot): string {
-  const d = new Date(`${s.date}T12:00:00`);
-  const day = `${DAY_NAMES[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
   const part = SLOT_PARTS.find((p) => p.from === s.from && p.until === s.until);
-  return part ? `${day} · ${part.label.toLowerCase()} ${part.from}–${part.until}` : `${day} · ${s.from}–${s.until}`;
+  return part ? `${inviteDayLabel(s.date)} · ${part.label.toLowerCase()} ${part.from}–${part.until}` : `${inviteDayLabel(s.date)} · ${s.from}–${s.until}`;
 }
 
 /** Waarom een uitnodiging nu nog niet kan; lege tekst betekent: kan. */
