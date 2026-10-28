@@ -34,7 +34,7 @@ import { quoteFromTask } from '@/lib/quotes.functions';
 import { FilePenLine } from 'lucide-react';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
-  head: () => ({ meta: [{ title: "Werkbonnen — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Werkbonnen — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>): { dag?: string } =>
     typeof s["dag"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["dag"]) ? { dag: s["dag"] } : {},
   component: Lijst,
@@ -63,7 +63,7 @@ function Lijst() {
     queryKey: ["work_orders"],
     refetchInterval: 10000,
     queryFn: async () =>
-      (await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, started_at, ended_at)").order("created_at", { ascending: false })).data ?? [],
+      (await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, started_at, ended_at)").neq("status", "offerte").order("created_at", { ascending: false })).data ?? [],
   });
   const role = useRole();
   const { data: opts } = useQuery({
@@ -144,7 +144,7 @@ function Lijst() {
     setBusy(true);
     try {
       const r = await runImport();
-      if (r.imported > 0) toast.success(`${r.imported} nieuwe werkbon(nen) aangemaakt`);
+      if (r.imported > 0) toast.success(`${r.imported} nieuwe taken aangemaakt`);
       else toast.info(`Geen nieuwe mails voor ${MAILBOX_ADDRESS}`);
       if (r.errors?.length) toast.error(`${r.errors.length} mail(s) konden niet gelezen worden`);
       qc.invalidateQueries({ queryKey: ["work_orders"] });
@@ -160,7 +160,7 @@ function Lijst() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <h1 className="text-3xl font-black uppercase">Werkbonnen</h1>
+          <h1 className="text-3xl font-black uppercase">Taken</h1>
           <p className="text-sm text-muted-foreground">Klanten uit {MAILBOX_ADDRESS}</p>
           <MailboxConnect />
           <p className="mt-2 text-sm text-muted-foreground">Werkbonmail vanuit info@riory.be</p>
@@ -281,7 +281,7 @@ function Lijst() {
         ))}
       </div>
       <div className="grid gap-3">
-        {rows.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen werkbonnen.</div>}
+        {rows.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen taken.</div>}
         {rows.map((w) => (
           <RowLink key={w.id} w={w} label={w.status === "afgetekend" ? "Werkbon" : "Taak"} extra={
             <>
@@ -300,7 +300,7 @@ function Lijst() {
                     setQuotingId(w.id);
                     try {
                       const q = await makeQuote({ data: { workOrderId: w.id } });
-                      await qc.invalidateQueries({ queryKey: ["quotes"] });
+                      await Promise.all([qc.invalidateQueries({ queryKey: ["quotes"] }), qc.invalidateQueries({ queryKey: ["work_orders"] })]);
                       toast.success(`Offerte ${q.number} aangemaakt — vul ze verder aan`);
                       await navigate({ to: "/offertes", search: { bewerk: q.id } });
                     } catch (error) {

@@ -36,3 +36,5 @@
 - Products can be flagged `admin_only`; the read policy excludes them for non-admins and the material picker filters them too, so crews cannot select them even via the API.
 - The accountant UBL mail (`sendAllToAccountant`) sends every invoice and credit note as separate UBL attachments in one Outlook mail to `settings.accountant_email`, without embedded PDFs to stay under mail size limits.
 - External crews have no auth account; tokens expose a price-free DTO. Forwarding uses quote descriptions/quantities (no prices/km) or task text. JSON slot options/customer alternatives use a service-only atomic RPC; chosen scalar slot preserves scheduling guards and mail retries.
+
+- Quotes track their source task separately from the approved output task; insertion atomically archives the source as status offerte, which task lists and calendars exclude, preserving history without deleting task data.

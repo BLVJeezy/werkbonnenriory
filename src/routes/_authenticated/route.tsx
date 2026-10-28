@@ -43,7 +43,7 @@ function Layout() {
           </Link>
           <nav className="ml-auto flex flex-wrap items-center gap-1 text-sm font-semibold">
             <Link to="/werkbonnen" className={navCls} activeProps={active}>
-              {role === "admin" ? "Werkbonnen" : "Mijn taken"}
+              {role === "admin" ? "Taken" : "Mijn taken"}
             </Link>
             {role === "admin" && (
               <>

@@ -129,7 +129,7 @@ function Detail() {
     const r = await mailWerkbon({ data: { workOrderId: id } });
     if (r.sent) toast.success(`Werkbon gemaild naar ${wo.email}`);
     else if (r.reason === "reconnect_required") toast.error("Koppel de mailbox info@riory.be opnieuw om te kunnen mailen");
-    else if (r.reason === "mailbox_not_connected") toast.error("Koppel eerst de mailbox info@riory.be op de werkbonnenpagina");
+    else if (r.reason === "mailbox_not_connected") toast.error("Koppel eerst de mailbox info@riory.be op de takenpagina");
     else toast.error("Mail versturen mislukt");
   }
 
@@ -165,7 +165,7 @@ function Detail() {
   return (
     <div className="space-y-6">
       <Link to="/werkbonnen" className="no-print text-sm text-muted-foreground underline">
-        {isAdmin ? "← Alle werkbonnen" : "← Mijn taken"}
+        {isAdmin ? "← Alle taken" : "← Mijn taken"}
       </Link>
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-3xl font-black uppercase">{kind} #{wo.number}</h1>
@@ -186,6 +186,8 @@ function Detail() {
               onClick={async () => {
                 try {
                   const q = await makeQuote({ data: { workOrderId: id } });
+                  refresh();
+                  qc.invalidateQueries({ queryKey: ["quotes"] });
                   toast.success(`Offerte ${q.number} aangemaakt — vul ze verder aan`);
                   navigate({ to: "/offertes", search: { bewerk: q.id } });
                 } catch (e) { toast.error(e instanceof Error ? e.message : "Offerte maken mislukt"); }
