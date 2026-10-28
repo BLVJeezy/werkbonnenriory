@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Leveranciers automatisch bewaren, betaalwijze en btw-regels beheren; kasticketten als foto/PDF uploaden en uitlezen voor aankoopcontrole.
+
 - [x] Aankoopcontrole: originele PDF-upload met privé-opslag/voorbeeld, creditnota-keuze opgeslagen en herladen, Ponto-controle afgerond (0 matches); 23 tests geslaagd. Betaalbestand zet betaling klaar, niet betaald; aflettering op unieke banktransactie + bedrag/referentie.
 - [ ] Originele aankoop-PDF automatisch uit Simpla ophalen (expliciet gevraagd) — leesgegevens en openbare documentatie onderzocht: originalFile bevat uitsluitend bestandsnamen, attachment leeg, help geeft NOK; geblokkeerd op Simpla's bevestigde PDF-downloadmethode. Bestaande facturen daarna aanvullen zonder bedragen/status te wijzigen.
 
