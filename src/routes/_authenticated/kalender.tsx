@@ -122,14 +122,14 @@ function Kalender() {
           </>
         )}
       </div>
+      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-snug">{w.description || "Geen omschrijving"}</p>
       {horizontal && <>
         <p className="mt-2 font-medium">{destinationLabel(w)}: {destinationLines(w).join(" · ") || "Niet ingevuld"}</p>
-        <p className="mt-2 whitespace-pre-wrap break-words">{w.description || "Geen omschrijving"}</p>
         {(w.site_contact_name || w.phone || w.site_contact_phone) && <p className="mt-2 text-xs opacity-80">{[w.site_contact_name, w.site_contact_phone, w.phone && `Klant: ${w.phone}`].filter(Boolean).join(" · ")}</p>}
       </>}
       </div>
-      <div className={horizontal ? "grid content-start gap-2 sm:grid-cols-2" : ""}>
-      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number}`} className="mt-1 h-8 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onBlur={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+      <div className={horizontal ? "grid content-start gap-2 sm:grid-cols-2" : "grid grid-cols-2 gap-1.5 sm:grid-cols-4"}>
+      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number}`} className="mt-0 h-7 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onBlur={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
       <select aria-label={`Ploeg taak ${w.number}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
         {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -167,7 +167,7 @@ function Kalender() {
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1">
+              <div className="grid gap-2">
                 {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
                 {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
                 {dayList(k).length === 0 && <p className="text-xs text-muted-foreground">Geen taken</p>}
