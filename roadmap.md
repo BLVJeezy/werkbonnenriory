@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Aangeleverde contractenlijst: uitsluitend status gestart importeren, bestaande klanten hergebruiken en oorspronkelijke contractnummers/regels/bedragen bewaren; ontbrekend planningsritme niet invullen.
+- [x] Negen gestarte contracten geïmporteerd, alle 16 oorspronkelijke regels en nummers bewaard, gekoppeld aan bestaande klanten; geen oude afspraken gegenereerd. Kalenderweergave en herladen gecontroleerd, 8 tests geslaagd. Planning pas na expliciete bevestiging van eerste beurt en ritme.
 
 - [x] Werkbonnenpagina hernoemd naar Taken; nieuwe omzettingen naar offerte archiveren de brontaak atomisch en verdwijnen uit takenlijst en kalender. Omzetting en herladen met tijdelijke taak gecontroleerd; tests geslaagd, proefgegevens verwijderd.
 
@@ -78,4 +78,4 @@
 
 - [x] Taken: dag, ploeg en activiteit rechtstreeks in de lijst kiezen; dringende taken (uit mail of handmatig) met rood kader bovenaan en in de agenda.
 - [x] Terugkerende opdrachten (contracten) in de agenda, elke N weken/maanden/jaren, 8 weken vooruit ingepland; contractwerkbonnen worden nooit gefactureerd.
-- [ ] Automatische contractfacturatie — wacht op de geëxporteerde contractenlijst van de gebruiker (kolommen, bedragen, factuurritme).
+- [ ] Automatische contractfacturatie — contractenlijst ontvangen, maar factuurritme en eerstvolgende factuurdatum ontbreken; vereist bevestiging door gebruiker.

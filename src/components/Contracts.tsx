@@ -104,8 +104,8 @@ export function Contracts({ opts }: { opts: Opts }) {
                 {Array.isArray(c.source_data) && c.source_data.map((line, i) => {
                   if (!line || typeof line !== "object" || Array.isArray(line)) return null;
                   return <div key={i} className="mt-2 border-t pt-2 text-xs">
-                    <div>{String(line.verkoop ?? "")}</div>
-                    <div>{String(line.aantal ?? "")} {String(line.eenheid ?? "")} · € {Number(line.eenheidsprijs ?? 0).toLocaleString("nl-BE", { minimumFractionDigits: 2 })} · korting {String(line.kortingspercentage ?? 0)}% · btw {String(line["BTW-percentage"] ?? 0)}%</div>
+                    <div>{String(line["verkoop"] ?? "")}</div>
+                    <div>{String(line["aantal"] ?? "")} {String(line["eenheid"] ?? "")} · € {Number(line["eenheidsprijs"] ?? 0).toLocaleString("nl-BE", { minimumFractionDigits: 2 })} · korting {String(line["kortingspercentage"] ?? 0)}% · btw {String(line["BTW-percentage"] ?? 0)}%</div>
                   </div>;
                 })}
               </details>}
