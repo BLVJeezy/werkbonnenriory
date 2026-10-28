@@ -1,10 +1,10 @@
 # Roadmap
 
-- [ ] Nieuw inlogwachtwoord veilig laten instellen; account en herstelmogelijkheid controleren.
+- [x] Wachtwoordherstel voor beheerder: herstelknop en publieke pagina voor nieuw wachtwoord; formulier en toegelaten terugkeeradres gecontroleerd.
 
-- [ ] Simpla-token veilig instellen en bestaande Mailtaken-koppeling controleren.
-- [ ] Afgeronde werkbonnen automatisch doorgeven met klant, arbeid, kilometers, materialen en btw; fouten en herproberen in adminoverzicht.
-- [ ] Simpla-aanmaakcontract controleren; geen onbevestigde writes automatisch herhalen.
+- [ ] Simpla-token veilig instellen — beveiligd formulier werd onderbroken; token nog niet ingesteld. Bestaande Mailtaken-leescode gecontroleerd.
+- [x] Nieuwe afgeronde werkbonnen duurzaam in Simpla-wachtrij; fouten en herproberen in Facturen-overzicht; klantmatch getest.
+- [ ] Automatische Simpla-verkoopfactuur met arbeid/km/materialen/btw — wacht op token en bevestigd aanmaakcontract; nog geen verkoopfacturen aangemaakt of POST getest.
 
 - [x] Projectnaam uit mail mee uitlezen, op klant en taak, selecteerbaar bij inplannen (datalist)
 - [x] Offerteruimte: offertes maken (OFF-nummering), versturen met ondertekenlink, digitale handtekening op publieke pagina, na akkoord omzetten in taak — volledig getest in de app (proefofferte OFF-1 ondertekend en omgezet, daarna opgeruimd)
