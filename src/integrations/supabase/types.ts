@@ -62,14 +62,74 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_projects: {
+        Row: {
+          city: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          house_number: string | null
+          id: string
+          import_key: string
+          name: string
+          number: string | null
+          postal_code: string | null
+          reference: string | null
+          status: string | null
+          street: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          house_number?: string | null
+          id?: string
+          import_key: string
+          name: string
+          number?: string | null
+          postal_code?: string | null
+          reference?: string | null
+          status?: string | null
+          street?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          house_number?: string | null
+          id?: string
+          import_key?: string
+          name?: string
+          number?: string | null
+          postal_code?: string | null
+          reference?: string | null
+          status?: string | null
+          street?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_projects_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           billing_email: string | null
           city: string | null
           created_at: string
+          customer_number: string | null
+          customer_numbers: string[]
+          default_vat_rate: number | null
           email: string | null
           house_number: string | null
           id: string
+          identity_key: string | null
           match_key: string | null
           name: string
           phone: string | null
@@ -82,9 +142,13 @@ export type Database = {
           billing_email?: string | null
           city?: string | null
           created_at?: string
+          customer_number?: string | null
+          customer_numbers?: string[]
+          default_vat_rate?: number | null
           email?: string | null
           house_number?: string | null
           id?: string
+          identity_key?: string | null
           match_key?: string | null
           name: string
           phone?: string | null
@@ -97,9 +161,13 @@ export type Database = {
           billing_email?: string | null
           city?: string | null
           created_at?: string
+          customer_number?: string | null
+          customer_numbers?: string[]
+          default_vat_rate?: number | null
           email?: string | null
           house_number?: string | null
           id?: string
+          identity_key?: string | null
           match_key?: string | null
           name?: string
           phone?: string | null
@@ -736,6 +804,7 @@ export type Database = {
           billing_email: string | null
           city: string | null
           created_at: string
+          customer_id: string | null
           customer_name: string
           description: string | null
           distance_km: number | null
@@ -748,6 +817,7 @@ export type Database = {
           paid_method: string | null
           phone: string | null
           postal_code: string | null
+          project_id: string | null
           project_name: string | null
           received_at: string | null
           scheduled_date: string | null
@@ -778,6 +848,7 @@ export type Database = {
           billing_email?: string | null
           city?: string | null
           created_at?: string
+          customer_id?: string | null
           customer_name?: string
           description?: string | null
           distance_km?: number | null
@@ -790,6 +861,7 @@ export type Database = {
           paid_method?: string | null
           phone?: string | null
           postal_code?: string | null
+          project_id?: string | null
           project_name?: string | null
           received_at?: string | null
           scheduled_date?: string | null
@@ -820,6 +892,7 @@ export type Database = {
           billing_email?: string | null
           city?: string | null
           created_at?: string
+          customer_id?: string | null
           customer_name?: string
           description?: string | null
           distance_km?: number | null
@@ -832,6 +905,7 @@ export type Database = {
           paid_method?: string | null
           phone?: string | null
           postal_code?: string | null
+          project_id?: string | null
           project_name?: string | null
           received_at?: string | null
           scheduled_date?: string | null
@@ -865,6 +939,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "work_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "work_orders_technician_id_fkey"
             columns: ["technician_id"]
             isOneToOne: false
@@ -878,6 +966,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      customer_identity: {
+        Args: { c: string; h: string; n: string; p: string; s: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
