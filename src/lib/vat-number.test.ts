@@ -31,8 +31,9 @@ it("always assigns 21% to a Dutch private customer recognised by NL postcode for
 });
 
 it("does not treat Belgian postcodes as Dutch", () => {
-  expect(vatRateForCustomer(null, 21, undefined, { postalCode: "3740" })).toBe(21);
+  expect(vatRateForCustomer(null, 12, undefined, { postalCode: "3740" })).toBe(12);
   expect(vatRateForCustomer(null, 6, undefined, { postalCode: "6211" })).toBe(6);
+  expect(vatRateForCustomer(null, 12, undefined, { postalCode: "3740 Bilzen" })).toBe(12);
 });
 
 it("preserves the selected rate when there is no BE or NL prefix", () => {
