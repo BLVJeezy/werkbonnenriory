@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Aangeleverde contractenlijst: uitsluitend status gestart importeren, bestaande klanten hergebruiken en oorspronkelijke contractnummers/regels/bedragen bewaren; ontbrekend planningsritme niet invullen.
+
 - [x] Werkbonnenpagina hernoemd naar Taken; nieuwe omzettingen naar offerte archiveren de brontaak atomisch en verdwijnen uit takenlijst en kalender. Omzetting en herladen met tijdelijke taak gecontroleerd; tests geslaagd, proefgegevens verwijderd.
 
 - [x] Meerdere ploegvoorstellen en klantalternatieven bij afwijzing; ploeg kan alternatieven overnemen, klant kiest één tijdsvak dat atomisch in agenda komt. Volledige flow met twee voorstellen, afwijzing/twee alternatieven en tweede keuze na herladen getest; 7 tests geslaagd, proefdata verwijderd, geen echte mails verstuurd.
