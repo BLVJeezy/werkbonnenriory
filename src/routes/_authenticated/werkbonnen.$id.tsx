@@ -23,6 +23,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { vatRateForCustomer } from "@/lib/vat-number";
 import { retrySimpla } from "@/lib/simpla.functions";
+import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -78,6 +79,8 @@ function Detail() {
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const makeQuote = useServerFn(quoteFromTask);
   const syncSimpla = useServerFn(retrySimpla);
+  const removePayment = useServerFn(removeWorkOrderPayment);
+  const [removingPayment,setRemovingPayment] = useState(false);
   const [kmTried, setKmTried] = useState<string | null>(null);
   const woAddr = data?.wo ? destinationAddress(data.wo) : null;
   const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
@@ -526,6 +529,13 @@ function Detail() {
           </div>
         )}
         <div className="mt-4 space-y-2">
+          {isAdmin && wo.paid_at && <Button variant="destructive" disabled={removingPayment} onClick={async()=>{
+            if(!confirm(`Betaling van ${euro(Number(wo.paid_amount))} verwijderen? Deze werkbon blijft afgesloten; de handtekening en werkgegevens blijven behouden. Eventuele factuurbetalingen blijven ongewijzigd.`))return;
+            setRemovingPayment(true);
+            try {await removePayment({data:{id}});refresh();qc.invalidateQueries({queryKey:['invoices']});toast.success('Betaling verwijderd; werkbon staat niet meer als betaald');}
+            catch(e){toast.error(e instanceof Error?e.message:'Betaling verwijderen mislukt');}
+            finally{setRemovingPayment(false);}
+          }}>{removingPayment?'Verwijderen…':'Betaling verwijderen'}</Button>}
           {!perms.canPayment ? null : wo.paid_at ? (
             <p className="rounded bg-accent p-3 font-bold text-accent-foreground">
               Betaald: {euro(Number(wo.paid_amount))} via {wo.paid_method} op {new Date(wo.paid_at).toLocaleString("nl-BE")}
@@ -567,7 +577,7 @@ function Detail() {
           <div className="space-y-2">
             {wo.signature && <img src={wo.signature} alt="Handtekening klant" className="h-40 rounded border bg-background" />}
             <p>
-              {wo.signed_name ? <>Afgetekend door <strong>{wo.signed_name}</strong></> : "Afgesloten na betaling"} op {wo.signed_at && new Date(wo.signed_at).toLocaleString("nl-BE")}
+              {wo.signed_name ? <>Afgetekend door <strong>{wo.signed_name}</strong></> : wo.paid_at ? "Afgesloten na betaling" : "Werkbon afgesloten"} op {wo.signed_at && new Date(wo.signed_at).toLocaleString("nl-BE")}
             </p>
           </div>
         ) : (
