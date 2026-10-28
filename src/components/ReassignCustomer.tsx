@@ -23,7 +23,7 @@ export function ReassignCustomer({ wo, onDone }: Props) {
     const warn = count ? "\n\nLet op: er bestaat al een factuur. Die blijft op de oude klant; maak zo nodig een creditnota en een nieuwe factuur." : "";
     if (!confirm(`Werkbon toewijzen aan ${chosen.name}? Het huidige adres blijft als werfadres staan.${warn}`)) return;
     const { error } = await supabase.from("work_orders").update(reassignCustomerPatch(wo, chosen)).eq("id", wo.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`Werkbon staat nu op ${chosen.name}`);
     setOpen(false); setLabel(""); onDone();
   }
