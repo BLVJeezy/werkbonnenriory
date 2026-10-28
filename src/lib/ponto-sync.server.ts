@@ -95,12 +95,9 @@ export async function syncPontoPayments(supabase: any) {
         continue;
       }
       if (!inv) continue;
-      const { error: claimError } = await supabase.from('ponto_reconciliations').insert({ transaction_key: tx.key, invoice_id: inv.id, amount: tx.amount, payment_ref: tx.remittanceInformation, paid_at: tx.executionDate ?? new Date().toISOString() });
-      if (claimError?.code === '23505') continue;
-      if (claimError) throw new Error(claimError.message);
-      const { error } = await supabase.from("invoices").update({ paid_amount: inv.total, paid_at: tx.executionDate ?? new Date().toISOString() }).eq("id", inv.id);
+      const { data: applied, error } = await supabase.rpc('reconcile_sales_payment', { p_id: inv.id, p_key: tx.key, p_amount: tx.amount, p_ref: tx.remittanceInformation, p_date: tx.executionDate ?? new Date().toISOString() });
       if (error) throw new Error(error.message);
-      matched.push(inv.number);
+      if (applied) { matched.push(inv.number); usedKeys.add(tx.key); }
     }
   }
   await supabase.from("settings").update({ ponto_last_sync: new Date().toISOString() }).eq("id", 1);

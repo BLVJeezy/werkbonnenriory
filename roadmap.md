@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Aankoopcontrole: origineel PDF bij factuur tonen/ophalen, creditnota-keuze en Ponto-aflettering op echte bankbetalingen; betaalbestand is geen betalingsbevestiging.
+- [x] Aankoopcontrole: originele PDF-upload met privé-opslag/voorbeeld, creditnota-keuze opgeslagen en herladen, Ponto-controle afgerond (0 matches); 23 tests geslaagd. Betaalbestand zet betaling klaar, niet betaald; aflettering op unieke banktransactie + bedrag/referentie.
+- [ ] Originele aankoop-PDF automatisch uit Simpla ophalen — API geeft alleen originalFile-bestandsnaam, downloadmethode niet gedocumenteerd; voorlopig originele PDF zelf toevoegen.
 
 - [x] Wachtwoordherstel voor beheerder: herstelknop en publieke pagina voor nieuw wachtwoord; formulier en toegelaten terugkeeradres gecontroleerd.
 
