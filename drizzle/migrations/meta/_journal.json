@@ -218,6 +218,13 @@
       "when": 1793172377634,
       "tag": "0030_atomic_ponto_sales_claim",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793173874230,
+      "tag": "0031_suppliers_and_receipts",
+      "breakpoints": true
     }
   ]
 }
