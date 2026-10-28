@@ -31,6 +31,12 @@ describe('inviteSlots', () => {
   });
 });
 
+describe('inviteDayLabel', () => {
+  it('toont dag en datum', () => {
+    expect(inviteDayLabel('2026-11-03')).toBe('di 3/11');
+  });
+});
+
 describe('inviteSlotLabel', () => {
   it('toont dag, deel van de dag en uren', () => {
     expect(inviteSlotLabel({ date: '2026-11-03', from: '08:00', until: '12:00' })).toBe('di 3/11 · ochtend 08:00–12:00');
