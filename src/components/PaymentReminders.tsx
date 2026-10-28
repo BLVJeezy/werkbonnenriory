@@ -75,7 +75,7 @@ export function PaymentReminders({ invoiceId }: { invoiceId: string }) {
             <select id={`kind-${invoiceId}`} className="w-full rounded border bg-background p-2 text-foreground" value={kind} disabled={busy || history.length > 0} onChange={e => { setKind(e.target.value as DebtorKind); clear(); }}>
               <option value="consumer">Particulier / consument</option><option value="business">Onderneming — opdracht voor beroepsdoeleinden</option>
             </select>
-            <Label className="flex items-start gap-2"><Checkbox checked={undisputed} disabled={busy} onCheckedChange={v => { setUndisputed(v === true); clear(); }} />Het saldo, betalingen en creditnota's zijn gecontroleerd; er is geen lopende betwisting.</Label>
+            <Label className="flex items-start gap-2"><Checkbox checked={undisputed} disabled={busy} onCheckedChange={v => { setUndisputed(v === true); clear(); }} />Het saldo, betalingen en creditnota's zijn gecontroleerd; er is geen lopende betwisting, betalingsregeling of schuldbemiddeling.</Label>
             <Label className="flex items-start gap-2"><Checkbox checked={terms} disabled={busy} onCheckedChange={v => { setTerms(v === true); clear(); }} />De voorwaarden van 18/09/2026 waren vóór de opdracht geldig overeengekomen en zijn op deze klant van toepassing.</Label>
           </div>
           <p className="text-sm text-muted-foreground">Eerste herinnering gratis; minstens 14 kalenderdagen betaaltermijn. Daarna maximaal één forfaitaire vergoeding volgens artikel 11. Er wordt geen interest of aparte aanmaningskost gevorderd.</p>

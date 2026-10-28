@@ -150,11 +150,16 @@ export const invoicePdf = createServerFn({ method: "POST" })
   .inputValidator((i: { invoiceId: string }) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { data: inv } = await context.supabase.from("invoices").select("*").eq("id", data.invoiceId).single();
-    if (!inv) throw new Error("Factuur niet gevonden");
-    const { createInvoicePdf } = await import("@/lib/invoice-pdf");
-    return { number: inv.number as string, base64: b64(await createInvoicePdf(await pdfData(context.supabase, inv))) };
+    return getInvoicePdfAttachment(context.supabase, data.invoiceId);
   });
+
+/** Only called after admin authorization, using the caller's RLS-scoped client. */
+export async function getInvoicePdfAttachment(supabase: any, invoiceId: string) {
+  const { data: inv, error } = await supabase.from('invoices').select('*').eq('id', invoiceId).single();
+  if (error || !inv) throw new Error('Factuur niet gevonden');
+  const { createInvoicePdf } = await import('@/lib/invoice-pdf');
+  return { number: inv.number as string, base64: b64(await createInvoicePdf(await pdfData(supabase, inv))) };
+}
 
 /** Credit note that reverses an existing invoice; it follows the same invoice numbering. */
 export const createCreditNote = createServerFn({ method: "POST" })

@@ -52,11 +52,11 @@ export const sendPaymentReminder = createServerFn({ method: 'POST' }).middleware
   let key: string | null = null;
   for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, WERKBON_MAILBOX_KEY); if (key) break; }
   if (!key) throw new Error('Koppel eerst de mailbox info@riory.be.');
-  const [{ createReminderPdf }, { invoicePdf: originalPdf }, { callAsAppUser, appUserReconnectRequired }] = await Promise.all([
+  const [{ createReminderPdf }, { getInvoicePdfAttachment }, { callAsAppUser, appUserReconnectRequired }] = await Promise.all([
     import('./payment-reminder-pdf'), import('./invoices.functions'), import('@/integrations/lovable/appUserConnector'),
   ]);
   const pdf = b64(await createReminderPdf(document));
-  const original = await originalPdf({ data: { invoiceId: data.invoiceId } });
+  const original = await getInvoicePdfAttachment(context.supabase, data.invoiceId);
   // Re-read directly before claiming; uniqueness makes repeated/concurrent requests one-time.
   if (await fingerprint(await documentFor(context, data)) !== data.fingerprint) throw new Error('Factuur gewijzigd. Open het voorbeeld opnieuw.');
   const { data: claim, error } = await supabaseAdmin.from('invoice_reminders').insert({ invoice_id: data.invoiceId, stage: data.stage, created_by: context.userId, recipient: document.recipient, document: document as unknown as Json }).select('id').single();
