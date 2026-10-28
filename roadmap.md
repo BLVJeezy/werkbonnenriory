@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Rioclean-tijdsvakken: fout bij ingevulde datum/uren reproduceren, invoer herstellen en verstuurflow controleren zonder echte klantmail.
 - [ ] Alleen aankoopfacturen verwijderen — verwijdering geweigerd; 22 aankoopfacturen blijven staan. 19 leveranciers behouden en terug zichtbaar; automatische aankoopimport gestopt.
 - [x] Volledige taakomschrijving zichtbaar in takenlijst en als vaste volledige tekst in ploegdetail; lijst met bestaande omschrijvingen gecontroleerd zonder afkapping.
 - [x] Aankoop voorlopig uit de navigatie gehaald; bestaande aankoopgegevens behouden. Als beheerder gecontroleerd dat Aankoop verborgen en Facturen bereikbaar is; build OK.
