@@ -14,6 +14,7 @@ import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, send
 import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
 import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
+import { SimplaSync } from "@/components/SimplaSync";
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -144,6 +145,7 @@ function Facturen() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-black uppercase">Facturen</h1>
+      <SimplaSync />
 
       <section className="space-y-3 rounded-md border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">

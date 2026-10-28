@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,31 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const [mode, setMode] = useState<"in" | "reset" | "new">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setMode("new");
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    if (mode === "in") {
+    if (mode === "reset") {
+      if (!email.trim().includes("@")) {
+        setBusy(false);
+        toast.error("Ploegen vragen een nieuw wachtwoord aan de beheerder.");
+        return;
+      }
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+      setBusy(false);
+      if (error) { toast.error("Herstelmail aanvragen mislukt. Probeer later opnieuw."); return; }
+      toast.success("Als dit account bestaat, ontvang je een mail om je wachtwoord te wijzigen.");
+    } else if (mode === "in") {
       const { error } = await supabase.auth.signInWithPassword({ email: loginEmail(email), password });
       setBusy(false);
       if (error) {
@@ -40,18 +56,15 @@ function AuthPage() {
       }
       navigate({ to: "/werkbonnen" });
     } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: window.location.origin },
-      });
+      const { error } = await supabase.auth.updateUser({ password });
       setBusy(false);
       if (error) {
-        toast.error(error.message);
+        toast.error("Wachtwoord wijzigen mislukt. Gebruik een nieuwe herstellink en een sterk wachtwoord.");
         return;
       }
-      toast.success("Bevestig je account via de link in je mail.");
-      setMode("in");
+      setPassword("");
+      toast.success("Je nieuwe wachtwoord is opgeslagen.");
+      navigate({ to: "/werkbonnen" });
     }
   }
 
@@ -61,17 +74,20 @@ function AuthPage() {
         <h1 className="text-2xl font-black uppercase">
           Riory <span className="text-primary">Werkbonnen</span>
         </h1>
-        <div className="space-y-1">
+        {mode !== "new" && <div className="space-y-1">
           <Label htmlFor="email">Naam ploeg of e-mail</Label>
           <Input id="email" type="text" autoCapitalize="none" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="pw">Wachtwoord</Label>
-          <Input id="pw" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
+        </div>}
+        {mode !== "reset" && <div className="space-y-1">
+          <Label htmlFor="pw">{mode === "new" ? "Nieuw wachtwoord" : "Wachtwoord"}</Label>
+          <Input id="pw" type="password" autoComplete={mode === "new" ? "new-password" : "current-password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>}
         <Button className="w-full" disabled={busy}>
-          {mode === "in" ? "Inloggen" : "Account aanmaken"}
+          {busy ? "Bezig…" : mode === "in" ? "Inloggen" : mode === "reset" ? "Herstelmail versturen" : "Nieuw wachtwoord opslaan"}
         </Button>
+        {mode !== "new" && <Button type="button" variant="link" className="w-full" onClick={() => { setMode(mode === "reset" ? "in" : "reset"); setPassword(""); }}>
+          {mode === "reset" ? "Terug naar inloggen" : "Wachtwoord vergeten?"}
+        </Button>}
       </form>
     </div>
   );

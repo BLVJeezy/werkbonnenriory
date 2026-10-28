@@ -454,6 +454,41 @@ export type Database = {
         }
         Relationships: []
       }
+      simpla_sync: {
+        Row: {
+          attempted_at: string | null
+          created_at: string
+          error: string | null
+          remote_id: string | null
+          status: string
+          work_order_id: string
+        }
+        Insert: {
+          attempted_at?: string | null
+          created_at?: string
+          error?: string | null
+          remote_id?: string | null
+          status?: string
+          work_order_id: string
+        }
+        Update: {
+          attempted_at?: string | null
+          created_at?: string
+          error?: string | null
+          remote_id?: string | null
+          status?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simpla_sync_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technicians: {
         Row: {
           can_payment: boolean
