@@ -229,7 +229,7 @@ function Offertes() {
                   setKm(null);
                   if (kmOn) setKmOn(false);
                   const c = customers.find((x) => x.id === e.target.value);
-                  if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate))));
+                  if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate), undefined, { postalCode: c.postal_code })));
                 }}>
                   <option value="">— Kies klant —</option>
                   {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.city ? ` (${c.city})` : ""}</option>)}

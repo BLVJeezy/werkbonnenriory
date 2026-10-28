@@ -95,7 +95,7 @@ function Lijst() {
   function pickCustomer(label: string) {
     const c = customers.find((x) => customerLabel(x) === label);
     if (!c) return;
-    setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", project_name: c.project_name ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
+    setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", project_name: c.project_name ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate), undefined, { postalCode: c.postal_code })) }));
   }
   const filtered = filter === "alle" ? data : filter === "nieuw" ? newTaskRows(data) : filter === "ingepland" ? plannedTaskRows(data) : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
   const rows = [...filtered].sort((a, b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
@@ -239,7 +239,7 @@ function Lijst() {
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-vat-number">Btw-nummer klant</Label>
-                <Input id="nb-vat-number" value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value, vat_rate: String(vatRateForCustomer(e.target.value, Number(form.vat_rate))) })} />
+                <Input id="nb-vat-number" value={form.vat_number} onChange={(e) => setForm({ ...form, vat_number: e.target.value, vat_rate: String(vatRateForCustomer(e.target.value, Number(form.vat_rate), undefined, { postalCode: form.postal_code })) })} />
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-project">Project</Label>

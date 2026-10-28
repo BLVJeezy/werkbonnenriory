@@ -183,7 +183,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           billing_email: x.billing_email,
           vat_number: customerVatNumber(x.vat_number),
           project_name: x.project_name,
-          vat_rate: vatRateForCustomer(x.vat_number, 21, { customerType: x.customer_type, olderThanTenYears: x.home_older_than_ten_years }),
+          vat_rate: vatRateForCustomer(x.vat_number, 21, { customerType: x.customer_type, olderThanTenYears: x.home_older_than_ten_years }, { postalCode: x.postal_code }),
           description: x.description,
           urgent: isUrgentMail(m.subject, m.body?.content),
           source_message_id: m.id,

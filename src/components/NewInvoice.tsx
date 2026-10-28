@@ -38,8 +38,8 @@ export function NewInvoice({ onCreated }: { onCreated: () => void }) {
     setCustomerLabel(label);
     const c = customers.find((x: any) => lab(x) === label);
     if (!c) return;
-    // BE-btw-nummer verlegt de heffing (0%), zoals op de werkbonnen.
-    const def = vatRateForCustomer(c.vat_number, 21);
+    // BE/NL-btw-nummer verlegt de heffing (0%); Nederlandse particulieren 21%.
+    const def = vatRateForCustomer(c.vat_number, 21, undefined, { postalCode: c.postal_code });
     if (def !== 21) setLines((ls) => ls.map((l) => ({ ...l, vatRate: String(def) })));
   }
 
