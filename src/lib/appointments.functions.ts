@@ -12,8 +12,8 @@ export const forwardAppointment=createServerFn({method:'POST'}).middleware([requ
  const {data:w}=await context.supabase.from('work_orders').select('*').eq('id',data.id).single();if(!w || w.status==='afgetekend' || !w.technician_id)throw new Error('Wijs eerst een externe ploeg toe aan een open taak');
  const {data:t}=await context.supabase.from('technicians').select('*').eq('id',w.technician_id).single();if(!t?.external_planning || t.user_id)throw new Error('Deze ploeg is geen externe ploeg');
  const email=z.string().email().parse(w.email);const crewEmail=z.string().email().parse(t.email);
- const {error:we}=await context.supabase.from('work_orders').update({scheduled_date:null,scheduled_from:null,scheduled_until:null}).eq('id',w.id);if(we)throw new Error(we.message);
- const {data:r,error}=await context.supabase.from('appointment_requests').upsert({work_order_id:w.id,technician_id:t.id,customer_email:email,crew_email:crewEmail,instruction:data.instruction,status:'crew_pending',crew_token:crypto.randomUUID(),customer_token:crypto.randomUUID(),expires_at:new Date(Date.now()+30*86400000).toISOString(),proposed_date:null,time_from:null,time_until:null,confirmed_at:null,mail_pending:'crew',mail_error:null,mail_sent_at:null,mail_lock_until:null,version:Date.now()%2147483647},{onConflict:'work_order_id'}).select('*').single();if(error || !r)throw new Error('Doorzetten mislukt');
+ const {data:requestId,error:forwardError}=await context.supabase.rpc('forward_external_appointment',{p_id:w.id,p_instruction:data.instruction});if(forwardError || !requestId)throw new Error(forwardError?.message??'Doorzetten mislukt');
+ const {data:r,error}=await context.supabase.from('appointment_requests').select('*').eq('id',requestId).single();if(error || !r)throw new Error('Doorzetten mislukt');
  const {deliverAppointment}=await import('./appointments.server');return deliverAppointment(r);
 });
 export const retryAppointmentMail=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((i:unknown)=>z.object({id:z.string().uuid()}).parse(i)).handler(async({data,context})=>{
