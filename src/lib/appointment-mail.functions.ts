@@ -19,7 +19,9 @@ export const processAppointmentMails = createServerFn({ method: "POST" })
       if (await appUserReconnectRequired(res)) throw new Error("Koppel afspraak@riory.be opnieuw om mails naar Uitgevoerd te verplaatsen.");
       return res;
     };
-    const { data: jobs, error } = await sb.from("appointment_mail_moves").select("*").is("moved_at", null).or(`user_id.eq.${context.userId},user_id.is.null`).order("created_at").limit(10);
+    // Mails no longer found in the inbox (e.g. moved by hand) are parked so they never block the queue.
+    const notParked = `last_error.is.null,last_error.not.like.${NOT_FOUND}*`;
+    const { data: jobs, error } = await sb.from("appointment_mail_moves").select("*").is("moved_at", null).or(`user_id.eq.${context.userId},user_id.is.null`).or(notParked).order("user_id", { nullsFirst: false }).order("created_at").limit(25);
     if (error) throw error;
     let moved = 0;
     let failure: string | null = null;
@@ -28,7 +30,10 @@ export const processAppointmentMails = createServerFn({ method: "POST" })
         if (!job.user_id) {
           // Legacy rows have no owner. Confirm the exact stored message exists in this user's mailbox first.
           const check = await graph(`/me/messages/${encodeURIComponent(job.source_message_id)}?$select=id`);
-          if (check.status === 404) { console.warn(`Appointment mail ${job.work_order_id} not found (404)`); continue; }
+          if (check.status === 404) {
+            await sb.from("appointment_mail_moves").update({ last_error: `${NOT_FOUND} (waarschijnlijk al handmatig verplaatst).` }).eq("work_order_id", job.work_order_id).is("user_id", null).is("moved_at", null);
+            continue;
+          }
           if (!check.ok) {
             console.error(`Appointment mail check failed [${check.status}]: ${await check.text()}`);
             throw new Error(`Afspraakmail controleren mislukt (${check.status}).`);
