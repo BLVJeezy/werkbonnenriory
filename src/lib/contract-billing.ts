@@ -5,7 +5,7 @@ export type ContractLine = z.infer<typeof contractLineSchema>;
 const r = (n: number) => Math.round(n * 100) / 100;
 export function contractTotals(input: unknown) {
   const source = z.array(contractLineSchema).min(1).parse(input);
-  const lines: InvoiceLine[] = source.map(l => ({ description: l.description, quantity: l.quantity, unit: l.unit || 'stuk', unitPrice: r(l.unitPrice * (1-l.discount/100)), amount: r(l.quantity * r(l.unitPrice * (1-l.discount/100))), vatRate: l.vatRate, discount: l.discount, originalUnitPrice: l.unitPrice }));
+  const lines: InvoiceLine[] = source.map(l => ({ description: l.description, quantity: l.quantity, unit: l.unit || 'stuk', unitPrice: l.unitPrice * (1-l.discount/100), amount: r(l.quantity * l.unitPrice * (1-l.discount/100)), vatRate: l.vatRate, discount: l.discount, originalUnitPrice: l.unitPrice }));
   const groups = invoiceTaxGroups(lines, 21);
   const net = r(lines.reduce((s,l)=>s+l.amount,0));
   const vat = r(groups.reduce((s,g)=>s+g.vat,0));

@@ -8,7 +8,6 @@ const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId: string | null; pdfBase64: string; creditNote?: boolean }) {
   const [sScheme, sId] = o.senderId.split(":");
   const [rScheme, rId] = o.receiverId?.split(":") ?? [];
-  const cat = d.vatRate === 0 ? "AE" : "S";
   const c = d.customer;
   const open = Math.max(0, d.total - d.paidAmount);
   const root = o.creditNote ? "CreditNote" : "Invoice";
@@ -24,7 +23,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
     <cac:Item><cbc:Name>${esc(l.description.slice(0, 200))}</cbc:Name>
       <cac:ClassifiedTaxCategory><cbc:ID>${lineCat}</cbc:ID><cbc:Percent>${rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory>
     </cac:Item>
-    <cac:Price><cbc:PriceAmount currencyID="EUR">${a(Math.abs(l.unitPrice))}</cbc:PriceAmount></cac:Price>
+    <cac:Price><cbc:PriceAmount currencyID="EUR">${Math.abs(l.unitPrice).toFixed(6)}</cbc:PriceAmount></cac:Price>
   </cac:${o.creditNote ? "CreditNoteLine" : "InvoiceLine"}>`;
   }).join("");
   const groups = invoiceTaxGroups(d.lines,d.vatRate);
