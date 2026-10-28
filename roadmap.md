@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Simpla-token veilig instellen en bestaande Mailtaken-koppeling controleren.
+- [ ] Afgeronde werkbonnen automatisch doorgeven met klant, arbeid, kilometers, materialen en btw; fouten en herproberen in adminoverzicht.
+- [ ] Simpla-aanmaakcontract controleren; geen onbevestigde writes automatisch herhalen.
+
 - [x] Projectnaam uit mail mee uitlezen, op klant en taak, selecteerbaar bij inplannen (datalist)
 - [x] Offerteruimte: offertes maken (OFF-nummering), versturen met ondertekenlink, digitale handtekening op publieke pagina, na akkoord omzetten in taak — volledig getest in de app (proefofferte OFF-1 ondertekend en omgezet, daarna opgeruimd)
 - [x] Producten markeren als enkel-voor-admin; ploegen zien ze niet (RLS + interface)
