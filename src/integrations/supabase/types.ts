@@ -400,6 +400,53 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_reminders: {
+        Row: {
+          created_at: string
+          created_by: string
+          document: Json
+          error: string | null
+          id: string
+          invoice_id: string
+          recipient: string
+          sent_at: string | null
+          stage: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document: Json
+          error?: string | null
+          id?: string
+          invoice_id: string
+          recipient: string
+          sent_at?: string | null
+          stage: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document?: Json
+          error?: string | null
+          id?: string
+          invoice_id?: string
+          recipient?: string
+          sent_at?: string | null
+          stage?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           created_at: string
