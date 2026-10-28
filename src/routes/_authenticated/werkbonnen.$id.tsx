@@ -25,6 +25,7 @@ import { vatRateForCustomer } from "@/lib/vat-number";
 import { retrySimpla } from "@/lib/simpla.functions";
 import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
+import { ReassignCustomer } from '@/components/ReassignCustomer';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -175,6 +176,7 @@ function Detail() {
           {locked && wo.email && (
             <Button variant="outline" onClick={mailNaarKlant}>Mail naar klant</Button>
           )}
+          {isAdmin && locked && <ReassignCustomer wo={{ ...wo, vat_rate: Number(wo.vat_rate) }} onDone={() => { refresh(); qc.invalidateQueries({ queryKey: ["work_orders"] }); }} />}
           {isAdmin && locked && (
             <Button variant="outline" onClick={() => confirm("Handtekening wissen en opnieuw openen als taak?") && update({ status: wo.technician_id ? "toegewezen" : "nieuw", signature: null, signed_name: null, signed_at: null })}>
               Heropenen
