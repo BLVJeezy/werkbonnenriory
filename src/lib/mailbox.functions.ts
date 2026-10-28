@@ -123,6 +123,8 @@ async function extractWithAI(apiKey: string, msg: GraphMessage): Promise<Extract
 export const importFromMailbox = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { data: admin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!admin) throw new Error("Alleen de beheerder kan afspraakmails ophalen.");
     const lovableKey = process.env['LOVABLE_API_KEY'];
     if (!lovableKey) throw new Error("Mailbox-koppeling ontbreekt");
     const { getConnectionKeyForUser } = await import("@/lib/appUserConnections.server");
@@ -184,6 +186,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           description: x.description,
           urgent: !!x.urgent,
           source_message_id: m.id,
+          source_mailbox_user_id: context.userId,
           source_subject: m.subject ?? null,
           received_at: m.receivedDateTime ?? null,
         });
