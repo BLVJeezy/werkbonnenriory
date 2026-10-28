@@ -84,3 +84,32 @@ export const paymentFile = createServerFn({ method: "POST" })
     if (upErr) throw new Error(upErr.message);
     return { filename: `betalingen-${messageId}.xml`, xml };
   });
+
+/** Reads unpaid purchase bills from Simpla (read-only API) and adds new ones for admin review. */
+export const importPurchasesFromSimpla = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const token = process.env['SIMPLA_API_TOKEN'];
+    if (!token) throw new Error("Simpla-token ontbreekt");
+    const get = async (dataType: string) => {
+      const url = new URL("https://app-02.simpla.be/api/");
+      url.searchParams.set("token", token); url.searchParams.set("dataType", dataType);
+      const res = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(30000) });
+      if (!res.ok) throw new Error(`Simpla ${dataType} mislukt (HTTP ${res.status})`);
+      const j = await res.json() as { status?: string; data?: any[] };
+      if (j.status !== "OK" || !Array.isArray(j.data)) throw new Error(`Simpla gaf geen geldige ${dataType}`);
+      return j.data;
+    };
+    const [bills, lines, suppliers] = await Promise.all([get("bill_purchase"), get("billline_purchase"), get("supplier")]);
+    const { mapSimplaPurchases } = await import("@/lib/simpla");
+    const rows = mapSimplaPurchases(bills, lines, suppliers);
+    const { data: existing } = await context.supabase.from("purchase_invoices").select("simpla_bill_id").not("simpla_bill_id", "is", null);
+    const have = new Set((existing ?? []).map((e: any) => e.simpla_bill_id));
+    const fresh = rows.filter((r) => !have.has(r.simpla_bill_id));
+    if (fresh.length) {
+      const { error } = await context.supabase.from("purchase_invoices").insert(fresh);
+      if (error) throw new Error(`Opslaan mislukt: ${error.message}`);
+    }
+    return { imported: fresh.length, skipped: rows.length - fresh.length };
+  });

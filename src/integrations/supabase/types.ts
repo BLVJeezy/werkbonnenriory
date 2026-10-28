@@ -290,6 +290,7 @@ export type Database = {
           paid_at: string | null
           payment_ref: string | null
           pdf_path: string | null
+          simpla_bill_id: number | null
           source: string
           status: string
           supplier_iban: string | null
@@ -310,6 +311,7 @@ export type Database = {
           paid_at?: string | null
           payment_ref?: string | null
           pdf_path?: string | null
+          simpla_bill_id?: number | null
           source?: string
           status?: string
           supplier_iban?: string | null
@@ -330,6 +332,7 @@ export type Database = {
           paid_at?: string | null
           payment_ref?: string | null
           pdf_path?: string | null
+          simpla_bill_id?: number | null
           source?: string
           status?: string
           supplier_iban?: string | null

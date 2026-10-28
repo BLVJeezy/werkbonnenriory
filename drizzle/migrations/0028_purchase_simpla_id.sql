@@ -1,0 +1,1 @@
+ALTER TABLE public.purchase_invoices ADD COLUMN IF NOT EXISTS simpla_bill_id integer UNIQUE;
