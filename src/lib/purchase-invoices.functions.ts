@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePurchaseInvoice, type ParsedPurchaseInvoice } from "@/lib/purchase-invoice";
+import { canExportPurchase } from '@/lib/purchase-payment';
 
 type Ctx = { supabase: any; userId: string };
 
@@ -27,9 +28,10 @@ export const importPurchaseInvoices = createServerFn({ method: "POST" })
 /** Admin corrects the parsed values before approving. */
 export const updatePurchaseInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string } & Partial<ParsedPurchaseInvoice>) => i)
+  .inputValidator((i: { id: string; kind?: 'factuur' | 'creditnota' } & Partial<ParsedPurchaseInvoice>) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    if (data.kind && !['factuur', 'creditnota'].includes(data.kind)) throw new Error('Ongeldig documenttype');
     const n = normalizePurchaseInvoice({
       supplierName: data.supplierName, supplierVat: data.supplierVat, supplierIban: data.supplierIban,
       invoiceNumber: data.invoiceNumber, invoiceDate: data.invoiceDate, dueDate: data.dueDate,
@@ -39,7 +41,8 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
       supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban,
       invoice_number: n.invoiceNumber, invoice_date: n.invoiceDate, due_date: n.dueDate,
       lines: n.lines, net: n.net, vat: n.vat, total: n.total, payment_ref: n.paymentRef,
-    }).eq("id", data.id);
+      ...(data.kind ? { kind: data.kind } : {}),
+    }).eq("id", data.id).neq('status', 'betaald');
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
@@ -49,12 +52,12 @@ export const setPurchaseInvoiceStatus = createServerFn({ method: "POST" })
   .inputValidator((i: { ids: string[]; status: "te_controleren" | "goedgekeurd" }) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase.from("purchase_invoices").update({ status: data.status }).in("id", data.ids.slice(0, 200));
+    const { error } = await context.supabase.from("purchase_invoices").update({ status: data.status }).in("id", data.ids.slice(0, 200)).neq('status', 'betaald').neq('status', 'betaling_klaargezet');
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
 
-/** Builds one SEPA payment file for the approved invoices, each paid on its own due date, and marks them paid. */
+/** A payment file is an instruction, never evidence of payment. */
 export const paymentFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { ids: string[] }) => i)
@@ -63,7 +66,7 @@ export const paymentFile = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase.from("purchase_invoices").select("*").in("id", data.ids.slice(0, 200));
     if (error) throw new Error(error.message);
     if (!rows?.length) throw new Error("Geen facturen geselecteerd");
-    const notApproved = rows.filter((r: any) => r.status !== "goedgekeurd");
+    const notApproved = rows.filter((r: any) => !canExportPurchase({ ...r, total: Number(r.total) }));
     if (notApproved.length) throw new Error("Enkel goedgekeurde facturen kunnen betaald worden");
     const missing = rows.filter((r: any) => !r.supplier_iban || !r.due_date || !(Number(r.total) > 0));
     if (missing.length) throw new Error(`Onvolledige facturen: ${missing.map((r: any) => r.invoice_number ?? r.supplier_name).join(", ")} (IBAN, vervaldag en bedrag vereist)`);
@@ -80,9 +83,30 @@ export const paymentFile = createServerFn({ method: "POST" })
       })),
       messageId,
     );
-    const { error: upErr } = await context.supabase.from("purchase_invoices").update({ status: "betaald", paid_at: new Date().toISOString() }).in("id", data.ids);
+    const { error: upErr } = await context.supabase.from("purchase_invoices").update({ status: "betaling_klaargezet", payment_file_at: new Date().toISOString() }).in("id", rows.map((r: any) => r.id)).eq('status', 'goedgekeurd');
     if (upErr) throw new Error(upErr.message);
     return { filename: `betalingen-${messageId}.xml`, xml };
+  });
+
+export const attachPurchasePdf = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { id: string; base64: string }) => {
+    if (!i.id || i.base64.length > 14000000) throw new Error('Kies een PDF van maximaal 10 MB');
+    return i;
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: row, error } = await context.supabase.from('purchase_invoices').select('id').eq('id', data.id).single();
+    if (error || !row) throw new Error('Factuur niet gevonden');
+    const bytes = Uint8Array.from(atob(data.base64), c => c.charCodeAt(0));
+    if (new TextDecoder().decode(bytes.slice(0,5)) !== '%PDF-') throw new Error('Geen geldig PDF-bestand');
+    const path = `${data.id}/${crypto.randomUUID()}.pdf`;
+    const storage = context.supabase.storage.from('aankoopfacturen');
+    const { error: uploadError } = await storage.upload(path, bytes, { contentType: 'application/pdf' });
+    if (uploadError) throw new Error('PDF opslaan mislukt');
+    const { error: saveError } = await context.supabase.from('purchase_invoices').update({ pdf_path: path }).eq('id', data.id);
+    if (saveError) { await storage.remove([path]); throw new Error('PDF koppelen mislukt'); }
+    return { path };
   });
 
 /** Reads unpaid purchase bills from Simpla (read-only API) and adds new ones for admin review. */

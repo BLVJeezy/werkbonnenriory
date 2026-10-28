@@ -11,6 +11,7 @@
 
 - Simpla completion sync uses a database-triggered queue independent of invoice mail statuses; only verified read calls are enabled until the provider confirms creation and idempotency, preventing duplicate legal invoices.
 - Password recovery uses the public /reset-password route and auth recovery sessions; never generate or disclose account passwords in chat.
+- Purchase payments use a separate tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes are excluded from outgoing payment files. Original purchase PDFs are private attachments, never reconstructed as evidence.
 
 
 - Roles live in `user_roles` (admin|technician); RLS gives admins everything and technicians only rows of work orders assigned to them via `my_technician_id()`. Technician logins are created by `src/lib/technicians.functions.ts` (admin-checked server fn) because public sign-up is removed.

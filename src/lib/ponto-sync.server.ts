@@ -1,5 +1,6 @@
 import { decryptConnectionKey } from "./connectionKeyCrypto.server";
 import { matchInvoice, type PontoTransaction } from "./ponto-match";
+import { matchPurchasePayment } from './purchase-payment';
 
 const API = "https://api.myponto.com";
 
@@ -31,19 +32,30 @@ async function pontoGet(token: string, path: string) {
 }
 
 /** Ask Ponto to refresh the account's transactions, then read the most recent ones. */
-async function recentTransactions(token: string, accountId: string): Promise<PontoTransaction[]> {
+async function recentTransactions(token: string, accountId: string): Promise<(PontoTransaction & { key: string })[]> {
   await fetch(`${API}/synchronization`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/vnd.api+json", Accept: "application/vnd.api+json" },
     body: JSON.stringify({ data: { type: "synchronization", attributes: { subtype: "accountTransactions", resourceType: "account", resourceId: accountId } } }),
   }).catch(() => {});
-  const json = await pontoGet(token, `/accounts/${accountId}/transactions?page%5Blimit%5D=100`);
-  return (json.data ?? []).map((t: any) => ({
+  let path: string | null = `/accounts/${encodeURIComponent(accountId)}/transactions?page%5Blimit%5D=100`;
+  const transactions: (PontoTransaction & { key: string })[] = [];
+  const seen = new Set<string>();
+  while (path && !seen.has(path)) {
+    seen.add(path);
+    const json = await pontoGet(token, path);
+    transactions.push(...(json.data ?? []).filter((t: any) => typeof t.id === 'string').map((t: any) => ({
+    key: `${accountId}:${t.id}`,
     amount: Number(t.attributes?.amount ?? 0),
     remittanceInformation: t.attributes?.remittanceInformation ?? null,
     executionDate: t.attributes?.executionDate ?? null,
     counterpartName: t.attributes?.counterpartName ?? null,
-  }));
+    })));
+    const next = json.links?.next;
+    const nextUrl = typeof next === 'string' ? new URL(next, API) : null;
+    path = nextUrl?.origin === API ? nextUrl.pathname + nextUrl.search : null;
+  }
+  return transactions;
 }
 
 /** Fetches recent bank transactions via Ponto and marks matching open invoices as paid. */
@@ -59,19 +71,38 @@ export async function syncPontoPayments(supabase: any) {
   const open = (invoices ?? [])
     .map((i: any) => ({ id: i.id as string, number: i.number as string, total: Number(i.total), paidAmount: Number(i.paid_amount) }))
     .filter((i: { total: number; paidAmount: number }) => i.total > 0 && i.paidAmount + 0.005 < i.total);
-  if (!open.length) return { checked: 0, matched: [] as string[] };
+  const { data: purchases, error: purchaseError } = await supabase.from('purchase_invoices').select('id,invoice_number,payment_ref,total,kind,status').in('status', ['goedgekeurd','betaling_klaargezet']);
+  if (purchaseError) throw new Error(purchaseError.message);
+  const payable = (purchases ?? []).map((r: any) => ({ ...r, total: Number(r.total) }));
+  const { data: used, error: usedError } = await supabase.from('ponto_reconciliations').select('transaction_key');
+  if (usedError) throw new Error(usedError.message);
+  const usedKeys = new Set((used ?? []).map((r: any) => r.transaction_key));
+  const purchaseMatched: string[] = [];
 
   const matched: string[] = [];
   for (const accountId of accountIds) {
     const txs = await recentTransactions(token, accountId);
     for (const tx of txs) {
+      if (usedKeys.has(tx.key)) continue;
+      const purchase = matchPurchasePayment(tx, payable);
       const inv = matchInvoice(tx, open.filter((o: { number: string }) => !matched.includes(o.number)));
+      // Ambiguity across customer receipts and supplier refunds must not reconcile either.
+      if (purchase && inv) continue;
+      if (purchase) {
+        const { data: applied, error } = await supabase.rpc('reconcile_purchase_payment', { p_id: purchase.id, p_key: tx.key, p_amount: tx.amount, p_ref: tx.remittanceInformation, p_date: tx.executionDate ?? new Date().toISOString() });
+        if (error) throw new Error(error.message);
+        if (applied) { purchaseMatched.push(purchase.invoice_number ?? purchase.id); purchase.status = 'betaald'; usedKeys.add(tx.key); }
+        continue;
+      }
       if (!inv) continue;
+      const { error: claimError } = await supabase.from('ponto_reconciliations').insert({ transaction_key: tx.key, invoice_id: inv.id, amount: tx.amount, payment_ref: tx.remittanceInformation, paid_at: tx.executionDate ?? new Date().toISOString() });
+      if (claimError?.code === '23505') continue;
+      if (claimError) throw new Error(claimError.message);
       const { error } = await supabase.from("invoices").update({ paid_amount: inv.total, paid_at: tx.executionDate ?? new Date().toISOString() }).eq("id", inv.id);
       if (error) throw new Error(error.message);
       matched.push(inv.number);
     }
   }
   await supabase.from("settings").update({ ponto_last_sync: new Date().toISOString() }).eq("id", 1);
-  return { checked: open.length, matched };
+  return { checked: open.length + payable.length, matched, purchaseMatched };
 }
