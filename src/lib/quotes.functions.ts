@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
+import { quoteSigningLink } from "@/lib/quote-signing-link";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { addDays, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
 import { quoteTotals } from "@/lib/quote";
@@ -130,8 +130,7 @@ export const sendQuote = createServerFn({ method: "POST" })
     if (!to) throw new Error("Deze offerte heeft geen e-mailadres van de klant");
     const { createQuotePdf } = await import("@/lib/quote-pdf");
     const pdf = b64(await createQuotePdf(await quotePdfData(context.supabase, q)));
-    const origin = new URL(getRequest().url).origin;
-    const link = `${origin}/offerte/${q.token}`;
+    const link = quoteSigningLink(q.token);
     await sendMail(
       to,
       `Offerte ${q.number} — Riory`,

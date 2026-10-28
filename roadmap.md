@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Offerte-ondertekenlink hersteld: openbare bestemming in plaats van afgeschermde preview; openbaar online openen en anoniem ondertekenen/opslaan/herladen lokaal gecontroleerd, tijdelijke offerte verwijderd; 7 tests geslaagd en build OK. Nieuwe mailbestemming vereist publicatie en opnieuw versturen; geen echte klantmail verstuurd.
+
 - [x] Externe zelfplannende ploegen zonder account: aanmaken, toegewezen taak doorzetten met prijsloze omschrijving, invullink datum/tijdsvak, klant bevestigt, atomische agendaplaatsing en bevestigingsmail naar ploeg. Ongeldige link, prijsloze pagina, voorstel/klantbevestiging/herladen/agenda en admin doorzetten/mailfout/herproberen getest met tijdelijke data; proefgegevens verwijderd, 3 tests geslaagd.
 - [ ] Echte afspraakmails en ontvangst controleren — vereist afgesproken proefontvanger; geen echte klant- of ploegmail als test verstuurd. Nieuwe publieke links vereisen publicatie.
 
