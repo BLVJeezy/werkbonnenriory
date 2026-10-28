@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Rioclean-tijdsvakken: fout bij ingevulde datum/uren reproduceren, invoer herstellen en verstuurflow controleren zonder echte klantmail.
+- [x] Rioclean-tijdsvakken: native datumveld wist Belgische invoer; vervangen door tekstvelden voor ploeg en klantalternatieven. Echte Rioclean-link met twee tijdsvakken gecontroleerd tot correct genormaliseerd verstuurverzoek (geblokkeerd om echte mail te vermijden); 12 tests geslaagd, build OK. Publicatie en herladen nodig; fysieke Rioclean-telefoon en mailontvangst niet getest.
 - [ ] Alleen aankoopfacturen verwijderen — verwijdering geweigerd; 22 aankoopfacturen blijven staan. 19 leveranciers behouden en terug zichtbaar; automatische aankoopimport gestopt.
 - [x] Volledige taakomschrijving zichtbaar in takenlijst en als vaste volledige tekst in ploegdetail; lijst met bestaande omschrijvingen gecontroleerd zonder afkapping.
 - [x] Aankoop voorlopig uit de navigatie gehaald; bestaande aankoopgegevens behouden. Als beheerder gecontroleerd dat Aankoop verborgen en Facturen bereikbaar is; build OK.
