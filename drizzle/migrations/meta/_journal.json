@@ -239,6 +239,13 @@
       "when": 1793176759849,
       "tag": "0033_external_crew_appointments",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793176776063,
+      "tag": "0034_appointment_confirmation_guard",
+      "breakpoints": true
     }
   ]
 }
