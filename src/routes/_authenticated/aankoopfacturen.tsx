@@ -7,9 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Link } from '@tanstack/react-router';
+import { pontoStatus, syncPontoNow } from '@/lib/ponto.functions';
+import { canExportPurchase } from '@/lib/purchase-payment';
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
-import { importPurchaseInvoices, importPurchasesFromSimpla, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
+import { attachPurchasePdf, importPurchaseInvoices, importPurchasesFromSimpla, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
   head: () => ({ meta: [{ title: "Aankoopfacturen — Riory Werkbonnen" }, { name: "description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:title", content: "Aankoopfacturen — Riory Werkbonnen" }, { property: "og:description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -20,16 +24,27 @@ type Row = {
   id: string; supplier_name: string; supplier_vat: string | null; supplier_iban: string | null;
   invoice_number: string | null; invoice_date: string | null; due_date: string | null;
   lines: PurchaseLine[]; net: number; vat: number; total: number; payment_ref: string | null;
-  status: string; pdf_path: string | null; created_at: string;
+  status: string; pdf_path: string | null; created_at: string; kind: 'factuur' | 'creditnota'; paid_at: string | null; bank_payment_ref: string | null;
 };
 
-const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Betaald" };
+const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Afgeletterd", betaling_klaargezet: 'Betaling klaargezet' };
 const d = (s: string | null) => (s ? new Date(`${s}T12:00:00Z`).toLocaleDateString("nl-BE") : "—");
 
 function Aankoopfacturen() {
   const qc = useQueryClient();
   const doImport = useServerFn(importPurchaseInvoices);
   const doSimpla = useServerFn(importPurchasesFromSimpla);
+  const uploadPdf = useServerFn(attachPurchasePdf);
+  const syncPayments = useServerFn(syncPontoNow);
+  const getPonto = useServerFn(pontoStatus);
+  const { data: ponto } = useQuery({ queryKey: ['ponto'], queryFn: () => getPonto() });
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  async function controleerBetalingen() {
+    setBusy(true);
+    try { const r = await syncPayments(); toast.success(`${r.purchaseMatched.length} aankoopfacturen afgeletterd`); await refresh(); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['ponto'] }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Betalingen controleren mislukt'); }
+    setBusy(false);
+  }
   async function vanSimpla() {
     setBusy(true);
     try { const r = await doSimpla(); toast.success(`${r.imported} openstaande factuur/facturen uit Simpla ingelezen${r.skipped ? `, ${r.skipped} al aanwezig` : ""}`); }
@@ -73,7 +88,7 @@ function Aankoopfacturen() {
   }
 
   async function betaal() {
-    const chosen = rows.filter((r) => sel.includes(r.id) && r.status === "goedgekeurd");
+    const chosen = rows.filter((r) => sel.includes(r.id) && canExportPurchase({ ...r, total: Number(r.total) }));
     if (!chosen.length) { toast.error("Selecteer goedgekeurde facturen"); return; }
     if (!confirm(`Betaalbestand maken voor ${chosen.length} facturen (${euro(chosen.reduce((s, r) => s + Number(r.total), 0))})? Elke factuur wordt op zijn vervaldag betaald. Laad het bestand daarna in je banktoepassing.`)) return;
     setBusy(true);
@@ -83,7 +98,7 @@ function Aankoopfacturen() {
       const a = document.createElement("a");
       a.href = url; a.download = r.filename; a.click();
       URL.revokeObjectURL(url);
-      toast.success("Betaalbestand gedownload en facturen als betaald gemarkeerd");
+      toast.success("Betaalbestand gedownload; wacht op bevestiging via bankbetaling");
       setSel([]);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Betaalbestand mislukt"); }
     setBusy(false);
@@ -91,22 +106,46 @@ function Aankoopfacturen() {
   }
 
   async function bekijkPdf(path: string) {
+    const tab = window.open('about:blank', '_blank');
     const { data, error } = await supabase.storage.from("aankoopfacturen").createSignedUrl(path, 300);
-    if (error || !data?.signedUrl) { toast.error("PDF openen mislukt"); return; }
-    window.open(data.signedUrl, "_blank");
+    if (error || !data?.signedUrl) { tab?.close(); toast.error("PDF openen mislukt"); return; }
+    if (tab) tab.location.href = data.signedUrl;
+    else setPdfUrl(data.signedUrl);
   }
 
-  async function slaOp() {
+  async function openControle(row: Row) {
+    setEdit({ ...row, lines: (row.lines ?? []) as PurchaseLine[] }); setPdfUrl(null);
+    if (row.pdf_path) {
+      const { data, error } = await supabase.storage.from('aankoopfacturen').createSignedUrl(row.pdf_path, 3600);
+      if (error) toast.error('PDF laden mislukt');
+      else setPdfUrl(data?.signedUrl ?? null);
+    }
+  }
+
+  async function voegPdfToe(file: File | undefined, row: Row) {
+    if (!file) return;
+    if (file.size > 10000000) { toast.error('Kies een PDF van maximaal 10 MB'); return; }
+    setBusy(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1] ?? ''); reader.onerror = reject; reader.readAsDataURL(file); });
+      const r = await uploadPdf({ data: { id: row.id, base64 } });
+      await refresh(); await openControle({ ...row, pdf_path: r.path }); toast.success('Origineel PDF toegevoegd');
+    } catch(e) { toast.error(e instanceof Error ? e.message : 'PDF toevoegen mislukt'); }
+    setBusy(false);
+  }
+
+  async function slaOp(approve = false) {
     if (!edit) return;
     setBusy(true);
     try {
       await update({
         data: {
-          id: edit.id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+          id: edit.id, kind: edit.kind, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
           invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
           lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
         },
       });
+      if (approve) await setStatus({ data: { ids: [edit.id], status: 'goedgekeurd' } });
       toast.success("Opgeslagen");
       setEdit(null);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
@@ -127,13 +166,12 @@ function Aankoopfacturen() {
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Nu inlezen vanuit mail"}</Button>
           <Button variant="outline" disabled={busy} onClick={vanSimpla}>Inlezen uit Simpla</Button>
+          {ponto?.connected ? <Button variant="outline" disabled={busy} onClick={controleerBetalingen}>Betalingen controleren</Button> : <Button variant="outline" asChild><Link to="/facturen">Ponto koppelen</Link></Button>}
           <Button variant="outline" disabled={!sel.length || busy} onClick={() => markeer("goedgekeurd")}>Goedkeuren ({sel.length})</Button>
           <Button disabled={!sel.length || busy} onClick={betaal}>Betaalbestand maken</Button>
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Mail of scan facturen naar info@riory.be en sleep ze in de map <strong>Aankoopfacturen</strong> — de app leest ze elk uur automatisch in. Controleer de uitgelezen bedragen, keur goed en maak één betaalbestand dat elke factuur op zijn vervaldag betaalt.
-      </p>
+      {ponto?.lastSync && <p className="text-sm text-muted-foreground">Laatste betalingscontrole: {new Date(ponto.lastSync).toLocaleString('nl-BE')}</p>}
 
       <ul className="divide-y rounded-md border bg-card">
         {rows.length === 0 && <li className="p-4 text-muted-foreground">Nog geen aankoopfacturen.</li>}
@@ -142,23 +180,33 @@ function Aankoopfacturen() {
             <input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} onChange={() => toggle(r.id)} />
             <span className="font-bold">{r.supplier_name}</span>
             <span className="font-mono text-sm">{r.invoice_number ?? "—"}</span>
+            {r.kind === 'creditnota' && <span className="text-sm font-bold text-destructive">Creditnota</span>}
             <span className="text-sm text-muted-foreground">vervaldag {d(r.due_date)}</span>
-            <span className="ml-auto font-mono">{euro(Number(r.total))}</span>
+            <span className="ml-auto font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</span>
             <span className={`rounded px-2 py-0.5 text-xs font-bold ${r.status === "betaald" ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
               {STATUS[r.status] ?? r.status}
             </span>
-            {r.pdf_path && <Button variant="outline" size="sm" onClick={() => bekijkPdf(r.pdf_path!)}>PDF</Button>}
-            {r.status !== "betaald" && <Button variant="outline" size="sm" onClick={() => setEdit({ ...r, lines: (r.lines ?? []) as PurchaseLine[] })}>Controleren</Button>}
+            {r.paid_at && <span className="text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>Betaald op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
+            {r.pdf_path ? <Button variant="outline" size="sm" onClick={() => { if (r.pdf_path) void bekijkPdf(r.pdf_path); }}>PDF</Button> : <span className="text-xs text-destructive">PDF ontbreekt</span>}
+            <Button variant="outline" size="sm" onClick={() => openControle({ ...r, kind: r.kind === 'creditnota' ? 'creditnota' : 'factuur', lines: (r.lines ?? []) as PurchaseLine[] })}>{r.status === 'betaald' ? 'Bekijken' : 'Controleren'}</Button>
           </li>
         ))}
       </ul>
 
       {edit && (
-        <section className="space-y-3 rounded-md border bg-card p-4">
+        <section className="space-y-3 border-t pt-4">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-black uppercase">Controleren: {edit.supplier_name}</h2>
             <Button variant="outline" size="sm" className="ml-auto" onClick={() => setEdit(null)}>Sluiten</Button>
           </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Checkbox id="purchase-credit" checked={edit.kind === 'creditnota'} disabled={edit.status === 'betaald' || edit.status === 'betaling_klaargezet'} onCheckedChange={checked => setEdit({ ...edit, kind: checked === true ? 'creditnota' : 'factuur' })} />
+            <Label htmlFor="purchase-credit">Dit is een creditnota</Label>
+            <Label className="ml-auto" htmlFor="purchase-pdf">Origineel PDF toevoegen</Label>
+            <Input id="purchase-pdf" aria-label="Origineel PDF toevoegen" className="max-w-72" type="file" accept="application/pdf,.pdf" disabled={busy} onChange={e => { void voegPdfToe(e.target.files?.[0], edit); e.target.value = ''; }} />
+          </div>
+          {pdfUrl ? <iframe title="Originele aankoopfactuur" src={pdfUrl} className="h-[650px] w-full border" /> : <p className="text-sm text-destructive">Het originele PDF ontbreekt. Simpla geeft momenteel alleen de bestandsnaam door; voeg het gedownloade PDF hierboven toe.</p>}
+          <fieldset disabled={edit.status === 'betaald' || edit.status === 'betaling_klaargezet'} className="space-y-3">
           {warnings.length > 0 && (
             <ul className="space-y-1 rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
               {warnings.map((w) => <li key={w}>⚠ {w}</li>)}
@@ -191,9 +239,10 @@ function Aankoopfacturen() {
             <Button type="button" size="sm" variant="outline" onClick={() => setEdit({ ...edit, lines: [...edit.lines, { description: "", quantity: 1, unit: "st", unitPrice: 0, amount: 0 }] })}>+ Lijn toevoegen</Button>
           </div>
           <div className="flex gap-2">
-            <Button disabled={busy} onClick={slaOp}>Opslaan</Button>
-            <Button variant="outline" disabled={busy} onClick={async () => { await slaOp(); await setStatus({ data: { ids: [edit.id], status: "goedgekeurd" } }); toast.success("Goedgekeurd"); refresh(); }}>Opslaan en goedkeuren</Button>
+            <Button disabled={busy} onClick={() => slaOp()}>Opslaan</Button>
+            <Button variant="outline" disabled={busy} onClick={() => slaOp(true)}>Opslaan en goedkeuren</Button>
           </div>
+          </fieldset>
         </section>
       )}
     </div>

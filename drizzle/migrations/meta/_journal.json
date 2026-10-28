@@ -204,6 +204,20 @@
       "when": 1793171160397,
       "tag": "0028_purchase_simpla_id",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793172146335,
+      "tag": "0029_purchase_credit_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793172377634,
+      "tag": "0030_atomic_ponto_sales_claim",
+      "breakpoints": true
     }
   ]
 }
