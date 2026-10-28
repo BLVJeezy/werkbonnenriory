@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Officiële Belgische btw-vermeldingen op factuur-PDF en UBL: 6% renovatie en btw-verlegging, ook gemengde tarieven; 15 tests geslaagd, voorbeelden visueel gecontroleerd en twee bestaande PDF’s via Facturen gedownload met juiste tekst. Geen tariefwijziging, mail of wijziging van verzonden snapshots; reiniging kwalificeert niet automatisch voor 6%.
 - [x] Nieuwsbrieven: adminpagina met opgeslagen concepten, Riory-mailvoorbeeld/logo, emailgebonden toestemming/bewijs/historiek en persoonlijke uitschrijflink. Opslaan/herladen, anoniem uitschrijven en teruglezen getest met tijdelijke proefklant; zes regels getest, geen mails verstuurd.
 - [ ] Nieuwsbrieven verzenden — gebruiker kiest voorlopig geen nieuwsbriefdienst; verzending blijft uitgeschakeld tot koppeling.
 - [x] Facturen, creditnota’s en boekhouder-UBL via aparte boekhouding-mailbox; overige communicatie via info behouden. Afzendercontrole en mailcontact aangepast; 11 tests geslaagd en koppelknop als beheerder gecontroleerd.
