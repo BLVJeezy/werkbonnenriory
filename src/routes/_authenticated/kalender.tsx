@@ -35,7 +35,7 @@ function Kalender() {
     queryKey: ["work_orders", "calendar"],
     refetchInterval: 10000,
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, project_name, city, use_site_address, site_city, scheduled_date, scheduled_from, scheduled_until, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "afgetekend").neq("status", "offerte").order("sort_order").order("number")).data ?? []) as Row[],
+      ((await supabase.from("work_orders").select("id, number, customer_name, project_name, city, use_site_address, site_city, scheduled_date, scheduled_from, scheduled_until, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "offerte").order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
@@ -86,7 +86,15 @@ function Kalender() {
     onDragOver: (e: React.DragEvent) => e.preventDefault(),
     onDrop: () => { if (drag) plan(drag, date); setDrag(null); },
   });
-  const card = (w: Row, i?: number, list?: Row[]) => (
+  const card = (w: Row, i?: number, list?: Row[]) => w.status === "afgetekend" ? (
+    <div key={w.id} style={crewStyle(w.technicians?.color)} className="rounded border bg-background px-2 py-1 text-xs opacity-75">
+      <div className="flex items-center gap-1">
+        <span className="rounded bg-foreground px-1 font-bold text-background">Afgewerkt</span>
+        <Link to="/werkbonnen/$id" params={{ id: w.id }} className="min-w-0 flex-1 truncate font-bold underline">#{w.number} {w.customer_name}</Link>
+      </div>
+      <p className="truncate opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, w.use_site_address ? w.site_city : w.city, w.technicians?.name].filter(Boolean).join(" · ")}</p>
+    </div>
+  ) : (
     <div key={w.id} draggable onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className="cursor-grab rounded border bg-background p-2 text-sm">
       <div className="flex items-start gap-1">
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
@@ -118,7 +126,7 @@ function Kalender() {
       </select>
     </div>
   );
-  const unplanned = data.filter((w) => !w.scheduled_date);
+  const unplanned = data.filter((w) => !w.scheduled_date && w.status !== "afgetekend");
 
   return (
     <div className="space-y-4">
