@@ -38,7 +38,7 @@ export const saveNewsletterConsent = createServerFn({ method: 'POST' }).middlewa
 export const saveNewsletterCampaign = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => campaignSchema.parse(d)).handler(async ({ data, context }) => {
   const { data: admin, error: roleError } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
   if (roleError || !admin) throw new Error('Alleen de beheerder kan nieuwsbrieven beheren.');
-  const { id, ...fields } = data;
+  const { id, image_url, ...rest } = data; const fields = { ...rest, image_url: image_url ?? null };
   const query = id ? context.supabase.from('newsletter_campaigns').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id) : context.supabase.from('newsletter_campaigns').insert({ ...fields, created_by: context.userId });
   const { data: saved, error } = await query.select('id').single();
   if (error) throw new Error(error.message);
@@ -48,7 +48,7 @@ export const saveNewsletterCampaign = createServerFn({ method: 'POST' }).middlew
 export const previewNewsletter = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => campaignSchema.parse(d)).handler(async ({ data, context }) => {
   const { data: admin } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
   if (!admin) throw new Error('Alleen beheerder');
-  return { html: brandedMailHtml(`${data.body}\n\nU ontvangt deze nieuwsbrief omdat u toestemming gaf.\nUitschrijven: https://werkbonnenriory.lovable.app/nieuwsbrief/uitschrijven/voorbeeld`, 'info@riory.be') };
+  return { html: brandedMailHtml(`${data.body}\n\nU ontvangt deze nieuwsbrief omdat u toestemming gaf.\nUitschrijven: https://werkbonnenriory.lovable.app/nieuwsbrief/uitschrijven/voorbeeld`, 'info@riory.be', data.image_url) };
 });
 
 export const newsletterHistory = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => z.object({ customerId: z.string().uuid() }).parse(d)).handler(async ({ data, context }) => {

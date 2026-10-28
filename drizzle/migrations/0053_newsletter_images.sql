@@ -1,0 +1,2 @@
+ALTER TABLE public.newsletter_campaigns ADD COLUMN IF NOT EXISTS image_url text;
+CREATE POLICY "Admins upload newsletter images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'newsletter-images' AND public.has_role(auth.uid(), 'admin'));

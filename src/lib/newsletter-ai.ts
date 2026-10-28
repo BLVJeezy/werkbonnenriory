@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const newsletterAiInput = z.object({ text: z.string().trim().min(1, 'Vul eerst jouw tekst in.').max(12000, 'Gebruik maximaal 12.000 tekens.') });
-export const newsletterAiOutput = z.object({ name: z.string(), subject: z.string(), body: z.string() }).strict();
+export const newsletterAiOutput = z.object({ name: z.string(), subject: z.string(), body: z.string(), imagePrompt: z.string() }).strict();
 
 export function newsletterAiError(body: unknown, status: number) {
   const value = body as { message?: unknown; error?: { message?: unknown; type?: string }; type?: string } | null;

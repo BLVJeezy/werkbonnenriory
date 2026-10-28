@@ -372,6 +372,13 @@
       "when": 1793209107886,
       "tag": "0052_newsletter_ai_denial_state",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793210361912,
+      "tag": "0053_newsletter_images",
+      "breakpoints": true
     }
   ]
 }
