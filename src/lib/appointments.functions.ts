@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
-import { appointmentInstruction,appointmentView,proposalInput,tokenInput } from './appointments';
+import { appointmentInstruction,appointmentSlotInput,appointmentSlotsInput,appointmentView,proposalInput,tokenInput } from './appointments';
 
 async function instructionForTask(db:any,id:string){
  const [{data:w,error:we},{data:q,error:qe}]=await Promise.all([
@@ -38,9 +38,12 @@ export const readAppointment=createServerFn({method:'GET'}).inputValidator((i:un
  const {data:r}=await db.from('appointment_requests').select('*').eq(data.crew?'crew_token':'customer_token',data.token).single();if(!r || Date.parse(r.expires_at)<Date.now())throw new Error('Link ongeldig of verlopen');
  const {data:w}=await db.from('work_orders').select('customer_name,technician_id,status,address,use_site_address,site_street,site_house_number,site_postal_code,site_city,street,house_number,postal_code,city').eq('id',r.work_order_id).single();if(!w || w.technician_id!==r.technician_id || w.status==='afgetekend')throw new Error('Afspraak niet meer beschikbaar');const {destinationAddress}=await import('./address');return appointmentView(r,{customer_name:w.customer_name,address:destinationAddress(w)},data.crew);
 });
-export const proposeAppointment=createServerFn({method:'POST'}).inputValidator((i:unknown)=>proposalInput.parse(i)).handler(async({data})=>{
- const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');const {data:id,error}=await db.rpc('respond_appointment',{p_token:data.token,p_date:data.date,p_from:data.from,p_until:data.until});if(error || !id)throw new Error(error?.message??'Voorstel mislukt');const {data:r}=await db.from('appointment_requests').select('*').eq('id',id).single();if(!r)throw new Error('Afspraak ontbreekt');const {deliverAppointment}=await import('./appointments.server');return deliverAppointment(r);
+export const proposeAppointment=createServerFn({method:'POST'}).inputValidator((i:unknown)=>{
+ const multiple=tokenInput.extend({slots:appointmentSlotsInput}).safeParse(i);if(multiple.success)return multiple.data;
+ const single=proposalInput.parse(i);return {token:single.token,slots:[{date:single.date,from:single.from,until:single.until}]};
+}).handler(async({data})=>{
+ const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');const {data:id,error}=await db.rpc('respond_appointment_options',{p_token:data.token,p_action:'propose',p_slots:data.slots});if(error || !id)throw new Error(error?.message??'Voorstel mislukt');const {data:r}=await db.from('appointment_requests').select('*').eq('id',id).single();if(!r)throw new Error('Afspraak ontbreekt');const {deliverAppointment}=await import('./appointments.server');return deliverAppointment(r);
 });
-export const answerAppointment=createServerFn({method:'POST'}).inputValidator((i:unknown)=>tokenInput.extend({accept:z.boolean()}).parse(i)).handler(async({data})=>{
- const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');const {data:id,error}=await db.rpc('respond_appointment',{p_token:data.token,p_accept:data.accept});if(error || !id)throw new Error(error?.message??'Bevestigen mislukt');const {data:r}=await db.from('appointment_requests').select('*').eq('id',id).single();if(!r)throw new Error('Afspraak ontbreekt');const {deliverAppointment}=await import('./appointments.server');const mail=await deliverAppointment(r);return {ok:true,mailSent:mail.sent};
+export const answerAppointment=createServerFn({method:'POST'}).inputValidator((i:unknown)=>tokenInput.extend({accept:z.boolean(),choice:z.number().int().min(0).max(9).optional(),slots:z.array(appointmentSlotInput).max(10).optional()}).parse(i)).handler(async({data})=>{
+ const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');const {data:id,error}=await db.rpc('respond_appointment_options',{p_token:data.token,p_action:data.accept?'accept':'reject',p_choice:data.choice??0,p_slots:data.slots??[]});if(error || !id)throw new Error(error?.message??'Bevestigen mislukt');const {data:r}=await db.from('appointment_requests').select('*').eq('id',id).single();if(!r)throw new Error('Afspraak ontbreekt');const {deliverAppointment}=await import('./appointments.server');const mail=await deliverAppointment(r);return {ok:true,mailSent:mail.sent};
 });
