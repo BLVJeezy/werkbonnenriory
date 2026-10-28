@@ -16,7 +16,7 @@ export async function planContracts(sb: SupabaseClient<Database>) {
   if (error) throw error;
   let created = 0;
   for (const c of contracts ?? []) {
-    const { dates, next } = occurrencesUntil(c.next_date, c.repeat_every, c.repeat_unit as RepeatUnit, until, c.end_date);
+    const { dates, next } = occurrencesUntil(c.next_date, c.repeat_every, c.repeat_unit as RepeatUnit, until, c.end_date, c.repeat_ordinal, c.repeat_weekday);
     const k = c.customers;
     for (const date of dates) {
       const { error: e } = await sb.from("work_orders").insert({

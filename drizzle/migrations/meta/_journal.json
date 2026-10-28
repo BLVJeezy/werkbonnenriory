@@ -330,6 +330,13 @@
       "when": 1793189824482,
       "tag": "0046_manual_invoice_without_work_order",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793190364715,
+      "tag": "0047_contracts_ordinal_weekday_recurrence",
+      "breakpoints": true
     }
   ]
 }

@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { allCustomers } from "@/lib/customers";
 import { planContracts, PLAN_AHEAD_DAYS } from "@/lib/contracts";
-import { REPEAT_PRESETS, repeatLabel, type RepeatUnit } from "@/lib/recurrence";
+import { REPEAT_PRESETS, repeatLabel, nthWeekdayOfMonth, addInterval, WEEKDAYS, ORDINALS, type RepeatUnit } from "@/lib/recurrence";
 import { ContractBilling } from './ContractBilling';
 
 type Opts = { techs: { id: string; name: string }[]; acts: { id: string; name: string }[] } | undefined;
 const sel = "h-10 w-full rounded-md border bg-background px-2";
-const empty = { customer: "", name: "", description: "", technician_id: "", activity_id: "", every: "1", unit: "maand" as RepeatUnit, next_date: "", end_date: "" };
+const empty = { customer: "", name: "", description: "", technician_id: "", activity_id: "", every: "1", unit: "maand" as RepeatUnit, next_date: "", end_date: "", mode: "datum" as "datum" | "weekdag", ordinal: "1", weekday: "0" };
 
 export function Contracts({ opts }: { opts: Opts }) {
   const qc = useQueryClient();
@@ -44,10 +44,22 @@ export function Contracts({ opts }: { opts: Opts }) {
     e.preventDefault();
     const c = customers.find((x) => label(x) === f.customer);
     if (!c) { toast.error("Kies een bestaande klant uit de lijst"); return; }
+    const useOrdinal = f.mode === "weekdag" && f.unit !== "week";
+    const ordinal = useOrdinal ? Number(f.ordinal) : null;
+    const weekday = useOrdinal ? Number(f.weekday) : null;
+    let nextDate = f.next_date;
+    if (useOrdinal) {
+      const [y, m] = f.next_date.split("-").map(Number) as [number, number];
+      let cand = nthWeekdayOfMonth(y, m, ordinal!, weekday!);
+      let guard = 0;
+      while (cand < f.next_date && guard++ < 500) cand = addInterval(cand, Number(f.every), f.unit, ordinal, weekday);
+      nextDate = cand;
+    }
     const values = {
       customer_id: c.id, customer_name: c.name, name: f.name || c.name, description: f.description || null,
       technician_id: f.technician_id || null, activity_id: f.activity_id || null,
-      repeat_every: Number(f.every), repeat_unit: f.unit, next_date: f.next_date, end_date: f.end_date || null,
+      repeat_every: Number(f.every), repeat_unit: f.unit, next_date: nextDate, end_date: f.end_date || null,
+      repeat_ordinal: ordinal, repeat_weekday: weekday,
       scheduling_ready: true,
     };
     const { error } = editingId
@@ -87,6 +99,26 @@ export function Contracts({ opts }: { opts: Opts }) {
             <div className="grid gap-1"><Label htmlFor="ct-om">Om de</Label><Input id="ct-om" type="number" min={1} value={f.every} onChange={(e) => setF({ ...f, every: e.target.value || "1" })} /></div>
             <div className="grid gap-1"><Label htmlFor="ct-unit">Eenheid</Label><select id="ct-unit" className={sel} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value as RepeatUnit })}><option value="week">weken</option><option value="maand">maanden</option><option value="jaar">jaar</option></select></div>
           </div>
+          {f.unit !== "week" && (
+            <div className="grid gap-2 sm:col-span-2">
+              <Label>Plannen op</Label>
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <label className="flex items-center gap-1"><input type="radio" name="ct-mode" checked={f.mode === "datum"} onChange={() => setF({ ...f, mode: "datum" })} /> Vaste datum</label>
+                <label className="flex items-center gap-1"><input type="radio" name="ct-mode" checked={f.mode === "weekdag"} onChange={() => setF({ ...f, mode: "weekdag" })} /> Bepaalde weekdag</label>
+                {f.mode === "weekdag" && (
+                  <span className="flex items-center gap-1">
+                    <select aria-label="Welke" className={sel + " !w-auto"} value={f.ordinal} onChange={(e) => setF({ ...f, ordinal: e.target.value })}>
+                      {ORDINALS.map((o, i) => <option key={o} value={String(i + 1)}>{o}</option>)}
+                    </select>
+                    <select aria-label="Weekdag" className={sel + " !w-auto"} value={f.weekday} onChange={(e) => setF({ ...f, weekday: e.target.value })}>
+                      {WEEKDAYS.map((w, i) => <option key={w} value={String(i)}>{w}</option>)}
+                    </select>
+                    <span className="text-muted-foreground">van de {f.unit === "jaar" ? "maand van de eerste beurt" : "maand"}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <div className="grid gap-1"><Label htmlFor="ct-start">Eerste beurt</Label><Input id="ct-start" type="date" required value={f.next_date} onChange={(e) => setF({ ...f, next_date: e.target.value })} /></div>
           <div className="grid gap-1"><Label htmlFor="ct-eind">Einde contract (optioneel)</Label><Input id="ct-eind" type="date" value={f.end_date} onChange={(e) => setF({ ...f, end_date: e.target.value })} /></div>
           <div className="grid gap-1"><Label htmlFor="ct-ploeg">Ploeg</Label><select id="ct-ploeg" className={sel} value={f.technician_id} onChange={(e) => setF({ ...f, technician_id: e.target.value })}><option value="">— Later —</option>{opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
@@ -101,7 +133,7 @@ export function Contracts({ opts }: { opts: Opts }) {
             <div key={c.id} className={`rounded border bg-background p-2 text-sm ${c.active ? "" : "opacity-50"}`}>
               <div className="font-bold">{c.number ? `${c.number} · ` : ""}{c.name}</div>
               <div>{c.customer_name}</div>
-              <div className="text-xs text-muted-foreground">{c.active ? (c.scheduling_ready ? `${repeatLabel(c.repeat_every, c.repeat_unit as RepeatUnit)} · volgende ${c.next_date.split("-").reverse().join("-")}` : "Gestart · planning nog in te stellen") : "gestopt"} · {c.technicians?.name ?? "geen ploeg"}</div>
+              <div className="text-xs text-muted-foreground">{c.active ? (c.scheduling_ready ? `${repeatLabel(c.repeat_every, c.repeat_unit as RepeatUnit, c.repeat_ordinal, c.repeat_weekday)} · volgende ${c.next_date.split("-").reverse().join("-")}` : "Gestart · planning nog in te stellen") : "gestopt"} · {c.technicians?.name ?? "geen ploeg"}</div>
               {c.source_data && <details className="mt-2">
                 <summary className="cursor-pointer text-sm font-medium">Contractgegevens</summary>
                 <p className="mt-1 whitespace-pre-wrap text-xs">{c.description}</p>
@@ -118,7 +150,7 @@ export function Contracts({ opts }: { opts: Opts }) {
                 const customer = list.find((x) => x.id === c.customer_id);
                 if (!customer) { toast.error("Klant niet gevonden"); return; }
                 setEditingId(c.id);
-                setF({ ...empty, customer: label(customer), name: c.name, description: c.description ?? "", every: String(c.repeat_every), unit: c.repeat_unit as RepeatUnit, next_date:c.scheduling_ready?c.next_date:'',end_date:c.end_date??'',technician_id:c.technician_id??'',activity_id:c.activity_id??'' });
+                setF({ ...empty, customer: label(customer), name: c.name, description: c.description ?? "", every: String(c.repeat_every), unit: c.repeat_unit as RepeatUnit, next_date:c.scheduling_ready?c.next_date:'',end_date:c.end_date??'',technician_id:c.technician_id??'',activity_id:c.activity_id??'', mode: c.repeat_ordinal ? "weekdag" : "datum", ordinal: String(c.repeat_ordinal ?? 1), weekday: String(c.repeat_weekday ?? 0) });
                 openForm();
               }}>{c.scheduling_ready?'Contract bewerken':'Planning instellen'}</Button>}
               <ContractBilling contract={c}/>
