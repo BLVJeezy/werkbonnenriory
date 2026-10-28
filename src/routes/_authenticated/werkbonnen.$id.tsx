@@ -25,6 +25,7 @@ import { vatRateForCustomer } from "@/lib/vat-number";
 import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
 import { ReassignCustomer } from '@/components/ReassignCustomer';
+import { DocumentReport } from '@/components/DocumentReport';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -165,6 +166,7 @@ function Detail() {
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
         <div className="no-print ml-auto flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => window.print()}>Afdrukken</Button>
+          {isAdmin && locked && <DocumentReport id={id} type="werkbon" />}
           {locked && wo.email && (
             <Button variant="outline" onClick={mailNaarKlant}>Mail naar klant</Button>
           )}

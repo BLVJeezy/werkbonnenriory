@@ -23,6 +23,7 @@ import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
+import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
@@ -30,6 +31,7 @@ import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.
 import { Route as AfspraakPloegTokenRouteImport } from './routes/afspraak.ploeg.$token'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
+import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/public/bookkeeping/sales'
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
 
@@ -104,6 +106,11 @@ const AuthenticatedTechniciRoute = AuthenticatedTechniciRouteImport.update({
   path: '/technici',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const DocumentTokenRoute = DocumentTokenRouteImport.update({
+  id: '/document/$token',
+  path: '/document/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OfferteTokenRoute = OfferteTokenRouteImport.update({
   id: '/offerte/$token',
   path: '/offerte/$token',
@@ -143,6 +150,12 @@ const ApiPublicAankoopfacturenImportRoute =
     path: '/api/public/aankoopfacturen/import',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBookkeepingSalesRoute =
+  ApiPublicBookkeepingSalesRouteImport.update({
+    id: '/api/public/bookkeeping/sales',
+    path: '/api/public/bookkeeping/sales',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicContractsProcessRoute =
   ApiPublicContractsProcessRouteImport.update({
     id: '/api/public/contracts/process',
@@ -169,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -176,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
@@ -193,6 +208,7 @@ export interface FileRoutesByTo {
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -200,6 +216,7 @@ export interface FileRoutesByTo {
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
@@ -219,6 +236,7 @@ export interface FileRoutesById {
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
+  '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -226,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
+  '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
 }
@@ -245,6 +264,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/tarieven'
     | '/technici'
+    | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -252,6 +272,7 @@ export interface FileRouteTypes {
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   fileRoutesByTo: FileRoutesByTo
@@ -269,6 +290,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/tarieven'
     | '/technici'
+    | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -276,6 +298,7 @@ export interface FileRouteTypes {
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   id:
@@ -294,6 +317,7 @@ export interface FileRouteTypes {
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
     | '/_authenticated/technici'
+    | '/document/$token'
     | '/offerte/$token'
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -301,6 +325,7 @@ export interface FileRouteTypes {
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
+    | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/ponto/sync'
   fileRoutesById: FileRoutesById
@@ -310,11 +335,13 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  DocumentTokenRoute: typeof DocumentTokenRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
   AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
+  ApiPublicBookkeepingSalesRoute: typeof ApiPublicBookkeepingSalesRoute
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
 }
@@ -419,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTechniciRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/document/$token': {
+      id: '/document/$token'
+      path: '/document/$token'
+      fullPath: '/document/$token'
+      preLoaderRoute: typeof DocumentTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/offerte/$token': {
       id: '/offerte/$token'
       path: '/offerte/$token'
@@ -466,6 +500,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/aankoopfacturen/import'
       fullPath: '/api/public/aankoopfacturen/import'
       preLoaderRoute: typeof ApiPublicAankoopfacturenImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/bookkeeping/sales': {
+      id: '/api/public/bookkeeping/sales'
+      path: '/api/public/bookkeeping/sales'
+      fullPath: '/api/public/bookkeeping/sales'
+      preLoaderRoute: typeof ApiPublicBookkeepingSalesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/contracts/process': {
@@ -523,11 +564,13 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  DocumentTokenRoute: DocumentTokenRoute,
   OfferteTokenRoute: OfferteTokenRoute,
   AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
+  ApiPublicBookkeepingSalesRoute: ApiPublicBookkeepingSalesRoute,
   ApiPublicContractsProcessRoute: ApiPublicContractsProcessRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
 }

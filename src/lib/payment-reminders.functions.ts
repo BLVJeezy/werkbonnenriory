@@ -63,9 +63,13 @@ export const sendPaymentReminder = createServerFn({ method: 'POST' }).middleware
   if (error || !claim) throw new Error(error?.code === '23505' ? 'Deze herinnering is al verzonden of wordt verwerkt.' : error?.message ?? 'Verzendregistratie mislukt.');
   let accepted = false;
   try {
+    const { prepareDocument } = await import('./document-tracking.server');
+    const { linkText } = await import('./document-tracking');
+    const tracking = await prepareDocument('herinnering', data.invoiceId, `Herinnering ${data.stage} · ${document.number}`, document.recipient, pdf);
+    await tracking.send(async () => {
     const res = await callAsAppUser({ gatewayBaseUrl: 'https://connector-gateway.lovable.dev', connectionAPIKey: key, connectorId: 'microsoft_outlook', path: '/me/sendMail', requiredScopes: WERKBON_MAIL_SCOPES,
       init: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: {
-        subject: document.subject, body: { contentType: 'Text', content: document.body },
+        subject: document.subject, body: { contentType: 'Text', content: linkText(document.body, tracking.url) },
         toRecipients: [{ emailAddress: { address: document.recipient } }],
         attachments: [
           { '@odata.type': '#microsoft.graph.fileAttachment', name: `Herinnering-${data.stage}-${document.number}.pdf`, contentType: 'application/pdf', contentBytes: pdf },
@@ -75,6 +79,7 @@ export const sendPaymentReminder = createServerFn({ method: 'POST' }).middleware
     if (await appUserReconnectRequired(res)) throw new Error('Koppel info@riory.be opnieuw; controleer eerst de verzonden berichten.');
     if (!res.ok) throw new Error(`Outlook [${res.status}]: ${await res.text()}`);
     accepted = true;
+    });
     const { error: saveError } = await supabaseAdmin.from('invoice_reminders').update({ status: 'accepted', sent_at: new Date().toISOString() }).eq('id', claim.id);
     if (saveError) throw new Error('Mail aanvaard, maar registratie mislukt. Controleer Outlook en verzend niet opnieuw.');
     return { recipient: document.recipient };

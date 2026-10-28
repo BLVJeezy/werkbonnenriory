@@ -52,8 +52,14 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
     let binary = "";
     for (const byte of pdf) binary += String.fromCharCode(byte);
     const message = werkbonPdfMessage(mailData, wo.email, btoa(binary));
+    const { prepareDocument } = await import('./document-tracking.server');
+    const { linkText } = await import('./document-tracking');
+    const tracking = await prepareDocument('werkbon', wo.id, `Werkbon #${wo.number}`, wo.email, btoa(binary));
+    message.body.content = linkText(message.body.content, tracking.url);
 
     const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
+    let result: SendWerkbonResult = { sent: true };
+    await tracking.send(async () => {
     const res = await callAsAppUser({
       gatewayBaseUrl: GATEWAY_BASE_URL,
       connectionAPIKey: key,
@@ -68,10 +74,11 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
       },
       requiredScopes: WERKBON_MAIL_SCOPES,
     });
-    if (await appUserReconnectRequired(res)) return { sent: false, reason: "reconnect_required" };
+    if (await appUserReconnectRequired(res)) { result = { sent: false, reason: 'reconnect_required' }; throw new Error('Opnieuw koppelen vereist'); }
     if (!res.ok) {
       console.error("werkbon sendMail failed", res.status, await res.text());
-      return { sent: false, reason: "send_failed" };
+      result = { sent: false, reason: 'send_failed' }; throw new Error('Mail niet aanvaard');
     }
-    return { sent: true };
+    }).catch(() => { if (result.sent) result = { sent: false, reason: 'send_failed' }; });
+    return result;
   });
