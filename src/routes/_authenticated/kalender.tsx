@@ -35,7 +35,7 @@ function Kalender() {
     queryKey: ["work_orders", "calendar"],
     refetchInterval: 10000,
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, project_name, city, use_site_address, site_city, scheduled_date, scheduled_from, scheduled_until, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "afgetekend").order("sort_order").order("number")).data ?? []) as Row[],
+      ((await supabase.from("work_orders").select("id, number, customer_name, project_name, city, use_site_address, site_city, scheduled_date, scheduled_from, scheduled_until, status, technician_id, activity_id, vat_rate, sort_order, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "afgetekend").neq("status", "offerte").order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],

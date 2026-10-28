@@ -594,6 +594,7 @@ export type Database = {
           signature: string | null
           signed_at: string | null
           signed_name: string | null
+          source_work_order_id: string | null
           status: string
           token: string
           total: number
@@ -613,6 +614,7 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          source_work_order_id?: string | null
           status?: string
           token?: string
           total: number
@@ -632,6 +634,7 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          source_work_order_id?: string | null
           status?: string
           token?: string
           total?: number
@@ -639,7 +642,15 @@ export type Database = {
           vat_rate?: number
           work_order_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quotes_source_work_order_id_fkey"
+            columns: ["source_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settings: {
         Row: {

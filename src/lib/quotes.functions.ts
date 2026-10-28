@@ -95,6 +95,10 @@ export const quoteFromTask = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { data: wo } = await context.supabase.from("work_orders").select("*").eq("id", data.workOrderId).single();
     if (!wo) throw new Error("Taak niet gevonden");
+    const { data: existing, error: existingError } = await context.supabase.from("quotes").select("*").eq("source_work_order_id", wo.id).maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    if (existing) return existing;
+    if (wo.status === "afgetekend") throw new Error("Alleen een open taak kan worden omgezet naar offerte");
     const { quoteLine } = await import("@/lib/quote");
     const siteAddress = wo.use_site_address
       ? [wo.site_street && `${wo.site_street} ${wo.site_house_number ?? ""}`.trim(), [wo.site_postal_code, wo.site_city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null
@@ -105,13 +109,13 @@ export const quoteFromTask = createServerFn({ method: "POST" })
       street: wo.street, houseNumber: wo.house_number, postalCode: wo.postal_code, city: wo.city,
     };
     const lines = (wo.description ?? "").trim()
-      ? [quoteLine((wo.description as string).trim().split("\n")[0]!, 1, "forfait", 0)]
+      ? [quoteLine((wo.description as string).trim().split("\n")[0] ?? "", 1, "forfait", 0)]
       : [];
     const t = quoteTotals(lines, Number(wo.vat_rate));
     const { data: number, error: ne } = await context.supabase.rpc("next_quote_number");
     if (ne) throw new Error(ne.message);
     const { data: row, error } = await context.supabase.from("quotes").insert({
-      number, customer, lines, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
+      number, customer, lines, source_work_order_id: wo.id, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
       intro: wo.project_name ? `Betreft: ${wo.project_name}` : null,
     }).select("*").single();
     if (error) throw new Error(error.message);
