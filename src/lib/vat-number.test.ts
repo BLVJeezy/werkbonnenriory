@@ -14,8 +14,29 @@ it("automatically assigns exactly 0% for a BE-prefixed customer VAT number", () 
   expect(vatRateForCustomer(" be0123456789 ", 6)).toBe(0);
 });
 
-it("preserves the selected rate when there is no BE prefix", () => {
-  expect(vatRateForCustomer("NL123456789B01", 12)).toBe(12);
+it("automatically assigns exactly 0% for an NL-prefixed customer VAT number (verlegd)", () => {
+  expect(vatRateForCustomer("NL123456789B01", 21)).toBe(0);
+  expect(vatRateForCustomer(" nl123456789b01 ", 12)).toBe(0);
+});
+
+it("keeps BE-prefixed customers at 0%", () => {
+  expect(vatRateForCustomer("BE 0123.456.789", 21)).toBe(0);
+  expect(vatRateForCustomer(" be0123456789 ", 6)).toBe(0);
+});
+
+it("always assigns 21% to a Dutch private customer recognised by NL postcode format", () => {
+  expect(vatRateForCustomer(null, 6, undefined, { postalCode: "6211 AB" })).toBe(21);
+  expect(vatRateForCustomer(null, 21, undefined, { postalCode: "1015 CJ" })).toBe(21);
+  expect(vatRateForCustomer(" ", 12, undefined, { postalCode: "1234AB" })).toBe(21);
+});
+
+it("does not treat Belgian postcodes as Dutch", () => {
+  expect(vatRateForCustomer(null, 12, undefined, { postalCode: "3740" })).toBe(12);
+  expect(vatRateForCustomer(null, 6, undefined, { postalCode: "6211" })).toBe(6);
+  expect(vatRateForCustomer(null, 12, undefined, { postalCode: "3740 Bilzen" })).toBe(12);
+});
+
+it("preserves the selected rate when there is no BE or NL prefix", () => {
   expect(vatRateForCustomer(null, 21)).toBe(21);
   expect(vatRateForCustomer("", 6)).toBe(6);
 });
