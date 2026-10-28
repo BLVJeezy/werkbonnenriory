@@ -351,6 +351,13 @@
       "when": 1793192014047,
       "tag": "0049_document_delivery_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793205678079,
+      "tag": "0050_invite_customer_appointment",
+      "breakpoints": true
     }
   ]
 }

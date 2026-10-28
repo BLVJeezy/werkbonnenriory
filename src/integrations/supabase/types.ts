@@ -1459,6 +1459,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      invite_customer_appointment: {
+        Args: { p_id: string; p_instruction: string; p_slots: Json }
+        Returns: string
+      }
+      login_email: { Args: { p_name: string }; Returns: string }
       my_crew_sees_signed: { Args: never; Returns: boolean }
       my_technician_id: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
