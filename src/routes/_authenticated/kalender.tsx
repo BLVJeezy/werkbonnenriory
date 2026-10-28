@@ -13,6 +13,10 @@ import { RunningTask } from "@/components/RunningTask";
 import type { TimeEntry } from "@/lib/time";
 import { Contracts } from "@/components/Contracts";
 import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
+import { taskListRows } from "@/lib/task-list";
+import { destinationLabel } from "@/lib/address";
+import { AppointmentMailSync } from "@/components/AppointmentMailSync";
+import { X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -26,7 +30,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = { id: string; number: number; customer_name: string; project_name: string | null; city: string | null; use_site_address: boolean; site_city: string | null; scheduled_date: string | null; scheduled_from:string|null; scheduled_until:string|null; status: string; technician_id: string | null; activity_id: string | null; vat_rate: number; sort_order: number; urgent: boolean; contract_id: string | null; technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[] };
+type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[] };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -37,7 +41,7 @@ function Kalender() {
     queryKey: ["work_orders", "calendar"],
     refetchInterval: 10000,
     queryFn: async () =>
-      ((await supabase.from("work_orders").select("id, number, customer_name, project_name, city, use_site_address, site_city, scheduled_date, scheduled_from, scheduled_until, status, technician_id, activity_id, vat_rate, sort_order, urgent, contract_id, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "offerte").order("sort_order").order("number")).data ?? []) as Row[],
+      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
@@ -67,7 +71,9 @@ function Kalender() {
     const j = i + dir;
     if (j < 0 || j >= list.length) return;
     const next = [...list];
-    [next[i], next[j]] = [next[j]!, next[i]!];
+    const current = next[i]; const other = next[j];
+    if (!current || !other) return;
+    [next[i], next[j]] = [other, current];
     await Promise.all(next.map((w, n) => supabase.from("work_orders").update({ sort_order: n + 1 }).eq("id", w.id)));
     qc.invalidateQueries({ queryKey: ["work_orders"] });
   }
@@ -88,7 +94,7 @@ function Kalender() {
     onDragOver: (e: React.DragEvent) => e.preventDefault(),
     onDrop: () => { if (drag) plan(drag, date); setDrag(null); },
   });
-  const card = (w: Row, i?: number, list?: Row[]) => w.status === "afgetekend" ? (
+  const card = (w: Row, i?: number, list?: Row[], horizontal = false) => w.status === "afgetekend" ? (
     <div key={w.id} style={crewStyle(w.technicians?.color)} className="rounded border bg-background px-2 py-1 text-xs opacity-75">
       <div className="flex items-center gap-1">
         <span className="rounded bg-foreground px-1 font-bold text-background">Afgewerkt</span>
@@ -97,33 +103,42 @@ function Kalender() {
       <p className="truncate opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, w.use_site_address ? w.site_city : w.city, w.technicians?.name].filter(Boolean).join(" · ")}</p>
     </div>
   ) : (
-    <div key={w.id} draggable onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`cursor-grab rounded border bg-background p-2 text-sm ${isUrgentOpen(w) ? URGENT_RING : ""}`}>
+    <div key={w.id} draggable onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""}`}>
+      <div className="min-w-0">
       {(isUrgentOpen(w) || w.contract_id) && <div className="mb-1 flex gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-1 text-destructive-foreground">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}</div>}
       <div className="flex items-start gap-1">
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
-        <button type="button" title="Verwijderen" className="px-1 font-bold" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}>✕</button>
+        <Button type="button" size="icon" variant="ghost" title="Verwijderen" aria-label="Taak verwijderen" className="h-7 w-7 shrink-0" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}><X /></Button>
       </div>
       <RunningTask entries={w.time_entries} />
       {w.scheduled_from && <p className="font-bold">{w.scheduled_from.slice(0,5)}–{w.scheduled_until?.slice(0,5)}</p>}
       <div className="flex items-center gap-1 text-xs opacity-80">
-        {list && <span className="font-mono font-bold">{i! + 1}.</span>}
+        {list && i !== undefined && <span className="font-mono font-bold">{i + 1}.</span>}
         <span className="flex-1">{(w.use_site_address ? w.site_city : w.city) ?? ""}</span>
-        {list && (
+        {list && i !== undefined && (
           <>
-            <button type="button" title="Eerder" disabled={i === 0} className="px-1 disabled:opacity-30" onClick={() => move(list, i!, -1)}>▲</button>
-            <button type="button" title="Later" disabled={i === list.length - 1} className="px-1 disabled:opacity-30" onClick={() => move(list, i!, 1)}>▼</button>
+            <Button type="button" variant="ghost" size="icon" title="Eerder" disabled={i === 0} className="h-6 w-6" onClick={() => move(list, i, -1)}>▲</Button>
+            <Button type="button" variant="ghost" size="icon" title="Later" disabled={i === list.length - 1} className="h-6 w-6" onClick={() => move(list, i, 1)}>▼</Button>
           </>
         )}
       </div>
-      <Input type="date" className="mt-1 h-7 bg-background text-xs text-foreground" value={w.scheduled_date ?? ""} onChange={(e) => plan(w.id, e.target.value || null)} />
-      <select className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
+      {horizontal && <>
+        <p className="mt-2 font-medium">{destinationLabel(w)}</p>
+        <p className="mt-2 whitespace-pre-wrap break-words">{w.description || "Geen omschrijving"}</p>
+        {(w.site_contact_name || w.phone || w.site_contact_phone) && <p className="mt-2 text-xs opacity-80">{[w.site_contact_name, w.site_contact_phone, w.phone && `Klant: ${w.phone}`].filter(Boolean).join(" · ")}</p>}
+      </>}
+      </div>
+      <div className={horizontal ? "grid content-start gap-2 sm:grid-cols-2" : ""}>
+      <Input type="date" aria-label={`Dag taak ${w.number}`} className="mt-1 h-8 bg-background text-xs text-foreground" value={w.scheduled_date ?? ""} onChange={(e) => plan(w.id, e.target.value || null)} />
+      <select aria-label={`Ploeg taak ${w.number}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
         {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
-      <select className={sel} value={w.activity_id ?? ""} onChange={(e) => set(w.id, { activity_id: e.target.value || null })}>
+      <select aria-label={`Activiteit taak ${w.number}`} className={sel} value={w.activity_id ?? ""} onChange={(e) => set(w.id, { activity_id: e.target.value || null })}>
         <option value="">— Activiteit —</option>
         {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>
+      </div>
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
@@ -140,6 +155,7 @@ function Kalender() {
         <Button variant="outline" size="sm" onClick={() => shift(7)}>Volgende week →</Button>
       </div>
       <p className="text-sm text-muted-foreground">Sleep een taak naar een dag, of kies een datum. Klik op + om op die dag een nieuwe taak aan te maken.</p>
+      <AppointmentMailSync />
       <div className="grid gap-2 md:grid-cols-7">
         {days.map((d) => {
           const k = iso(d);
@@ -159,7 +175,7 @@ function Kalender() {
       </div>
       <section {...drop(null)} className="rounded-md border bg-card p-3">
         <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">{unplanned.map((w) => card(w))}</div>
+        <div className="grid gap-2">{unplanned.map((w) => card(w, undefined, undefined, true))}</div>
       </section>
       <Contracts opts={opts} />
     </div>
