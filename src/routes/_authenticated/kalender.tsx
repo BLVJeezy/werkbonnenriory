@@ -16,6 +16,7 @@ import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
 import { AppointmentMailSync } from "@/components/AppointmentMailSync";
+import { CustomerInvite } from "@/components/CustomerInvite";
 import { X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
@@ -141,6 +142,7 @@ function Kalender() {
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
+      <div className="col-span-full flex flex-wrap items-center gap-2"><CustomerInvite task={w} /></div>
       </div>
     </div>
   );
