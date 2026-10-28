@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Offerteaanvragen verbergen uit Taken en Kalender tot klantakkoord; Nog in te plannen als horizontale informatierijke lijst; oorspronkelijke afspraakmail naar Uitgevoerd na inplannen of offerteomzetting, met veilige foutafhandeling/herproberen.
+
 - [x] Negen gestarte contracten geïmporteerd, alle 16 oorspronkelijke regels en nummers bewaard, gekoppeld aan bestaande klanten; geen oude afspraken gegenereerd. Kalenderweergave en herladen gecontroleerd, 8 tests geslaagd. Planning pas na expliciete bevestiging van eerste beurt en ritme.
 
 - [x] Werkbonnenpagina hernoemd naar Taken; nieuwe omzettingen naar offerte archiveren de brontaak atomisch en verdwijnen uit takenlijst en kalender. Omzetting en herladen met tijdelijke taak gecontroleerd; tests geslaagd, proefgegevens verwijderd.
