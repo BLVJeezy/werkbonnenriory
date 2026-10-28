@@ -111,7 +111,8 @@ export const createInvoices = createServerFn({ method: "POST" })
     let sent = 0, failed = 0;
     for (const id of data.workOrderIds) {
       const { data: wo } = await supabase.from("work_orders").select("*").eq("id", id).single();
-      if (!wo || wo.status !== "afgetekend") continue;
+      // Contract work orders are informational only and never invoiced.
+      if (!wo || wo.status !== "afgetekend" || wo.contract_id) continue;
       const { data: existing } = await supabase.from("invoices").select("id").eq("work_order_id", id).maybeSingle();
       if (existing) { skipped.push(wo.number); continue; }
       const [t, m] = await Promise.all([

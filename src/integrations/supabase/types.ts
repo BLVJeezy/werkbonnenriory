@@ -152,6 +152,91 @@ export type Database = {
           },
         ]
       }
+      contracts: {
+        Row: {
+          active: boolean
+          activity_id: string | null
+          created_at: string
+          customer_id: string | null
+          customer_name: string
+          description: string | null
+          end_date: string | null
+          id: string
+          invoice_amount: number | null
+          invoice_every: number
+          invoice_unit: string
+          name: string
+          next_date: string
+          next_invoice_date: string | null
+          number: string | null
+          repeat_every: number
+          repeat_unit: string
+          technician_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          activity_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          customer_name: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          invoice_amount?: number | null
+          invoice_every?: number
+          invoice_unit?: string
+          name: string
+          next_date: string
+          next_invoice_date?: string | null
+          number?: string | null
+          repeat_every?: number
+          repeat_unit?: string
+          technician_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          activity_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          invoice_amount?: number | null
+          invoice_every?: number
+          invoice_unit?: string
+          name?: string
+          next_date?: string
+          next_invoice_date?: string | null
+          number?: string | null
+          repeat_every?: number
+          repeat_unit?: string
+          technician_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_projects: {
         Row: {
           city: string | null
@@ -907,6 +992,7 @@ export type Database = {
           address: string | null
           billing_email: string | null
           city: string | null
+          contract_id: string | null
           created_at: string
           customer_id: string | null
           customer_name: string
@@ -942,6 +1028,7 @@ export type Database = {
           status: string
           street: string | null
           technician_id: string | null
+          urgent: boolean
           use_site_address: boolean
           vat_number: string | null
           vat_rate: number
@@ -953,6 +1040,7 @@ export type Database = {
           address?: string | null
           billing_email?: string | null
           city?: string | null
+          contract_id?: string | null
           created_at?: string
           customer_id?: string | null
           customer_name?: string
@@ -988,6 +1076,7 @@ export type Database = {
           status?: string
           street?: string | null
           technician_id?: string | null
+          urgent?: boolean
           use_site_address?: boolean
           vat_number?: string | null
           vat_rate?: number
@@ -999,6 +1088,7 @@ export type Database = {
           address?: string | null
           billing_email?: string | null
           city?: string | null
+          contract_id?: string | null
           created_at?: string
           customer_id?: string | null
           customer_name?: string
@@ -1034,6 +1124,7 @@ export type Database = {
           status?: string
           street?: string | null
           technician_id?: string | null
+          urgent?: boolean
           use_site_address?: boolean
           vat_number?: string | null
           vat_rate?: number
@@ -1046,6 +1137,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
           {
