@@ -232,6 +232,13 @@
       "when": 1793175101679,
       "tag": "0032_numbered_customers_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793176759849,
+      "tag": "0033_external_crew_appointments",
+      "breakpoints": true
     }
   ]
 }

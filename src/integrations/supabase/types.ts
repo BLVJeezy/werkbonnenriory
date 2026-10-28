@@ -62,6 +62,90 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_requests: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          crew_email: string
+          crew_token: string
+          customer_email: string
+          customer_token: string
+          expires_at: string
+          id: string
+          instruction: string
+          mail_error: string | null
+          mail_lock_until: string | null
+          mail_pending: string | null
+          mail_sent_at: string | null
+          proposed_date: string | null
+          status: string
+          technician_id: string
+          time_from: string | null
+          time_until: string | null
+          version: number
+          work_order_id: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          crew_email: string
+          crew_token?: string
+          customer_email: string
+          customer_token?: string
+          expires_at?: string
+          id?: string
+          instruction: string
+          mail_error?: string | null
+          mail_lock_until?: string | null
+          mail_pending?: string | null
+          mail_sent_at?: string | null
+          proposed_date?: string | null
+          status?: string
+          technician_id: string
+          time_from?: string | null
+          time_until?: string | null
+          version?: number
+          work_order_id: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          crew_email?: string
+          crew_token?: string
+          customer_email?: string
+          customer_token?: string
+          expires_at?: string
+          id?: string
+          instruction?: string
+          mail_error?: string | null
+          mail_lock_until?: string | null
+          mail_pending?: string | null
+          mail_sent_at?: string | null
+          proposed_date?: string | null
+          status?: string
+          technician_id?: string
+          time_from?: string | null
+          time_until?: string | null
+          version?: number
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_requests_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_requests_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_projects: {
         Row: {
           city: string | null
@@ -682,6 +766,7 @@ export type Database = {
           color: string | null
           created_at: string
           email: string | null
+          external_planning: boolean
           id: string
           large_text: boolean
           name: string
@@ -696,6 +781,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           email?: string | null
+          external_planning?: boolean
           id?: string
           large_text?: boolean
           name: string
@@ -710,6 +796,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           email?: string | null
+          external_planning?: boolean
           id?: string
           large_text?: boolean
           name?: string
@@ -821,6 +908,8 @@ export type Database = {
           project_name: string | null
           received_at: string | null
           scheduled_date: string | null
+          scheduled_from: string | null
+          scheduled_until: string | null
           signature: string | null
           signed_at: string | null
           signed_name: string | null
@@ -865,6 +954,8 @@ export type Database = {
           project_name?: string | null
           received_at?: string | null
           scheduled_date?: string | null
+          scheduled_from?: string | null
+          scheduled_until?: string | null
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
@@ -909,6 +1000,8 @@ export type Database = {
           project_name?: string | null
           received_at?: string | null
           scheduled_date?: string | null
+          scheduled_from?: string | null
+          scheduled_until?: string | null
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
@@ -1000,6 +1093,16 @@ export type Database = {
           p_ref: string
         }
         Returns: boolean
+      }
+      respond_appointment: {
+        Args: {
+          p_accept?: boolean
+          p_date?: string
+          p_from?: string
+          p_token: string
+          p_until?: string
+        }
+        Returns: string
       }
     }
     Enums: {
