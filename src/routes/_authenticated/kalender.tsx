@@ -156,19 +156,22 @@ function Kalender() {
       </div>
       <p className="text-sm text-muted-foreground">Sleep een taak naar een dag, of kies een datum. Klik op + om op die dag een nieuwe taak aan te maken.</p>
       <AppointmentMailSync />
-      <div className="grid gap-2 md:grid-cols-7">
+      <div className="grid gap-3 xl:grid-cols-7 xl:gap-2">
         {days.map((d) => {
           const k = iso(d);
           return (
-            <div key={k} {...drop(k)} className={`min-h-40 space-y-2 rounded-md border bg-card p-2 ${k === today ? "border-2 border-primary" : ""}`}>
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-sm font-black uppercase">
+            <div key={k} {...drop(k)} className={`space-y-2 rounded-md border bg-card p-2 xl:min-h-40 ${k === today ? "border-2 border-primary" : ""}`}>
+              <div className="-mx-2 -mt-2 flex items-center justify-between gap-1 rounded-t-md border-b bg-muted px-2 py-1.5 xl:mx-0 xl:mt-0 xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
+                <span className="text-base font-black uppercase xl:text-sm">
                   {d.toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
-              {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
-              {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1">
+                {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
+                {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
+                {dayList(k).length === 0 && <p className="text-xs text-muted-foreground">Geen taken</p>}
+              </div>
             </div>
           );
         })}
