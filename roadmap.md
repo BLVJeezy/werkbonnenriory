@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Zelfplannende ploegen: admin zet afspraak door, ploeg kiest datum en tijdsvak, klant bevestigt per link, daarna automatisch agenda en ploegbevestiging; alleen deze ploegen nooit prijzen/offertes. Veilige toegang, ongeldige/verouderde links en mailfouten testen.
+- [ ] Externe zelfplannende ploegen: geen toegang tot de app; admin zet afspraak per mail door naar ploegadres, ploeg kiest datum en tijdsvak via beperkte invullink, klant bevestigt per link, daarna automatisch agenda en bevestigingsmail naar ploeg. Nooit prijzen/offertes. Veilige toegang, ongeldige/verouderde links en mailfouten testen.
 
 - [x] Excel-import: 2.975 unieke klanten uit 3.001 bronregels, 335 unieke projecten uit 337 bronregels, alle projecten gekoppeld; bestaande klanten op naam/volledig adres hergebruikt, codes/aliascodes behouden. Klantenkeuze toont alle 2.978 klanten; project/werfadreskeuze en herhaalde afspraakkoppeling getest, 7 tests geslaagd. Broncode 001475 hoort bij twee verschillende klanten en is bij beide behouden; geen willekeurige hernummering.
 
