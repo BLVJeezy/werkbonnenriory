@@ -16,4 +16,5 @@ describe('Aankoopbetalingen', () => {
   it('klaargezette betalingen blijven afletterbaar', () => { expect(matchPurchasePayment(tx, [{ ...row, status: 'betaling_klaargezet' }])?.id).toBe('one'); });
   it('reeds betaald wordt niet nogmaals afgeletterd', () => { expect(matchPurchasePayment(tx, [{ ...row, status: 'betaald' }])).toBeNull(); });
   it('verwisselt INV-42 niet met INV-420', () => { expect(matchPurchasePayment({ ...tx, remittanceInformation: 'Factuur INV-420' }, [row])).toBeNull(); });
+  it('negatieve factuur vereist expliciete creditnota-keuze', () => { expect(matchPurchasePayment(tx, [{ ...row, total: -121 }])).toBeNull(); });
 });

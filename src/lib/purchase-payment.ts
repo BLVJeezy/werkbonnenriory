@@ -10,6 +10,7 @@ export function matchPurchasePayment(tx: PontoTransaction, rows: PayablePurchase
   if (!ref || !Number.isFinite(tx.amount) || tx.amount === 0) return null;
   const matches = rows.filter(r => {
     if (!['goedgekeurd', 'betaling_klaargezet'].includes(r.status)) return false;
+    if (r.kind !== 'creditnota' && r.total <= 0) return false;
     if (r.kind === 'creditnota' ? tx.amount <= 0 : tx.amount >= 0) return false;
     if (Math.abs(Math.abs(tx.amount) - Math.abs(r.total)) >= 0.005) return false;
     const paymentRef = canonical(r.payment_ref ?? '');
