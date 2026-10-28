@@ -21,6 +21,6 @@ describe("mapSimplaPurchases", () => {
       [{ supplierId: 9, supplierName: "Tuincentrum", supplierIBAN: "BE29 7310" }]);
     expect(r).toHaveLength(1);
     expect(r[0]).toMatchObject({ supplier_name: "Tuincentrum", supplier_iban: "BE297310", due_date: "2026-11-09", total: 12.49 });
-    expect(r[0].lines[0].amount).toBe(18);
+    expect(r[0]?.lines[0]?.amount).toBe(18);
   });
 });
