@@ -1,6 +1,7 @@
 import { linkText } from "./document-tracking";
 import { brandedBody } from "./mail-html";
 import type { InvoiceCustomer } from "./invoice";
+import { INVOICE_MAILBOX_ADDRESS } from './mail-senders';
 
 export const OKIOKI_INVOICE_EMAIL = "BE0840931404701144@okioki.app";
 
@@ -17,7 +18,7 @@ export function invoiceMail(to: string, number: string, contentBytes: string, fo
   return { message: {
     subject: `${label} ${number} — Riory`,
     body: format === "pdf"
-      ? brandedBody(docUrl ? linkText(text, docUrl) : text)
+      ? brandedBody(docUrl ? linkText(text, docUrl) : text, INVOICE_MAILBOX_ADDRESS)
       : { contentType: "Text", content: `${label} ${number} in UBL-formaat voor verwerking via OkiOki.` },
     toRecipients: [{ emailAddress: { address: to } }],
     attachments: [file({ name: `${label}-${number}.${format === "pdf" ? "pdf" : "xml"}`, contentType: format === "pdf" ? "application/pdf" : "application/xml", contentBytes })],

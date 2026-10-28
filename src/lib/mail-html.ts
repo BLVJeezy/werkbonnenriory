@@ -12,7 +12,7 @@ function button(url: string, label: string) {
 }
 
 /** Zet een platte tekstmail om naar HTML in Riory-huisstijl. Regels die enkel een link zijn worden een knop. */
-export function brandedMailHtml(text: string) {
+export function brandedMailHtml(text: string, contactEmail = 'info@riory.be') {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   const parts: string[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -34,9 +34,9 @@ export function brandedMailHtml(text: string) {
 <tr><td style="background:${ORANGE};height:6px;font-size:0;line-height:0">&nbsp;</td></tr>
 <tr><td style="padding:22px 28px 6px"><span style="font-size:26px;font-weight:800;letter-spacing:1px;color:${INK}">RIORY</span></td></tr>
 <tr><td style="padding:14px 28px 24px">${parts.join('\n')}</td></tr>
-<tr><td style="background:${INK};padding:16px 28px;color:#ffffff;font-size:12px;line-height:1.6">Riory bv · Natveld 47, 3740 Bilzen · BTW BE 0840.931.404<br><a href="https://www.riory.be" style="color:${ORANGE};text-decoration:none">www.riory.be</a> · <a href="mailto:info@riory.be" style="color:${ORANGE};text-decoration:none">info@riory.be</a></td></tr>
+<tr><td style="background:${INK};padding:16px 28px;color:#ffffff;font-size:12px;line-height:1.6">Riory bv · Natveld 47, 3740 Bilzen · BTW BE 0840.931.404<br><a href="https://www.riory.be" style="color:${ORANGE};text-decoration:none">www.riory.be</a> · <a href="mailto:${esc(contactEmail)}" style="color:${ORANGE};text-decoration:none">${esc(contactEmail)}</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
 /** Outlook-body in huisstijl. */
-export const brandedBody = (text: string) => ({ contentType: 'HTML' as const, content: brandedMailHtml(text) });
+export const brandedBody = (text: string, contactEmail?: string) => ({ contentType: 'HTML' as const, content: brandedMailHtml(text, contactEmail) });
