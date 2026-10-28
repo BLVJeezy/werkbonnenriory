@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Offerteaanvragen verbergen uit Taken en Kalender tot klantakkoord; Nog in te plannen als horizontale informatierijke lijst; oorspronkelijke afspraakmail naar Uitgevoerd na inplannen of offerteomzetting, met veilige foutafhandeling/herproberen.
+- [x] Offerteaanvragen verborgen uit Taken/Kalender via DB-gecontroleerde koppeling; proefomzetting en herladen getest. Nog in te plannen horizontaal met omschrijving, volledig adres en contact; screenshot gecontroleerd. Mailverplaatsing naar Uitgevoerd in duurzame, beveiligde wachtrij met stabiele ID/herproberen; 5 tests geslaagd.
+- [ ] Afspraakmails daadwerkelijk naar Uitgevoerd verplaatsen — Microsoft vraagt nieuwe toestemming; gebruiker moet afspraak@riory.be opnieuw koppelen. 16 bestaande verwerkte afspraakmails wachten; geen echte mail verplaatst tijdens controle.
 
 - [x] Negen gestarte contracten geïmporteerd, alle 16 oorspronkelijke regels en nummers bewaard, gekoppeld aan bestaande klanten; geen oude afspraken gegenereerd. Kalenderweergave en herladen gecontroleerd, 8 tests geslaagd. Planning pas na expliciete bevestiging van eerste beurt en ritme.
 

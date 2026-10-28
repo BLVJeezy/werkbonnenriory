@@ -14,7 +14,7 @@ import type { TimeEntry } from "@/lib/time";
 import { Contracts } from "@/components/Contracts";
 import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows } from "@/lib/task-list";
-import { destinationLabel } from "@/lib/address";
+import { destinationLabel, destinationLines } from "@/lib/address";
 import { AppointmentMailSync } from "@/components/AppointmentMailSync";
 import { X } from "lucide-react";
 
@@ -123,7 +123,7 @@ function Kalender() {
         )}
       </div>
       {horizontal && <>
-        <p className="mt-2 font-medium">{destinationLabel(w)}</p>
+        <p className="mt-2 font-medium">{destinationLabel(w)}: {destinationLines(w).join(" · ") || "Niet ingevuld"}</p>
         <p className="mt-2 whitespace-pre-wrap break-words">{w.description || "Geen omschrijving"}</p>
         {(w.site_contact_name || w.phone || w.site_contact_phone) && <p className="mt-2 text-xs opacity-80">{[w.site_contact_name, w.site_contact_phone, w.phone && `Klant: ${w.phone}`].filter(Boolean).join(" · ")}</p>}
       </>}
