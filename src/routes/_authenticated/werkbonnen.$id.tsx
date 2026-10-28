@@ -26,6 +26,7 @@ import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
 import { ReassignCustomer } from '@/components/ReassignCustomer';
 import { DocumentReport } from '@/components/DocumentReport';
+import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -161,6 +162,12 @@ function Detail() {
       <Link to="/werkbonnen" className="no-print text-sm text-muted-foreground underline">
         {isAdmin ? "← Alle taken" : "← Mijn taken"}
       </Link>
+      {isUrgentOpen(wo) && (
+        <div className={`no-print rounded-md bg-destructive p-4 text-destructive-foreground ${URGENT_RING}`}>
+          <p className="animate-pulse text-xl font-black uppercase">⚠ Dringend — vandaag helpen</p>
+          <p className="text-sm">Deze opdracht werd als dringend aangeduid. Behandel ze met voorrang.</p>
+        </div>
+      )}
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-3xl font-black uppercase">{kind} #{wo.number}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
