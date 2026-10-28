@@ -73,3 +73,7 @@
 - [x] Aankoopfacturen: nieuwe pagina "Aankoop"; inlezen vanuit map "Aankoopfacturen" in info@riory.be (uurlijkse cron + knop "Nu inlezen"), PDF-tekst + AI leest leverancier, IBAN, nummer, datums, lijnen en bedragen uit; admin controleert met waarschuwingen bij afwijkingen, keurt goed en maakt één SEPA-betaalbestand (pain.001) dat elke factuur op zijn vervaldag betaalt; daarna status Betaald. 12 tests geslaagd, pagina in app geopend.
 - [ ] Open: echte inlezing testen met een echte factuur-PDF in de map (vereist gekoppelde info@-mailbox); scans zonder tekstlaag worden nu geweigerd ("geen leesbare tekst").
 - [ ] Uitgesteld: Peppol-ontvangst van aankoopfacturen — loopt nu via Simpla (offline); opnieuw bekijken zodra Simpla/OkiOki API-toegang geregeld is.
+
+- [x] Taken: dag, ploeg en activiteit rechtstreeks in de lijst kiezen; dringende taken (uit mail of handmatig) met rood kader bovenaan en in de agenda.
+- [x] Terugkerende opdrachten (contracten) in de agenda, elke N weken/maanden/jaren, 8 weken vooruit ingepland; contractwerkbonnen worden nooit gefactureerd.
+- [ ] Automatische contractfacturatie — wacht op de geëxporteerde contractenlijst van de gebruiker (kolommen, bedragen, factuurritme).

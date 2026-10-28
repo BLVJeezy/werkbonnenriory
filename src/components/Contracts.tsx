@@ -34,18 +34,18 @@ export function Contracts({ opts }: { opts: Opts }) {
       qc.invalidateQueries({ queryKey: ["contracts"] });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Inplannen mislukt"); }
   }
-  useEffect(() => { if (!planned.current) { planned.current = true; void plan(true); } }, []);
+  useEffect(() => { if (!planned.current) { planned.current = true; void plan(true); } return undefined; }, []);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const c = customers.find((x) => label(x) === f.customer);
-    if (!c) return toast.error("Kies een bestaande klant uit de lijst");
+    if (!c) { toast.error("Kies een bestaande klant uit de lijst"); return; }
     const { error } = await supabase.from("contracts").insert({
       customer_id: c.id, customer_name: c.name, name: f.name || c.name, description: f.description || null,
       technician_id: f.technician_id || null, activity_id: f.activity_id || null,
       repeat_every: Number(f.every), repeat_unit: f.unit, next_date: f.next_date, end_date: f.end_date || null,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setF(empty); setOpen(false);
     await plan();
   }

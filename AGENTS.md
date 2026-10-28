@@ -38,3 +38,4 @@
 - External crews have no auth account; tokens expose a price-free DTO. Forwarding uses quote descriptions/quantities (no prices/km) or task text. JSON slot options/customer alternatives use a service-only atomic RPC; chosen scalar slot preserves scheduling guards and mail retries.
 
 - Quotes keep source and approved output tasks separate; insertion atomically sets the source status to offerte, excluded from lists/calendars without deleting history.
+- Recurring contract tasks are generated client-side by admins via `planContracts` (src/lib/contracts.ts) with a partial unique index on (contract_id, scheduled_date) for idempotency; contract work orders are excluded from invoicing and the Simpla queue.
