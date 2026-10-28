@@ -20,7 +20,7 @@ export const generateNewsletter = createServerFn({ method: 'POST' })
     let failure: ReturnType<typeof newsletterAiError> | undefined;
     try {
       const { generateNewsletterDraft, generateNewsletterImage } = await import('./newsletter-ai.server');
-      const { imagePrompt, ...text } = await generateNewsletterDraft(getRequest(), apiKey, data.text, async response => {
+      const { imagePrompt, invoiceImage, ...text } = await generateNewsletterDraft(getRequest(), apiKey, data.text, async response => {
         if (response.ok) return;
         const body = await response.clone().json().catch(() => null);
         failure = newsletterAiError(body, response.status);
@@ -29,7 +29,7 @@ export const generateNewsletter = createServerFn({ method: 'POST' })
           if (persistError) throw new Error('AI-toegang geweigerd; blokkering kon niet bewaard worden.');
         }
       });
-      let image_url: string | null = null;
+      let image_url: string | null = invoiceImage ? 'https://werkbonnenriory.lovable.app/riory-factuur-voorbeeld.png' : null;
       let imageError: string | null = null;
       if (imagePrompt) {
         const { res, body, b64 } = await generateNewsletterImage(apiKey, imagePrompt);

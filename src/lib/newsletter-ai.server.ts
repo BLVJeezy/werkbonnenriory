@@ -12,7 +12,8 @@ export async function generateNewsletterDraft(request: Request, apiKey: string, 
   draft.body = draft.body.replace(/^\s*\[[^\]\n]{3,}\]\s*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
   const wantsImage = /afbeelding|foto|beeld|illustratie|plaatje|prent|image|picture/i.test(text);
   const imagePrompt = out.imagePrompt.trim() || (wantsImage || /\[[^\]]*(afbeelding|voorbeeld|foto|beeld)/i.test(out.body) ? `Professional photorealistic landscape photo for a Belgian service company newsletter about: ${draft.subject}. No text, no logos.` : '');
-  return { ...draft, imagePrompt };
+  const wantsInvoice = /factu/i.test(text) && (wantsImage || /\[[^\]]*(factu|voorbeeld)/i.test(out.body));
+  return { ...draft, imagePrompt: wantsInvoice ? '' : imagePrompt, invoiceImage: wantsInvoice };
 }
 
 export async function generateNewsletterImage(apiKey: string, prompt: string) {
