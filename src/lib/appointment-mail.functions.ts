@@ -28,7 +28,7 @@ export const processAppointmentMails = createServerFn({ method: "POST" })
         if (!job.user_id) {
           // Legacy rows have no owner. Confirm the exact stored message exists in this user's mailbox first.
           const check = await graph(`/me/messages/${encodeURIComponent(job.source_message_id)}?$select=id`);
-          if (check.status === 404) continue;
+          if (check.status === 404) { console.warn(`Appointment mail ${job.work_order_id} not found (404)`); continue; }
           if (!check.ok) {
             console.error(`Appointment mail check failed [${check.status}]: ${await check.text()}`);
             throw new Error(`Afspraakmail controleren mislukt (${check.status}).`);
