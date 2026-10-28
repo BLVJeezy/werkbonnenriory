@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { addDays, buildCreditNote, buildInvoice, isFullyPaid, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
+import { addDays, buildCreditNote, buildInvoice, buildManualInvoice, isFullyPaid, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
 import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
@@ -51,6 +51,42 @@ export const createInvoices = createServerFn({ method: "POST" })
       if (isFullyPaid(inv.total, inv.paidAmount)) { const r = await (await import('./invoice-sending.server')).sendOne(supabase, row); r.ok ? sent++ : failed++; }
     }
     return { created, skipped, sent, failed };
+  });
+
+/** Handmade invoice from the "Nieuwe factuur" form: existing customer or free-form customer, own lines, per-line VAT. */
+export const createManualInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: {
+    customerId?: string | null; customer?: { name: string; street?: string | null; houseNumber?: string | null; postalCode?: string | null; city?: string | null; vatNumber?: string | null; email?: string | null } | null;
+    reference?: string | null; lines: { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number }[];
+  }) => i)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabase } = context;
+    const rows = data.lines.filter((l) => l.description.trim()).slice(0, 50);
+    if (!rows.length) throw new Error("Vul minstens één lijn met omschrijving in");
+    const calc = buildManualInvoice(rows);
+    let customer: InvoiceCustomer;
+    if (data.customerId) {
+      const { data: c, error } = await supabase.from("customers").select("*").eq("id", data.customerId).single();
+      if (error || !c) throw new Error("Klant niet gevonden");
+      customer = { name: c.name, address: c.address ?? null, siteAddress: null, vatNumber: c.vat_number?.trim() || null, email: c.billing_email?.trim() || c.email?.trim() || null, street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city };
+    } else {
+      const m = data.customer;
+      if (!m?.name?.trim()) throw new Error("Kies een klant of vul een naam in");
+      customer = { name: m.name.trim(), address: null, siteAddress: null, vatNumber: m.vatNumber?.trim() || null, email: m.email?.trim() || null, street: m.street?.trim() || null, houseNumber: m.houseNumber?.trim() || null, postalCode: m.postalCode?.trim() || null, city: m.city?.trim() || null };
+    }
+    const { data: s } = await supabase.from("settings").select("payment_days").eq("id", 1).single();
+    const { data: number, error: ne } = await supabase.rpc("next_invoice_number");
+    if (ne) throw new Error(ne.message);
+    const issue = new Date().toISOString().slice(0, 10);
+    const { data: row, error } = await supabase.from("invoices").insert({
+      number, work_order_id: null, issue_date: issue, due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+      customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, paid_amount: 0,
+      kind: "factuur", contract_reference: data.reference?.trim() || null,
+    }).select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
   });
 
 export const sendInvoices = createServerFn({ method: "POST" })
