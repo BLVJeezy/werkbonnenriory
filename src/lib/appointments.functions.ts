@@ -35,6 +35,14 @@ export const forwardAppointment=createServerFn({method:'POST'}).middleware([requ
 export const retryAppointmentMail=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((i:unknown)=>z.object({id:z.string().uuid()}).parse(i)).handler(async({data,context})=>{
  const {data:admin}=await context.supabase.rpc('has_role',{_user_id:context.userId,_role:'admin'});if(!admin)throw new Error('Alleen voor beheerder');const {data:r}=await context.supabase.from('appointment_requests').select('*').eq('work_order_id',data.id).single();if(!r || Date.parse(r.expires_at)<Date.now())throw new Error('Zet de afspraak opnieuw door');const {deliverAppointment}=await import('./appointments.server');return deliverAppointment(r);
 });
+/** Beheerder nodigt de klant uit: de gekozen standaardvakken gaan naar de klant via een keuzelink. */
+export const inviteCustomer=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((i:unknown)=>z.object({id:z.string().uuid(),slots:appointmentSlotsInput}).parse(i)).handler(async({data,context})=>{
+ const {data:admin}=await context.supabase.rpc('has_role',{_user_id:context.userId,_role:'admin'});if(!admin)throw new Error('Alleen voor beheerder');
+ const instruction=(await instructionForTask(context.supabase,data.id))||'Afspraak inplannen';
+ const {data:requestId,error:inviteError}=await context.supabase.rpc('invite_customer_appointment',{p_id:data.id,p_slots:data.slots,p_instruction:instruction});if(inviteError || !requestId)throw new Error(inviteError?.message??'Uitnodigen mislukt');
+ const {data:r,error}=await context.supabase.from('appointment_requests').select('*').eq('id',requestId).single();if(error || !r)throw new Error('Uitnodigen mislukt');
+ const {deliverAppointment}=await import('./appointments.server');return deliverAppointment(r);
+});
 export const readAppointment=createServerFn({method:'GET'}).inputValidator((i:unknown)=>tokenInput.extend({crew:z.boolean()}).parse(i)).handler(async({data})=>{
  const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
  const {data:r}=await db.from('appointment_requests').select('*').eq(data.crew?'crew_token':'customer_token',data.token).single();if(!r || Date.parse(r.expires_at)<Date.now())throw new Error('Link ongeldig of verlopen');

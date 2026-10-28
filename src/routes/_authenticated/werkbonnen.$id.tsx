@@ -26,6 +26,7 @@ import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
 import { ReassignCustomer } from '@/components/ReassignCustomer';
 import { DocumentReport } from '@/components/DocumentReport';
+import { CustomerInvite } from '@/components/CustomerInvite';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
@@ -481,6 +482,11 @@ function Detail() {
 
       <WorkOrderPhotos workOrderId={id} locked={matLocked} />
       {isAdmin && !locked && <AppointmentPanel id={id} external={!!techs.find(t=>t.id===wo.technician_id)?.external_planning} scheduled={!!wo.scheduled_date} />}
+      {isAdmin && !locked && <section className="no-print space-y-2 border-t pt-4">
+        <h2 className="text-lg font-black uppercase">Klant uitnodigen</h2>
+        <p className="text-sm text-muted-foreground">Kies standaardvakken (ochtend 08:00–12:00 of namiddag 13:00–17:00) en mail de klant een keuzelink. Bij bevestiging komt de afspraak automatisch in de agenda.</p>
+        <CustomerInvite task={wo} size="default" />
+      </section>}
 
       {(perms.showPrices || perms.canPayment) && <section className="rounded-md border bg-card p-4">
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>

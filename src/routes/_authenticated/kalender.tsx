@@ -16,6 +16,7 @@ import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
 import { AppointmentMailSync } from "@/components/AppointmentMailSync";
+import { CustomerInvite } from "@/components/CustomerInvite";
 import { X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
@@ -58,7 +59,7 @@ function Kalender() {
     if (error) toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
   }
-  const sel = "mt-1 h-7 w-full rounded border bg-background px-1 text-xs text-foreground";
+  const sel = "mt-1 h-7 w-full min-w-0 rounded border bg-background px-1 text-xs text-foreground";
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
@@ -103,7 +104,7 @@ function Kalender() {
       <p className="break-words opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, destinationLines(w).join(", ") || "Geen adres", w.technicians?.name].filter(Boolean).join(" · ")}</p>
     </div>
   ) : (
-    <div key={w.id} draggable onPointerDown={(e) => { e.currentTarget.draggable = !(e.target as HTMLElement).closest("input,select,button,a,textarea"); }} onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
+    <div key={w.id} draggable onPointerDown={(e) => { e.currentTarget.draggable = !(e.target as HTMLElement).closest("input,select,button,a,textarea"); }} onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`min-w-0 cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
       <div className="min-w-0">
       {(isUrgentOpen(w) || w.contract_id) && <div className="mb-1 flex gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-1 text-destructive-foreground">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}</div>}
       <div className="flex items-start gap-1">
@@ -128,7 +129,7 @@ function Kalender() {
         {(w.site_contact_name || w.phone || w.site_contact_phone) && <p className="mt-2 text-xs opacity-80">{[w.site_contact_name, w.site_contact_phone, w.phone && `Klant: ${w.phone}`].filter(Boolean).join(" · ")}</p>}
       </>}
       </div>
-      <div className={horizontal ? "grid content-start gap-2 sm:grid-cols-2" : "grid grid-cols-2 gap-1.5 sm:grid-cols-4"}>
+      <div className={horizontal ? "grid min-w-0 content-start gap-2 sm:grid-cols-2" : "grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-4"}>
       <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number}`} className="mt-0 h-7 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onBlur={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
       <select aria-label={`Ploeg taak ${w.number}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
@@ -141,6 +142,7 @@ function Kalender() {
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
+      <div className="col-span-full flex flex-wrap items-center gap-2"><CustomerInvite task={w} /></div>
       </div>
     </div>
   );
@@ -160,14 +162,14 @@ function Kalender() {
         {days.map((d) => {
           const k = iso(d);
           return (
-            <div key={k} {...drop(k)} className={`space-y-2 rounded-md border bg-card p-2 xl:min-h-40 ${k === today ? "border-2 border-primary" : ""}`}>
+            <div key={k} {...drop(k)} className={`min-w-0 space-y-2 overflow-hidden rounded-md border bg-card p-2 xl:min-h-40 ${k === today ? "border-2 border-primary" : ""}`}>
               <div className="-mx-2 -mt-2 flex items-center justify-between gap-1 rounded-t-md border-b bg-muted px-2 py-1.5 xl:mx-0 xl:mt-0 xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
                 <span className="text-base font-black uppercase xl:text-sm">
                   {d.toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
-              <div className="grid gap-2">
+              <div className="grid min-w-0 gap-2">
                 {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
                 {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
                 {dayList(k).length === 0 && <p className="text-xs text-muted-foreground">Geen taken</p>}
