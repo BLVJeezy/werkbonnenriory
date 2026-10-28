@@ -9,3 +9,10 @@ it('removes converted quote tasks while preserving open and completed work order
     { id: 'signed', status: 'afgetekend' },
   ]).map(row => row.id)).toEqual(['open', 'assigned', 'signed']);
 });
+
+it('hides quote-linked tasks until approval, even if their task status is reassigned', () => {
+  expect(taskListRows([
+    { id: 'pending', status: 'toegewezen', quote_pending: true },
+    { id: 'approved', status: 'nieuw', quote_pending: false },
+  ]).map(row => row.id)).toEqual(['approved']);
+});
