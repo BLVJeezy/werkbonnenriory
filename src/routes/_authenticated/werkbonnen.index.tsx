@@ -30,6 +30,8 @@ import { vatRateForCustomer } from "@/lib/vat-number";
 import { RunningTask } from "@/components/RunningTask";
 import { activeTimeEntry } from "@/lib/time";
 import { allCustomers, customerKey } from '@/lib/customers';
+import { quoteFromTask } from '@/lib/quotes.functions';
+import { FilePenLine } from 'lucide-react';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Werkbonnen — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -45,6 +47,8 @@ function Lijst() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const runImport = useServerFn(importFromMailbox);
+  const makeQuote = useServerFn(quoteFromTask);
+  const [quotingId, setQuotingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("alle");
   const { dag } = Route.useSearch();
@@ -285,6 +289,31 @@ function Lijst() {
               <Badge variant={w.status === "afgetekend" ? "secondary" : "default"} className="capitalize">
                 {w.status}
               </Badge>
+              {role === "admin" && w.status !== "afgetekend" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={quotingId !== null}
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setQuotingId(w.id);
+                    try {
+                      const q = await makeQuote({ data: { workOrderId: w.id } });
+                      await qc.invalidateQueries({ queryKey: ["quotes"] });
+                      toast.success(`Offerte ${q.number} aangemaakt — vul ze verder aan`);
+                      await navigate({ to: "/offertes", search: { bewerk: q.id } });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Offerte maken mislukt");
+                    } finally {
+                      setQuotingId(null);
+                    }
+                  }}
+                >
+                  <FilePenLine aria-hidden="true" />
+                  {quotingId === w.id ? "Offerte maken…" : "Omzetten naar offerte"}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
