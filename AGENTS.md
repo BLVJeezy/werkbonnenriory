@@ -9,6 +9,9 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
+- Simpla completion sync uses a database-triggered queue independent of invoice mail statuses; only verified read calls are enabled until the provider confirms creation and idempotency, preventing duplicate legal invoices.
+- Password recovery uses the public /reset-password route and auth recovery sessions; never generate or disclose account passwords in chat.
+
 
 - Roles live in `user_roles` (admin|technician); RLS gives admins everything and technicians only rows of work orders assigned to them via `my_technician_id()`. Technician logins are created by `src/lib/technicians.functions.ts` (admin-checked server fn) because public sign-up is removed.
 - Running-task indicators derive from open time entries, not order status; the task list and calendar refetch every ten seconds while visible so admins see starts and stops from other devices without new permissions or subscriptions.

@@ -22,6 +22,7 @@ import { quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { vatRateForCustomer } from "@/lib/vat-number";
+import { retrySimpla } from "@/lib/simpla.functions";
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -76,6 +77,7 @@ function Detail() {
   const calcKm = useServerFn(computeDistance);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const makeQuote = useServerFn(quoteFromTask);
+  const syncSimpla = useServerFn(retrySimpla);
   const [kmTried, setKmTried] = useState<string | null>(null);
   const woAddr = data?.wo ? destinationAddress(data.wo) : null;
   const needKm = !!data?.wo && data.wo.status !== "afgetekend" && data.wo.distance_km == null && !!woAddr;
@@ -140,7 +142,13 @@ function Detail() {
     try {
       await completeTask({
         save: () => update(patch),
-        mail: mailNaarKlant,
+        mail: async () => {
+          try {
+            const result = await syncSimpla({ data: { workOrderId: id } });
+            if (!result.ok) toast.error("Werkbon opgeslagen; factuur wacht op Simpla.");
+          } catch { toast.error("Werkbon opgeslagen; Simpla wordt later opnieuw gecontroleerd."); }
+          await mailNaarKlant();
+        },
         afterSaved: async () => {
           if (role === "technician") await navigate({ to: "/werkbonnen", search: {} });
         },
