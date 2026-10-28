@@ -23,6 +23,7 @@ import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
 import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
+import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
@@ -104,6 +105,11 @@ const AuthenticatedTechniciRoute = AuthenticatedTechniciRouteImport.update({
   path: '/technici',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const DocumentTokenRoute = DocumentTokenRouteImport.update({
+  id: '/document/$token',
+  path: '/document/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OfferteTokenRoute = OfferteTokenRouteImport.update({
   id: '/offerte/$token',
   path: '/offerte/$token',
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/producten': typeof AuthenticatedProductenRoute
   '/tarieven': typeof AuthenticatedTarievenRoute
   '/technici': typeof AuthenticatedTechniciRoute
+  '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
   '/_authenticated/technici': typeof AuthenticatedTechniciRoute
+  '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -245,6 +254,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/tarieven'
     | '/technici'
+    | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/tarieven'
     | '/technici'
+    | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/_authenticated/producten'
     | '/_authenticated/tarieven'
     | '/_authenticated/technici'
+    | '/document/$token'
     | '/offerte/$token'
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -310,6 +322,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  DocumentTokenRoute: typeof DocumentTokenRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
   AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
@@ -419,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTechniciRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/document/$token': {
+      id: '/document/$token'
+      path: '/document/$token'
+      fullPath: '/document/$token'
+      preLoaderRoute: typeof DocumentTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/offerte/$token': {
       id: '/offerte/$token'
       path: '/offerte/$token'
@@ -523,6 +543,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  DocumentTokenRoute: DocumentTokenRoute,
   OfferteTokenRoute: OfferteTokenRoute,
   AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,

@@ -135,12 +135,15 @@ export const sendQuote = createServerFn({ method: "POST" })
     const { createQuotePdf } = await import("@/lib/quote-pdf");
     const pdf = b64(await createQuotePdf(await quotePdfData(context.supabase, q)));
     const link = quoteSigningLink(q.token);
-    await sendMail(
+    const { prepareDocument } = await import('./document-tracking.server');
+    const { linkText } = await import('./document-tracking');
+    const tracking = await prepareDocument('offerte', q.id, `Offerte ${q.number}`, to, pdf);
+    await tracking.send(() => sendMail(
       to,
       `Offerte ${q.number} — Riory`,
-      `Beste ${(q.customer as InvoiceCustomer).name},\n\nIn de bijlage vindt u offerte ${q.number}.\n\nAkkoord? Onderteken de offerte via deze link:\n${link}\n\nMet vriendelijke groeten,\nRiory`,
+      linkText(`Beste ${(q.customer as InvoiceCustomer).name},\n\nIn de bijlage vindt u offerte ${q.number}.\n\nAkkoord? Onderteken de offerte via deze link:\n${link}\n\nMet vriendelijke groeten,\nRiory`, tracking.url),
       { name: `Offerte-${q.number}.pdf`, contentType: "application/pdf", contentBytes: pdf },
-    );
+    ));
     const { error } = await context.supabase.from("quotes").update({ status: "verzonden", sent_at: new Date().toISOString() }).eq("id", q.id);
     if (error) throw new Error(error.message);
     return { ok: true as const };

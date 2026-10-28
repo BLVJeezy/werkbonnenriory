@@ -15,6 +15,7 @@ import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
+import { DocumentReport } from '@/components/DocumentReport';
 
 export const Route = createFileRoute("/_authenticated/offertes")({
   validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
@@ -287,6 +288,7 @@ function Offertes() {
               {q.signed_name && <span className="text-xs text-muted-foreground">door {q.signed_name}</span>}
               <Button variant="outline" size="sm" onClick={() => preview(q.id)}>Voorbeeld</Button>
               <Button variant="outline" size="sm" onClick={() => download(q.id)}>PDF</Button>
+              <DocumentReport id={q.id} type="offerte" />
               {q.status !== "akkoord" && <Button variant="outline" size="sm" disabled={busy} onClick={() => openEdit(q)}>Bewerken</Button>}
               {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}
               {q.status === "akkoord" && !q.work_order_id && <Button size="sm" disabled={busy} onClick={() => naarTaak(q.id)}>Omzetten in taak</Button>}
