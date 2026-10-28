@@ -35,15 +35,21 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
   });
   async function submit(accept?: boolean) {
     if (busy) return;
+    const slots = rawSlots.map(normalizeSlot);
     if (crew || accept === false) {
       const result = appointmentSlotsInput.safeParse(slots);
       if (!result.success) {
         const index = result.error.issues[0]?.path[0];
         const slot = typeof index === "number" ? slots[index] : undefined;
+        const nr = typeof index === "number" ? index + 1 : 1;
         setMessage(
-          slot?.date && slot.from && slot.until
-            ? "Het einduur moet na het beginuur liggen."
-            : `Vul de datum, het beginuur en het einduur in voor tijdsvak ${typeof index === "number" ? index + 1 : 1}.`,
+          !slot?.date || !slot.from || !slot.until
+            ? `Vul de datum, het beginuur en het einduur in voor tijdsvak ${nr}.`
+            : !/^\d{4}-\d{2}-\d{2}$/.test(slot.date)
+              ? `De datum van tijdsvak ${nr} is niet herkend. Schrijf bijvoorbeeld 29-10-2026.`
+              : !/^\d{2}:\d{2}$/.test(slot.from) || !/^\d{2}:\d{2}$/.test(slot.until)
+                ? `Het uur van tijdsvak ${nr} is niet herkend. Schrijf bijvoorbeeld 12:30.`
+                : `Het einduur moet na het beginuur liggen (tijdsvak ${nr}).`,
         );
         return;
       }
