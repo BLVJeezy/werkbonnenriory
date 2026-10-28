@@ -73,6 +73,7 @@ export function Contracts({ opts }: { opts: Opts }) {
       <p className="text-sm text-muted-foreground">Contractbeurten · {PLAN_AHEAD_DAYS / 7} weken vooruit gepland · Werkbonnen enkel ter info</p>
       {open && (
         <form ref={formRef} onSubmit={save} className="grid scroll-mt-4 gap-3 rounded border-2 border-primary bg-background p-4 sm:grid-cols-2">
+          <h3 className="font-black uppercase sm:col-span-2">{editingId ? `Planning instellen: ${f.name || "contract"}` : "Nieuwe terugkerende opdracht"}</h3>
           <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-klant">Klant</Label>
             <Input id="ct-klant" required list="ct-klanten" placeholder="Typ om te zoeken…" value={f.customer} onChange={(e) => setF({ ...f, customer: e.target.value })} />
             <datalist id="ct-klanten">{customers.map((c) => <option key={c.id} value={label(c)} />)}</datalist></div>
