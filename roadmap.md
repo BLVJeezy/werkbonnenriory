@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Meerdere tijdsvakken door ploeg voorstellen; klant kiest of geeft eigen mogelijkheden bij afwijzing. Keuze atomisch in agenda, alternatieven in ploegmail/link; testen en proefdata opruimen.
+
 - [x] Externe ploeg: gekoppelde offerteomschrijving automatisch overgenomen zonder prijzen/kilometerpost; doorzetten zonder opnieuw typen, opgeslagen omschrijving en anonieme ploeglink gecontroleerd; 5 tests geslaagd, proefdata verwijderd, geen echte mail verstuurd.
 
 - [x] Offerte-ondertekenlink hersteld: openbare bestemming in plaats van afgeschermde preview; openbaar online openen en anoniem ondertekenen/opslaan/herladen lokaal gecontroleerd, tijdelijke offerte verwijderd; 7 tests geslaagd en build OK. Nieuwe mailbestemming vereist publicatie en opnieuw versturen; geen echte klantmail verstuurd.
