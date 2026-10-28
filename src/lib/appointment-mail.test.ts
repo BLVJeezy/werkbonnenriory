@@ -3,7 +3,7 @@ import { moveAppointmentMessage } from "./appointment-mail";
 
 it("moves the original message to Uitgevoerd after remembering its stable ID", async () => {
   const calls: string[] = [];
-  const graph = vi.fn(async (path: string) => {
+  const graph = vi.fn(async (path: string, _init?: RequestInit) => {
     calls.push(path);
     return Response.json(path.includes("mailFolders") ? { value: [{ id: "done" }] } : path.endsWith("/move") ? { id: "stable" } : { id: "stable", parentFolderId: "inbox" });
   });

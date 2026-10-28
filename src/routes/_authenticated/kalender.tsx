@@ -138,10 +138,10 @@ function Kalender() {
         <option value="">— Activiteit —</option>
         {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>
-      </div>
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
+      </div>
     </div>
   );
   const unplanned = data.filter((w) => !w.scheduled_date && w.status !== "afgetekend");
