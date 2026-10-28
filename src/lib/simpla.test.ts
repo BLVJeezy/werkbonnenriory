@@ -12,3 +12,15 @@ describe("Simpla klantkoppeling", () => {
     expect(matchSimplaCustomer([{ customerName: "Klant", isBlocked: true }], "Klant", null)).toBeNull();
   });
 });
+import { mapSimplaPurchases } from "./simpla";
+describe("mapSimplaPurchases", () => {
+  it("skips paid bills and maps supplier and lines", () => {
+    const r = mapSimplaPurchases(
+      [{ billDatabaseId: 1, billCustomerId: 9, documentId: "F1", dueDate: "2026-11-09T00:00:00", billTotalIncVAT: 12.49 }, { billDatabaseId: 2, paymentDate: "2026-10-01" }],
+      [{ billDatabaseId: 1, billLineUnitPrice: 10, billLineNumber: 2, billLineDiscount: 10 }],
+      [{ supplierId: 9, supplierName: "Tuincentrum", supplierIBAN: "BE29 7310" }]);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ supplier_name: "Tuincentrum", supplier_iban: "BE297310", due_date: "2026-11-09", total: 12.49 });
+    expect(r[0].lines[0].amount).toBe(18);
+  });
+});
