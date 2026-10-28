@@ -29,6 +29,7 @@ import { crewBuckets } from "@/lib/schedule";
 import { vatRateForCustomer } from "@/lib/vat-number";
 import { RunningTask } from "@/components/RunningTask";
 import { activeTimeEntry } from "@/lib/time";
+import { allCustomers, customerKey } from '@/lib/customers';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Werkbonnen — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Werkbonnen — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -75,9 +76,12 @@ function Lijst() {
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
     enabled: role === "admin",
-    queryFn: async () => (await supabase.from("customers").select("*").order("name")).data ?? [],
+    queryFn: () => allCustomers(supabase),
   });
-  const customerLabel = (c: (typeof customers)[number]) => [c.name, [c.street, c.house_number].filter(Boolean).join(" "), c.city].filter(Boolean).join(" — ");
+  const {data:projects=[]}=useQuery({queryKey:['customer_projects'],enabled:role==='admin',queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
+  const selectedCustomer = customers.find(c=>customerKey(c)===customerKey(form));
+  const selectedProjects = projects.filter(p=>p.customer_id===selectedCustomer?.id);
+  const customerLabel = (c: (typeof customers)[number]) => [c.customer_number,c.name, [c.street, c.house_number].filter(Boolean).join(" "), c.city].filter(Boolean).join(" — ");
   function pickCustomer(label: string) {
     const c = customers.find((x) => customerLabel(x) === label);
     if (!c) return;
@@ -124,10 +128,6 @@ function Lijst() {
       toast.error(error?.message ?? "Aanmaken mislukt");
       return;
     }
-    await supabase.from("customers").upsert(
-      { name: form.name.trim(), street: form.street || null, house_number: form.house_number || null, postal_code: form.postal_code || null, city: form.city || null, phone: form.phone || null, email: form.email || null, billing_email: form.billing_email || null, vat_number: form.vat_number.trim() || null, project_name: form.project_name.trim() || null },
-      { onConflict: "match_key" },
-    );
     qc.invalidateQueries({ queryKey: ["customers"] });
     setForm(emptyForm);
     setOpen(false);
@@ -144,6 +144,7 @@ function Lijst() {
       else toast.info(`Geen nieuwe mails voor ${MAILBOX_ADDRESS}`);
       if (r.errors?.length) toast.error(`${r.errors.length} mail(s) konden niet gelezen worden`);
       qc.invalidateQueries({ queryKey: ["work_orders"] });
+      qc.invalidateQueries({ queryKey: ['customers'] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ophalen mislukt");
     } finally {
@@ -228,8 +229,9 @@ function Lijst() {
                 <Label htmlFor="nb-project">Project</Label>
                 <Input id="nb-project" list="nb-projecten" placeholder="Naam van het project…" value={form.project_name} onChange={(e) => setForm({ ...form, project_name: e.target.value })} />
                 <datalist id="nb-projecten">
-                  {[...new Set([...customers.map((c) => c.project_name), ...data.map((w) => w.project_name)].filter((x): x is string => !!x))].map((p) => <option key={p} value={p} />)}
+                  {selectedProjects.map(p=><option key={p.id} value={p.name}>{p.number} — {formatAddress(p)}</option>)}
                 </datalist>
+                {selectedProjects.length>0 && <select aria-label="Klantproject kiezen" className="h-10 w-full rounded-md border bg-background px-2" value="" onChange={e=>{const p=selectedProjects.find(x=>x.id===e.target.value);if(p)setForm({...form,project_name:p.name,use_site_address:!!p.street,site_street:p.street??'',site_house_number:p.house_number??'',site_postal_code:p.postal_code??'',site_city:p.city??''});}}><option value="">Project kiezen…</option>{selectedProjects.map(p=><option key={p.id} value={p.id}>{p.number} {p.name}</option>)}</select>}
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-desc">Omschrijving</Label>

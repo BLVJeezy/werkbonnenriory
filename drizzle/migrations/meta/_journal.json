@@ -225,6 +225,13 @@
       "when": 1793173874230,
       "tag": "0031_suppliers_and_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793175101679,
+      "tag": "0032_numbered_customers_projects",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { customerKey, customerPatch, rowsToCustomers } from "./customers";
+import { customerKey, customerPatch, rowsToCustomers, splitCustomerAddress } from "./customers";
 
 describe("rowsToCustomers", () => {
   it("leest Nederlandse kolomkoppen", () => {
@@ -9,9 +9,11 @@ describe("rowsToCustomers", () => {
   it("slaat rijen zonder naam over", () => {
     expect(rowsToCustomers([{ Straat: "x" }])).toEqual([]);
   });
-  it("sleutel op naam en postcode", () => {
-    expect(customerKey({ name: " Jan ", postal_code: "3740" })).toBe("jan|3740");
+  it("herkent naam en volledig adres ongeacht hoofdletters en spaties", () => {
+    expect(customerKey({ name: " Jan Péeters ", street:'Kerk straat',house_number:'12 A',postal_code: "3740" })).toBe(customerKey({name:'Jan Peeters',street:'Kerkstraat',house_number:'12a',postal_code:'3740'}));
   });
+  it('voegt dezelfde naam op een ander huisnummer niet samen',()=>expect(customerKey({name:'Jan',street:'Kerkstraat',house_number:'12',postal_code:'3740'})).not.toBe(customerKey({name:'Jan',street:'Kerkstraat',house_number:'14',postal_code:'3740'})));
+  it('behoudt huisnummer en bus uit een gecombineerd adres',()=>expect(splitCustomerAddress('Groenstraat 92 bus 3')).toEqual({street:'Groenstraat',house_number:'92 bus 3'}));
 });
 
 describe("customerPatch", () => {
