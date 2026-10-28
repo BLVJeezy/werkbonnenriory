@@ -189,6 +189,7 @@ function Facturen() {
             <li key={i.id} className="flex flex-wrap items-center gap-3 py-2">
               <input type="checkbox" disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} />
               <span className="font-mono font-bold">{i.number}</span>
+              {i.contract_reference && <span className="w-full text-sm font-medium">{i.contract_reference}</span>}
               {i.kind === "creditnota" && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
               <span className="flex-1">{(i.customer as { name?: string }).name}</span>
               <span className="font-mono">{euro(Number(i.total))}</span>

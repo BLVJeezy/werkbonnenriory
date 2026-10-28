@@ -12,7 +12,6 @@ import type { Database } from "@/integrations/supabase/types";
 import { RunningTask } from "@/components/RunningTask";
 import type { TimeEntry } from "@/lib/time";
 import { activeTimeEntry } from "@/lib/time";
-import { Contracts } from "@/components/Contracts";
 import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
@@ -178,7 +177,7 @@ function Kalender() {
         <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
         <div className="grid gap-2">{unplanned.map((w) => card(w, undefined, undefined, true))}</div>
       </section>
-      <Contracts opts={opts} />
+      <Button variant="outline" asChild><Link to="/contracten">Contracten beheren</Link></Button>
     </div>
   );
 }
