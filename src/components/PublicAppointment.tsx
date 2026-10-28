@@ -10,6 +10,7 @@ import {
   appointmentStatuses,
   appointmentSlotsInput,
   slotLabel,
+  normalizeSlot,
   type AppointmentSlot,
 } from "@/lib/appointments";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
   const read = useServerFn(readAppointment),
     propose = useServerFn(proposeAppointment),
     answer = useServerFn(answerAppointment);
-  const [slots, setSlots] = useState<AppointmentSlot[]>([{ ...emptySlot }]),
+  const [rawSlots, setSlots] = useState<AppointmentSlot[]>([{ ...emptySlot }]),
     [choice, setChoice] = useState(0),
     [rejecting, setRejecting] = useState(false),
     [busy, setBusy] = useState(false),
@@ -35,15 +36,31 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
   });
   async function submit(accept?: boolean) {
     if (busy) return;
+    const field = (id: string, fallback: string) => {
+      const el = typeof document !== "undefined" ? document.getElementById(id) : null;
+      return el instanceof HTMLInputElement && el.value ? el.value : fallback;
+    };
+    const slots = rawSlots.map((s, i) =>
+      normalizeSlot({
+        date: field(`slot-date-${i}`, s.date),
+        from: field(`slot-from-${i}`, s.from),
+        until: field(`slot-until-${i}`, s.until),
+      }),
+    );
     if (crew || accept === false) {
       const result = appointmentSlotsInput.safeParse(slots);
       if (!result.success) {
         const index = result.error.issues[0]?.path[0];
         const slot = typeof index === "number" ? slots[index] : undefined;
+        const nr = typeof index === "number" ? index + 1 : 1;
         setMessage(
-          slot?.date && slot.from && slot.until
-            ? "Het einduur moet na het beginuur liggen."
-            : `Vul de datum, het beginuur en het einduur in voor tijdsvak ${typeof index === "number" ? index + 1 : 1}.`,
+          !slot?.date || !slot.from || !slot.until
+            ? `Vul de datum, het beginuur en het einduur in voor tijdsvak ${nr}.`
+            : !/^\d{4}-\d{2}-\d{2}$/.test(slot.date)
+              ? `De datum van tijdsvak ${nr} is niet herkend. Schrijf bijvoorbeeld 29-10-2026.`
+              : !/^\d{2}:\d{2}$/.test(slot.from) || !/^\d{2}:\d{2}$/.test(slot.until)
+                ? `Het uur van tijdsvak ${nr} is niet herkend. Schrijf bijvoorbeeld 12:30.`
+                : `Het einduur moet na het beginuur liggen (tijdsvak ${nr}).`,
         );
         return;
       }
@@ -147,7 +164,7 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
                     ))}
                   </section>
                 )}
-                <AppointmentSlots slots={slots} onChange={setSlots} />
+                <AppointmentSlots slots={rawSlots} onChange={setSlots} />
                 <Button type="submit" disabled={busy}>
                   {busy ? "Versturen…" : "Voorstellen naar klant sturen"}
                 </Button>
@@ -190,7 +207,7 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
                       }}
                     >
                       <h2 className="text-xl font-bold">Uw beschikbare tijdsvakken</h2>
-                      <AppointmentSlots slots={slots} onChange={setSlots} />
+                      <AppointmentSlots slots={rawSlots} onChange={setSlots} />
                       <div className="flex flex-wrap gap-3">
                         <Button type="submit" disabled={busy}>
                           {busy ? "Versturen…" : "Mogelijkheden doorgeven"}
