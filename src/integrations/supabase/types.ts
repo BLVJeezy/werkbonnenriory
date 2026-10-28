@@ -470,6 +470,74 @@ export type Database = {
         }
         Relationships: []
       }
+      document_deliveries: {
+        Row: {
+          created_at: string
+          document_id: string
+          document_type: string
+          expires_at: string
+          id: string
+          label: string
+          pdf_base64: string
+          recipient: string
+          sent_at: string | null
+          status: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          document_type: string
+          expires_at?: string
+          id?: string
+          label: string
+          pdf_base64: string
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          expires_at?: string
+          id?: string
+          label?: string
+          pdf_base64?: string
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          token_hash?: string
+        }
+        Relationships: []
+      }
+      document_open_events: {
+        Row: {
+          delivery_id: string
+          id: string
+          opened_at: string
+        }
+        Insert: {
+          delivery_id: string
+          id?: string
+          opened_at?: string
+        }
+        Update: {
+          delivery_id?: string
+          id?: string
+          opened_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_open_events_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "document_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_reminders: {
         Row: {
           created_at: string

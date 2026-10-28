@@ -344,6 +344,13 @@
       "when": 1793191813461,
       "tag": "0048_retire_simpla_sales_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793192014047,
+      "tag": "0049_document_delivery_reports",
+      "breakpoints": true
     }
   ]
 }
