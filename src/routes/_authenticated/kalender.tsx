@@ -11,6 +11,7 @@ import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
 import { RunningTask } from "@/components/RunningTask";
 import type { TimeEntry } from "@/lib/time";
+import { activeTimeEntry } from "@/lib/time";
 import { Contracts } from "@/components/Contracts";
 import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows } from "@/lib/task-list";
@@ -103,14 +104,14 @@ function Kalender() {
       <p className="truncate opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, w.use_site_address ? w.site_city : w.city, w.technicians?.name].filter(Boolean).join(" · ")}</p>
     </div>
   ) : (
-    <div key={w.id} draggable onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""}`}>
+    <div key={w.id} draggable onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
       <div className="min-w-0">
       {(isUrgentOpen(w) || w.contract_id) && <div className="mb-1 flex gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-1 text-destructive-foreground">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}</div>}
       <div className="flex items-start gap-1">
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
         <Button type="button" size="icon" variant="ghost" title="Verwijderen" aria-label="Taak verwijderen" className="h-7 w-7 shrink-0" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}><X /></Button>
       </div>
-      <RunningTask entries={w.time_entries} />
+      <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />
       {w.scheduled_from && <p className="font-bold">{w.scheduled_from.slice(0,5)}–{w.scheduled_until?.slice(0,5)}</p>}
       <div className="flex items-center gap-1 text-xs opacity-80">
         {list && i !== undefined && <span className="font-mono font-bold">{i + 1}.</span>}
