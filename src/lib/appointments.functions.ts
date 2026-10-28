@@ -9,7 +9,9 @@ async function instructionForTask(db:any,id:string){
   db.from('quotes').select('lines').eq('work_order_id',id).order('created_at',{ascending:false}).limit(1).maybeSingle(),
  ]);
  if(we || qe)throw new Error('Werkomschrijving ophalen mislukt');
- return appointmentInstruction(w?.description??null,q?.lines);
+ const {data:prods}=await db.from('products').select('name,alias').not('alias','is',null);
+ const aliases:Record<string,string>={};for(const p of prods??[])if(p.alias?.trim())aliases[p.name.trim().toLowerCase()]=p.alias.trim();
+ return appointmentInstruction(w?.description??null,q?.lines,aliases);
 }
 export const getAppointmentInstruction=createServerFn({method:'GET'}).middleware([requireSupabaseAuth]).inputValidator((i:unknown)=>z.object({id:z.string().uuid()}).parse(i)).handler(async({data,context})=>{
  const {data:admin}=await context.supabase.rpc('has_role',{_user_id:context.userId,_role:'admin'});if(!admin)throw new Error('Alleen voor beheerder');

@@ -463,9 +463,9 @@ function Detail() {
               onChange={(e) => setMat({ ...mat, productId: e.target.value })}
             >
               <option value="">{prods.length ? "— Kies product —" : "Nog geen producten aangemaakt"}</option>
-              {prods.map((p) => (
+              {[...prods].sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)).map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
+                  {p.alias ? `${p.alias} — ${p.name}` : p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
                 </option>
               ))}
             </select>
