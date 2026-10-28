@@ -19,6 +19,7 @@ function Producten() {
   const [unit, setUnit] = useState("st");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [alias, setAlias] = useState("");
   const [adminOnly, setAdminOnly] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
@@ -29,7 +30,7 @@ function Producten() {
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = await supabase.from("products").insert({ name, unit: unit || "st", price: Number(price) || 0, description, admin_only: adminOnly });
+    const { error } = await supabase.from("products").insert({ name, unit: unit || "st", price: Number(price) || 0, description, alias: alias.trim() || null, admin_only: adminOnly });
     if (error) {
       toast.error(error.message);
       return;
@@ -47,6 +48,7 @@ function Producten() {
       <h1 className="text-3xl font-black uppercase">Producten</h1>
       <form onSubmit={add} className="flex flex-wrap gap-2 rounded-md border bg-card p-4">
         <Input placeholder="Productnaam" required value={name} onChange={(e) => setName(e.target.value)} className="min-w-48 flex-1" />
+        <Input placeholder="Alias voor ploegen (bv. 'grijze buis')" value={alias} onChange={(e) => setAlias(e.target.value)} className="min-w-48 flex-1" />
         <Input placeholder="Eenheid" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-24" />
         <Input placeholder="Prijs € excl. btw" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-36" />
         <Textarea placeholder="Lange omschrijving (optioneel)" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-20 w-full" />
@@ -62,7 +64,8 @@ function Producten() {
           <li key={p.id} className="p-4">
             <div className="flex items-center justify-between">
               <div className="min-w-0">
-                <span className="font-bold">{p.name}</span> <span className="font-mono text-sm text-muted-foreground">({p.unit}) · {euro(Number(p.price))}</span>
+                <span className="font-bold">{p.name}</span>
+                {p.alias && <span className="ml-2 rounded bg-primary/15 px-2 py-0.5 text-xs font-bold">Alias: {p.alias}</span>} <span className="font-mono text-sm text-muted-foreground">({p.unit}) · {euro(Number(p.price))}</span>
                 {p.admin_only && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs font-bold">Enkel beheerder</span>}
                 {p.description ? (
                   <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{p.description}</p>
@@ -85,10 +88,11 @@ function Producten() {
                     } else {
                       setEditing(p.id);
                       setEditText(p.description ?? "");
+                      setEditAlias(p.alias ?? "");
                     }
                   }}
                 >
-                  {editing === p.id ? "Sluiten" : "Omschrijving"}
+                  {editing === p.id ? "Sluiten" : "Alias & omschrijving"}
                 </Button>
                 <Button
                   variant="ghost"
@@ -104,9 +108,10 @@ function Producten() {
             </div>
             {editing === p.id && (
               <div className="mt-3 space-y-2">
+                <Input value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="Alias voor ploegen" />
                 <Textarea value={editText} onChange={(e) => setEditText(e.target.value)} className="min-h-28" placeholder="Lange omschrijving" />
                 <Button size="sm" onClick={async () => {
-                  const { error } = await supabase.from("products").update({ description: editText }).eq("id", p.id);
+                  const { error } = await supabase.from("products").update({ description: editText, alias: editAlias.trim() || null }).eq("id", p.id);
                   if (error) toast.error(error.message);
                   setEditing(null);
                   qc.invalidateQueries({ queryKey: ["products"] });
