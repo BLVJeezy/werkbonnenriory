@@ -281,6 +281,13 @@
       "when": 1793184745541,
       "tag": "0039_product_alias",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793185360187,
+      "tag": "0040_contract_import_source",
+      "breakpoints": true
     }
   ]
 }

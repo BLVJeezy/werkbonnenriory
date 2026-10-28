@@ -171,6 +171,8 @@ export type Database = {
           number: string | null
           repeat_every: number
           repeat_unit: string
+          scheduling_ready: boolean
+          source_data: Json | null
           technician_id: string | null
         }
         Insert: {
@@ -191,6 +193,8 @@ export type Database = {
           number?: string | null
           repeat_every?: number
           repeat_unit?: string
+          scheduling_ready?: boolean
+          source_data?: Json | null
           technician_id?: string | null
         }
         Update: {
@@ -211,6 +215,8 @@ export type Database = {
           number?: string | null
           repeat_every?: number
           repeat_unit?: string
+          scheduling_ready?: boolean
+          source_data?: Json | null
           technician_id?: string | null
         }
         Relationships: [

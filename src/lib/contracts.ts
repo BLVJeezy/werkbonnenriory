@@ -12,7 +12,7 @@ export async function planContracts(sb: SupabaseClient<Database>) {
   const horizon = new Date();
   horizon.setUTCDate(horizon.getUTCDate() + PLAN_AHEAD_DAYS);
   const until = isoDate(horizon);
-  const { data: contracts, error } = await sb.from("contracts").select("*, customers(*)").eq("active", true).lte("next_date", until);
+  const { data: contracts, error } = await sb.from("contracts").select("*, customers(*)").eq("active", true).eq("scheduling_ready", true).lte("next_date", until);
   if (error) throw error;
   let created = 0;
   for (const c of contracts ?? []) {

@@ -18,6 +18,7 @@ export function Contracts({ opts }: { opts: Opts }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(empty);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const planned = useRef(false);
   const { data: contracts = [] } = useQuery({
     queryKey: ["contracts"],
@@ -40,13 +41,17 @@ export function Contracts({ opts }: { opts: Opts }) {
     e.preventDefault();
     const c = customers.find((x) => label(x) === f.customer);
     if (!c) { toast.error("Kies een bestaande klant uit de lijst"); return; }
-    const { error } = await supabase.from("contracts").insert({
+    const values = {
       customer_id: c.id, customer_name: c.name, name: f.name || c.name, description: f.description || null,
       technician_id: f.technician_id || null, activity_id: f.activity_id || null,
       repeat_every: Number(f.every), repeat_unit: f.unit, next_date: f.next_date, end_date: f.end_date || null,
-    });
+      scheduling_ready: true,
+    };
+    const { error } = editingId
+      ? await supabase.from("contracts").update(values).eq("id", editingId)
+      : await supabase.from("contracts").insert(values);
     if (error) { toast.error(error.message); return; }
-    setF(empty); setOpen(false);
+    setF(empty); setOpen(false); setEditingId(null);
     await plan();
   }
   async function stop(id: string) {
@@ -60,7 +65,7 @@ export function Contracts({ opts }: { opts: Opts }) {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-lg font-black uppercase">Terugkerende opdrachten (contracten)</h2>
         <Button size="sm" variant="outline" onClick={() => plan()}>Nu inplannen</Button>
-        <Button size="sm" onClick={() => setOpen((v) => !v)}>{open ? "Sluiten" : "+ Terugkerende opdracht"}</Button>
+        <Button size="sm" onClick={() => { setOpen((v) => !v); setEditingId(null); setF(empty); }}>{open ? "Sluiten" : "+ Terugkerende opdracht"}</Button>
       </div>
       <p className="text-sm text-muted-foreground">Beurten worden automatisch {PLAN_AHEAD_DAYS / 7} weken vooruit in de agenda gezet. Werkbonnen van een contract zijn enkel ter info en worden niet gefactureerd.</p>
       {open && (
@@ -70,7 +75,7 @@ export function Contracts({ opts }: { opts: Opts }) {
             <datalist id="ct-klanten">{customers.map((c) => <option key={c.id} value={label(c)} />)}</datalist></div>
           <div className="grid gap-1"><Label htmlFor="ct-naam">Naam opdracht</Label><Input id="ct-naam" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="bv. Onderhoud dakgoten" /></div>
           <div className="grid gap-1"><Label htmlFor="ct-freq">Frequentie</Label>
-            <select id="ct-freq" className={sel} value={`${f.every}-${f.unit}`} onChange={(e) => { const [ev, u] = e.target.value.split("-"); setF({ ...f, every: ev!, unit: u as RepeatUnit }); }}>
+            <select id="ct-freq" className={sel} value={`${f.every}-${f.unit}`} onChange={(e) => { const [ev, u] = e.target.value.split("-"); if (ev && u) setF({ ...f, every: ev, unit: u as RepeatUnit }); }}>
               {REPEAT_PRESETS.map((p) => <option key={p.label} value={`${p.every}-${p.unit}`}>{p.label}</option>)}
               {!REPEAT_PRESETS.some((p) => String(p.every) === f.every && p.unit === f.unit) && <option value={`${f.every}-${f.unit}`}>{repeatLabel(Number(f.every), f.unit)}</option>}
             </select></div>
@@ -90,9 +95,28 @@ export function Contracts({ opts }: { opts: Opts }) {
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
           {contracts.map((c) => (
             <div key={c.id} className={`rounded border bg-background p-2 text-sm ${c.active ? "" : "opacity-50"}`}>
-              <div className="font-bold">{c.name}</div>
+              <div className="font-bold">{c.number ? `${c.number} · ` : ""}{c.name}</div>
               <div>{c.customer_name}</div>
-              <div className="text-xs text-muted-foreground">{repeatLabel(c.repeat_every, c.repeat_unit as RepeatUnit)} · {c.technicians?.name ?? "geen ploeg"} · {c.active ? `volgende ${c.next_date.split("-").reverse().join("-")}` : "gestopt"}</div>
+              <div className="text-xs text-muted-foreground">{c.active ? (c.scheduling_ready ? `${repeatLabel(c.repeat_every, c.repeat_unit as RepeatUnit)} · volgende ${c.next_date.split("-").reverse().join("-")}` : "Gestart · planning nog in te stellen") : "gestopt"} · {c.technicians?.name ?? "geen ploeg"}</div>
+              {c.source_data && <details className="mt-2">
+                <summary className="cursor-pointer text-sm font-medium">Contractgegevens</summary>
+                <p className="mt-1 whitespace-pre-wrap text-xs">{c.description}</p>
+                {Array.isArray(c.source_data) && c.source_data.map((line, i) => {
+                  if (!line || typeof line !== "object" || Array.isArray(line)) return null;
+                  return <div key={i} className="mt-2 border-t pt-2 text-xs">
+                    <div>{String(line["verkoop"] ?? "")}</div>
+                    <div>{String(line["aantal"] ?? "")} {String(line["eenheid"] ?? "")} · € {Number(line["eenheidsprijs"] ?? 0).toLocaleString("nl-BE", { minimumFractionDigits: 2 })} · korting {String(line["kortingspercentage"] ?? 0)}% · btw {String(line["BTW-percentage"] ?? 0)}%</div>
+                  </div>;
+                })}
+              </details>}
+              {c.active && !c.scheduling_ready && <Button size="sm" variant="outline" className="mt-2" onClick={async () => {
+                const list = await allCustomers(supabase);
+                const customer = list.find((x) => x.id === c.customer_id);
+                if (!customer) { toast.error("Klant niet gevonden"); return; }
+                setEditingId(c.id);
+                setF({ ...empty, customer: label(customer), name: c.name, description: c.description ?? "", every: String(c.repeat_every), unit: c.repeat_unit as RepeatUnit });
+                setOpen(true);
+              }}>Planning instellen</Button>}
               {c.active && <Button size="sm" variant="outline" className="mt-1 h-7 text-destructive" onClick={() => stop(c.id)}>Stopzetten</Button>}
             </div>
           ))}
