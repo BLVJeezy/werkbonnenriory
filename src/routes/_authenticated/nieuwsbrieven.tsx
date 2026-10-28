@@ -17,7 +17,7 @@ export const Route = createFileRoute('/_authenticated/nieuwsbrieven')({
   head: () => ({ meta: [{ title: 'Nieuwsbrieven — Riory Werkbonnen' }, { name: 'description', content: 'Riory-nieuwsbriefconcepten en marketingtoestemming beheren.' }, { property: 'og:title', content: 'Nieuwsbrieven — Riory Werkbonnen' }, { property: 'og:description', content: 'Campagnes en klanttoestemming van Riory.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: Newsletters,
 });
-type Form = { id?: string | undefined; name: string; subject: string; body: string; image_url?: string | null };
+type Form = { id?: string | undefined; name: string; subject: string; body: string; image_url?: string | null | undefined };
 const empty: Form = { name: '', subject: '', body: '' };
 function Newsletters() {
   const { data } = useSuspenseQuery(options);
