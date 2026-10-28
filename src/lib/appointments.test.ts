@@ -18,3 +18,4 @@ describe('normalizeSlot', () => {
     expect([s.from, s.until]).toEqual(['12:30', '14:30']);
   });
 });
+it('gebruikt de productalias voor externe ploegen',()=>{expect(appointmentInstruction(null,[{description:'PVC buis 110 mm',quantity:2,unit:'m'}],{'pvc buis 110 mm':'grijze buis'})).toBe('- grijze buis: 2 m');});

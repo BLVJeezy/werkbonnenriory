@@ -23,6 +23,7 @@ function Producten() {
   const [adminOnly, setAdminOnly] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [editAlias, setEditAlias] = useState("");
   const { data = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [],
@@ -39,6 +40,7 @@ function Producten() {
     setUnit("st");
     setPrice("");
     setDescription("");
+    setAlias("");
     setAdminOnly(false);
     qc.invalidateQueries({ queryKey: ["products"] });
   }
