@@ -10,6 +10,7 @@ import {
   appointmentStatuses,
   appointmentSlotsInput,
   slotLabel,
+  normalizeSlot,
   type AppointmentSlot,
 } from "@/lib/appointments";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
   const read = useServerFn(readAppointment),
     propose = useServerFn(proposeAppointment),
     answer = useServerFn(answerAppointment);
-  const [slots, setSlots] = useState<AppointmentSlot[]>([{ ...emptySlot }]),
+  const [rawSlots, setSlots] = useState<AppointmentSlot[]>([{ ...emptySlot }]),
     [choice, setChoice] = useState(0),
     [rejecting, setRejecting] = useState(false),
     [busy, setBusy] = useState(false),
@@ -163,7 +164,7 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
                     ))}
                   </section>
                 )}
-                <AppointmentSlots slots={slots} onChange={setSlots} />
+                <AppointmentSlots slots={rawSlots} onChange={setSlots} />
                 <Button type="submit" disabled={busy}>
                   {busy ? "Versturen…" : "Voorstellen naar klant sturen"}
                 </Button>
@@ -206,7 +207,7 @@ export function PublicAppointment({ token, crew }: { token: string; crew: boolea
                       }}
                     >
                       <h2 className="text-xl font-bold">Uw beschikbare tijdsvakken</h2>
-                      <AppointmentSlots slots={slots} onChange={setSlots} />
+                      <AppointmentSlots slots={rawSlots} onChange={setSlots} />
                       <div className="flex flex-wrap gap-3">
                         <Button type="submit" disabled={busy}>
                           {busy ? "Versturen…" : "Mogelijkheden doorgeven"}
