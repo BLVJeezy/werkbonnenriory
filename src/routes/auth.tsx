@@ -43,7 +43,7 @@ function AuthPage() {
         toast.error("Ploegen vragen een nieuw wachtwoord aan de beheerder.");
         return;
       }
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/auth` });
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
       setBusy(false);
       if (error) { toast.error("Herstelmail aanvragen mislukt. Probeer later opnieuw."); return; }
       toast.success("Als dit account bestaat, ontvang je een mail om je wachtwoord te wijzigen.");
