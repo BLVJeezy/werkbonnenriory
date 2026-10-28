@@ -23,6 +23,7 @@ import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions } from "@/components/TaskActions";
 import { MailboxConnect, WerkbonMailboxConnect } from "@/components/MailboxConnect";
 import { deleteTask } from "@/lib/delete-task";
+import { CustomerInvite } from "@/components/CustomerInvite";
 import { crewStyle } from "@/lib/crew-color";
 import { VAT_RATES } from "@/lib/billing";
 import { crewBuckets } from "@/lib/schedule";
@@ -307,6 +308,7 @@ function Lijst() {
                 {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
               <Button size="sm" variant={w.urgent ? "destructive" : "outline"} className="h-9" onClick={() => patch(w.id, { urgent: !w.urgent })}>{w.urgent ? "Dringend ✓" : "Markeer dringend"}</Button>
+              <CustomerInvite task={w} className="sm:col-span-4 justify-self-start" />
             </div>
           ) : undefined} extra={
             <>
@@ -369,6 +371,7 @@ type Row = SiteAddressParts & {
   customer_name: string;
   address: string | null;
   phone: string | null;
+  email?: string | null;
   description: string | null;
   status: string;
   urgent?: boolean;
