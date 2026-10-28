@@ -316,7 +316,7 @@ function Lijst() {
               )}
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 title="Verwijderen"
                 className="text-destructive"
                 onClick={(e) => {
@@ -405,7 +405,7 @@ function AddressBlock({ w }: { w: Row }) {
   const lines = destinationLines(w);
   return (
     <div className="mt-0.5">
-      <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{destinationLabel(w)}</div>
+      <div className="text-xs font-bold uppercase tracking-wide opacity-70">{destinationLabel(w)}</div>
       {lines.length ? (
         <div className="break-words font-medium leading-snug">{lines.map((l) => <div key={l}>{l}</div>)}</div>
       ) : (
