@@ -16,6 +16,7 @@ import { Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 import { SimplaSync } from "@/components/SimplaSync";
 import { PaymentReminders } from "@/components/PaymentReminders";
+import { NewInvoice } from "@/components/NewInvoice";
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -179,6 +180,7 @@ function Facturen() {
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-lg font-black uppercase">Facturen</h2>
           <div className="ml-auto flex flex-wrap gap-2">
+            <NewInvoice onCreated={refresh} />
             <Button variant="outline" size="sm" onClick={() => setSelInv(selInv.length ? [] : openIds)}>{selInv.length ? "Niets selecteren" : "Alle openstaande"}</Button>
             <Button size="sm" disabled={!selInv.length || busy} onClick={() => sendSel(selInv)}>Verzenden ({selInv.length})</Button>
             <Button variant="outline" size="sm" disabled={busy || !data.invoices.length} onClick={sendToAccountant}>Alles naar boekhouder (UBL)</Button>
