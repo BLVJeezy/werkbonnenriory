@@ -538,6 +538,7 @@ export type Database = {
       products: {
         Row: {
           admin_only: boolean
+          alias: string | null
           created_at: string
           description: string
           id: string
@@ -547,6 +548,7 @@ export type Database = {
         }
         Insert: {
           admin_only?: boolean
+          alias?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -556,6 +558,7 @@ export type Database = {
         }
         Update: {
           admin_only?: boolean
+          alias?: string | null
           created_at?: string
           description?: string
           id?: string
