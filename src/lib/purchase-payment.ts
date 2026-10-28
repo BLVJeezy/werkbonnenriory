@@ -2,8 +2,8 @@ import type { PontoTransaction } from './ponto-match';
 
 export type PayablePurchase = { id: string; invoice_number: string | null; payment_ref: string | null; total: number; kind: string; status: string };
 const canonical = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '');
-export function canExportPurchase(r: { kind: string; status: string; total: number }) {
-  return r.kind !== 'creditnota' && r.status === 'goedgekeurd' && r.total > 0;
+export function canExportPurchase(r: { kind: string; status: string; total: number; payment_method?: string }) {
+  return r.kind !== 'creditnota' && r.status === 'goedgekeurd' && r.total > 0 && (!r.payment_method || r.payment_method === 'overschrijving');
 }
 export function matchPurchasePayment(tx: PontoTransaction, rows: PayablePurchase[]) {
   const ref = canonical(tx.remittanceInformation ?? '');
