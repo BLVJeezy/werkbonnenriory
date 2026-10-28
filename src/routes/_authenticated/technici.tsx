@@ -78,6 +78,24 @@ function Technici() {
               <div className="text-sm text-muted-foreground">
                 {[t.external_planning ? `Externe ploeg · ${t.email} · geen systeemtoegang` : t.user_id ? `login: ${t.name}` : "geen login", t.phone].filter(Boolean).join(" · ")}
               </div>
+              <form
+                className="mt-2 flex flex-wrap gap-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  const patch: { name?: string; phone: string | null; email?: string | null } = { phone: String(fd.get("phone") ?? "").trim() || null };
+                  if (!t.user_id) patch.name = String(fd.get("name") ?? "").trim() || t.name;
+                  if (t.external_planning) patch.email = String(fd.get("email") ?? "").trim() || t.email;
+                  const { error } = await supabase.from("technicians").update(patch).eq("id", t.id);
+                  if (error) toast.error("Opslaan mislukt");
+                  else { toast.success("Ploeggegevens opgeslagen"); qc.invalidateQueries({ queryKey: ["technicians"] }); qc.invalidateQueries({ queryKey: ["work_orders"] }); }
+                }}
+              >
+                <Input name="name" aria-label="Naam ploeg" className="h-8 w-40" defaultValue={t.name} disabled={!!t.user_id} title={t.user_id ? "Naam is de loginnaam en kan niet gewijzigd worden" : undefined} />
+                <Input name="phone" aria-label="Telefoon ploeg" placeholder="Telefoon" className="h-8 w-36" defaultValue={t.phone ?? ""} />
+                {t.external_planning && <Input name="email" type="email" required aria-label="E-mailadres ploeg" className="h-8 w-56" defaultValue={t.email ?? ""} />}
+                <Button size="sm" variant="outline" type="submit">Opslaan</Button>
+              </form>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                 {(
                   [
