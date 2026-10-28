@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Simpla-verkoopfacturatiesync en overzicht verwijderen/uitschakelen; facturen uitsluitend in deze app, aankoopinlezing behouden.
 
 - [ ] Verslag per verzonden factuur, creditnota, offerte, werkbon en herinnering met openingsmomenten en aantallen — meetbare documentlinks versus niet-meetbare PDF-bijlagen eerst afstemmen; werkelijk lezen is niet bewijsbaar.
 - [ ] Verkoopfacturen beschikbaar maken voor boekhouding in Mailtaken — ontvangende app kan vanuit deze chat alleen gelezen worden; wijziging in Mailtaken zelf vereist.
