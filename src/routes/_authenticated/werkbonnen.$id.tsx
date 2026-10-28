@@ -26,6 +26,7 @@ import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
 import { ReassignCustomer } from '@/components/ReassignCustomer';
 import { DocumentReport } from '@/components/DocumentReport';
+import { CustomerInvite } from '@/components/CustomerInvite';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({

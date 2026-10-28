@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SLOT_PARTS, inviteBlock, inviteDays, inviteKey, inviteSlotLabel, inviteSlots } from './invite-slots';
+import { SLOT_PARTS, inviteBlock, inviteDayLabel, inviteDays, inviteKey, inviteSlotLabel, inviteSlots } from './invite-slots';
 
 describe('inviteDays', () => {
   it('telt enkel werkdagen en slaat het weekend over', () => {
