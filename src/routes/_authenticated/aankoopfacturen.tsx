@@ -188,7 +188,7 @@ function Aankoopfacturen() {
             </span>
             {r.paid_at && <span className="text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>Betaald op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
             {r.pdf_path ? <Button variant="outline" size="sm" onClick={() => { if (r.pdf_path) void bekijkPdf(r.pdf_path); }}>PDF</Button> : <span className="text-xs text-destructive">PDF ontbreekt</span>}
-            <Button variant="outline" size="sm" onClick={() => openControle(r)}>{r.status === 'betaald' ? 'Bekijken' : 'Controleren'}</Button>
+            <Button variant="outline" size="sm" onClick={() => openControle({ ...r, kind: r.kind === 'creditnota' ? 'creditnota' : 'factuur', lines: (r.lines ?? []) as PurchaseLine[] })}>{r.status === 'betaald' ? 'Bekijken' : 'Controleren'}</Button>
           </li>
         ))}
       </ul>
