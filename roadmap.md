@@ -2,9 +2,9 @@
 
 - [x] Wachtwoordherstel voor beheerder: herstelknop en publieke pagina voor nieuw wachtwoord; formulier en toegelaten terugkeeradres gecontroleerd.
 
-- [ ] Simpla-token veilig instellen — beveiligd formulier werd onderbroken; token nog niet ingesteld. Bestaande Mailtaken-leescode gecontroleerd.
+- [x] Simpla-token veilig ingesteld; bestaande Mailtaken-leescode en GET customer gecontroleerd (HTTP 200, OK).
 - [x] Nieuwe afgeronde werkbonnen duurzaam in Simpla-wachtrij; fouten en herproberen in Facturen-overzicht; klantmatch getest.
-- [ ] Automatische Simpla-verkoopfactuur met arbeid/km/materialen/btw — wacht op token en bevestigd aanmaakcontract; nog geen verkoopfacturen aangemaakt of POST getest.
+- [ ] Automatische Simpla-verkoopfactuur met arbeid/km/materialen/btw — lege POST bill_sale geeft HTTP 403: schrijftoegang niet actief, vereist Simpla API-abonnement €15/maand. Na activering aanmaakcontract/idempotentie bevestigen; geen echte facturen aangemaakt.
 
 - [x] Projectnaam uit mail mee uitlezen, op klant en taak, selecteerbaar bij inplannen (datalist)
 - [x] Offerteruimte: offertes maken (OFF-nummering), versturen met ondertekenlink, digitale handtekening op publieke pagina, na akkoord omzetten in taak — volledig getest in de app (proefofferte OFF-1 ondertekend en omgezet, daarna opgeruimd)
