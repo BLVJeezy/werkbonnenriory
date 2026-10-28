@@ -12,7 +12,7 @@ export function vatRateForCustomer(value: string | null | undefined, currentRate
   customerType: "private" | "business" | "unknown";
   olderThanTenYears: boolean | null;
 }, address?: {
-  postalCode?: string | null;
+  postalCode?: string | null | undefined;
 }): number {
   const vat = customerVatNumber(value);
   // Belgisch en Nederlands bedrijf: 0% met verlegging van heffing.
