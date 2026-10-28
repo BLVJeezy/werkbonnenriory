@@ -102,7 +102,10 @@ function Offertes() {
   }
   function pickProduct(i: number, productId: string) {
     const p = products.find((x) => x.id === productId);
-    if (p) setLine(i, { description: p.name, unit: p.unit, unitPrice: String(p.price) });
+    if (p) {
+      const long = (p.description ?? "").trim();
+      setLine(i, { description: long ? `${p.name}\n${long}` : p.name, unit: p.unit, unitPrice: String(p.price) });
+    }
   }
 
   function openEdit(q: (typeof quotes)[number]) {
@@ -244,7 +247,7 @@ function Offertes() {
             <Label>Lijnen</Label>
             {lines.map((l, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2">
-                <Input list="offerte-producten" placeholder="Omschrijving (of kies product)" className="min-w-48 flex-1" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} />
+                <Textarea placeholder="Omschrijving (of kies product)" rows={Math.min(8, Math.max(1, l.description.split("\n").length))} className="min-h-10 min-w-48 flex-1 basis-full sm:basis-0" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} />
                 <select className="h-10 rounded-md border bg-background px-2" value="" onChange={(e) => e.target.value && pickProduct(i, e.target.value)}>
                   <option value="">Product…</option>
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
