@@ -48,7 +48,7 @@ export const saveNewsletterCampaign = createServerFn({ method: 'POST' }).middlew
 export const previewNewsletter = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => campaignSchema.parse(d)).handler(async ({ data, context }) => {
   const { data: admin } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
   if (!admin) throw new Error('Alleen beheerder');
-  return { html: brandedMailHtml(`${data.body}\n\nU ontvangt deze nieuwsbrief omdat u toestemming gaf.\nUitschrijven: https://werkbonnenriory.lovable.app/nieuwsbrief/uitschrijven/voorbeeld`, 'info@riory.be') };
+  return { html: brandedMailHtml(`${data.body}\n\nU ontvangt deze nieuwsbrief omdat u toestemming gaf.\nUitschrijven: https://werkbonnenriory.lovable.app/nieuwsbrief/uitschrijven/voorbeeld`, 'info@riory.be', data.image_url) };
 });
 
 export const newsletterHistory = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => z.object({ customerId: z.string().uuid() }).parse(d)).handler(async ({ data, context }) => {
