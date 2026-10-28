@@ -33,6 +33,8 @@ import { allCustomers, customerKey } from '@/lib/customers';
 import { quoteFromTask } from '@/lib/quotes.functions';
 import { FilePenLine } from 'lucide-react';
 import { taskListRows } from '@/lib/task-list';
+import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
+import type { Database } from '@/integrations/supabase/types';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -92,7 +94,13 @@ function Lijst() {
     if (!c) return;
     setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", project_name: c.project_name ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate))) }));
   }
-  const rows = filter === "alle" ? data : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
+  const filtered = filter === "alle" ? data : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
+  const rows = [...filtered].sort((a, b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
+  async function patch(id: string, p: Database["public"]["Tables"]["work_orders"]["Update"]) {
+    const { error } = await supabase.from("work_orders").update(p).eq("id", id);
+    if (error) toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["work_orders"] });
+  }
   if (role === "technician") return <TechList rows={data} />;
 
   async function addToe(e: React.FormEvent) {
@@ -284,7 +292,20 @@ function Lijst() {
       <div className="grid gap-3">
         {rows.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen taken.</div>}
         {rows.map((w) => (
-          <RowLink key={w.id} w={w} label={w.status === "afgetekend" ? "Werkbon" : "Taak"} extra={
+          <RowLink key={w.id} w={w} label={w.status === "afgetekend" ? "Werkbon" : "Taak"} below={role === "admin" && w.status !== "afgetekend" ? (
+            <div className="grid gap-2 border-t pt-3 sm:grid-cols-[auto_1fr_1fr_auto]">
+              <Input type="date" aria-label="Dag" className="h-9 bg-background text-foreground" value={w.scheduled_date ?? ""} onChange={(e) => patch(w.id, { scheduled_date: e.target.value || null })} />
+              <select aria-label="Ploeg" className="h-9 rounded-md border bg-background px-2 text-foreground" value={w.technician_id ?? ""} onChange={(e) => patch(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
+                <option value="">— Ploeg —</option>
+                {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              <select aria-label="Activiteit" className="h-9 rounded-md border bg-background px-2 text-foreground" value={w.activity_id ?? ""} onChange={(e) => patch(w.id, { activity_id: e.target.value || null })}>
+                <option value="">— Activiteit —</option>
+                {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <Button size="sm" variant={w.urgent ? "destructive" : "outline"} className="h-9" onClick={() => patch(w.id, { urgent: !w.urgent })}>{w.urgent ? "Dringend ✓" : "Markeer dringend"}</Button>
+            </div>
+          ) : undefined} extra={
             <>
               <span className="text-sm">{w.technicians?.name ?? "Niet toegewezen"}</span>
               <Badge variant={w.status === "afgetekend" ? "secondary" : "default"} className="capitalize">
@@ -347,6 +368,10 @@ type Row = SiteAddressParts & {
   phone: string | null;
   description: string | null;
   status: string;
+  urgent?: boolean;
+  contract_id?: string | null;
+  technician_id?: string | null;
+  activity_id?: string | null;
   time_entries: { id: string; started_at: string; ended_at: string | null }[];
 };
 
@@ -376,12 +401,13 @@ function TechList({ rows }: { rows: Row[] }) {
   );
 }
 
-function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.ReactNode }) {
+function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: React.ReactNode; below?: React.ReactNode }) {
   const showContact = usePerms()?.showContact ?? false;
   const running = w.time_entries?.find((t) => !t.ended_at);
   const signed = w.status === "afgetekend";
   return (
-    <div style={crewStyle(w.technicians?.color)} className="space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm">
+    <div style={crewStyle(w.technicians?.color)} className={`space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm ${isUrgentOpen(w) ? URGENT_RING : ""}`}>
+      {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex flex-wrap items-center gap-4">
         <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
         <div className="min-w-0 flex-1">
@@ -396,6 +422,7 @@ function RowLink({ w, label, extra }: { w: Row; label: string; extra?: React.Rea
         {running && <RunningTask entries={w.time_entries} />}
         {extra}
       </Link>
+      {below}
       {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} />}
     </div>
   );
