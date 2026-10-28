@@ -21,6 +21,8 @@ export function Contracts({ opts }: { opts: Opts }) {
   const [f, setF] = useState(empty);
   const [editingId, setEditingId] = useState<string | null>(null);
   const planned = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  function openForm() { setOpen(true); setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }
   const { data: contracts = [] } = useQuery({
     queryKey: ["contracts"],
     queryFn: async () => (await supabase.from("contracts").select("*, technicians(name)").order("name")).data ?? [],
@@ -66,11 +68,12 @@ export function Contracts({ opts }: { opts: Opts }) {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-lg font-black uppercase">Terugkerende opdrachten (contracten)</h2>
         <Button size="sm" variant="outline" onClick={() => plan()}>Nu inplannen</Button>
-        <Button size="sm" onClick={() => { setOpen((v) => !v); setEditingId(null); setF(empty); }}>{open ? "Sluiten" : "+ Terugkerende opdracht"}</Button>
+        <Button size="sm" onClick={() => { if (open) { setOpen(false); return; } setEditingId(null); setF(empty); openForm(); }}>{open ? "Sluiten" : "+ Terugkerende opdracht"}</Button>
       </div>
       <p className="text-sm text-muted-foreground">Contractbeurten · {PLAN_AHEAD_DAYS / 7} weken vooruit gepland · Werkbonnen enkel ter info</p>
       {open && (
-        <form onSubmit={save} className="grid gap-3 border-y py-4 sm:grid-cols-2">
+        <form ref={formRef} onSubmit={save} className="grid scroll-mt-4 gap-3 rounded border-2 border-primary bg-background p-4 sm:grid-cols-2">
+          <h3 className="font-black uppercase sm:col-span-2">{editingId ? `Planning instellen: ${f.name || "contract"}` : "Nieuwe terugkerende opdracht"}</h3>
           <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-klant">Klant</Label>
             <Input id="ct-klant" required list="ct-klanten" placeholder="Typ om te zoeken…" value={f.customer} onChange={(e) => setF({ ...f, customer: e.target.value })} />
             <datalist id="ct-klanten">{customers.map((c) => <option key={c.id} value={label(c)} />)}</datalist></div>
@@ -116,7 +119,7 @@ export function Contracts({ opts }: { opts: Opts }) {
                 if (!customer) { toast.error("Klant niet gevonden"); return; }
                 setEditingId(c.id);
                 setF({ ...empty, customer: label(customer), name: c.name, description: c.description ?? "", every: String(c.repeat_every), unit: c.repeat_unit as RepeatUnit, next_date:c.scheduling_ready?c.next_date:'',end_date:c.end_date??'',technician_id:c.technician_id??'',activity_id:c.activity_id??'' });
-                setOpen(true);
+                openForm();
               }}>{c.scheduling_ready?'Contract bewerken':'Planning instellen'}</Button>}
               <ContractBilling contract={c}/>
               {c.active && <Button size="sm" variant="outline" className="mt-1 h-7 text-destructive" onClick={() => stop(c.id)}>Stopzetten</Button>}
