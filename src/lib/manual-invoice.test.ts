@@ -14,13 +14,13 @@ describe("buildManualInvoice", () => {
   });
   it("rounds money to cents", () => {
     const inv = buildManualInvoice([{ description: "x", quantity: 3, unit: "st", unitPrice: 9.99, vatRate: 21 }]);
-    expect(inv.lines[0].amount).toBe(29.97);
+    expect(inv.lines[0]?.amount).toBe(29.97);
     expect(inv.vat).toBe(6.29); // 6.2937 -> 6.29
     expect(inv.total).toBe(36.26);
   });
   it("defaults empty unit to st and keeps vatRate of first line", () => {
     const inv = buildManualInvoice([{ description: "y", quantity: 1, unit: "", unitPrice: 10, vatRate: 0 }]);
-    expect(inv.lines[0].unit).toBe("st");
+    expect(inv.lines[0]?.unit).toBe("st");
     expect(inv.vatRate).toBe(0);
     expect(inv.total).toBe(10);
   });

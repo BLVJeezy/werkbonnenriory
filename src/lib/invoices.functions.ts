@@ -70,7 +70,7 @@ export const createManualInvoice = createServerFn({ method: "POST" })
     if (data.customerId) {
       const { data: c, error } = await supabase.from("customers").select("*").eq("id", data.customerId).single();
       if (error || !c) throw new Error("Klant niet gevonden");
-      customer = { name: c.name, address: c.address ?? null, siteAddress: null, vatNumber: c.vat_number?.trim() || null, email: c.billing_email?.trim() || c.email?.trim() || null, street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city };
+      customer = { name: c.name, address: null, siteAddress: null, vatNumber: c.vat_number?.trim() || null, email: c.billing_email?.trim() || c.email?.trim() || null, street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city };
     } else {
       const m = data.customer;
       if (!m?.name?.trim()) throw new Error("Kies een klant of vul een naam in");
@@ -83,7 +83,7 @@ export const createManualInvoice = createServerFn({ method: "POST" })
     const { data: row, error } = await supabase.from("invoices").insert({
       number, work_order_id: null, issue_date: issue, due_date: addDays(issue, Number(s?.payment_days ?? 14)),
       customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, paid_amount: 0,
-      kind: "factuur", contract_reference: data.reference?.trim() || null,
+      kind: "factuur", contract_reference: data.reference?.trim() || "",
     }).select("*").single();
     if (error) throw new Error(error.message);
     return row;
