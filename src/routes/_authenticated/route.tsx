@@ -10,8 +10,14 @@ import { Menu, X } from "lucide-react";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
+    // Keep crews signed in on weak mobile connections: a failed network check
+    // must not count as signed out while a stored session still exists.
+    const { data: s } = await supabase.auth.getSession();
+    if (!s.session) throw redirect({ to: "/auth" });
+    const { data, error } = await supabase.auth.getUser();
+    if (data.user) return;
+    const status = (error as { status?: number } | null)?.status;
+    if (status === 401 || status === 403) throw redirect({ to: "/auth" });
   },
   component: Layout,
 });
