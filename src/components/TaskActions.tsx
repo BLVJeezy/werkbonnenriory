@@ -22,7 +22,7 @@ type Props = {
   /** Toon een vakje om gewerkte tijd manueel in te vullen (per ploeg instelbaar). */
   manualTime?: boolean;
   /** Tijdstip waarop de ploeg aanduidde dat de klant niet opneemt. */
-  noAnswerAt?: string | null;
+  noAnswerAt?: string | null | undefined;
 };
 
 /** Het label "Neemt niet op" blijft 24 uur staan. */
