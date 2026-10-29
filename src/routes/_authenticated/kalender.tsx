@@ -193,6 +193,7 @@ function Kalender() {
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
+              {dayOmzet(k) > 0 && <p className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-black text-primary" title="Som van de afgewerkte bonnen van deze dag">Omzet: {euro(dayOmzet(k))}</p>}
               <div className="grid min-w-0 gap-2">
                 {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
                 {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
