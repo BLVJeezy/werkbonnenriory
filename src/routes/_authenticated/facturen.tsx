@@ -19,6 +19,8 @@ import { PaymentReminders } from "@/components/PaymentReminders";
 import { NewInvoice } from "@/components/NewInvoice";
 import { DocumentReport } from '@/components/DocumentReport';
 import { InvoiceMailboxConnect } from '@/components/MailboxConnect';
+import { WorkOrderPreview } from '@/components/WorkOrderPreview';
+import { sendWerkbonEmail } from '@/lib/werkbon-mail.functions';
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -38,6 +40,15 @@ function Facturen() {
   const dropPonto = useServerFn(disconnectPonto);
   const getPontoStatus = useServerFn(pontoStatus);
   const syncPonto = useServerFn(syncPontoNow);
+  const mailWerkbon = useServerFn(sendWerkbonEmail);
+  const WB_REASON: Record<string, string> = { not_signed: 'Werkbon is nog niet afgerond', no_email: 'Geen e-mailadres op de werkbon', mailbox_not_connected: 'Mailbox info@riory.be is niet gekoppeld', reconnect_required: 'Mailbox info@riory.be opnieuw koppelen', send_failed: 'Verzenden mislukt' };
+  async function sendWerkbon(id: string) {
+    if (!confirm('Werkbon naar de klant mailen?')) return;
+    setBusy(true);
+    try { const r = await mailWerkbon({ data: { workOrderId: id } }); r.sent ? toast.success('Werkbon verzonden') : toast.error(WB_REASON[r.reason]); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Verzenden mislukt'); }
+    finally { setBusy(false); }
+  }
   const [selWo, setSelWo] = useState<string[]>([]);
   const [selInv, setSelInv] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -211,6 +222,8 @@ function Facturen() {
               {i.okioki_sent_at && <span className="text-xs text-muted-foreground">UBL naar OkiOki gemaild</span>}
               <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
               <DocumentReport id={i.id} type={i.kind === 'creditnota' ? 'creditnota' : 'factuur'} />
+              {i.work_order_id && <WorkOrderPreview workOrderId={i.work_order_id} size="sm" />}
+              {i.work_order_id && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendWerkbon(i.work_order_id!)}>Werkbon verzenden</Button>}
               {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
               {i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005 && <PaymentReminders invoiceId={i.id} />}
               {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}

@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { PdfPreview } from '@/components/PdfPreview';
 import { werkbonNr } from '@/lib/werkbon-number';
 
-export function WorkOrderPreview({ workOrderId }: { workOrderId: string }) {
+export function WorkOrderPreview({ workOrderId, size }: { workOrderId: string; size?: 'sm' }) {
   const preview = useServerFn(previewWerkbonPdf);
   const [busy, setBusy] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -44,7 +44,7 @@ export function WorkOrderPreview({ workOrderId }: { workOrderId: string }) {
     window.setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
   return <>
-    <Button variant="outline" disabled={busy} onClick={open}>{busy ? <LoaderCircle className="animate-spin" /> : <Eye />} {busy ? 'Voorbeeld laden…' : 'Voorbeeld werkbon'}</Button>
+    <Button variant="outline" size={size} disabled={busy} onClick={open}>{busy ? <LoaderCircle className="animate-spin" /> : <Eye />} {busy ? 'Voorbeeld laden…' : 'Voorbeeld werkbon'}</Button>
     <Dialog open={opened} onOpenChange={setOpened}>
       <DialogContent aria-describedby={undefined} className="flex max-h-[92dvh] w-[calc(100%-1rem)] max-w-4xl flex-col p-3 sm:p-5">
         <DialogHeader className="shrink-0 pr-8"><DialogTitle>Voorbeeld werkbon{result ? ` ${werkbonNr(result.number)}` : ''}</DialogTitle></DialogHeader>
