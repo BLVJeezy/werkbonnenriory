@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteTask } from "@/lib/delete-task";
+import { werkbonNr } from "@/lib/werkbon-number";
 import { VAT_RATES } from "@/lib/billing";
 import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
@@ -99,7 +100,7 @@ function Kalender() {
     <div key={w.id} style={crewStyle(w.technicians?.color)} className="min-w-0 rounded border bg-background px-2 py-1 text-xs opacity-75">
       <div className="flex items-center gap-1">
         <span className="rounded bg-foreground px-1 font-bold text-background">Afgewerkt</span>
-        <Link to="/werkbonnen/$id" params={{ id: w.id }} className="min-w-0 flex-1 truncate font-bold underline">#{w.number} {w.customer_name}</Link>
+        <Link to="/werkbonnen/$id" params={{ id: w.id }} className="min-w-0 flex-1 truncate font-bold underline">{werkbonNr(w.number)} {w.customer_name}</Link>
       </div>
       <p className="break-words opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, destinationLines(w).join(", ") || "Geen adres", w.technicians?.name].filter(Boolean).join(" · ")}</p>
     </div>
@@ -109,8 +110,8 @@ function Kalender() {
       {w.quote_approved && <span className="mb-1 inline-block rounded bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">Offerte goedgekeurd</span>}
       {(isUrgentOpen(w) || w.contract_id) && <div className="mb-1 flex gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-1 text-destructive-foreground">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}</div>}
       <div className="flex items-start gap-1">
-        <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">#{w.number} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
-        <Button type="button" size="icon" variant="ghost" title="Verwijderen" aria-label="Taak verwijderen" className="h-7 w-7 shrink-0" onClick={() => deleteTask(qc, w.id, `Taak #${w.number} (${w.customer_name})`)}><X /></Button>
+        <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">{werkbonNr(w.number)} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
+        <Button type="button" size="icon" variant="ghost" title="Verwijderen" aria-label="Taak verwijderen" className="h-7 w-7 shrink-0" onClick={() => deleteTask(qc, w.id, `Taak ${werkbonNr(w.number)} (${w.customer_name})`)}><X /></Button>
       </div>
       <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />
       {w.scheduled_from && <p className="font-bold">{w.scheduled_from.slice(0,5)}–{w.scheduled_until?.slice(0,5)}</p>}
@@ -131,12 +132,12 @@ function Kalender() {
       </>}
       </div>
       <div className={horizontal ? "grid min-w-0 content-start gap-2 sm:grid-cols-2" : "grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-4"}>
-      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number}`} className="mt-0 h-7 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onBlur={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
-      <select aria-label={`Ploeg taak ${w.number}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
+      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number ?? "nieuw"}`} className="mt-0 h-7 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onBlur={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+      <select aria-label={`Ploeg taak ${w.number ?? "nieuw"}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
         {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
-      <select aria-label={`Activiteit taak ${w.number}`} className={sel} value={w.activity_id ?? ""} onChange={(e) => set(w.id, { activity_id: e.target.value || null })}>
+      <select aria-label={`Activiteit taak ${w.number ?? "nieuw"}`} className={sel} value={w.activity_id ?? ""} onChange={(e) => set(w.id, { activity_id: e.target.value || null })}>
         <option value="">— Activiteit —</option>
         {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>

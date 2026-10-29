@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
+import { werkbonNr } from "@/lib/werkbon-number";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoices } from "@/lib/invoices.functions";
 import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
 import { Trash2 } from "lucide-react";
@@ -169,8 +170,8 @@ function Facturen() {
         <ul className="divide-y">
           {data.todo.map((w) => (
             <li key={w.id} className="flex flex-wrap items-center gap-3 py-2">
-              <input type="checkbox" aria-label={`Selecteer werkbon #${w.number}`} disabled={busy} className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} />
-              <Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">#{w.number}</Link>
+              <input type="checkbox" aria-label={`Selecteer werkbon ${werkbonNr(w.number)}`} disabled={busy} className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} />
+              <Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">{werkbonNr(w.number)}</Link>
               <span className="flex-1">{w.customer_name}</span>
               <span className="text-xs text-muted-foreground">{w.technicians?.name ?? "Geen ploeg"} · {w.scheduled_date ? new Date(`${w.scheduled_date}T00:00`).toLocaleDateString("nl-BE") : w.signed_at ? new Date(w.signed_at).toLocaleDateString("nl-BE") : "—"}{w.scheduled_from ? ` ${w.scheduled_from.slice(0, 5)}${w.scheduled_until ? `–${w.scheduled_until.slice(0, 5)}` : ""}` : w.signed_at ? ` ${new Date(w.signed_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}` : ""}</span>
               {w.vat_number && <span className="text-xs text-muted-foreground">{w.vat_number}</span>}

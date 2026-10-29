@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { werkbonMailData } from "@/lib/werkbon-mail";
+import { werkbonNr } from "@/lib/werkbon-number";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
 import { getConnectionKeyForUser } from "@/lib/appUserConnections.server";
@@ -53,7 +54,7 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
     let binary = "";
     for (const byte of pdf) binary += String.fromCharCode(byte);
     const { prepareDocument } = await import('./document-tracking.server');
-    const tracking = await prepareDocument('werkbon', wo.id, `Werkbon #${wo.number}`, wo.email, btoa(binary));
+    const tracking = await prepareDocument('werkbon', wo.id, `Werkbon ${werkbonNr(wo.number)}`, wo.email, btoa(binary));
     const message = werkbonPdfMessage(mailData, wo.email, btoa(binary), tracking.url);
 
     const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");

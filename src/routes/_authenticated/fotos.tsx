@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { werkbonNr } from "@/lib/werkbon-number";
 
 export const Route = createFileRoute("/_authenticated/fotos")({
   head: () => ({ meta: [{ title: "Foto's — Riory Werkbonnen" }, { name: "description", content: "Alle werfoto's gesorteerd per interventie." }, { property: "og:title", content: "Foto's — Riory Werkbonnen" }, { property: "og:description", content: "Alle werfoto's gesorteerd per interventie." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -44,7 +45,7 @@ function Fotos() {
       {groups.map((g) => (
         <section key={g.id} className="rounded-md border bg-card p-4">
           <Link to="/werkbonnen/$id" params={{ id: g.id }} className="mb-3 flex flex-wrap items-baseline gap-x-3 hover:underline">
-            <span className="font-mono text-sm opacity-80">#{g.number}</span>
+            <span className="font-mono text-sm opacity-80">{werkbonNr(g.number)}</span>
             <span className="font-bold">{g.customer}</span>
             {g.city && <span className="text-sm text-muted-foreground">{g.city}</span>}
             {g.date && <span className="text-sm text-muted-foreground">{g.date}</span>}

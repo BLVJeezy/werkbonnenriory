@@ -21,6 +21,7 @@ import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 import { quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
+import { werkbonNr } from "@/lib/werkbon-number";
 import { vatRateForCustomer } from "@/lib/vat-number";
 import { AppointmentPanel } from '@/components/AppointmentPanel';
 import { removeWorkOrderPayment } from '@/lib/work-order-payment.functions';
@@ -171,7 +172,7 @@ function Detail() {
         </div>
       )}
       <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-3xl font-black uppercase">{kind} #{wo.number}</h1>
+        <h1 className="text-3xl font-black uppercase">{kind} {werkbonNr(wo.number)}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
         <div className="no-print ml-auto flex flex-wrap gap-2">
           {(role === 'admin' || role === 'technician') && <WorkOrderPreview workOrderId={id} />}
@@ -206,7 +207,7 @@ function Detail() {
             <Button
               variant="destructive"
               onClick={async () => {
-                if (!confirm(`${kind} #${wo.number} definitief verwijderen?`)) return;
+                if (!confirm(`${kind} ${werkbonNr(wo.number)} definitief verwijderen?`)) return;
                 const { error } = await supabase.from("work_orders").delete().eq("id", id);
                 if (error) { toast.error(error.message); return; }
                 qc.invalidateQueries({ queryKey: ["work_orders"] });

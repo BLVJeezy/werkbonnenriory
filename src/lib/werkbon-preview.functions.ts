@@ -35,6 +35,6 @@ export const previewWerkbonPdf = createServerFn({ method: 'POST' })
     const pdf = await createWerkbonPdf(dto, await loadWerkbonPhotos(supabase, wo.id));
     // Return bytes directly: photo PDFs exceed the server-function JSON output limit.
     return new Response(new Blob([new Uint8Array(pdf)], { type: 'application/pdf' }), {
-      headers: { 'Content-Type': 'application/pdf', 'Cache-Control': 'private, no-store', 'X-Werkbon-Number': String(wo.number) },
+      headers: { 'Content-Type': 'application/pdf', 'Cache-Control': 'private, no-store', 'X-Werkbon-Number': String(wo.number ?? '') },
     });
   });

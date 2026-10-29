@@ -23,6 +23,7 @@ import { usePerms, useRole } from "@/lib/use-role";
 import { TaskActions, isNoAnswer } from "@/components/TaskActions";
 import { MailboxConnect, WerkbonMailboxConnect } from "@/components/MailboxConnect";
 import { deleteTask } from "@/lib/delete-task";
+import { werkbonNr } from "@/lib/werkbon-number";
 import { CustomerInvite } from "@/components/CustomerInvite";
 import { crewStyle } from "@/lib/crew-color";
 import { VAT_RATES } from "@/lib/billing";
@@ -361,7 +362,7 @@ function Lijst() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  deleteTask(qc, w.id, `${w.status === "afgetekend" ? "Werkbon" : "Taak"} #${w.number} (${w.customer_name})`);
+                  deleteTask(qc, w.id, `${w.status === "afgetekend" ? "Werkbon" : "Taak"} ${werkbonNr(w.number)} (${w.customer_name})`);
                 }}
               >
                 Verwijderen
@@ -379,7 +380,7 @@ type Row = SiteAddressParts & {
   sort_order: number;
   scheduled_date: string | null;
   id: string;
-  number: number;
+  number: number | null;
   customer_name: string;
   address: string | null;
   phone: string | null;
@@ -432,7 +433,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
       {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
       {running && <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />}
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="grid min-w-0 grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:gap-4">
-        <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
+        <span className="font-mono text-sm opacity-80">{label} {werkbonNr(w.number)}</span>
         <div className="col-span-full row-start-1 min-w-0 break-words sm:flex-1">
           <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
           <AddressBlock w={w} />
