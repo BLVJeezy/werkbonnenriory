@@ -12,6 +12,7 @@ function useMe() {
       if (!u.user) return { role: "technician" as const, perms: { ...ALL, showPrices: false, showContact: false, canPayment: false, showSigned: false }, largeText: false };
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
       if (roles?.some((r) => r.role === "admin")) return { role: "admin" as const, perms: ALL, largeText: false };
+      if (roles?.some((r) => r.role === "marketing")) return { role: "marketing" as const, perms: { showPrices: false, showContact: true, canPayment: false, showSigned: false }, largeText: false };
       const { data: t } = await supabase
         .from("technicians")
         .select("show_prices, show_contact, can_payment, show_signed, large_text")
