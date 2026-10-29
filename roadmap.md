@@ -2,5 +2,5 @@
 
 - [x] Werkbonnummer pas toekennen bij eerste tijdstart (of bij afronden); taken zonder nummer tonen "Nieuw"
 - [x] Verifiëren: build + tests werkbonnummering
-- [ ] Dashboard met omzet per geselecteerde periode in een grafiek (admin) — route + nav klaar, nog testen
-- [ ] Uitzoeken waarom factuurnummers gaten vertonen en herstellen
+- [x] Dashboard met omzet per geselecteerde periode in een grafiek (admin) — visueel geverifieerd
+- [x] Factuurnummering: gaten verklaard (mislukte aanmakingen verslonden nummers) en hersteld via atomische nummering
