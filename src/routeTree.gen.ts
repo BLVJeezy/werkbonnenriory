@@ -16,6 +16,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
 import { Route as AuthenticatedContractenRouteImport } from './routes/_authenticated/contracten'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
+import { Route as AuthenticatedFotosRouteImport } from './routes/_authenticated/fotos'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
 import { Route as AuthenticatedLeveranciersRouteImport } from './routes/_authenticated/leveranciers'
@@ -71,6 +72,11 @@ const AuthenticatedContractenRoute = AuthenticatedContractenRouteImport.update({
 const AuthenticatedFacturenRoute = AuthenticatedFacturenRouteImport.update({
   id: '/facturen',
   path: '/facturen',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFotosRoute = AuthenticatedFotosRouteImport.update({
+  id: '/fotos',
+  path: '/fotos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/contracten': typeof AuthenticatedContractenRoute
   '/facturen': typeof AuthenticatedFacturenRoute
+  '/fotos': typeof AuthenticatedFotosRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
   '/leveranciers': typeof AuthenticatedLeveranciersRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/contracten': typeof AuthenticatedContractenRoute
   '/facturen': typeof AuthenticatedFacturenRoute
+  '/fotos': typeof AuthenticatedFotosRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
   '/leveranciers': typeof AuthenticatedLeveranciersRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/_authenticated/contracten': typeof AuthenticatedContractenRoute
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
+  '/_authenticated/fotos': typeof AuthenticatedFotosRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
   '/_authenticated/leveranciers': typeof AuthenticatedLeveranciersRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/aankoopfacturen'
     | '/contracten'
     | '/facturen'
+    | '/fotos'
     | '/kalender'
     | '/klanten'
     | '/leveranciers'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/aankoopfacturen'
     | '/contracten'
     | '/facturen'
+    | '/fotos'
     | '/kalender'
     | '/klanten'
     | '/leveranciers'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/_authenticated/aankoopfacturen'
     | '/_authenticated/contracten'
     | '/_authenticated/facturen'
+    | '/_authenticated/fotos'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
     | '/_authenticated/leveranciers'
@@ -436,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/facturen'
       fullPath: '/facturen'
       preLoaderRoute: typeof AuthenticatedFacturenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/fotos': {
+      id: '/_authenticated/fotos'
+      path: '/fotos'
+      fullPath: '/fotos'
+      preLoaderRoute: typeof AuthenticatedFotosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/kalender': {
@@ -592,6 +611,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAankoopfacturenRoute: typeof AuthenticatedAankoopfacturenRoute
   AuthenticatedContractenRoute: typeof AuthenticatedContractenRoute
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
+  AuthenticatedFotosRoute: typeof AuthenticatedFotosRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
   AuthenticatedLeveranciersRoute: typeof AuthenticatedLeveranciersRoute
@@ -608,6 +628,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAankoopfacturenRoute: AuthenticatedAankoopfacturenRoute,
   AuthenticatedContractenRoute: AuthenticatedContractenRoute,
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
+  AuthenticatedFotosRoute: AuthenticatedFotosRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
   AuthenticatedLeveranciersRoute: AuthenticatedLeveranciersRoute,
