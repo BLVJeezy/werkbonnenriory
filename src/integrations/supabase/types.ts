@@ -1579,6 +1579,58 @@ export type Database = {
         }
         Returns: string
       }
+      create_numbered_invoice: {
+        Args: {
+          p_contract_reference?: string
+          p_credit_for?: string
+          p_customer: Json
+          p_due_date: string
+          p_issue_date: string
+          p_kind?: string
+          p_lines: Json
+          p_net: number
+          p_paid_amount: number
+          p_total: number
+          p_vat: number
+          p_vat_rate: number
+          p_work_order_id: string
+        }
+        Returns: {
+          auto_send_started_at: string | null
+          contract_id: string | null
+          contract_reference: string | null
+          created_at: string
+          credit_for: string | null
+          customer: Json
+          delivery_lock_until: string | null
+          due_date: string
+          id: string
+          issue_date: string
+          kind: string
+          lines: Json
+          net: number
+          number: string
+          okioki_sent_at: string | null
+          paid_amount: number
+          paid_at: string | null
+          pdf_sent_at: string | null
+          send_error: string | null
+          sent_at: string | null
+          sent_to: string | null
+          sent_via: string | null
+          status: string
+          total: number
+          vat: number
+          vat_rate: number
+          work_order_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       customer_identity: {
         Args: { c: string; h: string; n: string; p: string; s: string }
         Returns: string

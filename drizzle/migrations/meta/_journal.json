@@ -435,6 +435,13 @@
       "when": 1793275636635,
       "tag": "0061_werkbonnummer_pas_bij_start",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1793275946858,
+      "tag": "0062_atomische_factuurnummering",
+      "breakpoints": true
     }
   ]
 }
