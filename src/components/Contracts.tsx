@@ -10,6 +10,7 @@ import { allCustomers } from "@/lib/customers";
 import { planContracts, PLAN_AHEAD_DAYS } from "@/lib/contracts";
 import { REPEAT_PRESETS, repeatLabel, nthWeekdayOfMonth, addInterval, WEEKDAYS, ORDINALS, type RepeatUnit } from "@/lib/recurrence";
 import { ContractBilling } from './ContractBilling';
+import { CustomerPicker } from './CustomerPicker';
 
 type Opts = { techs: { id: string; name: string }[]; acts: { id: string; name: string }[] } | undefined;
 const sel = "h-10 w-full rounded-md border bg-background px-2";
@@ -87,8 +88,7 @@ export function Contracts({ opts }: { opts: Opts }) {
         <form ref={formRef} onSubmit={save} className="grid scroll-mt-4 gap-3 rounded border-2 border-primary bg-background p-4 sm:grid-cols-2">
           <h3 className="font-black uppercase sm:col-span-2">{editingId ? `Planning instellen: ${f.name || "contract"}` : "Nieuwe terugkerende opdracht"}</h3>
           <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-klant">Klant</Label>
-            <Input id="ct-klant" required list="ct-klanten" placeholder="Typ om te zoeken…" value={f.customer} onChange={(e) => setF({ ...f, customer: e.target.value })} />
-            <datalist id="ct-klanten">{customers.map((c) => <option key={c.id} value={label(c)} />)}</datalist></div>
+            <CustomerPicker id="ct-klant" customers={customers} value={customers.find(c => label(c) === f.customer)?.id ?? ""} placeholder="Kies klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) setF({ ...f, customer: label(c) }); }} /></div>
           <div className="grid gap-1"><Label htmlFor="ct-naam">Naam opdracht</Label><Input id="ct-naam" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="bv. Onderhoud dakgoten" /></div>
           <div className="grid gap-1"><Label htmlFor="ct-freq">Frequentie</Label>
             <select id="ct-freq" className={sel} value={`${f.every}-${f.unit}`} onChange={(e) => { const [ev, u] = e.target.value.split("-"); if (ev && u) setF({ ...f, every: ev, unit: u as RepeatUnit }); }}>

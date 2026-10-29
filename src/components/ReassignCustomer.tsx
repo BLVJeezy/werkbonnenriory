@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { reassignCustomerPatch } from "@/lib/reassign-customer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CustomerPicker } from "@/components/CustomerPicker";
 import { Label } from "@/components/ui/label";
 
 type Props = { wo: Parameters<typeof reassignCustomerPatch>[0] & { id: string }; onDone: () => void };
@@ -32,8 +32,7 @@ export function ReassignCustomer({ wo, onDone }: Props) {
   return (
     <div className="w-full space-y-2 rounded-md border bg-card p-3">
       <Label>Nieuwe factuurklant</Label>
-      <Input list="reassign-customers" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Zoek op klantnummer, naam of adres" />
-      <datalist id="reassign-customers">{customers.map((c: any) => <option key={c.id} value={lab(c)} />)}</datalist>
+      <CustomerPicker customers={customers} value={chosen?.id ?? ""} placeholder="Kies factuurklant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) setLabel(lab(c)); }} />
       <div className="flex gap-2">
         <Button disabled={!chosen} onClick={save}>Toewijzen</Button>
         <Button variant="outline" onClick={() => { setOpen(false); setLabel(""); }}>Annuleren</Button>

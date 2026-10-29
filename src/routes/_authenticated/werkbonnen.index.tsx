@@ -37,6 +37,7 @@ import { taskListRows, newTaskRows, plannedTaskRows } from '@/lib/task-list';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 import type { Database } from '@/integrations/supabase/types';
 import { AppointmentMailSync } from '@/components/AppointmentMailSync';
+import { CustomerPicker } from '@/components/CustomerPicker';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -206,10 +207,7 @@ function Lijst() {
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-klant">Bestaande klant kiezen</Label>
-                <Input id="nb-klant" list="nb-klanten" placeholder="Typ om te zoeken…" onChange={(e) => pickCustomer(e.target.value)} />
-                <datalist id="nb-klanten">
-                  {customers.map((c) => <option key={c.id} value={customerLabel(c)} />)}
-                </datalist>
+                <CustomerPicker id="nb-klant" customers={customers} value={selectedCustomer?.id ?? ""} placeholder="Kies bestaande klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) pickCustomer(customerLabel(c)); }} />
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-name">Naam klant</Label>

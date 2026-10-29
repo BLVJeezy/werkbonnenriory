@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatAddress } from "@/lib/address";
 import { allCustomers, customerKey, customerPatch, rowsToCustomers, type CustomerRow } from "@/lib/customers";
+import { filterChoices } from "@/lib/choice-search";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   head: () => ({ meta: [{ title: "Klanten — Riory Werkbonnen" }, { name: "description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:title", content: "Klanten — Riory Werkbonnen" }, { property: "og:description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -38,7 +39,8 @@ function Klanten() {
     queryFn: () => allCustomers(supabase),
   });
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
-  const rows = data.filter((c) => !q || `${c.customer_number ?? ''} ${(c.customer_numbers??[]).join(' ')} ${c.name} ${c.city ?? ""} ${c.email ?? ""} ${c.phone ?? ""}`.toLowerCase().includes(q.toLowerCase()));
+  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number].filter(Boolean).join(' ') })), q).map(c => c.value));
+  const rows = data.filter(c => matchingIds.has(c.id));
 
   function openEdit(c: (typeof data)[number]) {
     setEditing(editing === c.id ? null : c.id);
@@ -97,7 +99,7 @@ function Klanten() {
           <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
         </label>
       </div>
-      <Input placeholder="Zoeken…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam of adres…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="divide-y rounded-md border bg-card">
         {rows.length === 0 && <p className="p-4 text-muted-foreground">Geen klanten.</p>}
         {rows.map((c) => (
