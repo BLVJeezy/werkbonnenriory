@@ -175,7 +175,7 @@ function Detail() {
         <h1 className="text-3xl font-black uppercase">{kind} {werkbonNr(wo.number)}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
         <div className="no-print ml-auto flex flex-wrap gap-2">
-          {(role === 'admin' || role === 'technician') && <WorkOrderPreview workOrderId={id} />}
+          {(role === 'admin' || role === 'technician') && wo.status === 'afgetekend' && <WorkOrderPreview workOrderId={id} />}
           <Button variant="outline" onClick={() => window.print()}>Afdrukken</Button>
           {isAdmin && locked && <DocumentReport id={id} type="werkbon" />}
           {locked && wo.email && (

@@ -427,7 +427,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
   const running = w.time_entries?.find((t) => !t.ended_at);
   const signed = w.status === "afgetekend";
   return (
-    <div style={crewStyle(w.technicians?.color)} className={`min-w-0 space-y-3 rounded-md border-l-4 border-primary bg-card p-3 shadow-sm sm:p-4 ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
+    <div style={crewStyle(w.technicians?.color)} className={`relative min-w-0 space-y-3 rounded-md border-l-4 border-primary bg-card p-3 shadow-sm sm:p-4 ${signed ? "" : "pt-12 sm:pt-12"} ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
       {w.quote_approved && <Badge variant="secondary">Offerte goedgekeurd</Badge>}
       {!signed && isNoAnswer(w.no_answer_at) && <Badge variant="destructive">Neemt niet op · {new Date(w.no_answer_at!).toLocaleString("nl-BE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</Badge>}
       {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
@@ -447,7 +447,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
       </Link>
       {below}
       <div className="flex flex-wrap items-center gap-2">
-        <WorkOrderPreview workOrderId={w.id} />
+        {signed && <WorkOrderPreview workOrderId={w.id} />}
         {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} noAnswerAt={w.no_answer_at} />}
       </div>
     </div>

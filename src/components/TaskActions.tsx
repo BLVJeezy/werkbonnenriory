@@ -120,7 +120,7 @@ export function TaskActions({ id, address, phone, contactPhone, contactName, run
           <a href={`tel:${calls.contact}`}>Bel contactpersoon{contactName ? ` (${contactName})` : ""}</a>
         </Button>
       )}
-      <Button size="sm" variant={noAnswer ? "destructive" : "outline"} disabled={busy} onClick={toggleNoAnswer}>
+      <Button size="sm" className="absolute right-3 top-3" variant={noAnswer ? "destructive" : "outline"} disabled={busy} onClick={toggleNoAnswer}>
         {noAnswer ? "Neemt niet op ✓" : "Klant neemt niet op"}
       </Button>
       {calls.customer && (
