@@ -39,6 +39,7 @@ import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/publ
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicNieuwsbriefAfbeeldingFileRouteImport } from './routes/api/public/nieuwsbrief-afbeelding/$file'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
+import { Route as ApiPublicReviewsInvoicesRouteImport } from './routes/api/public/reviews/invoices'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -200,6 +201,12 @@ const ApiPublicPontoSyncRoute = ApiPublicPontoSyncRouteImport.update({
   path: '/api/public/ponto/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicReviewsInvoicesRoute =
+  ApiPublicReviewsInvoicesRouteImport.update({
+    id: '/api/public/reviews/invoices',
+    path: '/api/public/reviews/invoices',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -262,6 +270,7 @@ export interface FileRoutesByTo {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -295,6 +304,7 @@ export interface FileRoutesById {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/reviews/invoices'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/reviews/invoices'
   id:
     | '__root__'
     | '/'
@@ -391,6 +403,7 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/reviews/invoices'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -409,6 +422,7 @@ export interface RootRouteChildren {
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicNieuwsbriefAfbeeldingFileRoute: typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
+  ApiPublicReviewsInvoicesRoute: typeof ApiPublicReviewsInvoicesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -623,6 +637,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPontoSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/reviews/invoices': {
+      id: '/api/public/reviews/invoices'
+      path: '/api/public/reviews/invoices'
+      fullPath: '/api/public/reviews/invoices'
+      preLoaderRoute: typeof ApiPublicReviewsInvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -682,6 +703,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicNieuwsbriefAfbeeldingFileRoute:
     ApiPublicNieuwsbriefAfbeeldingFileRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
+  ApiPublicReviewsInvoicesRoute: ApiPublicReviewsInvoicesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
