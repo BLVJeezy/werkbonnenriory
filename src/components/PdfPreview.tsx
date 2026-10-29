@@ -41,7 +41,7 @@ export function PdfPreview({ base64 }: { base64: string }) {
         if (i === 1 && !cancelled) setLoading(false);
       }
     }
-    void render().catch(() => { if (!cancelled) { setError('Het voorbeeld kon niet geladen worden. Download de PDF om deze te bekijken.'); setLoading(false); } });
+    void render().catch((cause) => { if (!cancelled) { console.error('PDF preview rendering failed', cause); setError('Het voorbeeld kon niet geladen worden. Download de PDF om deze te bekijken.'); setLoading(false); } });
     return () => { cancelled = true; destroy?.(); host.replaceChildren(); };
   }, [base64]);
   return <div className="relative min-h-40">
