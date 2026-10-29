@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { deleteTask } from "@/lib/delete-task";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { isFullyPlanned } from "@/lib/planning";
-import { VAT_RATES } from "@/lib/billing";
+import { VAT_RATES, euro, workOrderRevenue } from "@/lib/billing";
 import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
 import { RunningTask } from "@/components/RunningTask";
 import type { TimeEntry } from "@/lib/time";
-import { activeTimeEntry } from "@/lib/time";
+import { activeTimeEntry, totalSeconds } from "@/lib/time";
 import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
@@ -33,7 +33,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[] };
+type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[]; materials: { quantity: number; unit_price: number }[] };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -44,16 +44,17 @@ function Kalender() {
     queryKey: ["work_orders", "calendar"],
     refetchInterval: 10000,
     queryFn: async () =>
-      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
+      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(started_at, ended_at), materials(quantity, unit_price)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
     queryFn: async () => {
-      const [t, a] = await Promise.all([
+      const [t, a, s] = await Promise.all([
         supabase.from("technicians").select("id, name").order("name"),
         supabase.from("activities").select("id, name, hourly_rate").order("name"),
+        supabase.from("settings").select("km_rate").eq("id", 1).single(),
       ]);
-      return { techs: t.data ?? [], acts: a.data ?? [] };
+      return { techs: t.data ?? [], acts: a.data ?? [], kmRate: Number(s.data?.km_rate ?? 0) };
     },
   });
   async function set(id: string, patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
