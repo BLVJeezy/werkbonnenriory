@@ -73,7 +73,7 @@ function Lijst() {
     queryKey: ["work_orders"],
     refetchInterval: 10000,
     queryFn: async () =>
-      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(id, started_at, ended_at)").neq("status", "offerte").eq("quote_pending", false).order("created_at", { ascending: false })).data ?? []),
+      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color, manual_time_entry), time_entries(id, started_at, ended_at)").neq("status", "offerte").eq("quote_pending", false).order("created_at", { ascending: false })).data ?? []),
   });
   const role = useRole();
   const { data: opts } = useQuery({
