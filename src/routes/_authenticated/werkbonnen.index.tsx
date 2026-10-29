@@ -380,7 +380,7 @@ type Row = SiteAddressParts & {
   sort_order: number;
   scheduled_date: string | null;
   id: string;
-  number: number;
+  number: number | null;
   customer_name: string;
   address: string | null;
   phone: string | null;

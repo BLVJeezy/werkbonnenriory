@@ -8,7 +8,7 @@ export type InvoiceCustomer = {
 };
 
 type InvoiceWorkOrder = SiteAddressParts & {
-  number: number; customer_name: string; address: string | null; street: string | null; house_number: string | null;
+  number: number | null; customer_name: string; address: string | null; street: string | null; house_number: string | null;
   postal_code: string | null; city: string | null; vat_number: string | null; email: string | null; billing_email: string | null;
   distance_km: number | null; warranty: boolean; vat_rate: number; paid_amount: number | null; paid_at: string | null;
 };

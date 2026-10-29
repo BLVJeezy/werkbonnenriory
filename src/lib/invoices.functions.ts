@@ -24,7 +24,7 @@ export const createInvoices = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: s } = await supabase.from("settings").select("*").eq("id", 1).single();
     const { data: acts } = await supabase.from("activities").select("*");
-    const created: string[] = [], skipped: number[] = [];
+    const created: string[] = [], skipped: (number | null)[] = [];
     let sent = 0, failed = 0;
     for (const id of data.workOrderIds) {
       const { data: wo } = await supabase.from("work_orders").select("*").eq("id", id).single();
