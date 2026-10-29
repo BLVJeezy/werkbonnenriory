@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/fotos")({
   component: Fotos,
 });
 
-type Group = { id: string; number: number | null; customer: string; city: string | null; date: string | null; photos: { id: string; url: string | null }[] };
+type Group = { id: string; number: number | null; customer: string; city: string | null; date: string | null; description: string; photos: { id: string; url: string | null }[] };
 
 function Fotos() {
   const [q, setQ] = useState("");
@@ -25,7 +25,7 @@ function Fotos() {
         const w = r;
         let g = map.get(r.work_order_id);
         if (!g) {
-          g = { id: r.work_order_id, number: w?.number ?? null, customer: w?.customer_name ?? "Onbekend", city: w?.city ?? null, date: w?.scheduled_date ?? r.created_at.slice(0, 10), photos: [] };
+          g = { id: r.work_order_id, number: w?.number ?? null, customer: w?.customer_name ?? "Onbekend", city: w?.city ?? null, date: w?.scheduled_date ?? r.created_at.slice(0, 10), description: (w?.task_description ?? "").trim(), photos: [] };
           map.set(r.work_order_id, g);
         }
         g.photos.push({ id: r.id, url: signed?.[i]?.signedUrl ?? null });
@@ -34,11 +34,11 @@ function Fotos() {
     },
   });
   const s = q.trim().toLowerCase();
-  const groups = s ? data.filter((g) => `${g.number} ${g.customer} ${g.city}`.toLowerCase().includes(s)) : data;
+  const groups = s ? data.filter((g) => `${g.number} ${g.customer} ${g.city} ${g.description}`.toLowerCase().includes(s)) : data;
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-black uppercase">Foto's</h1>
-      <Input placeholder="Zoek op klant, plaats of nummer" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input placeholder="Zoek op klant, plaats, nummer of omschrijving" value={q} onChange={(e) => setQ(e.target.value)} />
       {isLoading && <p className="text-muted-foreground">Laden…</p>}
       {!isLoading && groups.length === 0 && <p className="text-muted-foreground">Geen foto's gevonden.</p>}
       {groups.map((g) => (
@@ -50,6 +50,9 @@ function Fotos() {
             {g.date && <span className="text-sm text-muted-foreground">{g.date}</span>}
             <span className="text-sm text-muted-foreground">· {g.photos.length} foto{g.photos.length === 1 ? "" : "'s"}</span>
           </Link>
+          {g.description && (
+            <p className="mb-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{g.description}</p>
+          )}
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {g.photos.map((p) => p.url && (
               <a key={p.id} href={p.url} target="_blank" rel="noreferrer">
