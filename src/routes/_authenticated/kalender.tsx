@@ -81,7 +81,7 @@ function Kalender() {
           s +
           workOrderRevenue({
             paidAmount: w.paid_amount == null ? null : Number(w.paid_amount),
-            seconds: totalSeconds(w.time_entries, new Date()),
+            seconds: totalSeconds(w.time_entries, Date.now()),
             hourlyRate: Number(opts?.acts.find((a) => a.id === w.activity_id)?.hourly_rate ?? 0),
             distanceKm: w.distance_km == null ? null : Number(w.distance_km),
             kmRate: opts?.kmRate ?? 0,
