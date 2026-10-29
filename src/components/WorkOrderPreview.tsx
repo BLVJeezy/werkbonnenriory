@@ -19,7 +19,12 @@ export function WorkOrderPreview({ workOrderId }: { workOrderId: string }) {
     setError('');
     setBusy(true);
     try {
-      setResult(await preview({ data: { workOrderId } }));
+      const response = await preview({ data: { workOrderId } });
+      if (!response.ok) throw new Error('Werkbonvoorbeeld kon niet geladen worden');
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+      setResult({ base64: btoa(binary), number: Number(response.headers.get('X-Werkbon-Number')) });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Werkbonvoorbeeld kon niet geopend worden';
       setError(message);

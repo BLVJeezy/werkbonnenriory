@@ -33,7 +33,8 @@ export const previewWerkbonPdf = createServerFn({ method: 'POST' })
     const { createWerkbonPdf } = await import('./werkbon-pdf');
     const { loadWerkbonPhotos } = await import('./werkbon-photos.server');
     const pdf = await createWerkbonPdf(dto, await loadWerkbonPhotos(supabase, wo.id));
-    let binary = '';
-    for (const byte of pdf) binary += String.fromCharCode(byte);
-    return { base64: btoa(binary), number: wo.number };
+    // Return bytes directly: photo PDFs exceed the server-function JSON output limit.
+    return new Response(new Blob([new Uint8Array(pdf)], { type: 'application/pdf' }), {
+      headers: { 'Content-Type': 'application/pdf', 'Cache-Control': 'private, no-store', 'X-Werkbon-Number': String(wo.number) },
+    });
   });
