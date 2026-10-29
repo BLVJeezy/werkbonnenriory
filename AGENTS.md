@@ -26,17 +26,17 @@
 - Newsletters: email-bound audited consent, hashed-token unsubscribe POSTs; draft-only until delivery linked. Admin server AI creates unsaved suggestions; provider denials persist in settings.
 - PDF/UBL share invoice-vat-notices for all line rates; preserve tax treatment and sent snapshots.
 - Crews log in with name + password; `src/lib/login.ts` maps a name to an internal non-mailable email. Per-crew visibility flags live on `technicians` (signed orders enforced in RLS, the rest hidden in the UI).
-- Mail import reads the inbox through a per-admin Microsoft Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox account signs in itself without Exchange delegation.
+- Mail import reads the inbox through a per-admin Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox signs in itself without Exchange delegation.
 - Crew accessibility flags use `use-role.ts` and an `<html>` class; `text-size.ts` gives local overrides for shared tablets. Mobile navigation collapses into a menu.
 - Invoices snapshot customer/lines, send PDF+UBL with OkiOki in BCC, and lock accepted legs for retries; only paid invoices auto-send. Mail acceptance is not Peppol confirmation. Reminders use explicit debtor type, tested balance/fee/waiting rules and one-time claims; uncertain Outlook outcomes require review.
-- Invoice numbers are assigned atomically by the create_numbered_invoice RPC (counter + insert in one transaction); never call next_invoice_number separately from the insert, or failed inserts burn numbers and create gaps.
+- Invoice numbers come from the create_numbered_invoice RPC (counter + insert in one transaction); never call next_invoice_number separately, or failed inserts burn numbers and leave gaps.
 - Bulk work-order deletion uses the shared delete-task helper with one explicit confirmation and selected IDs only; invalidate work-order and invoice lists so deleted orders cannot remain selectable.
 - Quotes use OFF numbering and secret-token signing; privileged reads stay inside handlers. Approval atomically creates one task via `ensure_approved_quote_task` (`work_order_id` prevents duplicates); source worksite and crew persist, `quote_approved` drives labels.
 - Quote signing emails use the canonical published app URL through the tested signing-link helper, never the request origin, because preview and internal hosts are inaccessible to customers.
 - Credit notes are `invoices` rows with `kind = 'creditnota'` and `credit_for` to the original; same numbering, reversed by tested `buildCreditNote`. `work_order_id` is nullable and not unique: credit notes share it, manual invoices have none and reuse `contract_reference`.
-- Products can be flagged `admin_only`; the read policy excludes them for non-admins and the material picker filters them too, so crews cannot select them even via the API.
+- Products can be flagged `admin_only`; the read policy and material picker exclude them for non-admins, so crews cannot select them even via the API.
 - Invoices/credit notes use a separate, sender-verified Outlook connection; other mails retain theirs. Accountant exports attach UBL only.
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.
-- Quotes keep source/output tasks separate; DB-enforced quote_pending hides sources and unapproved outputs. Scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
+- Quote scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.
 - Work order numbers are nullable; assign at first time entry or completion via triggers. Render unnumbered tasks as "Nieuw" via werkbonNr().
