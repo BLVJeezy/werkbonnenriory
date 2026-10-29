@@ -376,6 +376,7 @@ type Row = SiteAddressParts & {
   status: string;
   urgent?: boolean;
   contract_id?: string | null;
+  quote_approved?: boolean;
   technician_id?: string | null;
   activity_id?: string | null;
   time_entries: { id: string; started_at: string; ended_at: string | null }[];
@@ -413,6 +414,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
   const signed = w.status === "afgetekend";
   return (
     <div style={crewStyle(w.technicians?.color)} className={`space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
+      {w.quote_approved && <Badge variant="secondary">Offerte goedgekeurd</Badge>}
       {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
       {running && <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />}
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex flex-wrap items-center gap-4">

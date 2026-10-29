@@ -379,6 +379,13 @@
       "when": 1793210361912,
       "tag": "0053_newsletter_images",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793252889847,
+      "tag": "0054_quote_assignment_and_automatic_approved_tasks",
+      "breakpoints": true
     }
   ]
 }

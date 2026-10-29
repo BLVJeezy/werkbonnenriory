@@ -12,7 +12,7 @@ import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
-import { convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
+import { assignQuoteCrew, convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
 import { DocumentReport } from '@/components/DocumentReport';
@@ -35,6 +35,7 @@ function Offertes() {
   const send = useServerFn(sendQuote);
   const getPdf = useServerFn(quotePdf);
   const convert = useServerFn(convertQuoteToTask);
+  const assignCrew = useServerFn(assignQuoteCrew);
   const calcKm = useServerFn(quoteDistance);
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -55,6 +56,10 @@ function Offertes() {
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => (await supabase.from("customers").select("*").order("name")).data ?? [],
+  });
+  const { data: crews = [] } = useQuery({
+    queryKey: ["quote_crews"],
+    queryFn: async () => (await supabase.from("technicians").select("id, name").order("name")).data ?? [],
   });
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
@@ -162,12 +167,13 @@ function Offertes() {
       };
     }
     if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
+    if (!customer) { toast.error("Kies een klant"); return; }
     setBusy(true);
     const win = window.open("", "_blank");
     try {
       const saved = editId
-        ? await update({ data: { quoteId: editId, customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } })
-        : await create({ data: { customer: customer!, lines: parsedLines, vatRate: Number(vatRate), intro } });
+        ? await update({ data: { quoteId: editId, customer, lines: parsedLines, vatRate: Number(vatRate), intro } })
+        : await create({ data: { customer, lines: parsedLines, vatRate: Number(vatRate), intro } });
       toast.success(editId ? "Offerte bijgewerkt" : "Offerte aangemaakt");
       const id = saved.id as string;
       closeForm();
@@ -284,6 +290,18 @@ function Offertes() {
             <li key={q.id} className="flex flex-wrap items-center gap-3 p-3">
               <span className="font-mono font-bold">{q.number}</span>
               <span className="flex-1">{c.name}</span>
+              <select aria-label={`Ploeg offerte ${q.number}`} className="h-9 max-w-full rounded-md border bg-background px-2 text-foreground" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
+                setBusy(true);
+                try {
+                  await assignCrew({ data: { quoteId: q.id, technicianId: e.target.value || null } });
+                  await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ["work_orders"] })]);
+                  toast.success("Ploeg toegewezen aan offerte");
+                } catch (error) { toast.error(error instanceof Error ? error.message : "Toewijzen mislukt"); }
+                finally { setBusy(false); }
+              }}>
+                <option value="">— Ploeg —</option>
+                {crews.map((crew) => <option key={crew.id} value={crew.id}>{crew.name}</option>)}
+              </select>
               <span className="font-mono">{euro(Number(q.total))}</span>
               <span className={`rounded px-2 py-0.5 text-xs font-bold ${q.status === "akkoord" ? "bg-accent text-accent-foreground" : "bg-muted"}`}>
                 {QUOTE_STATUS[q.status] ?? q.status}
@@ -295,7 +313,7 @@ function Offertes() {
               {q.status !== "akkoord" && <Button variant="outline" size="sm" disabled={busy} onClick={() => openEdit(q)}>Bewerken</Button>}
               {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}
               {q.status === "akkoord" && !q.work_order_id && <Button size="sm" disabled={busy} onClick={() => naarTaak(q.id)}>Omzetten in taak</Button>}
-              {q.work_order_id && <span className="text-xs text-muted-foreground">Taak aangemaakt</span>}
+              {q.work_order_id && <Button asChild variant="outline" size="sm"><a href={`/werkbonnen/${q.work_order_id}`}>Taak openen</a></Button>}
             </li>
           );
         })}

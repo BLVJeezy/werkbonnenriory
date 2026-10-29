@@ -1044,6 +1044,7 @@ export type Database = {
           signed_name: string | null
           source_work_order_id: string | null
           status: string
+          technician_id: string | null
           token: string
           total: number
           vat: number
@@ -1064,6 +1065,7 @@ export type Database = {
           signed_name?: string | null
           source_work_order_id?: string | null
           status?: string
+          technician_id?: string | null
           token?: string
           total: number
           vat: number
@@ -1084,6 +1086,7 @@ export type Database = {
           signed_name?: string | null
           source_work_order_id?: string | null
           status?: string
+          technician_id?: string | null
           token?: string
           total?: number
           vat?: number
@@ -1096,6 +1099,13 @@ export type Database = {
             columns: ["source_work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
             referencedColumns: ["id"]
           },
         ]
@@ -1375,6 +1385,7 @@ export type Database = {
           postal_code: string | null
           project_id: string | null
           project_name: string | null
+          quote_approved: boolean
           quote_pending: boolean
           received_at: string | null
           scheduled_date: string | null
@@ -1425,6 +1436,7 @@ export type Database = {
           postal_code?: string | null
           project_id?: string | null
           project_name?: string | null
+          quote_approved?: boolean
           quote_pending?: boolean
           received_at?: string | null
           scheduled_date?: string | null
@@ -1475,6 +1487,7 @@ export type Database = {
           postal_code?: string | null
           project_id?: string | null
           project_name?: string | null
+          quote_approved?: boolean
           quote_pending?: boolean
           received_at?: string | null
           scheduled_date?: string | null
@@ -1546,6 +1559,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      convert_approved_quote: { Args: { p_id: string }; Returns: string }
       create_contract_completion_invoice: {
         Args: {
           p_customer: Json
@@ -1563,6 +1577,7 @@ export type Database = {
         Args: { c: string; h: string; n: string; p: string; s: string }
         Returns: string
       }
+      ensure_approved_quote_task: { Args: { p_id: string }; Returns: string }
       forward_external_appointment: {
         Args: { p_id: string; p_instruction: string }
         Returns: string
