@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,11 @@ function Layout() {
   const [device, setDevice] = useState<DeviceChoice>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const large = largeTextOn(adminSet, device);
+  const { pathname } = useLocation();
+  const marketingAllowed = ["/nieuwsbrieven", "/fotos", "/klanten"].some((p) => pathname.startsWith(p));
+  useEffect(() => {
+    if (role === "marketing" && !marketingAllowed) navigate({ to: "/nieuwsbrieven", replace: true });
+  }, [role, marketingAllowed, navigate]);
 
   useEffect(() => {
     setDevice(readDeviceChoice());
@@ -45,9 +50,17 @@ function Layout() {
           </Link>
           <Button variant="secondary" size="icon" className="shrink-0 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
           <nav id="beheer-menu" aria-label="Beheerpagina’s" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenuOpen(false); }} className={`${menuOpen ? "grid" : "hidden"} col-span-full min-w-0 grid-cols-2 items-center gap-1 border-t border-secondary-foreground/20 pt-2 text-sm font-semibold sm:ml-auto sm:flex sm:flex-wrap sm:border-0 sm:pt-0`}>
-            <Link to="/werkbonnen" className={navCls} activeProps={active}>
-              {role === "admin" ? "Taken" : "Mijn taken"}
-            </Link>
+            {role === "marketing" ? (
+              <>
+                <Link to="/nieuwsbrieven" className={navCls} activeProps={active}>Nieuwsbrieven</Link>
+                <Link to="/klanten" className={navCls} activeProps={active}>Klanten</Link>
+                <Link to="/fotos" className={navCls} activeProps={active}>Foto's</Link>
+              </>
+            ) : (
+              <Link to="/werkbonnen" className={navCls} activeProps={active}>
+                {role === "admin" ? "Taken" : "Mijn taken"}
+              </Link>
+            )}
             {role === "admin" && (
               <>
                 <Link to="/kalender" className={navCls} activeProps={active}>
@@ -115,9 +128,9 @@ function Layout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6">
+      {role === "marketing" && !marketingAllowed ? null : <main className="mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6">
         <Outlet />
-      </main>
+      </main>}
     </div>
   );
 }
