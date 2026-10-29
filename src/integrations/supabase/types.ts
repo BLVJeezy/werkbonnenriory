@@ -1593,11 +1593,25 @@ export type Database = {
         Args: { p_id: string; p_instruction: string; p_slots: Json }
         Returns: string
       }
+      is_admin_or_marketing: { Args: never; Returns: boolean }
       login_email: { Args: { p_name: string }; Returns: string }
       my_crew_sees_signed: { Args: never; Returns: boolean }
       my_technician_id: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
+      photo_overview: {
+        Args: never
+        Returns: {
+          city: string
+          created_at: string
+          customer_name: string
+          id: string
+          number: number
+          path: string
+          scheduled_date: string
+          work_order_id: string
+        }[]
+      }
       reconcile_purchase_payment: {
         Args: {
           p_amount: number
@@ -1649,7 +1663,7 @@ export type Database = {
       unsubscribe_newsletter: { Args: { p_hash: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "technician"
+      app_role: "admin" | "technician" | "marketing"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1777,7 +1791,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "technician"],
+      app_role: ["admin", "technician", "marketing"],
     },
   },
 } as const

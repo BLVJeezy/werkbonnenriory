@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createTechnicianLogin, deleteTechnician } from "@/lib/technicians.functions";
 import { createExternalCrew } from '@/lib/appointments.functions';
+import { MarketingUsers } from "@/components/MarketingUsers";
 
 export const Route = createFileRoute("/_authenticated/technici")({
   head: () => ({ meta: [{ title: "Ploegen — Riory Werkbonnen" }, { name: "description", content: "Beheer Riory-ploegen, hun toegang en persoonlijke weergave." }, { property: "og:title", content: "Ploegen — Riory Werkbonnen" }, { property: "og:description", content: "Beheer Riory-ploegen, hun toegang en persoonlijke weergave." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -140,6 +141,7 @@ function Technici() {
           </li>
         ))}
       </ul>
+      <MarketingUsers />
     </div>
   );
 }

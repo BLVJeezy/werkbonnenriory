@@ -1,0 +1,2 @@
+CREATE POLICY "Marketing upload newsletter images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'newsletter-images' AND public.has_role(auth.uid(),'marketing'));
+CREATE POLICY "Marketing read newsletter images" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'newsletter-images' AND public.has_role(auth.uid(),'marketing'));

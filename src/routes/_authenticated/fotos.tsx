@@ -16,16 +16,13 @@ function Fotos() {
   const { data = [], isLoading } = useQuery({
     queryKey: ["all_photos"],
     queryFn: async (): Promise<Group[]> => {
-      const { data: rows, error } = await supabase
-        .from("work_order_photos")
-        .select("id, path, created_at, work_order_id, work_orders(number, customer_name, city, scheduled_date)")
-        .order("created_at", { ascending: false });
+      const { data: rows, error } = await supabase.rpc("photo_overview");
       if (error) throw error;
       if (!rows?.length) return [];
       const { data: signed } = await supabase.storage.from("werkbon-fotos").createSignedUrls(rows.map((r) => r.path), 3600);
       const map = new Map<string, Group>();
       rows.forEach((r, i) => {
-        const w = r.work_orders as { number: number | null; customer_name: string; city: string | null; scheduled_date: string | null } | null;
+        const w = r;
         let g = map.get(r.work_order_id);
         if (!g) {
           g = { id: r.work_order_id, number: w?.number ?? null, customer: w?.customer_name ?? "Onbekend", city: w?.city ?? null, date: w?.scheduled_date ?? r.created_at.slice(0, 10), photos: [] };

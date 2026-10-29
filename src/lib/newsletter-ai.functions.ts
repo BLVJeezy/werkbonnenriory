@@ -7,7 +7,7 @@ export const generateNewsletter = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
   .inputValidator(d => newsletterAiInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: admin, error } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+    const { data: admin, error } = await context.supabase.rpc('is_admin_or_marketing');
     if (error || !admin) throw new Error('Alleen de beheerder kan nieuwsbrieven genereren.');
     const { data: settings, error: settingsError } = await context.supabase.from('settings').select('newsletter_ai_denial').eq('id', 1).single();
     if (settingsError) throw new Error('AI-toegang kon niet gecontroleerd worden.');
