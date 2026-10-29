@@ -91,17 +91,14 @@ function Layout() {
                 <Link to="/leveranciers" className={navCls} activeProps={active}>
                   Leveranciers
                 </Link>
-                <Link to="/technici" className={navCls} activeProps={active}>
-                  Ploegen
-                </Link>
                 <Link to="/producten" className={navCls} activeProps={active}>
                   Producten
                 </Link>
                 <Link to="/fotos" className={navCls} activeProps={active}>
                   Foto's
                 </Link>
-                <Link to="/tarieven" className={navCls} activeProps={active}>
-                  Tarieven
+                <Link to="/instellingen" className={navCls} activeProps={active}>
+                  Instellingen
                 </Link>
               </>
             )}

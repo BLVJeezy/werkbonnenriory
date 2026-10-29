@@ -25,8 +25,6 @@ import { Route as AuthenticatedLeveranciersRouteImport } from './routes/_authent
 import { Route as AuthenticatedNieuwsbrievenRouteImport } from './routes/_authenticated/nieuwsbrieven'
 import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
-import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
-import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
 import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
@@ -125,16 +123,6 @@ const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
   path: '/producten',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedTarievenRoute = AuthenticatedTarievenRouteImport.update({
-  id: '/tarieven',
-  path: '/tarieven',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedTechniciRoute = AuthenticatedTechniciRouteImport.update({
-  id: '/technici',
-  path: '/technici',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const DocumentTokenRoute = DocumentTokenRouteImport.update({
   id: '/document/$token',
   path: '/document/$token',
@@ -231,8 +219,6 @@ export interface FileRoutesByFullPath {
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
-  '/tarieven': typeof AuthenticatedTarievenRoute
-  '/technici': typeof AuthenticatedTechniciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
@@ -264,8 +250,6 @@ export interface FileRoutesByTo {
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
-  '/tarieven': typeof AuthenticatedTarievenRoute
-  '/technici': typeof AuthenticatedTechniciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
@@ -299,8 +283,6 @@ export interface FileRoutesById {
   '/_authenticated/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
-  '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
-  '/_authenticated/technici': typeof AuthenticatedTechniciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
@@ -334,8 +316,6 @@ export interface FileRouteTypes {
     | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
-    | '/tarieven'
-    | '/technici'
     | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
@@ -367,8 +347,6 @@ export interface FileRouteTypes {
     | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
-    | '/tarieven'
-    | '/technici'
     | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
@@ -401,8 +379,6 @@ export interface FileRouteTypes {
     | '/_authenticated/nieuwsbrieven'
     | '/_authenticated/offertes'
     | '/_authenticated/producten'
-    | '/_authenticated/tarieven'
-    | '/_authenticated/technici'
     | '/document/$token'
     | '/offerte/$token'
     | '/_authenticated/werkbonnen/$id'
@@ -552,20 +528,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProductenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/tarieven': {
-      id: '/_authenticated/tarieven'
-      path: '/tarieven'
-      fullPath: '/tarieven'
-      preLoaderRoute: typeof AuthenticatedTarievenRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/technici': {
-      id: '/_authenticated/technici'
-      path: '/technici'
-      fullPath: '/technici'
-      preLoaderRoute: typeof AuthenticatedTechniciRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/document/$token': {
       id: '/document/$token'
       path: '/document/$token'
@@ -680,8 +642,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNieuwsbrievenRoute: typeof AuthenticatedNieuwsbrievenRoute
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
-  AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
-  AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
   AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
 }
@@ -699,8 +659,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNieuwsbrievenRoute: AuthenticatedNieuwsbrievenRoute,
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
-  AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
-  AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
   AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,
 }
