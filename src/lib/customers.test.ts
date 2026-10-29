@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { customerKey, customerPatch, rowsToCustomers, splitCustomerAddress } from "./customers";
+import { describe, expect, it, vi } from "vitest";
+import { allCustomers, customerKey, customerPatch, rowsToCustomers, splitCustomerAddress } from "./customers";
 
 describe("rowsToCustomers", () => {
   it("leest Nederlandse kolomkoppen", () => {
@@ -27,5 +27,24 @@ describe("customerPatch", () => {
   });
   it("laat een lege naam staan en negeert velden die niet meekomen", () => {
     expect(customerPatch({ name: "   ", email: "x@y.be", city: undefined })).toEqual({ email: "x@y.be" });
+  });
+});
+
+describe("allCustomers", () => {
+  it("vraagt de nieuwste klanten eerst op en behoudt alle pagina's", async () => {
+    const newest = Array.from({ length: 1000 }, (_, i) => ({ id: `new-${i}`, created_at: "2026-10-29" }));
+    const oldest = { id: "older", created_at: "2026-10-28" };
+    const range = vi.fn().mockResolvedValueOnce({ data: newest, error: null }).mockResolvedValueOnce({ data: [oldest], error: null });
+    const order = vi.fn();
+    const builder = { select: vi.fn(), order, range };
+    builder.select.mockReturnValue(builder);
+    order.mockReturnValue(builder);
+    const rows = await allCustomers({ from: () => builder });
+    expect(order).toHaveBeenNthCalledWith(1, "created_at", { ascending: false });
+    expect(order).toHaveBeenNthCalledWith(2, "id");
+    expect(range.mock.calls).toEqual([[0, 999], [1000, 1999]]);
+    expect(rows).toHaveLength(1001);
+    expect(rows[0].id).toBe("new-0");
+    expect(rows[1000].id).toBe("older");
   });
 });
