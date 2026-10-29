@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { billableHours, computeTotals } from "./billing";
+import { billableHours, computeTotals, workOrderRevenue } from "./billing";
 
 describe("billableHours", () => {
   it("charges the first hour in full", () => {
@@ -37,5 +37,16 @@ describe("computeTotals", () => {
     expect(t.km).toBe(0);
     expect(t.net).toBe(40);
     expect(computeTotals({ ...base, seconds: 40 * 60 }).labour).toBe(0);
+  });
+});
+
+describe("workOrderRevenue", () => {
+  const base = { seconds: 3600, hourlyRate: 60, distanceKm: 10, kmRate: 0.5, materials: [{ quantity: 1, unit_price: 20 }], vatRate: 21 };
+  it("uses the paid amount when the bon is paid", () => {
+    expect(workOrderRevenue({ ...base, paidAmount: 100 })).toBe(100);
+  });
+  it("computes the total when there is no payment yet", () => {
+    // 1 u × 60 + 10 km × 0,5 + 20 materiaal = 85 netto, +21% = 102,85
+    expect(workOrderRevenue({ ...base, paidAmount: null })).toBe(102.85);
   });
 });
