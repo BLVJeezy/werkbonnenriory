@@ -19,7 +19,7 @@
 - Roles live in `user_roles` (admin|technician|marketing); admins get everything, technicians only assigned work orders via `my_technician_id()`, marketing only customers/newsletters/photos via `is_admin_or_marketing()` and the price-free `photo_overview()` RPC. Logins are created by admin-checked server fns since public sign-up is removed.
 - Running indicators use open time entries, not task status; lists and calendars refetch every ten seconds while visible to show other devices' starts/stops.
 - Work orders keep customer and optional worksite addresses separately in split fields; resolve the destination through the shared address helper, and invalidate cached driving distance through the database trigger on address changes.
-- Work-order emails/previews share the allowlist and Worker PDF; previews enforce crew visibility with user RLS. Mail uses a private Outlook attachment and short cover, never inline details or rates.
+- Work-order emails/previews share the allowlist and Worker PDF; previews enforce crew visibility with user RLS and render browser-only PDF.js pages in a dialog, not blob tabs. Mail uses a private Outlook attachment and short cover, never inline details or rates.
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, including failures, so a mail error cannot strand them on a completed task.
 - Billing math lives in `src/lib/billing.ts` (pure, tested); the UI computes totals live and stores only the paid amount when payment is recorded.
 - Work-order payment removal uses an authenticated admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
