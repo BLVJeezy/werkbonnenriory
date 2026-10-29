@@ -82,6 +82,13 @@ export async function syncPontoPayments(supabase: any) {
   const matched: string[] = [];
   for (const accountId of accountIds) {
     const txs = await recentTransactions(token, accountId);
+    if (txs.length) {
+      const { error: storeError } = await supabase.from("ponto_transactions").upsert(
+        txs.map((tx) => ({ transaction_key: tx.key, account_id: accountId, amount: tx.amount, remittance: tx.remittanceInformation, counterpart_name: tx.counterpartName, execution_date: tx.executionDate ? tx.executionDate.slice(0, 10) : null })),
+        { onConflict: "transaction_key" },
+      );
+      if (storeError) throw new Error(storeError.message);
+    }
     for (const tx of txs) {
       if (usedKeys.has(tx.key)) continue;
       const purchase = matchPurchasePayment(tx, payable);
