@@ -170,8 +170,8 @@ function Lijst() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
+      <div className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap sm:gap-3">
+        <div className="col-span-full min-w-0">
           <h1 className="text-3xl font-black uppercase">Taken</h1>
           <p className="text-sm text-muted-foreground">Klanten uit {MAILBOX_ADDRESS}</p>
           <MailboxConnect />
@@ -281,12 +281,12 @@ function Lijst() {
             </form>
           </DialogContent>
         </Dialog>
-        <Button className="ml-auto" onClick={doImport} disabled={busy}>
+        <Button className="sm:ml-auto" onClick={doImport} disabled={busy}>
           {busy ? "Mails lezen…" : "Mails ophalen"}
         </Button>
       </div>
       <AppointmentMailSync />
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {FILTERS.map((f) => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)} className="capitalize">
             {FILTER_LABELS[f]} ({f === "nieuw" ? newTaskRows(data).length : f === "ingepland" ? plannedTaskRows(data).length : f === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)).length : f === "alle" ? data.length : data.filter(w => w.status === f).length})
@@ -413,13 +413,13 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
   const running = w.time_entries?.find((t) => !t.ended_at);
   const signed = w.status === "afgetekend";
   return (
-    <div style={crewStyle(w.technicians?.color)} className={`space-y-3 rounded-md border-l-4 border-primary bg-card p-4 shadow-sm ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
+    <div style={crewStyle(w.technicians?.color)} className={`min-w-0 space-y-3 rounded-md border-l-4 border-primary bg-card p-3 shadow-sm sm:p-4 ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
       {w.quote_approved && <Badge variant="secondary">Offerte goedgekeurd</Badge>}
       {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
       {running && <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />}
-      <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex flex-wrap items-center gap-4">
+      <Link to="/werkbonnen/$id" params={{ id: w.id }} className="grid min-w-0 grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:gap-4">
         <span className="font-mono text-sm opacity-80">{label} #{w.number}</span>
-        <div className="min-w-0 flex-1">
+        <div className="col-span-full row-start-1 min-w-0 break-words sm:flex-1">
           <div className="font-bold underline-offset-2 hover:underline">{w.customer_name}</div>
           <AddressBlock w={w} />
           {w.description ? (
