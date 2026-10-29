@@ -2,7 +2,10 @@ import { expect, it, vi } from "vitest";
 
 // Het opstartpad wordt één keer per pagina geladen onthouden, dus elke test
 // krijgt een vers exemplaar van de module.
-const fresh = () => vi.importActual<typeof import("./cold-entry")>("./cold-entry").then(() => import("./cold-entry"));
+const fresh = async () => {
+  vi.resetModules();
+  return import("./cold-entry");
+};
 
 it("treats a cold open of the page it loaded as a restore", async () => {
   const { isRestoredWorkOrder, noteAppEntry } = await fresh();
