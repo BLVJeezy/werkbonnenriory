@@ -13,8 +13,8 @@
 - Mailtaken sales feed requires a shared server token and stable source IDs to prevent duplicate accounting imports.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery: public /reset-password and recovery sessions; never disclose passwords.
-- Purchase payments use a tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes are excluded. Original purchase PDFs are private attachments, never reconstructed.
-- Purchase suppliers are linked by a DB trigger; new documents snapshot supplier defaults without rewriting source amounts. Receipt AI runs server-side, originals private, hash dedup; mobile scanning stops camera tracks on capture/close/unmount.
+- Purchase payments use a tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes excluded. Original purchase PDFs stay private attachments.
+- Purchase suppliers link via DB trigger; documents snapshot supplier defaults without rewriting source amounts. Receipt AI is server-side, originals private, hash dedup; mobile scanning stops camera tracks on capture/close/unmount.
 - Customers use normalized name/full-address identity, preserve source codes/aliases and link via a work-order trigger; projects belong to customer IDs. allCustomers paginates newest-first; CustomerPicker/SearchSelect share ID-based, order-preserving search.
 - Roles live in `user_roles` (admin|technician|marketing); technicians only see assigned work orders via `my_technician_id()`, marketing only customers/newsletters/photos via `is_admin_or_marketing()` and the price-free `photo_overview()` RPC. Logins are created by admin-checked server fns; public sign-up is removed.
 - Running indicators use open time entries, not task status; lists and calendars refetch every ten seconds while visible.
