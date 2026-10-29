@@ -386,6 +386,13 @@
       "when": 1793252889847,
       "tag": "0054_quote_assignment_and_automatic_approved_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1793264135893,
+      "tag": "0055_add_marketing_role",
+      "breakpoints": true
     }
   ]
 }

@@ -1649,7 +1649,7 @@ export type Database = {
       unsubscribe_newsletter: { Args: { p_hash: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "technician"
+      app_role: "admin" | "technician" | "marketing"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1777,7 +1777,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "technician"],
+      app_role: ["admin", "technician", "marketing"],
     },
   },
 } as const
