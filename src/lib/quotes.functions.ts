@@ -118,6 +118,7 @@ export const quoteFromTask = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase.from("quotes").insert({
       number, customer, lines, source_work_order_id: wo.id, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
       intro: wo.project_name ? `Betreft: ${wo.project_name}` : null,
+      technician_id: wo.technician_id,
     }).select("*").single();
     if (error) throw new Error(error.message);
     return row;
@@ -171,16 +172,19 @@ export const convertQuoteToTask = createServerFn({ method: "POST" })
     if (!q) throw new Error("Offerte niet gevonden");
     if (q.status !== "akkoord") throw new Error("De klant heeft deze offerte nog niet ondertekend");
     if (q.work_order_id) return { workOrderId: q.work_order_id as string };
-    const c = q.customer as InvoiceCustomer;
-    const lines = (q.lines as InvoiceLine[]).map((l) => `- ${l.description}: ${l.quantity} ${l.unit}`).join("\n");
-    const { data: wo, error } = await context.supabase.from("work_orders").insert({
-      customer_name: c.name, street: c.street, house_number: c.houseNumber, postal_code: c.postalCode, city: c.city,
-      address: c.address, email: c.email, vat_number: c.vatNumber, vat_rate: Number(q.vat_rate),
-      description: `Offerte ${q.number} (ondertekend door ${q.signed_name ?? "klant"}):\n${lines}`,
-    }).select("id").single();
+    const { data: workOrderId, error } = await context.supabase.rpc("convert_approved_quote", { p_id: q.id });
     if (error) throw new Error(error.message);
-    await context.supabase.from("quotes").update({ work_order_id: wo.id }).eq("id", q.id);
-    return { workOrderId: wo.id as string };
+    return { workOrderId: workOrderId as string };
+  });
+
+export const assignQuoteCrew = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { quoteId: string; technicianId: string | null }) => i)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase.from("quotes").update({ technician_id: data.technicianId }).eq("id", data.quoteId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });
 
 // ---- Public signing (no login; the random token in the link is the secret) ----
