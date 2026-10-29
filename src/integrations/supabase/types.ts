@@ -1380,6 +1380,7 @@ export type Database = {
           email: string | null
           house_number: string | null
           id: string
+          no_answer_at: string | null
           number: number
           paid_amount: number | null
           paid_at: string | null
@@ -1431,6 +1432,7 @@ export type Database = {
           email?: string | null
           house_number?: string | null
           id?: string
+          no_answer_at?: string | null
           number?: number
           paid_amount?: number | null
           paid_at?: string | null
@@ -1482,6 +1484,7 @@ export type Database = {
           email?: string | null
           house_number?: string | null
           id?: string
+          no_answer_at?: string | null
           number?: number
           paid_amount?: number | null
           paid_at?: string | null

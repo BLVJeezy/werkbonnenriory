@@ -47,7 +47,7 @@ function Facturen() {
     queryKey: ["facturen"],
     queryFn: async () => {
       const [w, i, s] = await Promise.all([
-        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
+        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, technicians(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
       ]);
@@ -168,10 +168,11 @@ function Facturen() {
         <p className="text-sm text-muted-foreground">Afgerekende bonnen worden meteen verzonden; openstaande facturen verzend je hieronder zelf.</p>
         <ul className="divide-y">
           {data.todo.map((w) => (
-            <li key={w.id} className="flex items-center gap-3 py-2">
+            <li key={w.id} className="flex flex-wrap items-center gap-3 py-2">
               <input type="checkbox" aria-label={`Selecteer werkbon #${w.number}`} disabled={busy} className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} />
               <Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">#{w.number}</Link>
               <span className="flex-1">{w.customer_name}</span>
+              <span className="text-xs text-muted-foreground">{w.technicians?.name ?? "Geen ploeg"} · {w.scheduled_date ? new Date(`${w.scheduled_date}T00:00`).toLocaleDateString("nl-BE") : w.signed_at ? new Date(w.signed_at).toLocaleDateString("nl-BE") : "—"}{w.scheduled_from ? ` ${w.scheduled_from.slice(0, 5)}${w.scheduled_until ? `–${w.scheduled_until.slice(0, 5)}` : ""}` : w.signed_at ? ` ${new Date(w.signed_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}` : ""}</span>
               {w.vat_number && <span className="text-xs text-muted-foreground">{w.vat_number}</span>}
               <span className="text-sm">{w.paid_at ? `Betaald ${euro(Number(w.paid_amount))}` : "Open"}</span>
             </li>

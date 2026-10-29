@@ -254,7 +254,7 @@ function Detail() {
         </div>
       </section>
 
-      <TaskActions id={id} address={destinationAddress(wo)} phone={perms.showContact ? wo.phone : null} contactPhone={wo.site_contact_phone} contactName={wo.site_contact_name} runningEntryId={running?.id ?? null} showTimer={false} manualTime={!!techs.find((t) => t.id === wo.technician_id)?.manual_time_entry} />
+      <TaskActions id={id} address={destinationAddress(wo)} phone={perms.showContact ? wo.phone : null} contactPhone={wo.site_contact_phone} contactName={wo.site_contact_name} runningEntryId={running?.id ?? null} showTimer={false} manualTime={!!techs.find((t) => t.id === wo.technician_id)?.manual_time_entry} noAnswerAt={wo.no_answer_at} />
 
       <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />

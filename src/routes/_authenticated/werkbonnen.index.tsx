@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SiteAddressFields } from "@/components/SiteAddressFields";
 import { destinationAddress, destinationLabel, destinationLines, formatAddress, type SiteAddressParts } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
-import { TaskActions } from "@/components/TaskActions";
+import { TaskActions, isNoAnswer } from "@/components/TaskActions";
 import { MailboxConnect, WerkbonMailboxConnect } from "@/components/MailboxConnect";
 import { deleteTask } from "@/lib/delete-task";
 import { CustomerInvite } from "@/components/CustomerInvite";
@@ -387,6 +387,7 @@ type Row = SiteAddressParts & {
   description: string | null;
   status: string;
   urgent?: boolean;
+  no_answer_at?: string | null;
   contract_id?: string | null;
   quote_approved?: boolean;
   technician_id?: string | null;
@@ -427,6 +428,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
   return (
     <div style={crewStyle(w.technicians?.color)} className={`min-w-0 space-y-3 rounded-md border-l-4 border-primary bg-card p-3 shadow-sm sm:p-4 ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
       {w.quote_approved && <Badge variant="secondary">Offerte goedgekeurd</Badge>}
+      {!signed && isNoAnswer(w.no_answer_at) && <Badge variant="destructive">Neemt niet op · {new Date(w.no_answer_at!).toLocaleString("nl-BE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</Badge>}
       {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
       {running && <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />}
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="grid min-w-0 grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:gap-4">
@@ -445,7 +447,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
       {below}
       <div className="flex flex-wrap items-center gap-2">
         <WorkOrderPreview workOrderId={w.id} />
-        {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} />}
+        {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} noAnswerAt={w.no_answer_at} />}
       </div>
     </div>
   );
