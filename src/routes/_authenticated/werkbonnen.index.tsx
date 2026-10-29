@@ -38,6 +38,7 @@ import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 import type { Database } from '@/integrations/supabase/types';
 import { AppointmentMailSync } from '@/components/AppointmentMailSync';
 import { CustomerPicker } from '@/components/CustomerPicker';
+import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -442,7 +443,10 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
         {extra}
       </Link>
       {below}
-      {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} />}
+      <div className="flex flex-wrap items-center gap-2">
+        <WorkOrderPreview workOrderId={w.id} />
+        {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} />}
+      </div>
     </div>
   );
 }

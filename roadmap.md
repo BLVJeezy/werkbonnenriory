@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Werkbonvoorbeeld rechtstreeks vanuit Taken voor beheerder en ploegen, buiten de taaklink. Echte PDF opent terwijl /werkbonnen open blijft; 16 knoppen in Riory1-ploegweergave gecontroleerd, geen runtimefouten, build OK.
 - [x] Voorbeeld werkbon op taakdetail voor beheerder én ploegen, met servercontrole van toewijzing en ingestelde zichtbaarheid. Bestaande werkbon #85 als echte PDF geopend en visueel gecontroleerd; acht tests geslaagd, build OK; niets verzonden. Ploegrechten getest als regels, niet via een afzonderlijke ploegaanmelding.
 - [x] Productzoeken bij offertes en gedeelde doorzoekbare klantkeuzes bij taken, offertes, contracten en facturen; nieuwste klanten eerst met volledige paginering. Bestaande klant/product geselecteerd, lange productomschrijving en adreszoeken gecontroleerd op 402px zonder overloop; 13 tests geslaagd, build OK; niets opgeslagen of verstuurd.
 - [x] Mobiel beheer benut schermbreedte met kleinere zijmarges, compact inklapmenu en geordende taak-/offertebediening. Zes pagina’s op 402px zonder horizontale overloop gecontroleerd; menu openen/navigeren/sluiten en desktopmenu getest, zeven tests geslaagd, build OK.
