@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Wit scherm bij werkbonvoorbeeld: PDF binnen de app weergeven zonder nieuw blob-venster; echte PDF controleren.
+- [x] Werkbonvoorbeeld toont PDF binnen een dialoog zonder blob-venster; browsercompatibele PDF.js-weergave. Echte #85 op desktop en 402px: tien niet-lege pagina’s, PDF-download en Taken blijft open; vijf tests geslaagd, build OK, geen runtimefouten.
 - [x] Werkbonvoorbeeld rechtstreeks vanuit Taken voor beheerder en ploegen, buiten de taaklink. Echte PDF opent terwijl /werkbonnen open blijft; 16 knoppen in Riory1-ploegweergave gecontroleerd, geen runtimefouten, build OK.
 - [x] Voorbeeld werkbon op taakdetail voor beheerder én ploegen, met servercontrole van toewijzing en ingestelde zichtbaarheid. Bestaande werkbon #85 als echte PDF geopend en visueel gecontroleerd; acht tests geslaagd, build OK; niets verzonden. Ploegrechten getest als regels, niet via een afzonderlijke ploegaanmelding.
 - [x] Productzoeken bij offertes en gedeelde doorzoekbare klantkeuzes bij taken, offertes, contracten en facturen; nieuwste klanten eerst met volledige paginering. Bestaande klant/product geselecteerd, lange productomschrijving en adreszoeken gecontroleerd op 402px zonder overloop; 13 tests geslaagd, build OK; niets opgeslagen of verstuurd.
