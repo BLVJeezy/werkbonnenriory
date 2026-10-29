@@ -4,11 +4,10 @@ import { useServerFn } from '@tanstack/react-start';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { inviteCustomer, retryAppointmentMail } from '@/lib/appointments.functions';
 import { appointmentStatuses } from '@/lib/appointments';
-import { SLOT_PARTS, inviteBlock, inviteDayLabel, inviteDays, inviteKey, inviteSlotLabel, inviteSlots } from '@/lib/invite-slots';
+import { SLOT_CHOICES, type SlotChoice, inviteBlock, inviteDayLabel, inviteDays, inviteSlotLabel, inviteSlots, partsForChoice } from '@/lib/invite-slots';
 import { useRole } from '@/lib/use-role';
 
 type InviteTask = { id: string; customer_name: string; email?: string | null; technician_id?: string | null; status?: string | null };
@@ -20,10 +19,10 @@ export function CustomerInvite({ task, size = 'sm', className }: { task: InviteT
   const invite = useServerFn(inviteCustomer);
   const resend = useServerFn(retryAppointmentMail);
   const [open, setOpen] = useState(false);
-  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [choice, setChoice] = useState<SlotChoice>('beide');
   const [busy, setBusy] = useState(false);
   const [days] = useState(() => inviteDays(new Date(), 5));
-  const slots = inviteSlots(days, picked);
+  const slots = inviteSlots(days, choice);
   const block = inviteBlock(task);
 
   const { data: r } = useQuery({
@@ -50,7 +49,6 @@ export function CustomerInvite({ task, size = 'sm', className }: { task: InviteT
       if (result.sent) {
         toast.success(`Uitnodiging verstuurd naar ${task.customer_name}`);
         setOpen(false);
-        setPicked({});
       } else toast.error(result.error ?? 'Uitnodiging bewaard, maar de mail is niet verstuurd. Probeer opnieuw.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Uitnodigen mislukt');
@@ -84,22 +82,24 @@ export function CustomerInvite({ task, size = 'sm', className }: { task: InviteT
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Klant uitnodigen: {task.customer_name}</DialogTitle>
-            <DialogDescription>Vink de momenten aan waaruit de klant kan kiezen. De klant krijgt een mail met een link, bevestigt zelf, en de afspraak komt in de agenda.</DialogDescription>
+            <DialogDescription>Kies welk deel van de dag je voorstelt. De klant krijgt een mail met een link, bevestigt zelf, en de afspraak komt in de agenda.</DialogDescription>
           </DialogHeader>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Deel van de dag">
+            {SLOT_CHOICES.map((c) => (
+              <Button key={c.key} type="button" size="sm" variant={choice === c.key ? 'default' : 'outline'} aria-pressed={choice === c.key} onClick={() => setChoice(c.key)}>
+                {c.label}
+              </Button>
+            ))}
+          </div>
           <div className="space-y-1">
             {days.map((d) => (
-              <div key={d} className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b py-2 last:border-b-0">
+              <div key={d} className="flex flex-wrap items-baseline gap-x-3 border-b py-1.5 last:border-b-0">
                 <span className="w-20 font-bold">{inviteDayLabel(d)}</span>
-                {SLOT_PARTS.map((part) => (
-                  <label key={part.key} className="flex cursor-pointer items-center gap-2 text-sm">
-                    <Checkbox checked={!!picked[inviteKey(d, part)]} onCheckedChange={(v) => setPicked((s) => ({ ...s, [inviteKey(d, part)]: v === true }))} />
-                    {part.label} {part.from}–{part.until}
-                  </label>
-                ))}
+                <span className="text-sm">{partsForChoice(choice).map((p) => `${p.label} ${p.from}–${p.until}`).join('  ·  ')}</span>
               </div>
             ))}
           </div>
-          <p className="text-sm text-muted-foreground">{slots.length ? `Voorgesteld: ${slots.map(inviteSlotLabel).join(' · ')}` : 'Nog niets aangevinkt.'}</p>
+          <p className="text-sm text-muted-foreground">Voorgesteld: {slots.map(inviteSlotLabel).join(' · ')}</p>
           <DialogFooter>
             <Button disabled={busy || !slots.length} onClick={send}>
               {busy ? 'Versturen…' : 'Uitnodiging versturen'}
