@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/fotos")({
   component: Fotos,
 });
 
-type Group = { id: string; number: number | null; customer: string; city: string | null; date: string | null; description: string; photos: { id: string; url: string | null }[] };
+type Group = { id: string; number: number | null; customer: string; city: string | null; date: string | null; description: string; notes: string; photos: { id: string; url: string | null }[] };
 
 function Fotos() {
   const [q, setQ] = useState("");
@@ -26,7 +26,7 @@ function Fotos() {
         const w = r;
         let g = map.get(r.work_order_id);
         if (!g) {
-          g = { id: r.work_order_id, number: w?.number ?? null, customer: w?.customer_name ?? "Onbekend", city: w?.city ?? null, date: w?.scheduled_date ?? r.created_at.slice(0, 10), description: (w?.task_description ?? "").trim(), photos: [] };
+          g = { id: r.work_order_id, number: w?.number ?? null, customer: w?.customer_name ?? "Onbekend", city: w?.city ?? null, date: w?.scheduled_date ?? r.created_at.slice(0, 10), description: (w?.task_description ?? "").trim(), notes: (w?.work_notes ?? "").trim(), photos: [] };
           map.set(r.work_order_id, g);
         }
         g.photos.push({ id: r.id, url: signed?.[i]?.signedUrl ?? null });
@@ -35,7 +35,7 @@ function Fotos() {
     },
   });
   const s = q.trim().toLowerCase();
-  const groups = s ? data.filter((g) => `${g.number} ${g.customer} ${g.city} ${g.description}`.toLowerCase().includes(s)) : data;
+  const groups = s ? data.filter((g) => `${g.number} ${g.customer} ${g.city} ${g.description} ${g.notes}`.toLowerCase().includes(s)) : data;
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-black uppercase">Foto's</h1>
@@ -53,6 +53,9 @@ function Fotos() {
           </Link>
           {g.description && (
             <p className="mb-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{g.description}</p>
+          )}
+          {g.notes && (
+            <p className="mb-3 whitespace-pre-line rounded border-l-4 border-primary bg-muted/40 p-2 text-sm leading-relaxed [overflow-wrap:anywhere]"><span className="font-bold">Technieker: </span>{g.notes}</p>
           )}
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {g.photos.map((p) => p.url && (

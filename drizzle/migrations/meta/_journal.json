@@ -442,6 +442,13 @@
       "when": 1793275946858,
       "tag": "0062_atomische_factuurnummering",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1793278862145,
+      "tag": "0063_photo_overview_add_work_notes",
+      "breakpoints": true
     }
   ]
 }
