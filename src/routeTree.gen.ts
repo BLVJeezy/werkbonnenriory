@@ -18,14 +18,13 @@ import { Route as AuthenticatedContractenRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedFotosRouteImport } from './routes/_authenticated/fotos'
+import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
 import { Route as AuthenticatedLeveranciersRouteImport } from './routes/_authenticated/leveranciers'
 import { Route as AuthenticatedNieuwsbrievenRouteImport } from './routes/_authenticated/nieuwsbrieven'
 import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
-import { Route as AuthenticatedTarievenRouteImport } from './routes/_authenticated/tarieven'
-import { Route as AuthenticatedTechniciRouteImport } from './routes/_authenticated/technici'
 import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
@@ -86,6 +85,12 @@ const AuthenticatedFotosRoute = AuthenticatedFotosRouteImport.update({
   path: '/fotos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInstellingenRoute =
+  AuthenticatedInstellingenRouteImport.update({
+    id: '/instellingen',
+    path: '/instellingen',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
   id: '/kalender',
   path: '/kalender',
@@ -116,16 +121,6 @@ const AuthenticatedOffertesRoute = AuthenticatedOffertesRouteImport.update({
 const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
   id: '/producten',
   path: '/producten',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedTarievenRoute = AuthenticatedTarievenRouteImport.update({
-  id: '/tarieven',
-  path: '/tarieven',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedTechniciRoute = AuthenticatedTechniciRouteImport.update({
-  id: '/technici',
-  path: '/technici',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const DocumentTokenRoute = DocumentTokenRouteImport.update({
@@ -217,14 +212,13 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/fotos': typeof AuthenticatedFotosRoute
+  '/instellingen': typeof AuthenticatedInstellingenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
   '/leveranciers': typeof AuthenticatedLeveranciersRoute
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
-  '/tarieven': typeof AuthenticatedTarievenRoute
-  '/technici': typeof AuthenticatedTechniciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
@@ -249,14 +243,13 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/fotos': typeof AuthenticatedFotosRoute
+  '/instellingen': typeof AuthenticatedInstellingenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
   '/leveranciers': typeof AuthenticatedLeveranciersRoute
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
-  '/tarieven': typeof AuthenticatedTarievenRoute
-  '/technici': typeof AuthenticatedTechniciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
@@ -283,14 +276,13 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/fotos': typeof AuthenticatedFotosRoute
+  '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
   '/_authenticated/leveranciers': typeof AuthenticatedLeveranciersRoute
   '/_authenticated/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
-  '/_authenticated/tarieven': typeof AuthenticatedTarievenRoute
-  '/_authenticated/technici': typeof AuthenticatedTechniciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
@@ -317,14 +309,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/facturen'
     | '/fotos'
+    | '/instellingen'
     | '/kalender'
     | '/klanten'
     | '/leveranciers'
     | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
-    | '/tarieven'
-    | '/technici'
     | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
@@ -349,14 +340,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/facturen'
     | '/fotos'
+    | '/instellingen'
     | '/kalender'
     | '/klanten'
     | '/leveranciers'
     | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
-    | '/tarieven'
-    | '/technici'
     | '/document/$token'
     | '/offerte/$token'
     | '/werkbonnen/$id'
@@ -382,14 +372,13 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/facturen'
     | '/_authenticated/fotos'
+    | '/_authenticated/instellingen'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
     | '/_authenticated/leveranciers'
     | '/_authenticated/nieuwsbrieven'
     | '/_authenticated/offertes'
     | '/_authenticated/producten'
-    | '/_authenticated/tarieven'
-    | '/_authenticated/technici'
     | '/document/$token'
     | '/offerte/$token'
     | '/_authenticated/werkbonnen/$id'
@@ -490,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFotosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/instellingen': {
+      id: '/_authenticated/instellingen'
+      path: '/instellingen'
+      fullPath: '/instellingen'
+      preLoaderRoute: typeof AuthenticatedInstellingenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/kalender': {
       id: '/_authenticated/kalender'
       path: '/kalender'
@@ -530,20 +526,6 @@ declare module '@tanstack/react-router' {
       path: '/producten'
       fullPath: '/producten'
       preLoaderRoute: typeof AuthenticatedProductenRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/tarieven': {
-      id: '/_authenticated/tarieven'
-      path: '/tarieven'
-      fullPath: '/tarieven'
-      preLoaderRoute: typeof AuthenticatedTarievenRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/technici': {
-      id: '/_authenticated/technici'
-      path: '/technici'
-      fullPath: '/technici'
-      preLoaderRoute: typeof AuthenticatedTechniciRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/document/$token': {
@@ -653,14 +635,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedFotosRoute: typeof AuthenticatedFotosRoute
+  AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
   AuthenticatedLeveranciersRoute: typeof AuthenticatedLeveranciersRoute
   AuthenticatedNieuwsbrievenRoute: typeof AuthenticatedNieuwsbrievenRoute
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
-  AuthenticatedTarievenRoute: typeof AuthenticatedTarievenRoute
-  AuthenticatedTechniciRoute: typeof AuthenticatedTechniciRoute
   AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
 }
@@ -671,14 +652,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedFotosRoute: AuthenticatedFotosRoute,
+  AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
   AuthenticatedLeveranciersRoute: AuthenticatedLeveranciersRoute,
   AuthenticatedNieuwsbrievenRoute: AuthenticatedNieuwsbrievenRoute,
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
-  AuthenticatedTarievenRoute: AuthenticatedTarievenRoute,
-  AuthenticatedTechniciRoute: AuthenticatedTechniciRoute,
   AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,
 }

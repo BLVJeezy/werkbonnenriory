@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,12 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { euro } from "@/lib/billing";
 
-export const Route = createFileRoute("/_authenticated/tarieven")({
-  head: () => ({ meta: [{ title: "Tarieven — Riory Werkbonnen" }, { name: "description", content: "Beheer Riory-activiteiten, uurtarieven en kilometerinstellingen." }, { property: "og:title", content: "Tarieven — Riory Werkbonnen" }, { property: "og:description", content: "Beheer Riory-activiteiten, uurtarieven en kilometerinstellingen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
-  component: Tarieven,
-});
-
-function Tarieven() {
+export function TarievenBeheer() {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [rate, setRate] = useState("");
@@ -51,7 +45,6 @@ function Tarieven() {
   const s = data?.settings;
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-black uppercase">Tarieven</h1>
       {s && (
         <section className="grid gap-3 rounded-md border bg-card p-4 sm:grid-cols-[1fr_10rem]">
           <div className="space-y-1">
@@ -70,7 +63,7 @@ function Tarieven() {
           </div>
         </section>
       )}
-      <h2 className="text-xl font-black uppercase">Activiteiten</h2>
+      <h3 className="text-xl font-black uppercase">Activiteiten</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 rounded-md border bg-card p-4">
         <Input placeholder="Activiteit (bv. Herstelling)" required value={name} onChange={(e) => setName(e.target.value)} className="min-w-48 flex-1" />
         <Input placeholder="Uurtarief €" type="number" step="0.01" min="0" required value={rate} onChange={(e) => setRate(e.target.value)} className="w-32" />
