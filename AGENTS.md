@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Simpla sales sync is retired; enqueue does nothing; purchase imports stay read-only.
-- Mailtaken sales feed requires a shared server token and stable source IDs against duplicate accounting imports.
+- Mailtaken/review feeds require separate server tokens and stable IDs. Reviews expose sent invoice emails only, with sent_at+id cursors.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery: public /reset-password and recovery sessions; never disclose passwords.
 - Purchase payments use a tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes excluded. Original purchase PDFs stay private attachments.
@@ -39,4 +39,4 @@
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.
 - Quotes keep source/output tasks separate; DB-enforced quote_pending hides sources and unapproved outputs. Scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.
-- Work order numbers are assigned only at the first time entry (trigger on time_entries) or on completion (BEFORE UPDATE trigger); tasks without a number render as "Nieuw" via werkbonNr() from src/lib/werkbon-number.ts. The number column is nullable — never assume it exists for open tasks.
+- Work order numbers are nullable; assign at first time entry or completion via triggers. Render unnumbered tasks as "Nieuw" via werkbonNr().
