@@ -72,6 +72,25 @@ function Kalender() {
 
   // Alleen volledig ingeplande taken (dag + ploeg + activiteit) verschijnen op de dag; afgetekende blijven op hun dag staan.
   const dayList = (k: string) => data.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w)));
+  // Dagomzet: enkel afgewerkte bonnen — betaald bedrag, of het berekende totaal als er nog geen betaling is.
+  const dayOmzet = (k: string) =>
+    dayList(k)
+      .filter((w) => w.status === "afgetekend")
+      .reduce(
+        (s, w) =>
+          s +
+          workOrderRevenue({
+            paidAmount: w.paid_amount == null ? null : Number(w.paid_amount),
+            seconds: totalSeconds(w.time_entries, new Date()),
+            hourlyRate: Number(opts?.acts.find((a) => a.id === w.activity_id)?.hourly_rate ?? 0),
+            distanceKm: w.distance_km == null ? null : Number(w.distance_km),
+            kmRate: opts?.kmRate ?? 0,
+            materials: w.materials.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })),
+            vatRate: Number(w.vat_rate),
+            warranty: w.warranty,
+          }),
+        0,
+      );
   async function move(list: Row[], i: number, dir: -1 | 1) {
     const j = i + dir;
     if (j < 0 || j >= list.length) return;
