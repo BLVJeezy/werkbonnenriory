@@ -39,3 +39,4 @@
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.
 - Quotes keep source/output tasks separate; DB-enforced quote_pending hides sources and unapproved outputs. Scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.
+- Marketing role (`user_roles` = marketing) may only use Klanten, Nieuwsbrieven and Foto's; server fns use `is_admin_or_marketing()` and photos come through the `photo_overview()` RPC so marketing never reads work-order prices.
