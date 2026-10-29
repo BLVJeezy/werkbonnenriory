@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Beveiligde API voor klantmailadressen van verzonden facturen, met stabiele IDs en tests
-- [ ] Gedeelde API-sleutel instellen en aansluiting documenteren
+- [x] Beveiligde API voor klantmailadressen van verzonden facturen; 10 tests en echte API-aanvraag met 14 facturen geslaagd
+- [x] Gedeelde API-sleutel ingesteld en aansluiting gedocumenteerd; productie vereist publiceren, reviewsysteem zelf niet gekoppeld
 
 - [x] Werkbonnummer pas toekennen bij eerste tijdstart (of bij afronden); taken zonder nummer tonen "Nieuw"
 - [x] Verifiëren: build + tests werkbonnummering
