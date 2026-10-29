@@ -96,7 +96,7 @@ function Kalender() {
     onDrop: () => { if (drag) plan(drag, date); setDrag(null); },
   });
   const card = (w: Row, i?: number, list?: Row[], horizontal = false) => w.status === "afgetekend" ? (
-    <div key={w.id} style={crewStyle(w.technicians?.color)} className="rounded border bg-background px-2 py-1 text-xs opacity-75">
+    <div key={w.id} style={crewStyle(w.technicians?.color)} className="min-w-0 rounded border bg-background px-2 py-1 text-xs opacity-75">
       <div className="flex items-center gap-1">
         <span className="rounded bg-foreground px-1 font-bold text-background">Afgewerkt</span>
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="min-w-0 flex-1 truncate font-bold underline">#{w.number} {w.customer_name}</Link>
@@ -151,13 +151,12 @@ function Kalender() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-3xl font-black uppercase">Kalender</h1>
+      <div className="grid grid-cols-3 items-center gap-2 sm:flex sm:flex-wrap">
+        <h1 className="col-span-full min-w-0 text-3xl font-black uppercase sm:mr-auto">Kalender</h1>
         <Button variant="outline" size="sm" onClick={() => shift(-7)}>← Vorige week</Button>
         <Button variant="outline" size="sm" onClick={() => setStart(monday(new Date()))}>Deze week</Button>
         <Button variant="outline" size="sm" onClick={() => shift(7)}>Volgende week →</Button>
       </div>
-      <p className="text-sm text-muted-foreground">Sleep een taak naar een dag, of kies een datum. Klik op + om op die dag een nieuwe taak aan te maken.</p>
       <AppointmentMailSync />
       <div className="grid gap-3 xl:grid-cols-7 xl:gap-2">
         {days.map((d) => {

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useRole, useLargeText } from "@/lib/use-role";
 import { largeTextOn, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
+import { Menu, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -24,6 +25,7 @@ function Layout() {
   const role = useRole();
   const adminSet = useLargeText();
   const [device, setDevice] = useState<DeviceChoice>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const large = largeTextOn(adminSet, device);
 
   useEffect(() => {
@@ -37,11 +39,12 @@ function Layout() {
   return (
     <div className="min-h-screen bg-background">
       <header className="no-print border-b-4 border-primary bg-secondary text-secondary-foreground">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-4 py-3">
-          <Link to="/werkbonnen" className="text-lg font-black uppercase tracking-tight">
+        <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 sm:flex sm:flex-wrap sm:gap-4 sm:px-4">
+          <Link to="/werkbonnen" className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
             Riory <span className="text-primary">Werkbonnen</span>
           </Link>
-          <nav className="ml-auto flex flex-wrap items-center gap-1 text-sm font-semibold">
+          <Button variant="secondary" size="icon" className="shrink-0 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
+          <nav id="beheer-menu" aria-label="Beheerpagina’s" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenuOpen(false); }} className={`${menuOpen ? "grid" : "hidden"} col-span-full min-w-0 grid-cols-2 items-center gap-1 border-t border-secondary-foreground/20 pt-2 text-sm font-semibold sm:ml-auto sm:flex sm:flex-wrap sm:border-0 sm:pt-0`}>
             <Link to="/werkbonnen" className={navCls} activeProps={active}>
               {role === "admin" ? "Taken" : "Mijn taken"}
             </Link>
@@ -109,7 +112,7 @@ function Layout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6">
         <Outlet />
       </main>
     </div>

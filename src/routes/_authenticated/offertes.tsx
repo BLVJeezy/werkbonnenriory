@@ -217,7 +217,7 @@ function Offertes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap sm:gap-3">
         <h1 className="text-3xl font-black uppercase">Offertes</h1>
         <Button className="ml-auto" variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
       </div>
@@ -287,10 +287,10 @@ function Offertes() {
         {quotes.map((q) => {
           const c = q.customer as InvoiceCustomer;
           return (
-            <li key={q.id} className="flex flex-wrap items-center gap-3 p-3">
+            <li key={q.id} className="grid min-w-0 grid-cols-2 items-center gap-2 p-3 sm:flex sm:flex-wrap sm:gap-3">
               <span className="font-mono font-bold">{q.number}</span>
-              <span className="flex-1">{c.name}</span>
-              <select aria-label={`Ploeg offerte ${q.number}`} className="h-9 max-w-full rounded-md border bg-background px-2 text-foreground" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
+              <span className="col-span-full row-start-1 min-w-0 break-words font-semibold sm:flex-1">{c.name}</span>
+              <select aria-label={`Ploeg offerte ${q.number}`} className="col-span-full h-10 w-full min-w-0 rounded-md border bg-background px-2 text-foreground sm:h-9 sm:w-auto" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
                 setBusy(true);
                 try {
                   await assignCrew({ data: { quoteId: q.id, technicianId: e.target.value || null } });
