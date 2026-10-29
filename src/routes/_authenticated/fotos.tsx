@@ -38,7 +38,7 @@ function Fotos() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-black uppercase">Foto's</h1>
-      <Input placeholder="Zoek op klant, plaats of nummer" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input placeholder="Zoek op klant, plaats, nummer of omschrijving" value={q} onChange={(e) => setQ(e.target.value)} />
       {isLoading && <p className="text-muted-foreground">Laden…</p>}
       {!isLoading && groups.length === 0 && <p className="text-muted-foreground">Geen foto's gevonden.</p>}
       {groups.map((g) => (
