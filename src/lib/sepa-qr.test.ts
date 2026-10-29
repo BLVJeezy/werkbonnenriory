@@ -18,7 +18,7 @@ describe("buildSepaQr", () => {
 
   it("keeps the invoice number in the communication so Ponto still matches the payment", () => {
     const payload = buildSepaQr(base);
-    const communication = payload.split("\n")[10];
+    const communication = payload.split("\n")[10] ?? "";
     const invoice = { id: "1", number: "2026-0817", total: 358.34, paidAmount: 0 };
     const tx = { amount: 358.34, remittanceInformation: communication, executionDate: "2026-11-10", counterpartName: "J. Doe" };
     expect(matchInvoice(tx, [invoice])?.id).toBe("1");
