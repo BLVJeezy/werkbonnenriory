@@ -82,6 +82,9 @@ function Layout() {
                 <Link to="/dashboard" className={navCls} activeProps={active}>
                   Dashboard
                 </Link>
+                <Link to="/betalingen" className={navCls} activeProps={active}>
+                  Bank
+                </Link>
                 <Link to="/klanten" className={navCls} activeProps={active}>
                   Klanten
                 </Link>
