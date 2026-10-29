@@ -20,7 +20,7 @@
 - Running indicators use open time entries, not task status; lists and calendars refetch every ten seconds while visible.
 - Work orders keep customer and optional worksite addresses in split fields; resolve the destination through the shared address helper; a DB trigger invalidates cached driving distance on address changes.
 - Work-order mail/previews share the allowlist, Worker PDF and RLS-scoped private photo loader; photo annex precedes terms, errors block omission. Previews enforce crew visibility and use browser-only PDF.js dialogs. Mail uses private attachments, never inline details/rates.
-- Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, including failures, so a mail error cannot strand them on a completed task.
+- Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, even on failure, so a mail error cannot strand them on a completed task.
 - Billing math lives in `src/lib/billing.ts` (pure, tested); the UI computes totals live and stores only the paid amount when payment is recorded.
 - Work-order payment removal uses an admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
 - Newsletters: email-bound audited consent, hashed-token unsubscribe POSTs; draft-only until delivery linked. Admin server AI creates unsaved suggestions; provider denials persist in settings.
