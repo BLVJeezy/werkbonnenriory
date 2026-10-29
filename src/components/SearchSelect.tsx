@@ -24,8 +24,8 @@ export function SearchSelect({ options, value, onChange, placeholder, searchPlac
   return (
     <Popover open={open} onOpenChange={next => { setOpen(next); if (!next) setQuery(""); }}>
       <PopoverTrigger asChild>
-        <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={placeholder} className={cn("h-10 w-full min-w-0 justify-between gap-2 font-normal", className)}>
-          <span className="truncate">{selected?.label ?? placeholder}</span>
+        <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={placeholder} className={cn("h-10 w-full min-w-0 max-w-full justify-between gap-2 overflow-hidden font-normal", className)}>
+          <span className="min-w-0 flex-1 truncate text-left">{selected?.label ?? placeholder}</span>
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
