@@ -502,7 +502,7 @@ function Detail() {
       {isAdmin && !locked && <AppointmentPanel id={id} external={!!techs.find(t=>t.id===wo.technician_id)?.external_planning} scheduled={!!wo.scheduled_date} />}
       {isAdmin && !locked && <section className="no-print space-y-2 border-t pt-4">
         <h2 className="text-lg font-black uppercase">Klant uitnodigen</h2>
-        <p className="text-sm text-muted-foreground">Kies standaardvakken (ochtend 08:00–12:00 of namiddag 13:00–17:00) en mail de klant een keuzelink. Bij bevestiging komt de afspraak automatisch in de agenda.</p>
+        <p className="text-sm text-muted-foreground">Kies voormiddag 08:00–12:00, namiddag 13:00–17:00 of beide en mail de klant een keuzelink. Bij bevestiging komt de afspraak automatisch in de agenda.</p>
         <CustomerInvite task={wo} size="default" />
       </section>}
 
