@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
 import { Route as AuthenticatedContractenRouteImport } from './routes/_authenticated/contracten'
+import { Route as AuthenticatedCrashtestRouteImport } from './routes/_authenticated/crashtest'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedFotosRouteImport } from './routes/_authenticated/fotos'
@@ -69,6 +70,11 @@ const AuthenticatedAankoopfacturenRoute =
 const AuthenticatedContractenRoute = AuthenticatedContractenRouteImport.update({
   id: '/contracten',
   path: '/contracten',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCrashtestRoute = AuthenticatedCrashtestRouteImport.update({
+  id: '/crashtest',
+  path: '/crashtest',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -214,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/contracten': typeof AuthenticatedContractenRoute
+  '/crashtest': typeof AuthenticatedCrashtestRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/fotos': typeof AuthenticatedFotosRoute
@@ -246,6 +253,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/contracten': typeof AuthenticatedContractenRoute
+  '/crashtest': typeof AuthenticatedCrashtestRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
   '/fotos': typeof AuthenticatedFotosRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/_authenticated/contracten': typeof AuthenticatedContractenRoute
+  '/_authenticated/crashtest': typeof AuthenticatedCrashtestRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/fotos': typeof AuthenticatedFotosRoute
@@ -314,6 +323,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/aankoopfacturen'
     | '/contracten'
+    | '/crashtest'
     | '/dashboard'
     | '/facturen'
     | '/fotos'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/aankoopfacturen'
     | '/contracten'
+    | '/crashtest'
     | '/dashboard'
     | '/facturen'
     | '/fotos'
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/aankoopfacturen'
     | '/_authenticated/contracten'
+    | '/_authenticated/crashtest'
     | '/_authenticated/dashboard'
     | '/_authenticated/facturen'
     | '/_authenticated/fotos'
@@ -467,6 +479,13 @@ declare module '@tanstack/react-router' {
       path: '/contracten'
       fullPath: '/contracten'
       preLoaderRoute: typeof AuthenticatedContractenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crashtest': {
+      id: '/_authenticated/crashtest'
+      path: '/crashtest'
+      fullPath: '/crashtest'
+      preLoaderRoute: typeof AuthenticatedCrashtestRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -650,6 +669,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAankoopfacturenRoute: typeof AuthenticatedAankoopfacturenRoute
   AuthenticatedContractenRoute: typeof AuthenticatedContractenRoute
+  AuthenticatedCrashtestRoute: typeof AuthenticatedCrashtestRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedFotosRoute: typeof AuthenticatedFotosRoute
@@ -668,6 +688,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAankoopfacturenRoute: AuthenticatedAankoopfacturenRoute,
   AuthenticatedContractenRoute: AuthenticatedContractenRoute,
+  AuthenticatedCrashtestRoute: AuthenticatedCrashtestRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedFotosRoute: AuthenticatedFotosRoute,
