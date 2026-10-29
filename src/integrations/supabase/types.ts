@@ -1609,6 +1609,7 @@ export type Database = {
           number: number
           path: string
           scheduled_date: string
+          task_description: string
           work_order_id: string
         }[]
       }

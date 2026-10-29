@@ -407,6 +407,13 @@
       "when": 1793264194099,
       "tag": "0057_marketing_newsletter_images",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1793268741898,
+      "tag": "0058_photo_overview_with_task_description",
+      "breakpoints": true
     }
   ]
 }
