@@ -414,6 +414,13 @@
       "when": 1793268741898,
       "tag": "0058_photo_overview_with_task_description",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1793274137860,
+      "tag": "0059_technicians_manual_time_entry",
+      "breakpoints": true
     }
   ]
 }
