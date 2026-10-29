@@ -28,6 +28,7 @@ import { ReassignCustomer } from '@/components/ReassignCustomer';
 import { DocumentReport } from '@/components/DocumentReport';
 import { CustomerInvite } from '@/components/CustomerInvite';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
+import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -173,6 +174,7 @@ function Detail() {
         <h1 className="text-3xl font-black uppercase">{kind} #{wo.number}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
         <div className="no-print ml-auto flex flex-wrap gap-2">
+          {(role === 'admin' || role === 'technician') && <WorkOrderPreview workOrderId={id} />}
           <Button variant="outline" onClick={() => window.print()}>Afdrukken</Button>
           {isAdmin && locked && <DocumentReport id={id} type="werkbon" />}
           {locked && wo.email && (

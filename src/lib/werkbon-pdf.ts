@@ -142,7 +142,7 @@ export async function createWerkbonPdf(data: WerkbonData): Promise<Uint8Array> {
     y -= 14;
   }
   ensure(16);
-  page.drawText(printable(data.signedName ? `Afgetekend door ${data.signedName}` : "Afgesloten na betaling."), { x: M, y, size: 10.5, font, color: ink });
+  page.drawText(printable(data.signedName ? `Afgetekend door ${data.signedName}` : data.paid ? "Afgesloten na betaling." : "Nog niet afgetekend."), { x: M, y, size: 10.5, font, color: ink });
   await appendTermsPdf(doc);
   return doc.save();
 }
