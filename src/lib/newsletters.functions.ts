@@ -5,7 +5,7 @@ import { campaignSchema, consentSchema, eligibleNewsletterRecipient, newsletterT
 import { brandedMailHtml } from './mail-html';
 
 export const getNewsletters = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const { data: admin, error: roleError } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+  const { data: admin, error: roleError } = await context.supabase.rpc('is_admin_or_marketing');
   if (roleError || !admin) throw new Error('Alleen de beheerder kan nieuwsbrieven beheren.');
   const customers = [];
   for (let offset = 0; ; offset += 1000) {
@@ -36,7 +36,7 @@ export const saveNewsletterConsent = createServerFn({ method: 'POST' }).middlewa
 });
 
 export const saveNewsletterCampaign = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => campaignSchema.parse(d)).handler(async ({ data, context }) => {
-  const { data: admin, error: roleError } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+  const { data: admin, error: roleError } = await context.supabase.rpc('is_admin_or_marketing');
   if (roleError || !admin) throw new Error('Alleen de beheerder kan nieuwsbrieven beheren.');
   const { id, image_url, ...rest } = data; const fields = { ...rest, image_url: image_url ?? null };
   const query = id ? context.supabase.from('newsletter_campaigns').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id) : context.supabase.from('newsletter_campaigns').insert({ ...fields, created_by: context.userId });
@@ -46,13 +46,13 @@ export const saveNewsletterCampaign = createServerFn({ method: 'POST' }).middlew
 });
 
 export const previewNewsletter = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => campaignSchema.parse(d)).handler(async ({ data, context }) => {
-  const { data: admin } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+  const { data: admin } = await context.supabase.rpc('is_admin_or_marketing');
   if (!admin) throw new Error('Alleen beheerder');
   return { html: brandedMailHtml(`${data.body}\n\nU ontvangt deze nieuwsbrief omdat u toestemming gaf.\nUitschrijven: https://werkbonnenriory.lovable.app/nieuwsbrief/uitschrijven/voorbeeld`, 'info@riory.be', data.image_url?.replace('https://werkbonnenriory.lovable.app', '')) };
 });
 
 export const newsletterHistory = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(d => z.object({ customerId: z.string().uuid() }).parse(d)).handler(async ({ data, context }) => {
-  const { data: admin } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+  const { data: admin } = await context.supabase.rpc('is_admin_or_marketing');
   if (!admin) throw new Error('Alleen beheerder');
   const { data: events, error } = await context.supabase.from('newsletter_consent_events').select('id,status,evidence,created_at').eq('customer_id', data.customerId).order('created_at', { ascending: false }).limit(100);
   if (error) throw new Error(error.message);
