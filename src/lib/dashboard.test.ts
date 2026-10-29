@@ -20,7 +20,7 @@ describe("groupOmzet", () => {
 
   it("trekt creditnota’s af van de omzet", () => {
     const punten = groupOmzet([inv("2026-10-01", 100), inv("2026-10-01", 30, "creditnota")], "2026-10-01", "2026-10-01");
-    expect(punten[0].omzet).toBe(70);
+    expect(punten[0]?.omzet).toBe(70);
   });
 
   it("groepeert per maand bij een periode langer dan 62 dagen", () => {

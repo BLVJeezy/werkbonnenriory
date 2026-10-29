@@ -78,7 +78,7 @@ export const createManualInvoice = createServerFn({ method: "POST" })
     const { data: s } = await supabase.from("settings").select("payment_days").eq("id", 1).single();
     const issue = new Date().toISOString().slice(0, 10);
     const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
-      p_work_order_id: null, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+      p_work_order_id: null as unknown as string, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
       p_customer: customer, p_lines: calc.lines, p_vat_rate: calc.vatRate, p_net: calc.net, p_vat: calc.vat, p_total: calc.total, p_paid_amount: 0,
       p_kind: "factuur", p_contract_reference: data.reference?.trim() || "",
     });
@@ -120,7 +120,7 @@ export const createCreditNote = createServerFn({ method: "POST" })
     const cn = buildCreditNote({ lines: inv.lines as InvoiceLine[], vatRate: Number(inv.vat_rate), net: Number(inv.net), vat: Number(inv.vat), total: Number(inv.total) });
     const issue = new Date().toISOString().slice(0, 10);
     const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
-      p_work_order_id: inv.work_order_id, p_issue_date: issue, p_due_date: issue,
+      p_work_order_id: inv.work_order_id as string, p_issue_date: issue, p_due_date: issue,
       p_customer: inv.customer, p_lines: cn.lines, p_vat_rate: cn.vatRate, p_net: cn.net, p_vat: cn.vat, p_total: cn.total, p_paid_amount: 0,
       p_kind: "creditnota", p_credit_for: inv.id,
     });
