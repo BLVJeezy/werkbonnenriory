@@ -25,7 +25,7 @@ export function TarievenBeheer() {
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = await supabase.from("activities").insert({ name, hourly_rate: Number(rate) || 0 });
+    const { error } = await supabase.from("activities").insert({ name, hourly_rate: rate.trim() === "" ? null : Number(rate) || 0 });
     if (error) {
       toast.error(error.message);
       return;
@@ -66,15 +66,35 @@ export function TarievenBeheer() {
       <h3 className="text-xl font-black uppercase">Activiteiten</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 rounded-md border bg-card p-4">
         <Input placeholder="Activiteit (bv. Herstelling)" required value={name} onChange={(e) => setName(e.target.value)} className="min-w-48 flex-1" />
-        <Input placeholder="Uurtarief €" type="number" step="0.01" min="0" required value={rate} onChange={(e) => setRate(e.target.value)} className="w-32" />
+        <Input placeholder="Uurtarief € (leeg = geen)" type="number" step="0.01" min="0" value={rate} onChange={(e) => setRate(e.target.value)} className="w-44" title="Laat leeg voor een activiteit zonder tarief" />
         <Button>Toevoegen</Button>
       </form>
       <ul className="divide-y rounded-md border bg-card">
         {data?.acts.length === 0 && <li className="p-4 text-muted-foreground">Nog geen activiteiten.</li>}
         {data?.acts.map((a) => (
-          <li key={a.id} className="flex items-center justify-between p-4">
-            <div>
-              <span className="font-bold">{a.name}</span> <span className="font-mono text-sm text-muted-foreground">{euro(Number(a.hourly_rate))}/u</span>
+          <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold">{a.name}</span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                aria-label={`Uurtarief ${a.name}`}
+                title="Leeg maken = geen tarief"
+                className="h-8 w-28 font-mono text-sm"
+                defaultValue={a.hourly_rate ?? ""}
+                placeholder="geen"
+                onBlur={async (e) => {
+                  const v = e.target.value.trim();
+                  const next = v === "" ? null : Number(v) || 0;
+                  if (next === a.hourly_rate) return;
+                  const { error } = await supabase.from("activities").update({ hourly_rate: next }).eq("id", a.id);
+                  if (error) toast.error(error.message);
+                  else toast.success(next === null ? `Tarief van ${a.name} verwijderd` : "Tarief opgeslagen");
+                  refresh();
+                }}
+              />
+              <span className="font-mono text-sm text-muted-foreground">{a.hourly_rate === null ? "geen tarief" : `${euro(Number(a.hourly_rate))}/u`}</span>
             </div>
             <Button
               variant="ghost"
