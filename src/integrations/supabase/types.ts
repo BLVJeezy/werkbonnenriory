@@ -895,6 +895,36 @@ export type Database = {
           },
         ]
       }
+      ponto_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          counterpart_name: string | null
+          execution_date: string | null
+          remittance: string | null
+          synced_at: string
+          transaction_key: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          counterpart_name?: string | null
+          execution_date?: string | null
+          remittance?: string | null
+          synced_at?: string
+          transaction_key: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          counterpart_name?: string | null
+          execution_date?: string | null
+          remittance?: string | null
+          synced_at?: string
+          transaction_key?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           admin_only: boolean
