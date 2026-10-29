@@ -1,7 +1,8 @@
 import { formatSiteAddress, type SiteAddressParts } from "./address";
+import { werkbonNr } from "./werkbon-number";
 
 type MailWorkOrder = SiteAddressParts & {
-  number: number; customer_name: string; address: string | null;
+  number: number | null; customer_name: string; address: string | null;
   description: string | null; signed_at: string | null; signed_name: string | null;
   distance_km: number | null; warranty: boolean;
   vat_number?: string | null; signature?: string | null;
@@ -27,7 +28,7 @@ export function renderWerkbonMail(data: ReturnType<typeof werkbonMailData>) {
   const row = (label: string, value: string) => `<tr><td style="padding:4px 12px 4px 0">${label}</td><td style="padding:4px 0">${esc(value)}</td></tr>`;
   const minutes = Math.round(data.seconds / 60);
   return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px">
-<h1>Werkbon #${data.number}</h1><p>Riory — bedankt voor uw vertrouwen.</p><table>
+<h1>Werkbon ${werkbonNr(data.number)}</h1><p>Riory — bedankt voor uw vertrouwen.</p><table>
 ${row("Klant", data.customer)}
 ${data.address ? row("Klantadres", data.address) : ""}
 ${data.siteAddress ? row("Werfadres", data.siteAddress) : ""}

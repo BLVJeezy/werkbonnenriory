@@ -54,7 +54,7 @@ export async function createWerkbonPdf(data: WerkbonData, photos: readonly Uint8
   // Title block, right aligned
   const title = "WERKBON";
   page.drawText(title, { x: W - M - bold.widthOfTextAtSize(title, 22), y: H - 50, size: 22, font: bold, color: ink });
-  const nr = `#${data.number}`;
+  const nr = werkbonNr(data.number);
   page.drawText(nr, { x: W - M - bold.widthOfTextAtSize(nr, 14), y: H - 68, size: 14, font: bold, color: orange });
   if (data.signedAt) {
     const d = new Date(data.signedAt).toLocaleDateString("nl-BE", { timeZone: "Europe/Brussels" });
@@ -154,7 +154,7 @@ export async function createWerkbonPdf(data: WerkbonData, photos: readonly Uint8
     if (i % 2 === 0) {
       page = doc.addPage([W, H]);
       header(false);
-      section(`Foto’s - werkbon #${data.number}`);
+      section(`Foto’s - werkbon ${werkbonNr(data.number)}`);
     }
     const scale = Math.min((W - 2 * M) / image.width, 280 / image.height, 1);
     const width = image.width * scale, height = image.height * scale;
@@ -168,11 +168,11 @@ export async function createWerkbonPdf(data: WerkbonData, photos: readonly Uint8
 
 /** Outlook file attachment: no public storage URL and no work-order details in the body. */
 export function werkbonPdfMessage(data: WerkbonData, recipient: string, pdfBase64: string, docUrl?: string) {
-  const text = `Beste klant,\n\nIn de bijlage vindt u uw werkbon #${data.number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`;
+  const text = `Beste klant,\n\nIn de bijlage vindt u uw werkbon ${werkbonNr(data.number)} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`;
   return {
-    subject: `Werkbon #${data.number} — ${data.customer}`,
+    subject: `Werkbon ${werkbonNr(data.number)} — ${data.customer}`,
     body: brandedBody(docUrl ? linkText(text, docUrl) : text),
     toRecipients: [{ emailAddress: { address: recipient } }],
-    attachments: [{ "@odata.type": "#microsoft.graph.fileAttachment", name: `Werkbon-${data.number}.pdf`, contentType: "application/pdf", contentBytes: pdfBase64 }],
+    attachments: [{ "@odata.type": "#microsoft.graph.fileAttachment", name: `Werkbon-${data.number ?? "nieuw"}.pdf`, contentType: "application/pdf", contentBytes: pdfBase64 }],
   };
 }
