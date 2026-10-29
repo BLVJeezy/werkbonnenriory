@@ -58,7 +58,7 @@ export function splitCustomerAddress(value: string) {
 export async function allCustomers(client: any) {
   const rows: any[] = [];
   for (let offset = 0; ; offset += 1000) {
-    const {data,error} = await client.from('customers').select('*').order('name').order('id').range(offset,offset+999);
+    const {data,error} = await client.from('customers').select('*').order('created_at', { ascending: false }).order('id').range(offset,offset+999);
     if(error) throw new Error(error.message);
     rows.push(...(data ?? [])); if(!data || data.length<1000) break;
   }

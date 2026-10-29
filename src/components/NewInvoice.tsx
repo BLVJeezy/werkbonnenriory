@@ -11,6 +11,7 @@ import { createManualInvoice } from "@/lib/invoices.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CustomerPicker } from "@/components/CustomerPicker";
 
 type Line = { description: string; quantity: string; unit: string; unitPrice: string; vatRate: string };
 const emptyLine: Line = { description: "", quantity: "1", unit: "st", unitPrice: "", vatRate: "21" };
@@ -63,8 +64,7 @@ export function NewInvoice({ onCreated }: { onCreated: () => void }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Klant</Label>
-          <Input list="new-invoice-customers" value={customerLabel} onChange={(e) => chooseCustomer(e.target.value)} placeholder="Zoek op klantnummer, naam of adres" />
-          <datalist id="new-invoice-customers">{customers.map((c: any) => <option key={c.id} value={lab(c)} />)}</datalist>
+          <CustomerPicker customers={customers} value={chosen?.id ?? ""} placeholder="Kies klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) chooseCustomer(lab(c)); }} />
         </div>
         <div className="space-y-1">
           <Label>Betreft (referentie, optioneel)</Label>

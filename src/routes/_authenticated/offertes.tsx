@@ -16,6 +16,9 @@ import { assignQuoteCrew, convertQuoteToTask, createQuote, quotePdf, sendQuote, 
 import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
 import { DocumentReport } from '@/components/DocumentReport';
+import { allCustomers } from '@/lib/customers';
+import { CustomerPicker } from '@/components/CustomerPicker';
+import { SearchSelect } from '@/components/SearchSelect';
 
 export const Route = createFileRoute("/_authenticated/offertes")({
   validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
@@ -55,7 +58,7 @@ function Offertes() {
   });
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
-    queryFn: async () => (await supabase.from("customers").select("*").order("name")).data ?? [],
+    queryFn: () => allCustomers(supabase),
   });
   const { data: crews = [] } = useQuery({
     queryKey: ["quote_crews"],
@@ -224,22 +227,19 @@ function Offertes() {
 
       {showForm && (
         <form onSubmit={maak} className="space-y-3 rounded-md border bg-card p-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0 space-y-1">
               <Label>Klant</Label>
               {editId ? (
                 <p className="flex h-10 items-center rounded-md border bg-muted px-2 font-bold">{editCustomer?.name}</p>
               ) : (
-                <select required className="h-10 w-full rounded-md border bg-background px-2" value={customerId} onChange={(e) => {
-                  setCustomerId(e.target.value);
+                <CustomerPicker customers={customers} value={customerId} placeholder="Kies klant…" onChange={(id) => {
+                  setCustomerId(id);
                   setKm(null);
                   if (kmOn) setKmOn(false);
-                  const c = customers.find((x) => x.id === e.target.value);
+                  const c = customers.find((x) => x.id === id);
                   if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate), undefined, { postalCode: c.postal_code })));
-                }}>
-                  <option value="">— Kies klant —</option>
-                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.city ? ` (${c.city})` : ""}</option>)}
-                </select>
+                }} />
               )}
             </div>
             <div className="space-y-1">
@@ -254,17 +254,13 @@ function Offertes() {
             {lines.map((l, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2">
                 <Textarea placeholder="Omschrijving (of kies product)" rows={Math.min(8, Math.max(1, l.description.split("\n").length))} className="min-h-10 min-w-48 flex-1 basis-full sm:basis-0" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} />
-                <select className="h-10 rounded-md border bg-background px-2" value="" onChange={(e) => e.target.value && pickProduct(i, e.target.value)}>
-                  <option value="">Product…</option>
-                  {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                <SearchSelect className="basis-full sm:w-64 sm:basis-auto" placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={products.map(p => ({ value: p.id, label: p.name, search: `${p.alias ?? ''} ${p.description ?? ''}` }))} />
                 <Input type="number" step="any" min="0" className="w-20" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} />
                 <Input className="w-16" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} />
                 <Input type="number" step="0.01" min="0" placeholder="Prijs" className="w-28" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} />
                 <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
               </div>
             ))}
-            <datalist id="offerte-producten">{products.map((p) => <option key={p.id} value={p.name} />)}</datalist>
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
           </div>
           <div className="space-y-1">
