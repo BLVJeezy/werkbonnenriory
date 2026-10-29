@@ -233,7 +233,7 @@ function Detail() {
             <option value="">{acts.length ? "— Kies activiteit —" : "Nog geen activiteiten (zie Tarieven)"}</option>
             {acts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}{perms.showPrices && ` — ${money(Number(a.hourly_rate))}/u`}
+                {a.name}{perms.showPrices && (a.hourly_rate === null ? " — geen tarief" : ` — ${money(Number(a.hourly_rate))}/u`)}
               </option>
             ))}
           </select>
@@ -495,7 +495,7 @@ function Detail() {
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
         {perms.showPrices && <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
           <dt>
-            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u{wo.warranty && " − 1 u garantie"} × {euro(Number(activity?.hourly_rate ?? 0))}
+            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u{wo.warranty && " − 1 u garantie"} × {activity?.hourly_rate === null ? "geen tarief" : euro(Number(activity?.hourly_rate ?? 0))}
             {!activity && <span className="text-destructive"> (kies activiteit)</span>}
           </dt>
           <dd className="text-right">{euro(totals.labour)}</dd>
