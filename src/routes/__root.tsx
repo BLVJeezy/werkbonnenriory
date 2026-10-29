@@ -37,9 +37,8 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: ErrorComponentProps) {
+function ErrorComponent({ error }: ErrorComponentProps) {
   console.error(error);
-  const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
@@ -51,7 +50,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
           Deze pagina laadde niet
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. U kunt de pagina opnieuw laden of terug naar huis.
+          Er liep iets mis tijdens het laden. Herlaad de pagina; in de meeste gevallen is dat genoeg.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
