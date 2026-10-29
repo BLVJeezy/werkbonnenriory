@@ -31,8 +31,10 @@ export const previewWerkbonPdf = createServerFn({ method: 'POST' })
     const dto = visibleWerkbonPreview(werkbonMailData({ ...wo, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), paid_amount: wo.paid_amount == null ? null : Number(wo.paid_amount) }, activity.data?.name ?? null, totalSeconds(times.data ?? [], Date.now()),
       (materials.data ?? []).map(m => ({ name: m.name, quantity: Number(m.quantity), unit: m.unit }))), permissions);
     const { createWerkbonPdf } = await import('./werkbon-pdf');
-    const pdf = await createWerkbonPdf(dto);
-    let binary = '';
-    for (const byte of pdf) binary += String.fromCharCode(byte);
-    return { base64: btoa(binary), number: wo.number };
+    const { loadWerkbonPhotos } = await import('./werkbon-photos.server');
+    const pdf = await createWerkbonPdf(dto, await loadWerkbonPhotos(supabase, wo.id));
+    // Return bytes directly: photo PDFs exceed the server-function JSON output limit.
+    return new Response(new Blob([new Uint8Array(pdf)], { type: 'application/pdf' }), {
+      headers: { 'Content-Type': 'application/pdf', 'Cache-Control': 'private, no-store', 'X-Werkbon-Number': String(wo.number) },
+    });
   });
