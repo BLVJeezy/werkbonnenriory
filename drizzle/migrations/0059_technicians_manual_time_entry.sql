@@ -1,0 +1,2 @@
+ALTER TABLE public.technicians ADD COLUMN manual_time_entry boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.technicians.manual_time_entry IS 'Ploeg mag gewerkte tijd manueel invullen naast start/stop-knoppen';

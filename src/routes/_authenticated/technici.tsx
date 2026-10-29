@@ -105,6 +105,7 @@ function Technici() {
                     ["can_payment", "Afrekenen"],
                     ["show_signed", "Afgetekende werkbonnen"],
                     ["large_text", "Extra grote letters"],
+                    ["manual_time_entry", "Tijd manueel invullen"],
                   ] as const
                 ).map(([k, label]) => (
                   <label key={k} className="flex items-center gap-1.5">

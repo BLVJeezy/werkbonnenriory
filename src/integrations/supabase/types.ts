@@ -1247,6 +1247,7 @@ export type Database = {
           external_planning: boolean
           id: string
           large_text: boolean
+          manual_time_entry: boolean
           name: string
           phone: string | null
           show_contact: boolean
@@ -1262,6 +1263,7 @@ export type Database = {
           external_planning?: boolean
           id?: string
           large_text?: boolean
+          manual_time_entry?: boolean
           name: string
           phone?: string | null
           show_contact?: boolean
@@ -1277,6 +1279,7 @@ export type Database = {
           external_planning?: boolean
           id?: string
           large_text?: boolean
+          manual_time_entry?: boolean
           name?: string
           phone?: string | null
           show_contact?: boolean
