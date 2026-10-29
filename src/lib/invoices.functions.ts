@@ -39,13 +39,12 @@ export const createInvoices = createServerFn({ method: "POST" })
       const seconds = (t.data ?? []).reduce((sum: number, e: any) => sum + (e.ended_at ? (new Date(e.ended_at).getTime() - new Date(e.started_at).getTime()) / 1000 : 0), 0);
       const act = (acts ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
       const inv = buildInvoice({ wo: { ...wo, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) }, activity: act, seconds, kmRate: Number(s?.km_rate ?? 0), materials: m.data ?? [] });
-      const { data: number, error: ne } = await supabase.rpc("next_invoice_number");
-      if (ne) throw new Error(ne.message);
       const issue = new Date().toISOString().slice(0, 10);
-      const { data: row, error } = await supabase.from("invoices").insert({
-        number, work_order_id: id, issue_date: issue, due_date: addDays(issue, Number(s?.payment_days ?? 14)),
-        customer: inv.customer, lines: inv.lines, vat_rate: inv.vatRate, net: inv.net, vat: inv.vat, total: inv.total, paid_amount: inv.paidAmount,
-      }).select("*").single();
+      // Atomic: number and invoice are created in one transaction, so a failed insert cannot burn a number.
+      const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
+        p_work_order_id: id, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+        p_customer: inv.customer, p_lines: inv.lines, p_vat_rate: inv.vatRate, p_net: inv.net, p_vat: inv.vat, p_total: inv.total, p_paid_amount: inv.paidAmount,
+      });
       if (error) throw new Error(error.message);
       created.push(row.number);
       if (isFullyPaid(inv.total, inv.paidAmount)) { const r = await (await import('./invoice-sending.server')).sendOne(supabase, row); r.ok ? sent++ : failed++; }
@@ -77,14 +76,12 @@ export const createManualInvoice = createServerFn({ method: "POST" })
       customer = { name: m.name.trim(), address: null, siteAddress: null, vatNumber: m.vatNumber?.trim() || null, email: m.email?.trim() || null, street: m.street?.trim() || null, houseNumber: m.houseNumber?.trim() || null, postalCode: m.postalCode?.trim() || null, city: m.city?.trim() || null };
     }
     const { data: s } = await supabase.from("settings").select("payment_days").eq("id", 1).single();
-    const { data: number, error: ne } = await supabase.rpc("next_invoice_number");
-    if (ne) throw new Error(ne.message);
     const issue = new Date().toISOString().slice(0, 10);
-    const { data: row, error } = await supabase.from("invoices").insert({
-      number, work_order_id: null, issue_date: issue, due_date: addDays(issue, Number(s?.payment_days ?? 14)),
-      customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, paid_amount: 0,
-      kind: "factuur", contract_reference: data.reference?.trim() || "",
-    }).select("*").single();
+    const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
+      p_work_order_id: null, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+      p_customer: customer, p_lines: calc.lines, p_vat_rate: calc.vatRate, p_net: calc.net, p_vat: calc.vat, p_total: calc.total, p_paid_amount: 0,
+      p_kind: "factuur", p_contract_reference: data.reference?.trim() || "",
+    });
     if (error) throw new Error(error.message);
     return row;
   });
@@ -121,14 +118,12 @@ export const createCreditNote = createServerFn({ method: "POST" })
     const { data: existing } = await supabase.from("invoices").select("id").eq("credit_for", inv.id).maybeSingle();
     if (existing) throw new Error("Er bestaat al een creditnota voor deze factuur");
     const cn = buildCreditNote({ lines: inv.lines as InvoiceLine[], vatRate: Number(inv.vat_rate), net: Number(inv.net), vat: Number(inv.vat), total: Number(inv.total) });
-    const { data: number, error: ne } = await supabase.rpc("next_invoice_number");
-    if (ne) throw new Error(ne.message);
     const issue = new Date().toISOString().slice(0, 10);
-    const { data: row, error } = await supabase.from("invoices").insert({
-      number, work_order_id: inv.work_order_id, issue_date: issue, due_date: issue,
-      customer: inv.customer, lines: cn.lines, vat_rate: cn.vatRate, net: cn.net, vat: cn.vat, total: cn.total, paid_amount: 0,
-      kind: "creditnota", credit_for: inv.id,
-    }).select("*").single();
+    const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
+      p_work_order_id: inv.work_order_id, p_issue_date: issue, p_due_date: issue,
+      p_customer: inv.customer, p_lines: cn.lines, p_vat_rate: cn.vatRate, p_net: cn.net, p_vat: cn.vat, p_total: cn.total, p_paid_amount: 0,
+      p_kind: "creditnota", p_credit_for: inv.id,
+    });
     if (error) throw new Error(error.message);
     return row;
   });
