@@ -21,10 +21,17 @@ type Props = {
   showTimer?: boolean;
   /** Toon een vakje om gewerkte tijd manueel in te vullen (per ploeg instelbaar). */
   manualTime?: boolean;
+  /** Tijdstip waarop de ploeg aanduidde dat de klant niet opneemt. */
+  noAnswerAt?: string | null;
 };
 
+/** Het label "Neemt niet op" blijft 24 uur staan. */
+export function isNoAnswer(at: string | null | undefined, now = Date.now()) {
+  return !!at && now - new Date(at).getTime() < 24 * 3600_000;
+}
+
 /** Start/stop timer, route and call buttons. Stopping opens the task page. */
-export function TaskActions({ id, address, phone, contactPhone, contactName, runningEntryId, showTimer = true, manualTime = false }: Props) {
+export function TaskActions({ id, address, phone, contactPhone, contactName, runningEntryId, showTimer = true, manualTime = false, noAnswerAt = null }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -48,6 +55,17 @@ export function TaskActions({ id, address, phone, contactPhone, contactName, run
     }
     toast.success(`${String(h).replace(".", ",")} uur opgeslagen`);
     setHours("");
+    qc.invalidateQueries({ queryKey: ["work_orders"] });
+    qc.invalidateQueries({ queryKey: ["work_order", id] });
+  }
+
+  const noAnswer = isNoAnswer(noAnswerAt);
+  async function toggleNoAnswer() {
+    setBusy(true);
+    const { error } = await supabase.from("work_orders").update({ no_answer_at: noAnswer ? null : new Date().toISOString() }).eq("id", id);
+    setBusy(false);
+    if (error) return void toast.error(error.message);
+    toast.success(noAnswer ? "Markering verwijderd" : "Gemarkeerd: klant neemt niet op");
     qc.invalidateQueries({ queryKey: ["work_orders"] });
     qc.invalidateQueries({ queryKey: ["work_order", id] });
   }
@@ -102,6 +120,9 @@ export function TaskActions({ id, address, phone, contactPhone, contactName, run
           <a href={`tel:${calls.contact}`}>Bel contactpersoon{contactName ? ` (${contactName})` : ""}</a>
         </Button>
       )}
+      <Button size="sm" variant={noAnswer ? "destructive" : "outline"} disabled={busy} onClick={toggleNoAnswer}>
+        {noAnswer ? "Neemt niet op ✓" : "Klant neemt niet op"}
+      </Button>
       {calls.customer && (
         <Button size="sm" variant="outline" asChild>
           <a href={`tel:${calls.customer}`}>Bel klant</a>
