@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Simpla sales sync is retired; enqueue does nothing; purchase imports stay read-only.
-- Mailtaken sales feed requires a shared server token and stable source IDs to prevent duplicate accounting imports.
+- Mailtaken sales feed requires a shared server token and stable source IDs against duplicate accounting imports.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery: public /reset-password and recovery sessions; never disclose passwords.
 - Purchase payments use a tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes excluded. Original purchase PDFs stay private attachments.
@@ -27,11 +27,11 @@
 - PDF/UBL share invoice-vat-notices for all line rates; preserve tax treatment and sent snapshots.
 - Crews log in with name + password; `src/lib/login.ts` maps a name to an internal non-mailable email. Per-crew visibility flags live on `technicians` (signed orders enforced in RLS, the rest hidden in the UI).
 - Mail import reads the inbox through a per-admin Microsoft Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox account signs in itself without Exchange delegation.
-- Admin-set crew accessibility flags use `use-role.ts` and an `<html>` class; `text-size.ts` provides local overrides for shared tablets. Shared layout collapses mobile navigation into a menu.
+- Crew accessibility flags use `use-role.ts` and an `<html>` class; `text-size.ts` gives local overrides for shared tablets. Mobile navigation collapses into a menu.
 - Invoices snapshot customer/lines, send PDF+UBL with OkiOki in BCC, and lock accepted legs for retries; only paid invoices auto-send. Mail acceptance is not Peppol confirmation. Reminders use explicit debtor type, tested balance/fee/waiting rules and one-time claims; uncertain Outlook outcomes require review.
 - Invoice numbers are assigned atomically by the create_numbered_invoice RPC (counter + insert in one transaction); never call next_invoice_number separately from the insert, or failed inserts burn numbers and create gaps.
 - Bulk work-order deletion uses the shared delete-task helper with one explicit confirmation and selected IDs only; invalidate both work-order and invoice lists so deleted orders cannot remain selectable.
-- Quotes use OFF numbering and secret-token signing; privileged reads stay inside handlers. Approval atomically creates a task via `ensure_approved_quote_task`; `work_order_id` prevents duplicates, source worksite and crew persist, and `quote_approved` drives labels. Admin-only quote crew changes propagate without altering completion.
+- Quotes use OFF numbering and secret-token signing; privileged reads stay inside handlers. Approval atomically creates one task via `ensure_approved_quote_task` (`work_order_id` prevents duplicates); source worksite and crew persist, `quote_approved` drives labels.
 - Quote signing emails use the canonical published app URL through the tested signing-link helper, never the request origin, because preview and internal hosts are inaccessible to customers.
 - Credit notes are `invoices` rows with `kind = 'creditnota'` and `credit_for` to the original; same numbering, reversed by tested `buildCreditNote`. `work_order_id` is nullable and not unique: credit notes share it, manual invoices have none and reuse `contract_reference` as reference.
 - Products can be flagged `admin_only`; the read policy excludes them for non-admins and the material picker filters them too, so crews cannot select them even via the API.
