@@ -37,7 +37,7 @@ export function PdfPreview({ base64 }: { base64: string }) {
         host.appendChild(canvas);
         const canvasContext = canvas.getContext('2d');
         if (!canvasContext) throw new Error('PDF canvas unavailable');
-        await page.render({ canvas, canvasContext, viewport }).promise;
+        await page.render({ canvasContext, viewport }).promise;
         if (i === 1 && !cancelled) setLoading(false);
       }
     }
