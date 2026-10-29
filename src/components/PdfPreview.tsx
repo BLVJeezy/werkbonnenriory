@@ -19,7 +19,7 @@ export function PdfPreview({ base64 }: { base64: string }) {
       const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
       if (cancelled || !host) return;
       pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-      const task = pdfjs.getDocument({ data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)), isEvalSupported: false });
+      const task = pdfjs.getDocument({ data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)), useSystemFonts: true });
       destroy = () => { void task.destroy(); };
       const pdf = await task.promise;
       for (let i = 1; i <= pdf.numPages && !cancelled; i++) {
@@ -35,7 +35,9 @@ export function PdfPreview({ base64 }: { base64: string }) {
         canvas.className = 'block h-auto w-full';
         canvas.setAttribute('aria-label', `PDF pagina ${i}`);
         host.appendChild(canvas);
-        await page.render({ canvas, viewport }).promise;
+        const canvasContext = canvas.getContext('2d');
+        if (!canvasContext) throw new Error('PDF canvas unavailable');
+        await page.render({ canvas, canvasContext, viewport }).promise;
         if (i === 1 && !cancelled) setLoading(false);
       }
     }
