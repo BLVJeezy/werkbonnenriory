@@ -19,4 +19,12 @@ describe("isFullyPlanned", () => {
   it("blijft onvolledig zonder activiteit", () => {
     expect(isFullyPlanned({ ...base, activity_id: null })).toBe(false);
   });
+
+  it("contracttaak is volledig zonder activiteit", () => {
+    expect(isFullyPlanned({ ...base, activity_id: null, contract_id: "c1" })).toBe(true);
+  });
+
+  it("contracttaak blijft onvolledig zonder ploeg", () => {
+    expect(isFullyPlanned({ ...base, technician_id: null, activity_id: null, contract_id: "c1" })).toBe(false);
+  });
 });
