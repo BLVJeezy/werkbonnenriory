@@ -10,7 +10,7 @@ type WerkbonData = ReturnType<typeof werkbonMailData>;
 const W = 595.28, H = 841.89, M = 48;
 
 /** Pure, Worker-compatible PDF in the riory.be house style; only allowlisted fields (paid amount if paid, no rates or line prices). */
-export async function createWerkbonPdf(data: WerkbonData): Promise<Uint8Array> {
+export async function createWerkbonPdf(data: WerkbonData, photos: readonly Uint8Array[] = []): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -143,6 +143,25 @@ export async function createWerkbonPdf(data: WerkbonData): Promise<Uint8Array> {
   }
   ensure(16);
   page.drawText(printable(data.signedName ? `Afgetekend door ${data.signedName}` : data.paid ? "Afgesloten na betaling." : "Nog niet afgetekend."), { x: M, y, size: 10.5, font, color: ink });
+  // Photo annex precedes the conditions; all photos belong to this same PDF snapshot.
+  for (let i = 0; i < photos.length; i++) {
+    const bytes = photos[i];
+    if (!bytes) continue;
+    const isPng = bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71;
+    const isJpeg = bytes[0] === 255 && bytes[1] === 216;
+    if (!isPng && !isJpeg) throw new Error('Een foto heeft een niet-ondersteund formaat. Gebruik JPG of PNG voor de werkbon.');
+    const image = isPng ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+    if (i % 2 === 0) {
+      page = doc.addPage([W, H]);
+      header(false);
+      section(`Foto’s - werkbon #${data.number}`);
+    }
+    const scale = Math.min((W - 2 * M) / image.width, 280 / image.height, 1);
+    const width = image.width * scale, height = image.height * scale;
+    page.drawText(`Foto ${i + 1} van ${photos.length}`, { x: M, y, size: 9, font, color: muted });
+    page.drawImage(image, { x: M + (W - 2 * M - width) / 2, y: y - 12 - height, width, height });
+    y -= 320;
+  }
   await appendTermsPdf(doc);
   return doc.save();
 }
