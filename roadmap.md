@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Productzoeken bij offertes, doorzoekbare klantkeuzes overal en nieuwste klanten bovenaan; controleren in de app.
 - [x] Mobiel beheer benut schermbreedte met kleinere zijmarges, compact inklapmenu en geordende taak-/offertebediening. Zes pagina’s op 402px zonder horizontale overloop gecontroleerd; menu openen/navigeren/sluiten en desktopmenu getest, zeven tests geslaagd, build OK.
 - [x] Ludwig Vandebosch en Willy Ketelslagers aan hun offertes gekoppeld en verborgen tot akkoord; offerteploeg kiesbaar en automatisch overgenomen. Klantondertekening plaatst atomisch een nieuwe oningeplande taak met label Offerte goedgekeurd, behoud van werfadres en ploeg. Tijdelijke offerte door volledige flow en herladen gecontroleerd, proefgegevens verwijderd; acht tests geslaagd, build OK, geen mail verstuurd.
 - [x] AI-nieuwsbriefconcept vanuit eigen tekst: echte generatie als beheerder, voorstel overnemen/bewerken en mailvoorbeeld gecontroleerd; negen tests geslaagd, build OK. Geen campagne automatisch opgeslagen, geen mail verstuurd of toestemming gewijzigd.
