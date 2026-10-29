@@ -1,30 +1,53 @@
 import { useState } from 'react';
 import { useServerFn } from '@tanstack/react-start';
-import { Eye, LoaderCircle } from 'lucide-react';
+import { Download, Eye, LoaderCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { previewWerkbonPdf } from '@/lib/werkbon-preview.functions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PdfPreview } from '@/components/PdfPreview';
 
 export function WorkOrderPreview({ workOrderId }: { workOrderId: string }) {
   const preview = useServerFn(previewWerkbonPdf);
   const [busy, setBusy] = useState(false);
+  const [opened, setOpened] = useState(false);
+  const [result, setResult] = useState<{ base64: string; number: number } | null>(null);
+  const [error, setError] = useState('');
   async function open() {
-    const tab = window.open('', '_blank');
-    if (!tab) { toast.error('Sta pop-ups toe om het werkbonvoorbeeld te openen'); return; }
-    tab.opener = null;
-    tab.document.title = 'Werkbonvoorbeeld — Riory';
-    tab.document.body.textContent = 'Werkbonvoorbeeld laden…';
+    setOpened(true);
+    setResult(null);
+    setError('');
     setBusy(true);
     try {
-      const result = await preview({ data: { workOrderId } });
-      const bytes = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-      tab.location.href = url;
-      window.setTimeout(() => URL.revokeObjectURL(url), 300000);
+      setResult(await preview({ data: { workOrderId } }));
     } catch (error) {
-      tab.close();
-      toast.error(error instanceof Error ? error.message : 'Werkbonvoorbeeld kon niet geopend worden');
+      const message = error instanceof Error ? error.message : 'Werkbonvoorbeeld kon niet geopend worden';
+      setError(message);
+      toast.error(message);
     } finally { setBusy(false); }
   }
-  return <Button variant="outline" disabled={busy} onClick={open}>{busy ? <LoaderCircle className="animate-spin" /> : <Eye />} {busy ? 'Voorbeeld laden…' : 'Voorbeeld werkbon'}</Button>;
+  function download() {
+    if (!result) return;
+    const bytes = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Werkbon-${result.number}.pdf`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  return <>
+    <Button variant="outline" disabled={busy} onClick={open}>{busy ? <LoaderCircle className="animate-spin" /> : <Eye />} {busy ? 'Voorbeeld laden…' : 'Voorbeeld werkbon'}</Button>
+    <Dialog open={opened} onOpenChange={setOpened}>
+      <DialogContent aria-describedby={undefined} className="flex max-h-[92dvh] w-[calc(100%-1rem)] max-w-4xl flex-col p-3 sm:p-5">
+        <DialogHeader className="shrink-0 pr-8"><DialogTitle>Voorbeeld werkbon{result ? ` #${result.number}` : ''}</DialogTitle></DialogHeader>
+        {result && <Button className="shrink-0 self-start" size="sm" variant="outline" onClick={download}><Download /> PDF downloaden</Button>}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {busy && <p role="status" className="flex items-center justify-center gap-2 p-8 text-muted-foreground"><LoaderCircle className="size-5 animate-spin" /> Werkbon laden…</p>}
+          {error && <p role="alert" className="p-4 text-destructive">{error}</p>}
+          {result && <PdfPreview base64={result.base64} />}
+        </div>
+      </DialogContent>
+    </Dialog>
+  </>;
 }
