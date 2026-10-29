@@ -38,3 +38,5 @@
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.
 - Quotes keep source/output tasks separate; DB-enforced quote_pending hides sources and unapproved outputs. Scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.
+- Work order numbers are assigned only at the first time entry (trigger on time_entries) or on completion (BEFORE UPDATE trigger); tasks without a number render as "Nieuw" via werkbonNr() from src/lib/werkbon-number.ts. The number column is nullable — never assume it exists for open tasks.
+- Invoice numbers are assigned atomically by the create_numbered_invoice RPC (counter + insert in one transaction); never call next_invoice_number separately from the insert, or failed inserts burn numbers and create gaps.
