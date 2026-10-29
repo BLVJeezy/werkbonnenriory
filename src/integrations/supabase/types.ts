@@ -17,19 +17,19 @@ export type Database = {
       activities: {
         Row: {
           created_at: string
-          hourly_rate: number
+          hourly_rate: number | null
           id: string
           name: string
         }
         Insert: {
           created_at?: string
-          hourly_rate?: number
+          hourly_rate?: number | null
           id?: string
           name: string
         }
         Update: {
           created_at?: string
-          hourly_rate?: number
+          hourly_rate?: number | null
           id?: string
           name?: string
         }

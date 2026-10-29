@@ -456,6 +456,13 @@
       "when": 1793279077775,
       "tag": "0064_ponto_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1793279699893,
+      "tag": "0065_activities_optional_rate",
+      "breakpoints": true
     }
   ]
 }
