@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Database } from "@/integrations/supabase/types";
 import { SignaturePad } from "@/components/SignaturePad";
 import { formatDuration, totalSeconds } from "@/lib/time";
+import { clearAppEntry, isRestoredWorkOrder } from "@/lib/cold-entry";
 import { SiteAddressFields } from "@/components/SiteAddressFields";
 import { destinationAddress, destinationLabel, destinationLines, formatAddress, type AddressParts, type SiteAddressParts } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
@@ -97,6 +98,20 @@ function Detail() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needKm, woAddr]);
+
+  // Zet een bij het opstarten herstelde werkbon niet terug open. Een afgewerkte bon
+  // stuurt de ploeg of admin dan terug naar de takenlijst; een bon waar nog gewerkt
+  // wordt blijft open staan. Bewust klikken in de app telt niet als herstellen.
+  useEffect(() => {
+    if (!data?.wo) return;
+    if (!isRestoredWorkOrder(`/werkbonnen/${id}`)) return;
+    clearAppEntry();
+    if (data.wo.status === "afgetekend" && !data.times.some((t) => !t.ended_at)) {
+      navigate({ to: "/werkbonnen", search: {}, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, id, navigate]);
+
 
   if (!data?.wo) return <p className="text-muted-foreground">Laden…</p>;
   const { wo, times, mats, techs, acts, settings } = data;
