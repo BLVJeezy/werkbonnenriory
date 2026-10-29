@@ -19,6 +19,8 @@ import { taskListRows } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
 import { AppointmentMailSync } from "@/components/AppointmentMailSync";
 import { CustomerInvite } from "@/components/CustomerInvite";
+import { dayPartLabel } from "@/lib/invite-slots";
+import { appointmentStatuses } from "@/lib/appointments";
 import { X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
@@ -57,6 +59,19 @@ function Kalender() {
       return { techs: t.data ?? [], acts: a.data ?? [], kmRate: Number(s.data?.km_rate ?? 0) };
     },
   });
+  // Open uitnodigingen: de tabel is alleen voor de beheerder leesbaar, dus ploegen zien hier niets.
+  const { data: appts = [] } = useQuery({
+    queryKey: ["appointment_requests"],
+    refetchInterval: 10000,
+    queryFn: async () => (await supabase.from("appointment_requests").select("work_order_id,status,expires_at,created_at").order("created_at", { ascending: false })).data ?? [],
+  });
+  const waiting = new Map<string, string>();
+  for (const a of appts) if (!waiting.has(a.work_order_id) && Date.parse(a.expires_at) >= Date.now()) waiting.set(a.work_order_id, a.status);
+  // Status van een uitnodiging die nog op de klant of de ploeg wacht; leeg als alles bevestigd is.
+  const waitingLabel = (id: string) => {
+    const s = waiting.get(id);
+    return s && s !== "confirmed" ? appointmentStatuses[s] ?? s : "";
+  };
   async function set(id: string, patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
     const { error } = await supabase.from("work_orders").update(patch).eq("id", id);
     if (error) toast.error(error.message);
@@ -131,7 +146,7 @@ function Kalender() {
       <div className="min-w-0">
       {w.quote_approved && <span className="mb-1 inline-block rounded bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">Offerte goedgekeurd</span>}
       {horizontal && w.scheduled_date && !isFullyPlanned(w) && <p className="mb-1 text-xs font-bold text-destructive">{w.contract_id ? "Nog niet volledig ingepland — vul dag en ploeg in" : "Nog niet volledig ingepland — vul dag, ploeg én activiteit in"}</p>}
-      {(isUrgentOpen(w) || w.contract_id) && <div className="mb-1 flex gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-1 text-destructive-foreground">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}</div>}
+      {(isUrgentOpen(w) || w.contract_id || dayPartLabel(w.scheduled_from) || waitingLabel(w.id)) && <div className="mb-1 flex flex-wrap gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-1 text-destructive-foreground">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}{dayPartLabel(w.scheduled_from) && <span className="rounded bg-primary px-1 text-primary-foreground">{dayPartLabel(w.scheduled_from)}</span>}{waitingLabel(w.id) && <span className="rounded border border-primary/50 px-1 text-primary">{waitingLabel(w.id)}</span>}</div>}
       <div className="flex items-start gap-1">
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">{werkbonNr(w.number)} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
         <Button type="button" size="icon" variant="ghost" title="Verwijderen" aria-label="Taak verwijderen" className="h-7 w-7 shrink-0" onClick={() => deleteTask(qc, w.id, `Taak ${werkbonNr(w.number)} (${w.customer_name})`)}><X /></Button>
