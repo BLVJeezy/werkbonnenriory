@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
+import { Route as AuthenticatedBetalingenRouteImport } from './routes/_authenticated/betalingen'
 import { Route as AuthenticatedContractenRouteImport } from './routes/_authenticated/contracten'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
@@ -65,6 +66,11 @@ const AuthenticatedAankoopfacturenRoute =
     path: '/aankoopfacturen',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedBetalingenRoute = AuthenticatedBetalingenRouteImport.update({
+  id: '/betalingen',
+  path: '/betalingen',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedContractenRoute = AuthenticatedContractenRouteImport.update({
   id: '/contracten',
   path: '/contracten',
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/betalingen': typeof AuthenticatedBetalingenRoute
   '/contracten': typeof AuthenticatedContractenRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/betalingen': typeof AuthenticatedBetalingenRoute
   '/contracten': typeof AuthenticatedContractenRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
@@ -272,6 +280,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/_authenticated/betalingen': typeof AuthenticatedBetalingenRoute
   '/_authenticated/contracten': typeof AuthenticatedContractenRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
@@ -305,6 +314,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/aankoopfacturen'
+    | '/betalingen'
     | '/contracten'
     | '/dashboard'
     | '/facturen'
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/aankoopfacturen'
+    | '/betalingen'
     | '/contracten'
     | '/dashboard'
     | '/facturen'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/aankoopfacturen'
+    | '/_authenticated/betalingen'
     | '/_authenticated/contracten'
     | '/_authenticated/dashboard'
     | '/_authenticated/facturen'
@@ -449,6 +461,13 @@ declare module '@tanstack/react-router' {
       path: '/aankoopfacturen'
       fullPath: '/aankoopfacturen'
       preLoaderRoute: typeof AuthenticatedAankoopfacturenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/betalingen': {
+      id: '/_authenticated/betalingen'
+      path: '/betalingen'
+      fullPath: '/betalingen'
+      preLoaderRoute: typeof AuthenticatedBetalingenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/contracten': {
@@ -631,6 +650,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAankoopfacturenRoute: typeof AuthenticatedAankoopfacturenRoute
+  AuthenticatedBetalingenRoute: typeof AuthenticatedBetalingenRoute
   AuthenticatedContractenRoute: typeof AuthenticatedContractenRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
@@ -648,6 +668,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAankoopfacturenRoute: AuthenticatedAankoopfacturenRoute,
+  AuthenticatedBetalingenRoute: AuthenticatedBetalingenRoute,
   AuthenticatedContractenRoute: AuthenticatedContractenRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
