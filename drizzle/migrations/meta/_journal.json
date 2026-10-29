@@ -393,6 +393,13 @@
       "when": 1793264135893,
       "tag": "0055_add_marketing_role",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1793264161562,
+      "tag": "0056_marketing_access",
+      "breakpoints": true
     }
   ]
 }
