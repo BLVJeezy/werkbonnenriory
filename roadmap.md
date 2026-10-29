@@ -110,5 +110,5 @@
 - [x] Taken: dag, ploeg en activiteit rechtstreeks in de lijst kiezen; dringende taken (uit mail of handmatig) met rood kader bovenaan en in de agenda.
 - [x] Terugkerende opdrachten (contracten) in de agenda, elke N weken/maanden/jaren, 8 weken vooruit ingepland; contractwerkbonnen worden nooit gefactureerd.
 - [ ] Automatische contractfacturatie — contractenlijst ontvangen, maar factuurritme en eerstvolgende factuurdatum ontbreken; vereist bevestiging door gebruiker.
-- [ ] Bon Ronald Stassen afgerekend maar open
-- [ ] Ploeg ontbreekt bij te factureren werkbonnen
+- [x] Bon Ronald Stassen afgerekend maar open
+- [x] Ploeg ontbreekt bij te factureren werkbonnen
