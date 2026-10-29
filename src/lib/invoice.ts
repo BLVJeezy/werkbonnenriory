@@ -17,7 +17,7 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Pure: turns a signed work order into invoice lines and totals using the same billing rules as the app. */
 export function buildInvoice(o: {
-  wo: InvoiceWorkOrder; activity: { name: string; hourly_rate: number } | null; seconds: number;
+  wo: InvoiceWorkOrder; activity: { name: string; hourly_rate: number | null } | null; seconds: number;
   materials: { name: string; quantity: number; unit: string; unit_price: number }[]; kmRate: number;
 }) {
   const { wo } = o;
