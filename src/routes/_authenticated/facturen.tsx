@@ -13,7 +13,7 @@ import { euro } from "@/lib/billing";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoices } from "@/lib/invoices.functions";
 import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
-import { Trash2 } from "lucide-react";
+import { QrCode, Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 import { PaymentReminders } from "@/components/PaymentReminders";
 import { NewInvoice } from "@/components/NewInvoice";
@@ -21,6 +21,7 @@ import { DocumentReport } from '@/components/DocumentReport';
 import { InvoiceMailboxConnect } from '@/components/MailboxConnect';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { sendWerkbonEmail } from '@/lib/werkbon-mail.functions';
+import { InvoicePaymentDetails } from '@/components/InvoicePaymentDetails';
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -226,6 +227,9 @@ function Facturen() {
               {i.work_order_id && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendWerkbon(i.work_order_id!)}>Werkbon verzenden</Button>}
               {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
               {i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005 && <PaymentReminders invoiceId={i.id} />}
+              {i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005 && (
+                <InvoicePaymentDetails invoice={i} company={{ name: s?.company_name ?? "Riory bv", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null }} />
+              )}
               {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
               {i.send_error && <p className="w-full text-xs text-destructive">{i.send_error}</p>}
             </li>
