@@ -375,7 +375,7 @@ function Lijst() {
 }
 
 type Row = SiteAddressParts & {
-  technicians?: { name: string; color: string | null } | null;
+  technicians?: { name: string; color: string | null; manual_time_entry?: boolean | null } | null;
   sort_order: number;
   scheduled_date: string | null;
   id: string;
@@ -445,7 +445,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
       {below}
       <div className="flex flex-wrap items-center gap-2">
         <WorkOrderPreview workOrderId={w.id} />
-        {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} />}
+        {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} />}
       </div>
     </div>
   );
