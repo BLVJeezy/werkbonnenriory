@@ -36,3 +36,19 @@ it('hides quote-linked tasks until approval, even if their task status is reassi
     { id: 'approved', status: 'nieuw', quote_pending: false },
   ]).map(row => row.id)).toEqual(['approved']);
 });
+
+it('excludes Ludwig Vandebosch and Willy Ketelslagers while their sent quotes await approval', () => {
+  expect(newTaskRows([
+    { customer_name: 'Ludwig Vandebosch', status: 'toegewezen', scheduled_date: null, quote_pending: true },
+    { customer_name: 'Willy Ketelslagers', status: 'toegewezen', scheduled_date: null, quote_pending: true },
+  ])).toEqual([]);
+});
+
+it('returns approved quote output tasks to unplanned while retaining their assigned crew', () => {
+  const approved = { id: 'approved-output', status: 'toegewezen', scheduled_date: null, quote_pending: false, quote_approved: true, technician_id: 'assigned-crew' };
+  expect(newTaskRows([
+    { ...approved, id: 'archived-source', status: 'offerte', quote_pending: true },
+    approved,
+  ])).toEqual([approved]);
+  expect(newTaskRows([approved])[0]?.technician_id).toBe('assigned-crew');
+});
