@@ -29,4 +29,19 @@ export function computeTotals(o: {
 
 export const VAT_RATES = [21, 12, 6, 0] as const;
 
+/** Omzet van een afgewerkte bon: het betaalde bedrag, of het berekende totaal als er nog geen betaling is. */
+export function workOrderRevenue(o: {
+  paidAmount: number | null;
+  seconds: number;
+  hourlyRate: number;
+  distanceKm: number | null;
+  kmRate: number;
+  materials: { quantity: number; unit_price: number }[];
+  vatRate: number;
+  warranty?: boolean;
+}): number {
+  if (o.paidAmount != null) return Math.round(Number(o.paidAmount) * 100) / 100;
+  return computeTotals(o).total;
+}
+
 export const euro = (n: number) => n.toLocaleString("nl-BE", { style: "currency", currency: "EUR" });

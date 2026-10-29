@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { deleteTask } from "@/lib/delete-task";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { isFullyPlanned } from "@/lib/planning";
-import { VAT_RATES } from "@/lib/billing";
+import { VAT_RATES, euro, workOrderRevenue } from "@/lib/billing";
 import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
 import { RunningTask } from "@/components/RunningTask";
 import type { TimeEntry } from "@/lib/time";
-import { activeTimeEntry } from "@/lib/time";
+import { activeTimeEntry, totalSeconds } from "@/lib/time";
 import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
@@ -33,7 +33,7 @@ function monday(d: Date) {
   return m;
 }
 
-type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[] };
+type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[]; materials: { quantity: number; unit_price: number }[] };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -44,16 +44,17 @@ function Kalender() {
     queryKey: ["work_orders", "calendar"],
     refetchInterval: 10000,
     queryFn: async () =>
-      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(started_at, ended_at)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
+      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(started_at, ended_at), materials(quantity, unit_price)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["assign_opts"],
     queryFn: async () => {
-      const [t, a] = await Promise.all([
+      const [t, a, s] = await Promise.all([
         supabase.from("technicians").select("id, name").order("name"),
         supabase.from("activities").select("id, name, hourly_rate").order("name"),
+        supabase.from("settings").select("km_rate").eq("id", 1).single(),
       ]);
-      return { techs: t.data ?? [], acts: a.data ?? [] };
+      return { techs: t.data ?? [], acts: a.data ?? [], kmRate: Number(s.data?.km_rate ?? 0) };
     },
   });
   async function set(id: string, patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
@@ -71,6 +72,25 @@ function Kalender() {
 
   // Alleen volledig ingeplande taken (dag + ploeg + activiteit) verschijnen op de dag; afgetekende blijven op hun dag staan.
   const dayList = (k: string) => data.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w)));
+  // Dagomzet: enkel afgewerkte bonnen — betaald bedrag, of het berekende totaal als er nog geen betaling is.
+  const dayOmzet = (k: string) =>
+    dayList(k)
+      .filter((w) => w.status === "afgetekend")
+      .reduce(
+        (s, w) =>
+          s +
+          workOrderRevenue({
+            paidAmount: w.paid_amount == null ? null : Number(w.paid_amount),
+            seconds: totalSeconds(w.time_entries, Date.now()),
+            hourlyRate: Number(opts?.acts.find((a) => a.id === w.activity_id)?.hourly_rate ?? 0),
+            distanceKm: w.distance_km == null ? null : Number(w.distance_km),
+            kmRate: opts?.kmRate ?? 0,
+            materials: w.materials.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })),
+            vatRate: Number(w.vat_rate),
+            warranty: w.warranty,
+          }),
+        0,
+      );
   async function move(list: Row[], i: number, dir: -1 | 1) {
     const j = i + dir;
     if (j < 0 || j >= list.length) return;
@@ -173,6 +193,7 @@ function Kalender() {
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
               </div>
+              {dayOmzet(k) > 0 && <p className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-black text-primary" title="Som van de afgewerkte bonnen van deze dag">Omzet: {euro(dayOmzet(k))}</p>}
               <div className="grid min-w-0 gap-2">
                 {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
                 {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
