@@ -1381,7 +1381,7 @@ export type Database = {
           house_number: string | null
           id: string
           no_answer_at: string | null
-          number: number
+          number: number | null
           paid_amount: number | null
           paid_at: string | null
           paid_method: string | null
@@ -1433,7 +1433,7 @@ export type Database = {
           house_number?: string | null
           id?: string
           no_answer_at?: string | null
-          number?: number
+          number?: number | null
           paid_amount?: number | null
           paid_at?: string | null
           paid_method?: string | null
@@ -1485,7 +1485,7 @@ export type Database = {
           house_number?: string | null
           id?: string
           no_answer_at?: string | null
-          number?: number
+          number?: number | null
           paid_amount?: number | null
           paid_at?: string | null
           paid_method?: string | null
