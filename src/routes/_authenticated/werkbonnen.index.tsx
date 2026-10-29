@@ -57,6 +57,8 @@ function Lijst() {
   const [quotingId, setQuotingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("nieuw");
+  const [crewView, setCrewView] = useState("");
+  useEffect(() => { setCrewView(localStorage.getItem("admin_crew_view") ?? ""); }, []);
   const { dag } = Route.useSearch();
   const [open, setOpenState] = useState(!!dag);
   const [form, setForm] = useState({ ...emptyForm, scheduled_date: dag ?? "" });
@@ -105,6 +107,16 @@ function Lijst() {
     qc.invalidateQueries({ queryKey: ["work_orders"] });
   }
   if (role === "technician") return <TechList rows={data} />;
+  const crewPicker = (
+    <label className="flex flex-wrap items-center gap-2 text-sm font-bold">
+      Ploegweergave
+      <select aria-label="Ploegweergave" className="h-10 rounded-md border bg-background px-2 text-foreground" value={crewView} onChange={(e) => { setCrewView(e.target.value); localStorage.setItem("admin_crew_view", e.target.value); }}>
+        <option value="">Uit (beheer)</option>
+        {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+      </select>
+    </label>
+  );
+  if (crewView) return <div className="space-y-4">{crewPicker}<TechList rows={data.filter((w) => w.technician_id === crewView)} /></div>;
 
   async function addToe(e: React.FormEvent) {
     e.preventDefault();
@@ -177,6 +189,7 @@ function Lijst() {
           <MailboxConnect />
           <p className="mt-2 text-sm text-muted-foreground">Werkbonmail vanuit info@riory.be</p>
           <WerkbonMailboxConnect />
+          <div className="mt-3">{crewPicker}</div>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
