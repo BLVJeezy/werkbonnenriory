@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteTask } from "@/lib/delete-task";
 import { werkbonNr } from "@/lib/werkbon-number";
+import { isFullyPlanned } from "@/lib/planning";
 import { VAT_RATES } from "@/lib/billing";
 import { crewStyle } from "@/lib/crew-color";
 import type { Database } from "@/integrations/supabase/types";
@@ -68,7 +69,8 @@ function Kalender() {
   });
   const today = iso(new Date());
 
-  const dayList = (k: string) => data.filter((w) => w.scheduled_date === k);
+  // Alleen volledig ingeplande taken (dag + ploeg + activiteit) verschijnen op de dag; afgetekende blijven op hun dag staan.
+  const dayList = (k: string) => data.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w)));
   async function move(list: Row[], i: number, dir: -1 | 1) {
     const j = i + dir;
     if (j < 0 || j >= list.length) return;
@@ -108,6 +110,7 @@ function Kalender() {
     <div key={w.id} draggable onPointerDown={(e) => { e.currentTarget.draggable = !(e.target as HTMLElement).closest("input,select,button,a,textarea"); }} onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`min-w-0 cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
       <div className="min-w-0">
       {w.quote_approved && <span className="mb-1 inline-block rounded bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">Offerte goedgekeurd</span>}
+      {horizontal && w.scheduled_date && !isFullyPlanned(w) && <p className="mb-1 text-xs font-bold text-destructive">Nog niet volledig ingepland — vul dag, ploeg én activiteit in</p>}
       {(isUrgentOpen(w) || w.contract_id) && <div className="mb-1 flex gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-1 text-destructive-foreground">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}</div>}
       <div className="flex items-start gap-1">
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">{werkbonNr(w.number)} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
@@ -148,7 +151,7 @@ function Kalender() {
       </div>
     </div>
   );
-  const unplanned = data.filter((w) => !w.scheduled_date && w.status !== "afgetekend");
+  const unplanned = data.filter((w) => w.status !== "afgetekend" && !isFullyPlanned(w));
 
   return (
     <div className="space-y-4">
