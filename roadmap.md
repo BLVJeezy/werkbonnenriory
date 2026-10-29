@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Mobiel beheer verbreden en overzichtelijk maken; menu, taken en planning controleren op 402px.
 - [x] Ludwig Vandebosch en Willy Ketelslagers aan hun offertes gekoppeld en verborgen tot akkoord; offerteploeg kiesbaar en automatisch overgenomen. Klantondertekening plaatst atomisch een nieuwe oningeplande taak met label Offerte goedgekeurd, behoud van werfadres en ploeg. Tijdelijke offerte door volledige flow en herladen gecontroleerd, proefgegevens verwijderd; acht tests geslaagd, build OK, geen mail verstuurd.
 - [x] AI-nieuwsbriefconcept vanuit eigen tekst: echte generatie als beheerder, voorstel overnemen/bewerken en mailvoorbeeld gecontroleerd; negen tests geslaagd, build OK. Geen campagne automatisch opgeslagen, geen mail verstuurd of toestemming gewijzigd.
 - [x] Officiële Belgische btw-vermeldingen op factuur-PDF en UBL: 6% renovatie en btw-verlegging, ook gemengde tarieven; 15 tests geslaagd, voorbeelden visueel gecontroleerd en twee bestaande PDF’s via Facturen gedownload met juiste tekst. Geen tariefwijziging, mail of wijziging van verzonden snapshots; reiniging kwalificeert niet automatisch voor 6%.
