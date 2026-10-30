@@ -20,6 +20,7 @@ import { InvoiceMailboxConnect } from '@/components/MailboxConnect';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { sendWerkbonEmail } from '@/lib/werkbon-mail.functions';
 import { InvoicePaymentDetails } from '@/components/InvoicePaymentDetails';
+import { invoicePaymentReference } from '@/lib/invoice-payment-reference';
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -202,6 +203,7 @@ function Facturen() {
             <li key={i.id} className="flex flex-wrap items-center gap-3 py-2">
               <input type="checkbox" disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} />
               <span className="font-mono font-bold">{i.number}</span>
+              {i.kind !== 'creditnota' && <span className="font-mono text-xs text-muted-foreground" title="Gestructureerde mededeling">{invoicePaymentReference(i.number)}</span>}
               {i.contract_reference && <span className="w-full text-sm font-medium">{i.contract_reference}</span>}
               {i.kind === "creditnota" && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
               <span className="flex-1">{(i.customer as { name?: string }).name}</span>

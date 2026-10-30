@@ -4,6 +4,9 @@ import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
 import { invoiceTaxGroups } from './contract-billing';
 import { invoiceVatNotices } from './invoice-vat-notices';
+import { invoicePaymentReference } from './invoice-payment-reference';
+import { buildSepaQr } from './sepa-qr';
+import QRCode from 'qrcode';
 
 export type InvoicePdfData = {
   number: string; issueDate: string; dueDate: string; workOrderNumber: number;
@@ -112,19 +115,27 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   }
 
   // Payment box
-  ensure(70);
-  y -= 8;
   const open = Math.max(0, Math.round((d.total - d.paidAmount) * 100) / 100);
-  page.drawRectangle({ x: M, y: y - 44, width: W - 2 * M, height: 56, color: soft, borderColor: orange, borderWidth: 1.5 });
+  const paymentReference = invoicePaymentReference(d.number);
+  const qr = d.total > 0 && open > 0.005 && d.company.iban
+    ? await doc.embedPng(await QRCode.toDataURL(buildSepaQr({ serviceName: d.company.name, iban: d.company.iban, bic: d.company.bic, amount: open, reference: d.number }), { width: 320, margin: 4, errorCorrectionLevel: 'M' }))
+    : null;
+  const boxHeight = qr ? 120 : 82;
+  ensure(boxHeight + 20);
+  y -= 8;
+  page.drawRectangle({ x: M, y: y - boxHeight + 12, width: W - 2 * M, height: boxHeight, color: soft, borderColor: orange, borderWidth: 1.5 });
+  if (qr) page.drawImage(qr, { x: W - M - 112, y: y - 96, width: 104, height: 104 });
   if (d.total < 0) {
     page.drawText(pr(`Terugbetaling aan de klant: ${money(-d.total)}.`), { x: M + 12, y: y - 8, size: 10.5, font: bold, color: ink });
   } else if (open <= 0.005) {
     page.drawText(pr(`Reeds betaald: ${money(d.paidAmount)}. Niets meer te betalen.`), { x: M + 12, y: y - 8, size: 10.5, font: bold, color: ink });
   } else {
     page.drawText(pr(`Te betalen: ${money(open)} vóór ${date(d.dueDate)}`), { x: M + 12, y: y - 6, size: 11, font: bold, color: ink });
-    page.drawText(pr(`${d.company.iban ? `IBAN ${d.company.iban}` : ""}${d.company.bic ? `  BIC ${d.company.bic}` : ""}  -  Mededeling: ${d.number}${d.paidAmount > 0 ? `  -  reeds betaald ${money(d.paidAmount)}` : ""}`), { x: M + 12, y: y - 24, size: 9.5, font, color: ink });
+    const paymentLines = [d.company.iban ? `IBAN ${d.company.iban}` : '', d.company.bic ? `BIC ${d.company.bic}` : '', `Mededeling: ${paymentReference}`, d.paidAmount > 0 ? `Reeds betaald ${money(d.paidAmount)}` : ''].filter(Boolean);
+    paymentLines.forEach((text, index) => page.drawText(pr(text), { x: M + 12, y: y - 24 - index * 14, size: 9.5, font, color: ink }));
   }
-  y -= 64;
+  if (open <= 0.005 || d.total < 0) page.drawText(pr(`Mededeling: ${paymentReference}`), { x: M + 12, y: y - 30, size: 9.5, font, color: ink });
+  y -= boxHeight + 8;
 
   await appendTermsPdf(doc);
   return doc.save();

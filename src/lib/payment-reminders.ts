@@ -1,4 +1,5 @@
 import { addDays, type InvoiceCustomer } from './invoice';
+import { invoicePaymentReference } from './invoice-payment-reference';
 
 export type ReminderStage = 1 | 2 | 3;
 export type DebtorKind = 'consumer' | 'business';
@@ -70,7 +71,7 @@ export function buildReminder(o: {
     ...(o.creditAmount > 0 ? [`Verrekende creditnota's: ${eur(o.creditAmount)}`] : []),
     `Openstaande hoofdsom: ${eur(balance)}`, `Eenmalige forfaitaire vergoeding: ${eur(compensation)}`, 'Verwijlinterest: EUR 0,00 (niet gevorderd)',
     `Totaal te betalen: ${eur(round(balance + compensation))}`, '',
-    `Gelieve te betalen uiterlijk op ${dateLabel(deadline)} op IBAN ${o.iban}, met mededeling ${i.number}.`,
+    `Gelieve te betalen uiterlijk op ${dateLabel(deadline)} op IBAN ${o.iban}, met mededeling ${invoicePaymentReference(i.number)}.`,
     ...(stage === 1 ? [
       'Deze eerste herinnering is kosteloos. U beschikt over minstens veertien kalenderdagen, te rekenen vanaf de dag na deze elektronische verzending.',
       `Bij uitblijven van betaling na deze termijn kan, uitsluitend als vooraf geldig overeengekomen en wettelijk toegestaan, een eenmalige forfaitaire vergoeding van ${eur(feesAfterDeadline)} worden gevorderd volgens artikel ${debtorKind === 'consumer' ? '11.5–11.7' : '11.3'} van onze algemene voorwaarden. Er wordt in deze herinneringsreeks geen verwijlinterest gevorderd.`,

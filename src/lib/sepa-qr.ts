@@ -1,6 +1,7 @@
 // ============= EPC069-08 SEPA payment QR =============
 // Pure: builds the payment-code text that Belgian banking apps scan to pre-fill a transfer.
 // No payment provider, no card fees: the customer's own bank does the transfer.
+import { invoicePaymentReference } from './invoice-payment-reference';
 
 export type SepaQrInput = {
   /** Name of the receiving business, shown to the customer. */
@@ -22,31 +23,27 @@ export function openAmount(total: number, paid: number): number {
 }
 
 /**
- * Builds an EPC069-08 v2 payload (15 lines, character set 1 = UTF-8, function SCT).
- * The invoice number goes into the free communication so bank payments still match
- * the invoice through the existing Ponto matcher.
+ * Builds an EPC069-08 v2 payload (UTF-8, SCT). Belgian OGM goes in the
+ * unstructured field: the structured EPC field only accepts ISO 11649 RF references.
  */
 export function buildSepaQr(input: SepaQrInput): string {
   const iban = input.iban.replace(/[\s-]/g, "").toUpperCase();
   if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(iban)) throw new Error("Ongeldig IBAN");
   const amount = openAmount(input.amount, 0);
   if (amount <= 0) throw new Error("Bedrag moet groter dan nul zijn");
-  const communication = clip(`Factuur ${input.reference}`, 140);
+  const communication = clip(invoicePaymentReference(input.reference), 140);
   return [
     "BCD",
-    "001",
+    "002",
     "1",
     "SCT",
+    clip(input.bic ?? "", 35),
     clip(input.serviceName, 70),
     clip(iban, 35),
-    clip(input.bic ?? "", 35),
     clip(`EUR${amount.toFixed(2)}`, 13),
     "",
     "",
     communication,
-    "",
-    "",
-    "",
     "",
   ].join("\n");
 }
@@ -59,7 +56,7 @@ export function paymentText(input: SepaQrInput): string {
     `Ontvanger: ${clean(input.serviceName)}`,
     `IBAN: ${input.iban.replace(/[\s-]/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim()}`,
     input.bic ? `BIC: ${clean(input.bic).toUpperCase()}` : "",
-    `Mededeling: Factuur ${clean(input.reference)}`,
+    `Mededeling: ${invoicePaymentReference(input.reference)}`,
   ]
     .filter(Boolean)
     .join("\n");
