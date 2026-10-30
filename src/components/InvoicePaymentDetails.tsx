@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { buildSepaQr, openAmount, paymentText, type SepaQrInput } from "@/lib/sepa-qr";
 import { euro } from "@/lib/billing";
+import { invoicePaymentReference } from '@/lib/invoice-payment-reference';
 
 type Invoice = { number: string; total: number; paid_amount: number; due_date: string };
 type Company = { name: string; iban: string | null; bic: string | null };
@@ -84,7 +85,7 @@ export function InvoicePaymentDetails({ invoice, company }: { invoice: Invoice; 
               <Row label="Ontvanger" value={company.name} />
               <Row label="IBAN" value={input.iban.toUpperCase().replace(/(.{4})/g, "$1 ").trim()} mono />
               {company.bic ? <Row label="BIC" value={company.bic.toUpperCase()} mono /> : null}
-              <Row label="Mededeling" value={`Factuur ${invoice.number}`} mono />
+              <Row label="Mededeling" value={invoicePaymentReference(invoice.number)} mono />
               <Row label="Vervaldag" value={new Date(`${invoice.due_date}T00:00`).toLocaleDateString("nl-BE")} />
             </dl>
             <Button size="sm" onClick={copy}>Betaalgegevens kopiëren</Button>

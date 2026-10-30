@@ -1,6 +1,7 @@
 import type { InvoicePdfData } from "./invoice-pdf";
 import { invoiceTaxGroups } from './contract-billing';
 import { invoiceVatNotices } from './invoice-vat-notices';
+import { invoicePaymentReference } from './invoice-payment-reference';
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
@@ -59,7 +60,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
     ${c.vatNumber ? `<cac:PartyTaxScheme><cbc:CompanyID>${esc(c.vatNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase())}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}
     <cac:PartyLegalEntity><cbc:RegistrationName>${esc(c.name)}</cbc:RegistrationName></cac:PartyLegalEntity>
   </cac:Party></cac:AccountingCustomerParty>
-  ${d.company.iban ? `<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cbc:PaymentID>${esc(d.number)}</cbc:PaymentID><cac:PayeeFinancialAccount><cbc:ID>${esc(d.company.iban.replace(/\s/g, ""))}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>` : ""}
+  ${d.company.iban ? `<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cbc:PaymentID>${esc(invoicePaymentReference(d.number))}</cbc:PaymentID><cac:PayeeFinancialAccount><cbc:ID>${esc(d.company.iban.replace(/\s/g, ""))}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>` : ""}
   <cac:TaxTotal>
     <cbc:TaxAmount currencyID="EUR">${a(Math.abs(d.vat))}</cbc:TaxAmount>
     ${subtotals}
