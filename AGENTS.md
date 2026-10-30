@@ -27,7 +27,7 @@
 - PDF/UBL share invoice-vat-notices for all line rates; preserve tax treatment and sent snapshots.
 - Crews log in with name + password; `src/lib/login.ts` maps a name to an internal non-mailable email. Per-crew visibility flags live on `technicians` (signed orders enforced in RLS, the rest hidden in the UI).
 - Mail import reads the inbox through a per-admin Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox signs in itself without Exchange delegation.
-- Crew accessibility flags use `use-role.ts` and an `<html>` class; `text-size.ts` gives local overrides for shared tablets. Mobile navigation collapses into a menu.
+- Crew accessibility uses use-role/html and text-size device overrides; mobile nav collapses. Embedded pages use a dvh flex shell with min-h-0 and no outer scroll.
 - Invoices snapshot customer/lines, send PDF+UBL with OkiOki in BCC, and lock accepted legs for retries; only paid invoices auto-send. Mail acceptance is not Peppol confirmation. Reminders use explicit debtor type, tested balance/fee/waiting rules and one-time claims; uncertain Outlook outcomes require review.
 - Invoice numbers come from the create_numbered_invoice RPC (counter + insert in one transaction); never call next_invoice_number separately, or failed inserts burn numbers and leave gaps.
 - Bulk work-order deletion uses the shared delete-task helper with one explicit confirmation and selected IDs only; invalidate work-order and invoice lists so deleted orders cannot remain selectable.
