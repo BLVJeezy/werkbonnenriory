@@ -34,6 +34,7 @@ function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const large = largeTextOn(adminSet, device);
   const { pathname } = useLocation();
+  const fullScreen = pathname === '/medewerkers';
   const marketingAllowed = ["/nieuwsbrieven", "/fotos", "/klanten"].some((p) => pathname.startsWith(p));
   useEffect(() => {
     if (role === "marketing" && !marketingAllowed) navigate({ to: "/nieuwsbrieven", replace: true });
@@ -48,8 +49,8 @@ function Layout() {
   useEffect(() => () => document.documentElement.classList.remove("large-text"), []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="no-print border-b-4 border-primary bg-secondary text-secondary-foreground">
+    <div className={fullScreen ? 'flex h-dvh min-h-0 flex-col overflow-hidden bg-background' : 'min-h-screen bg-background'}>
+      <header className="no-print shrink-0 border-b-4 border-primary bg-secondary text-secondary-foreground">
         <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 sm:flex sm:flex-wrap sm:gap-4 sm:px-4">
           <Link to="/werkbonnen" className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
             Riory <span className="text-primary">Werkbonnen</span>
@@ -103,6 +104,7 @@ function Layout() {
                 <Link to="/instellingen" className={navCls} activeProps={active}>
                   Instellingen
                 </Link>
+                <Link to="/medewerkers" className={navCls} activeProps={active}>Medewerkers</Link>
               </>
             )}
             {role === "technician" && (
@@ -137,7 +139,7 @@ function Layout() {
           </nav>
         </div>
       </header>
-      {role === "marketing" && !marketingAllowed ? null : <main className="mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6">
+      {role === "marketing" && !marketingAllowed ? null : <main className={fullScreen ? 'min-h-0 w-full min-w-0 flex-1 overflow-hidden' : 'mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6'}>
         <Outlet />
       </main>}
     </div>
