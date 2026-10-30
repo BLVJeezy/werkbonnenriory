@@ -42,7 +42,7 @@ function Medewerkers() {
         <Button asChild variant="outline" size="sm" className="ml-auto shrink-0">
           <a href={TIJKLOK_URL} target="_blank" rel="noopener noreferrer">
             <ExternalLink />
-            <span className="hidden sm:inline">Openen in nieuwe tabblad</span>
+            <span className="hidden sm:inline">Openen in nieuw tabblad</span>
             <span className="sm:hidden">Openen</span>
           </a>
         </Button>
