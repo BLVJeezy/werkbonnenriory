@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,10 @@ function Producten() {
     queryKey: ["products"],
     queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [],
   });
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const visible = needle ? data.filter((p) => [p.name, p.alias, p.description].some((v) => v?.toLowerCase().includes(needle))) : data;
+  const sort = useSort(visible, { naam: (p) => p.name, alias: (p) => p.alias, eenheid: (p) => p.unit, prijs: (p) => Number(p.price), admin: (p) => (p.admin_only ? 1 : 0) }, "naam");
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -60,69 +65,63 @@ function Producten() {
         </label>
         <Button>Toevoegen</Button>
       </form>
-      <ul className="divide-y rounded-md border bg-card">
-        {data.length === 0 && <li className="p-4 text-muted-foreground">Nog geen producten.</li>}
-        {data.map((p) => (
-          <li key={p.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0">
-                <span className="font-bold">{p.name}</span>
-                {p.alias && <span className="ml-2 rounded bg-primary/15 px-2 py-0.5 text-xs font-bold">Alias: {p.alias}</span>} <span className="font-mono text-sm text-muted-foreground">({p.unit}) · {euro(Number(p.price))}</span>
-                {p.admin_only && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs font-bold">Enkel beheerder</span>}
-                {p.description ? (
-                  <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{p.description}</p>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="h-5 w-5 accent-primary" checked={p.admin_only} onChange={async (e) => {
-                    await supabase.from("products").update({ admin_only: e.target.checked }).eq("id", p.id);
-                    qc.invalidateQueries({ queryKey: ["products"] });
-                  }} />
-                  Enkel beheerder
-                </label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (editing === p.id) {
-                      setEditing(null);
-                    } else {
-                      setEditing(p.id);
-                      setEditText(p.description ?? "");
-                      setEditAlias(p.alias ?? "");
-                    }
-                  }}
-                >
-                  {editing === p.id ? "Sluiten" : "Alias & omschrijving"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    await supabase.from("products").delete().eq("id", p.id);
-                    qc.invalidateQueries({ queryKey: ["products"] });
-                  }}
-                >
-                  Verwijderen
-                </Button>
-              </div>
-            </div>
-            {editing === p.id && (
-              <div className="mt-3 space-y-2">
-                <Input value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="Alias voor ploegen" />
-                <Textarea value={editText} onChange={(e) => setEditText(e.target.value)} className="min-h-28" placeholder="Lange omschrijving" />
-                <Button size="sm" onClick={async () => {
-                  const { error } = await supabase.from("products").update({ description: editText, alias: editAlias.trim() || null }).eq("id", p.id);
-                  if (error) toast.error(error.message);
-                  setEditing(null);
-                  qc.invalidateQueries({ queryKey: ["products"] });
-                }}>Opslaan</Button>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+      <Input type="search" aria-label="Producten zoeken" placeholder="Zoek product of alias…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className={tableWrap}>
+        <table className={tableCls}>
+          <thead><tr>
+            <SortTh k="naam" sort={sort}>Product</SortTh>
+            <SortTh k="alias" sort={sort} className="hidden md:table-cell">Alias</SortTh>
+            <SortTh k="eenheid" sort={sort} className="hidden sm:table-cell">Eenh.</SortTh>
+            <SortTh k="prijs" sort={sort} right>Prijs</SortTh>
+            <SortTh k="admin" sort={sort}>Enkel beheerder</SortTh>
+            <Th />
+          </tr></thead>
+          <tbody>
+            {sort.sorted.length === 0 && <tr><td colSpan={6} className="text-muted-foreground">Geen producten.</td></tr>}
+            {sort.sorted.map((p) => (
+              <Fragment key={p.id}>
+                <tr>
+                  <td className="font-bold">{p.name}{p.alias && <div className="text-xs font-normal text-muted-foreground md:hidden">Alias: {p.alias}</div>}</td>
+                  <td className="hidden text-muted-foreground md:table-cell">{p.alias ?? "—"}</td>
+                  <td className="hidden font-mono text-xs sm:table-cell">{p.unit}</td>
+                  <td className="whitespace-nowrap text-right font-mono">{euro(Number(p.price))}</td>
+                  <td>
+                    <input type="checkbox" aria-label={`${p.name} enkel voor beheerder`} className="h-5 w-5 accent-primary" checked={p.admin_only} onChange={async (e) => {
+                      await supabase.from("products").update({ admin_only: e.target.checked }).eq("id", p.id);
+                      qc.invalidateQueries({ queryKey: ["products"] });
+                    }} />
+                  </td>
+                  <td className="whitespace-nowrap text-right">
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      if (editing === p.id) setEditing(null);
+                      else { setEditing(p.id); setEditText(p.description ?? ""); setEditAlias(p.alias ?? ""); }
+                    }}>{editing === p.id ? "Sluiten" : "Details"}</Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={async () => {
+                      if (!confirm(`${p.name} verwijderen?`)) return;
+                      await supabase.from("products").delete().eq("id", p.id);
+                      qc.invalidateQueries({ queryKey: ["products"] });
+                    }}>Verwijderen</Button>
+                  </td>
+                </tr>
+                {editing === p.id && (
+                  <tr className="bg-muted/30"><td colSpan={6}>
+                    <div className="space-y-2">
+                      <Input value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="Alias voor ploegen" />
+                      <Textarea value={editText} onChange={(e) => setEditText(e.target.value)} className="min-h-28" placeholder="Lange omschrijving" />
+                      <Button size="sm" onClick={async () => {
+                        const { error } = await supabase.from("products").update({ description: editText, alias: editAlias.trim() || null }).eq("id", p.id);
+                        if (error) toast.error(error.message);
+                        setEditing(null);
+                        qc.invalidateQueries({ queryKey: ["products"] });
+                      }}>Opslaan</Button>
+                    </div>
+                  </td></tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
