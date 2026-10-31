@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Boekhouding en Finance van Mail Assist AI volledig overzetten, met behoud van functies en berekeningen; geen iframe.
+- [x] Boekhouding en Finance van Mail Assist AI volledig ingebouwd, met behoud van rekenmodules en tabbladen; geen iframe. Invoer, beoordeling, boeking, btw en bankverwerking getest.
 - [ ] Bestaande boekhoudgegevens importeren; wacht op export uit Mail Assist AI.
 
 - [x] Bankverrichtingen handmatig aan een factuur koppelen, met veilige betaalregistratie en controle in de app.
