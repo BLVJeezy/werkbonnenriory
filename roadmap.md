@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Boekhouding en Finance van Mail Assist AI ongewijzigd inbouwen; wijze van overnemen vastleggen na broncontrole.
+
 - [x] Bankverrichtingen handmatig aan een factuur koppelen, met veilige betaalregistratie en controle in de app.
 
 - [x] Bankpagina met alle Ponto-verrichtingen, automatisch ververst (30s), afletteringsbadge per verrichting
