@@ -67,6 +67,15 @@ export function buildManualInvoice(lines: { description: string; quantity: numbe
   return { lines: rows, vatRate: rows[0]?.vatRate ?? 21, net, vat, total: r2(net + vat) };
 }
 
+/** Pure: per-line totals — excl. VAT after discount, and incl. VAT at the line's own rate. */
+export function lineTotals(l: { quantity: number; unitPrice: number; discount?: number; vatRate?: number }) {
+  const qty = Number(l.quantity) || 0;
+  const price = Number(l.unitPrice) || 0;
+  const disc = Math.min(100, Math.max(0, Number(l.discount) || 0));
+  const excl = r2(qty * price * (1 - disc / 100));
+  return { excl, incl: r2(excl * (1 + (Number(l.vatRate) || 0) / 100)) };
+}
+
 /** Fully paid invoices may go out automatically; open ones always wait for a manual send. */
 export function isFullyPaid(total: number, paidAmount: number) {
   return paidAmount > 0 && paidAmount + 0.005 >= total;
