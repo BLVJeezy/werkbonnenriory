@@ -7,13 +7,13 @@ describe("boekhouding", () => {
   it("aankoopfactuur is in evenwicht met btw en leverancier", () => {
     const { lines } = invoiceToEntry({ direction: "aankoop", doc_type: "factuur", lines: [{ account: "611120", ex_vat: 275, vat: 57.75 }] });
     expect(isBalanced(lines).ok).toBe(true);
-    expect(lines.find((l) => l.account === "440000")!.credit).toBe(332.75);
-    expect(lines.find((l) => l.account === "411000")!.vat_grid).toBe("59");
+    expect(lines.find((l) => l.account === "440000")?.credit).toBe(332.75);
+    expect(lines.find((l) => l.account === "411000")?.vat_grid).toBe("59");
   });
   it("creditnota draait de boeking om", () => {
     const { lines } = invoiceToEntry({ direction: "aankoop", doc_type: "creditnota", lines: [{ account: "601000", ex_vat: 100, vat: 21 }] });
-    expect(lines.find((l) => l.account === "601000")!.credit).toBe(100);
-    expect(lines.find((l) => l.account === "440000")!.debit).toBe(121);
+    expect(lines.find((l) => l.account === "601000")?.credit).toBe(100);
+    expect(lines.find((l) => l.account === "440000")?.debit).toBe(121);
     expect(isBalanced(lines).ok).toBe(true);
   });
   it("lijn zonder rekening weigert", () => {
@@ -35,11 +35,11 @@ describe("boekhouding", () => {
     const a = post(invoiceToEntry({ direction: "aankoop", doc_type: "factuur", lines: [{ account: "613260", ex_vat: 400, vat: 0 }] }).lines, "2025-12-01");
     const tb = trialBalance(a, "2026-01-01");
     expect(tb.find((r) => r.account === "613260")).toBeUndefined();
-    expect(tb.find((r) => r.account === "440000")!.saldo).toBe(-400);
+    expect(tb.find((r) => r.account === "440000")?.saldo).toBe(-400);
   });
   it("balansimport en openingsboeking", () => {
     const rows = parseAccountRows([{ r: "550000", n: "Bank", s: "1.000,00" }, { r: "100000", n: "Kapitaal", s: "-1000" }, { r: "abc", n: "x", s: "1" }], { nr: "r", naam: "n", saldo: "s" });
-    expect(rows[2]!.err).toBeTruthy();
+    expect(rows[2]?.err).toBeTruthy();
     const o = openingEntry(rows);
     expect(o.diff).toBe(0);
     expect(o.lines).toHaveLength(2);

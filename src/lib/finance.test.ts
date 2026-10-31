@@ -7,18 +7,18 @@ describe("afschrijving", () => {
   it("lineair met afrondingscorrectie in laatste maand", () => {
     const s = depreciationSchedule(base);
     expect(s.map((r) => r.depreciation)).toEqual([333.33, 333.33, 333.34]);
-    expect(s[0]!.month).toBe("2026-01-01");
-    expect(s.at(-1)!.bookValue).toBe(0);
+    expect(s[0]?.month).toBe("2026-01-01");
+    expect(s.at(-1)?.bookValue).toBe(0);
   });
   it("nooit onder restwaarde", () => {
     const s = depreciationSchedule({ ...base, residual_value: 100 });
-    expect(s.at(-1)!.bookValue).toBe(100);
+    expect(s.at(-1)?.bookValue).toBe(100);
   });
   it("openingssaldo met cutoff verdeelt enkel het restant", () => {
     const s = depreciationSchedule({ ...base, useful_life_months: 10, opening_accumulated: 400, opening_cutoff: "2026-04-30" });
     expect(s.length).toBe(6);
-    expect(s[0]!.month).toBe("2026-05-01");
-    expect(s.at(-1)!.accumulated).toBe(1000);
+    expect(s[0]?.month).toBe("2026-05-01");
+    expect(s.at(-1)?.accumulated).toBe(1000);
   });
   it("grond en buitengebruikstelling", () => {
     expect(depreciationSchedule({ ...base, is_land: true })).toEqual([]);
@@ -32,9 +32,9 @@ describe("afschrijving", () => {
 describe("lening", () => {
   it("kapitaal + interest sluit exact", () => {
     const s = loanSchedule(10000, 3.6, 12, "2026-01-01");
-    expect(s.at(-1)!.balance).toBe(0);
+    expect(s.at(-1)?.balance).toBe(0);
     expect(Math.round(s.reduce((a, b) => a + b.principal, 0) * 100) / 100).toBe(10000);
-    expect(s[0]!.interest).toBe(30);
+    expect(s[0]?.interest).toBe(30);
   });
 });
 
@@ -107,7 +107,7 @@ const taskBase = () => ({
 
 describe("geen dubbele taken over meerdere dagen", () => {
   it("verouderde Simpla-sync: zelfde sleutel op dag 1, 2 en 3", () => {
-    const keys = ["2026-10-05", "2026-10-06", "2026-10-07"].map((d) => buildFinanceTasks({ ...taskBase(), today: d }).find((t) => t.key.startsWith("sync-stale"))!.key);
+    const keys = ["2026-10-05", "2026-10-06", "2026-10-07"].map((d) => buildFinanceTasks({ ...taskBase(), today: d }).find((t) => t.key.startsWith("sync-stale"))?.key);
     expect(new Set(keys).size).toBe(1);
   });
   it("vervallen factuur: zelfde sleutel op opeenvolgende dagen", () => {
@@ -173,7 +173,7 @@ describe("winst en kassaldo", () => {
     ];
     const s = summarizeMonth(m, E, [], { depreciation: 333, interest: 50 });
     expect(s.profit).toBe(880);
-    const s2 = summarizeMonth(m, [E[0]!, { month: m, kind: "kost", category: "Huur", account: "611120", amount: 275, level: "totaal" }], [], { depreciation: 333, interest: 50 });
+    const s2 = summarizeMonth(m, [...E.slice(0, 1), { month: m, kind: "kost", category: "Huur", account: "611120", amount: 275, level: "totaal" }], [], { depreciation: 333, interest: 50 });
     expect(s2.profit).toBe(342);
     // kosten onbekend => resultaat onbekend, ook met berekende afschrijving
     expect(summarizeMonth(m, E.slice(0, 1), [], { depreciation: 333, interest: 50 }).profit).toBeNull();

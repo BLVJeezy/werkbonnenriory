@@ -14,9 +14,9 @@ describe("werkbonnen verkoopfacturen", () => {
     expect(toDoc({ ...base, status: "draft" })).toBeNull();
   });
   it("herkent creditnota's en gebruikt positieve bedragen", () => {
-    const d = toDoc({ ...base, kind: "credit_note", net: -50, vat: -10.5 })!;
-    expect(d.credit).toBe(true);
-    expect(d.lijnen[0]).toMatchObject({ ex: 50, vat: 10.5 });
+    const d = toDoc({ ...base, kind: "credit_note", net: -50, vat: -10.5 });
+    expect(d?.credit).toBe(true);
+    expect(d?.lijnen[0]).toMatchObject({ ex: 50, vat: 10.5 });
   });
   it("dubbelsleutel scheidt factuur en creditnota met hetzelfde nummer", () => {
     expect(dubbelSleutel("2026 001", false)).toBe("f:2026001");
