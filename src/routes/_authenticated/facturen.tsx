@@ -182,19 +182,31 @@ function Facturen() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">Afgerekende bonnen worden meteen verzonden; openstaande facturen verzend je hieronder zelf.</p>
-        <ul className="divide-y">
-          {data.todo.map((w) => (
-            <li key={w.id} className="flex flex-wrap items-center gap-3 py-2">
-              <input type="checkbox" aria-label={`Selecteer werkbon ${werkbonNr(w.number)}`} disabled={busy} className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} />
-              <Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">{werkbonNr(w.number)}</Link>
-              <span className="flex-1">{w.customer_name}</span>
-              <span className="text-xs text-muted-foreground">{w.technicians?.name ?? "Geen ploeg"} · {w.scheduled_date ? new Date(`${w.scheduled_date}T00:00`).toLocaleDateString("nl-BE") : w.signed_at ? new Date(w.signed_at).toLocaleDateString("nl-BE") : "—"}{w.scheduled_from ? ` ${w.scheduled_from.slice(0, 5)}${w.scheduled_until ? `–${w.scheduled_until.slice(0, 5)}` : ""}` : w.signed_at ? ` ${new Date(w.signed_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}` : ""}</span>
-              {w.vat_number && <span className="text-xs text-muted-foreground">{w.vat_number}</span>}
-              <span className="text-sm">{w.paid_at ? `Betaald ${euro(Number(w.paid_amount))}` : "Open"}</span>
-            </li>
-          ))}
-          {!data.todo.length && <li className="py-2 text-muted-foreground">Alles is gefactureerd.</li>}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className={tableCls}>
+            <thead><tr>
+              <Th className="w-8" />
+              <SortTh k="nr" sort={todoSort}>Nr.</SortTh>
+              <SortTh k="klant" sort={todoSort}>Klant</SortTh>
+              <SortTh k="ploeg" sort={todoSort} className="hidden sm:table-cell">Ploeg</SortTh>
+              <SortTh k="datum" sort={todoSort} className="hidden sm:table-cell">Datum</SortTh>
+              <SortTh k="betaald" sort={todoSort} right>Betaald</SortTh>
+            </tr></thead>
+            <tbody>
+              {todoSort.sorted.map((w) => (
+                <tr key={w.id}>
+                  <td><input type="checkbox" aria-label={`Selecteer werkbon ${werkbonNr(w.number)}`} disabled={busy} className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} /></td>
+                  <td><Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">{werkbonNr(w.number)}</Link></td>
+                  <td>{w.customer_name}{w.vat_number && <div className="font-mono text-xs text-muted-foreground">{w.vat_number}</div>}<div className="text-xs text-muted-foreground sm:hidden">{w.technicians?.name ?? "Geen ploeg"} · {woWhen(w)}</div></td>
+                  <td className="hidden sm:table-cell">{w.technicians?.name ?? <span className="text-muted-foreground">Geen ploeg</span>}</td>
+                  <td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">{woWhen(w)}</td>
+                  <td className="whitespace-nowrap text-right font-mono">{w.paid_at ? euro(Number(w.paid_amount)) : <span className="font-sans text-xs text-muted-foreground">Open</span>}</td>
+                </tr>
+              ))}
+              {!data.todo.length && <tr><td colSpan={6} className="text-muted-foreground">Alles is gefactureerd.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="space-y-3 rounded-md border bg-card p-4">
@@ -207,42 +219,76 @@ function Facturen() {
             <Button variant="outline" size="sm" disabled={busy || !data.invoices.length} onClick={sendToAccountant}>Alles naar boekhouder (UBL)</Button>
           </div>
         </div>
-        <ul className="divide-y">
-          {data.invoices.map((i) => (
-            <li key={i.id} className="flex flex-wrap items-center gap-3 py-2">
-              <input type="checkbox" disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} />
-              <span className="font-mono font-bold">{i.number}</span>
-              {i.kind !== 'creditnota' && <span className="font-mono text-xs text-muted-foreground" title="Gestructureerde mededeling">{invoicePaymentReference(i.number)}</span>}
-              {i.contract_reference && <span className="w-full text-sm font-medium">{i.contract_reference}</span>}
-              {i.kind === "creditnota" && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
-              <span className="flex-1">{(i.customer as { name?: string }).name}</span>
-              <span className="font-mono">{euro(Number(i.total))}</span>
-              {Number(i.paid_amount) + 0.005 >= Number(i.total) && i.kind !== "creditnota" && (
-                <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Betaald{i.paid_at ? ` ${new Date(i.paid_at).toLocaleDateString("nl-BE")}` : ""}</span>
-              )}
-              <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>
-                {STATUS[i.status] ?? i.status}{i.sent_via ? ` · ${i.sent_via === "okioki" ? "PDF + OkiOki" : i.sent_via === "peppol" ? "Peppol" : "e-mail"}` : ""}
-              </span>
-              {i.pdf_sent_at && <span className="text-xs text-muted-foreground">PDF gemaild</span>}
-              {i.okioki_sent_at && <span className="text-xs text-muted-foreground">UBL naar OkiOki gemaild</span>}
-              <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
-              <DocumentReport id={i.id} type={i.kind === 'creditnota' ? 'creditnota' : 'factuur'} />
-              {i.work_order_id && <WorkOrderPreview workOrderId={i.work_order_id} size="sm" />}
-              {i.work_order_id && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendWerkbon(i.work_order_id!)}>Werkbon verzenden</Button>}
-              {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
-              {i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005 && <PaymentReminders invoiceId={i.id} />}
-              {i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005 && (
-                <InvoicePaymentDetails invoice={i} company={{ name: s?.company_name ?? "Riory bv", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null }} />
-              )}
-              {isInvoiceEditable(i) && <NewInvoice invoice={i} onCreated={refresh} />}
-              {i.post_sent_at && <span className="text-xs text-muted-foreground">Per post verstuurd {new Date(i.post_sent_at).toLocaleDateString("nl-BE")}</span>}
-              {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
-              {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
-              {i.send_error && <p className="w-full text-xs text-destructive">{i.send_error}</p>}
-            </li>
-          ))}
-          {!data.invoices.length && <li className="py-2 text-muted-foreground">Nog geen facturen.</li>}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className={tableCls}>
+            <thead><tr>
+              <Th className="w-8" />
+              <SortTh k="nr" sort={invSort}>Nr.</SortTh>
+              <SortTh k="klant" sort={invSort}>Klant</SortTh>
+              <SortTh k="datum" sort={invSort} className="hidden md:table-cell">Datum</SortTh>
+              <SortTh k="bedrag" sort={invSort} right>Bedrag</SortTh>
+              <SortTh k="status" sort={invSort}>Status</SortTh>
+              <Th right>Acties</Th>
+            </tr></thead>
+            <tbody>
+              {invSort.sorted.map((i) => {
+                const open = Number(i.total) - Number(i.paid_amount) > 0.005;
+                const paid = !open && i.kind !== "creditnota";
+                const expanded = openInv === i.id;
+                return (
+                  <Fragment key={i.id}>
+                    <tr>
+                      <td><input type="checkbox" aria-label={`Selecteer factuur ${i.number}`} disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} /></td>
+                      <td className="whitespace-nowrap font-mono font-bold">{i.number}{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
+                      <td>{(i.customer as { name?: string }).name}{i.contract_reference && <div className="max-w-xs truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
+                      <td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">{new Date(i.created_at).toLocaleDateString("nl-BE")}</td>
+                      <td className="whitespace-nowrap text-right font-mono">{euro(Number(i.total))}</td>
+                      <td>
+                        <div className="flex flex-wrap gap-1">
+                          <span className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{STATUS[i.status] ?? i.status}</span>
+                          {paid && <span className="whitespace-nowrap rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Betaald</span>}
+                        </div>
+                        {i.send_error && <div className="max-w-xs truncate text-xs text-destructive" title={i.send_error}>{i.send_error}</div>}
+                      </td>
+                      <td className="whitespace-nowrap text-right">
+                        <div className="inline-flex gap-1">
+                          <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
+                          {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
+                          <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={() => setOpenInv(expanded ? null : i.id)}>{expanded ? "Minder" : "Meer"}</Button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expanded && (
+                      <tr className="bg-muted/30"><td colSpan={7}>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            {i.kind !== "creditnota" && <span>Mededeling: <span className="font-mono">{invoicePaymentReference(i.number)}</span></span>}
+                            {i.sent_via && <span>Via {i.sent_via === "okioki" ? "PDF + OkiOki" : i.sent_via === "peppol" ? "Peppol" : "e-mail"}</span>}
+                            {i.pdf_sent_at && <span>PDF gemaild</span>}
+                            {i.okioki_sent_at && <span>UBL naar OkiOki gemaild</span>}
+                            {paid && i.paid_at && <span>Betaald op {new Date(i.paid_at).toLocaleDateString("nl-BE")}</span>}
+                            {i.post_sent_at && <span>Per post verstuurd {new Date(i.post_sent_at).toLocaleDateString("nl-BE")}</span>}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <DocumentReport id={i.id} type={i.kind === 'creditnota' ? 'creditnota' : 'factuur'} />
+                            {i.work_order_id && <WorkOrderPreview workOrderId={i.work_order_id} size="sm" />}
+                            {i.work_order_id && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendWerkbon(i.work_order_id!)}>Werkbon verzenden</Button>}
+                            {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
+                            {i.kind !== "creditnota" && open && <PaymentReminders invoiceId={i.id} />}
+                            {i.kind !== "creditnota" && open && <InvoicePaymentDetails invoice={i} company={{ name: s?.company_name ?? "Riory bv", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null }} />}
+                            {isInvoiceEditable(i) && <NewInvoice invoice={i} onCreated={refresh} />}
+                            {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
+                          </div>
+                        </div>
+                      </td></tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+              {!data.invoices.length && <tr><td colSpan={7} className="text-muted-foreground">Nog geen facturen.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="space-y-3 rounded-md border bg-card p-4">
