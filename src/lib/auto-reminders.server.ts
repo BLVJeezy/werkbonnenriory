@@ -5,9 +5,9 @@ import { brusselsDate, buildReminder, type ReminderInvoice } from './payment-rem
 const b64 = (bytes: Uint8Array) => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
 
 /**
- * Sends the free first reminder (stage 1) automatically once the due date has passed.
- * Stages 2 and 3 carry fees and legal consequences, so they stay a manual admin decision.
- * Any existing reminder row (accepted, uncertain or in progress) blocks a new automatic one.
+ * Sends the next reminder stage automatically: stage 1 after the due date, stages 2 and 3
+ * once the previous stage's 15-day term has passed (buildReminder enforces waiting/fees).
+ * Any non-accepted reminder row (uncertain or in progress) blocks further automatic steps.
  */
 export async function processAutoReminders(supabaseAdmin: any) {
   const today = brusselsDate();
@@ -19,11 +19,17 @@ export async function processAutoReminders(supabaseAdmin: any) {
   const ids = (invoices ?? []).map((i: any) => i.id);
   if (!ids.length) return { checked: 0, sent: [], skipped: [] };
   const [{ data: reminders }, { data: credits }] = await Promise.all([
-    supabaseAdmin.from('invoice_reminders').select('invoice_id').in('invoice_id', ids),
+    supabaseAdmin.from('invoice_reminders').select('invoice_id,stage,status,sent_at,document').in('invoice_id', ids),
     supabaseAdmin.from('invoices').select('credit_for,total').eq('kind', 'creditnota').in('credit_for', ids),
   ]);
-  const reminded = new Set((reminders ?? []).map((r: any) => r.invoice_id));
-  const candidates = (invoices ?? []).filter((i: any) => !reminded.has(i.id) && Number(i.total) - Number(i.paid_amount) > 0.005);
+  const historyOf = (id: string) => (reminders ?? []).filter((r: any) => r.invoice_id === id);
+  const nextStage = (id: string): 1 | 2 | 3 | null => {
+    const h = historyOf(id);
+    if (h.some((r: any) => r.status !== 'accepted')) return null;
+    const max = Math.max(0, ...h.map((r: any) => Number(r.stage)));
+    return max >= 3 ? null : ((max + 1) as 1 | 2 | 3);
+  };
+  const candidates = (invoices ?? []).filter((i: any) => nextStage(i.id) && Number(i.total) - Number(i.paid_amount) > 0.005);
   if (!candidates.length) return { checked: ids.length, sent: [], skipped: [] };
 
   const { getConnectionKeyForUser } = await import('./appUserConnections.server');
@@ -44,23 +50,26 @@ export async function processAutoReminders(supabaseAdmin: any) {
     try {
       const creditAmount = (credits ?? []).filter((c: any) => c.credit_for === inv.id).reduce((s: number, c: any) => s + Math.abs(Number(c.total)), 0);
       const customer = inv.customer as ReminderInvoice['customer'];
-      document = buildReminder({ invoice: inv as ReminderInvoice, history: [], creditAmount, stage: 1,
-        debtorKind: customer?.vatNumber?.trim() ? 'business' : 'consumer', today, termsAccepted: false, undisputed: true,
+      const history = historyOf(inv.id);
+      const stage = nextStage(inv.id)!;
+      const prevKind = (history.find((r: any) => r.stage === 1)?.document as any)?.debtorKind;
+      document = buildReminder({ invoice: inv as ReminderInvoice, history, creditAmount, stage,
+        debtorKind: prevKind ?? (customer?.vatNumber?.trim() ? 'business' : 'consumer'), today, termsAccepted: true, undisputed: true,
         companyName: settings.company_name, companyVat: settings.company_vat, iban: settings.company_iban ?? '' });
-    } catch (e) { skipped.push({ number: inv.number, reason: e instanceof Error ? e.message : String(e) }); continue; }
+    } catch (e) { if (String(e).includes('Wacht tot')) continue; skipped.push({ number: inv.number, reason: e instanceof Error ? e.message : String(e) }); continue; }
     const pdf = b64(await createReminderPdf(document));
     const original = await getInvoicePdfAttachment(supabaseAdmin, inv.id);
-    const { data: claim, error: cErr } = await supabaseAdmin.from('invoice_reminders').insert({ invoice_id: inv.id, stage: 1, created_by: owner, recipient: document.recipient, document: document as unknown as Json }).select('id').single();
+    const { data: claim, error: cErr } = await supabaseAdmin.from('invoice_reminders').insert({ invoice_id: inv.id, stage: document.stage, created_by: owner, recipient: document.recipient, document: document as unknown as Json }).select('id').single();
     if (cErr || !claim) { skipped.push({ number: inv.number, reason: cErr?.message ?? 'claim mislukt' }); continue; }
     try {
-      const tracking = await prepareDocument('herinnering', inv.id, `Herinnering 1 · ${document.number}`, document.recipient, pdf);
+      const tracking = await prepareDocument('herinnering', inv.id, `${document.stage === 3 ? 'Ingebrekestelling' : `Herinnering ${document.stage}`} · ${document.number}`, document.recipient, pdf);
       await tracking.send(async () => {
         const res = await callAsAppUser({ gatewayBaseUrl: 'https://connector-gateway.lovable.dev', connectionAPIKey: key!, connectorId: 'microsoft_outlook', path: '/me/sendMail', requiredScopes: WERKBON_MAIL_SCOPES,
           init: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: {
             subject: document.subject, body: brandedBody(linkText(document.body, tracking.url)),
             toRecipients: [{ emailAddress: { address: document.recipient } }],
             attachments: [
-              { '@odata.type': '#microsoft.graph.fileAttachment', name: `Herinnering-1-${document.number}.pdf`, contentType: 'application/pdf', contentBytes: pdf },
+              { '@odata.type': '#microsoft.graph.fileAttachment', name: `${document.stage === 3 ? 'Ingebrekestelling' : `Herinnering-${document.stage}`}-${document.number}.pdf`, contentType: 'application/pdf', contentBytes: pdf },
               { '@odata.type': '#microsoft.graph.fileAttachment', name: `Factuur-${document.number}.pdf`, contentType: 'application/pdf', contentBytes: original.base64 },
             ] }, saveToSentItems: true }) } });
         if (await appUserReconnectRequired(res)) throw new Error('Koppel info@riory.be opnieuw.');
