@@ -143,7 +143,10 @@ function Offertes() {
     const kmLine = all.find((l) => l.unit === "km");
     setKmOn(!!kmLine);
     setKm(kmLine ? kmLine.quantity : null);
-    const ls = all.filter((l) => l.unit !== "km").map((l) => ({ ...splitLineText(l.description), quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
+    const ls = all.filter((l) => l.unit !== "km").map((l) => {
+      const t = splitLineText(l.description);
+      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) };
+    });
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
   }
@@ -219,7 +222,10 @@ function Offertes() {
       setDamageCause(d.cause);
       setDamageFindings(d.findings);
       const keep = lines.filter((l) => lineText(l));
-      setLines([...keep, ...d.lines.map((l) => ({ ...splitLineText(l.description), quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" }))]);
+      setLines([...keep, ...d.lines.map((l) => {
+        const t = splitLineText(l.description);
+        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" };
+      })]);
       toast.success("Voorstel ingevuld — kijk alles na en vul de prijzen in");
     } catch (e) { toast.error(e instanceof Error ? e.message : "AI-voorstel mislukt"); }
     finally { setAiBusy(false); }

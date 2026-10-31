@@ -41,8 +41,9 @@ async function drawnText(bytes: Uint8Array, pageIndex = 0): Promise<Drawn[]> {
   let font = "", size = "", order = 0;
   const ops = /\/([^\s/]+)\s+([\d.]+)\s+Tf|<([0-9A-Fa-f]+)>\s*Tj|\(((?:[^()\\]|\\.)*)\)\s*Tj/g;
   for (const m of raw.matchAll(ops)) {
-    if (m[1]) { font = m[1]; size = m[2]; continue; }
-    const text = m[3] !== undefined ? hexText(m[3]) : (m[4] ?? "").replace(/\\([()\\])/g, "$1");
+    const [, fName, fSize, hex, lit] = m;
+    if (fName) { font = fName; size = fSize ?? ""; continue; }
+    const text = hex !== undefined ? hexText(hex) : (lit ?? "").replace(/\\([()\\])/g, "$1");
     out.push({ text, baseFont: baseFonts.get(font) ?? "", size, order: order++ });
   }
   return out;
@@ -55,7 +56,7 @@ const hexText = (hex: string) => {
 };
 
 const line = { description: "Dieptereiniging regenput\nPut leeggepompt en met hogedruk gereinigd.", quantity: 2, unit: "st", unitPrice: 100, amount: 200 };
-const customer = { name: "Test", address: null, siteAddress: null, vatNumber: null, email: null };
+const customer = { name: "Test", street: null, houseNumber: null, postalCode: null, city: null, address: null, siteAddress: null, vatNumber: null, email: null };
 const company = { name: "Riory bv", vat: "BE0840931404", iban: null, bic: null };
 
 const invoice: InvoicePdfData = {
