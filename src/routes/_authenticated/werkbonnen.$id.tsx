@@ -597,6 +597,17 @@ function Detail() {
                     Betaald met {m}
                   </Button>
                 ))}
+                {!!techs.find((t) => t.id === wo.technician_id)?.ccv_terminal_id && (
+                  <Button
+                    disabled={!!running}
+                    onClick={async () => {
+                      try { await startCcv({ data: { workOrderId: id } }); }
+                      catch (e) { toast.error(e instanceof Error ? e.message : "CCV-betaling starten mislukt"); }
+                    }}
+                  >
+                    Afrekenen via CCV ({euro(totals.total)})
+                  </Button>
+                )}
               </div>
               {running && <p className="text-sm text-muted-foreground">Stop eerst de tijd.</p>}
             </>
