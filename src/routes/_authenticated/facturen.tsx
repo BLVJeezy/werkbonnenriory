@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { euro } from "@/lib/billing";
 import { werkbonNr } from "@/lib/werkbon-number";
-import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoices } from "@/lib/invoices.functions";
+import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoices } from "@/lib/invoices.functions";
+import { isInvoiceEditable } from "@/lib/invoice";
 import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
 import { QrCode, Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
@@ -41,6 +42,14 @@ function Facturen() {
   const getPontoStatus = useServerFn(pontoStatus);
   const syncPonto = useServerFn(syncPontoNow);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
+  const byPost = useServerFn(sendInvoiceByPost);
+  async function sendPost(id: string, number: string) {
+    if (!confirm(`Factuur ${number} per briefpost (bpost) versturen naar het adres van de klant?`)) return;
+    setBusy(true);
+    try { await byPost({ data: { invoiceId: id } }); toast.success('Factuur per post verstuurd'); refresh(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Briefpost mislukt'); }
+    finally { setBusy(false); }
+  }
   const WB_REASON: Record<string, string> = { not_signed: 'Werkbon is nog niet afgerond', no_email: 'Geen e-mailadres op de werkbon', mailbox_not_connected: 'Mailbox info@riory.be is niet gekoppeld', reconnect_required: 'Mailbox info@riory.be opnieuw koppelen', send_failed: 'Verzenden mislukt' };
   async function sendWerkbon(id: string) {
     if (!confirm('Werkbon naar de klant mailen?')) return;
@@ -225,6 +234,9 @@ function Facturen() {
               {i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005 && (
                 <InvoicePaymentDetails invoice={i} company={{ name: s?.company_name ?? "Riory bv", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null }} />
               )}
+              {isInvoiceEditable(i) && <NewInvoice invoice={i} onCreated={refresh} />}
+              {i.post_sent_at && <span className="text-xs text-muted-foreground">Per post verstuurd {new Date(i.post_sent_at).toLocaleDateString("nl-BE")}</span>}
+              {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
               {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
               {i.send_error && <p className="w-full text-xs text-destructive">{i.send_error}</p>}
             </li>

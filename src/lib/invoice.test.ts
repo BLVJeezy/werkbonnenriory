@@ -34,3 +34,25 @@ describe("invoice", () => {
     expect(addDays("2026-10-27", 14)).toBe("2026-11-10");
   });
 });
+
+import { buildManualInvoice as bmi, groupInvoiceLines as gil, isInvoiceEditable as iie } from "./invoice";
+describe("factuurtitels", () => {
+  it("telt de producten onder een titel samen", () => {
+    const inv = bmi([
+      { description: "Ruimen", quantity: 1, unit: "st", unitPrice: 150, vatRate: 21, group: "Dieptereiniging", hidePrice: true },
+      { description: "Camera", quantity: 2, unit: "st", unitPrice: 25, vatRate: 21, group: "Dieptereiniging", hidePrice: true },
+      { description: "Los", quantity: 1, unit: "st", unitPrice: 10, vatRate: 21 },
+    ]);
+    const s = gil(inv.lines);
+    expect(s[0]).toMatchObject({ title: "Dieptereiniging", subtotal: 200, hidePrice: true });
+    expect(s[1]).toMatchObject({ title: null, subtotal: 10 });
+    expect(inv.net).toBe(210);
+  });
+  it("factuur aanpasbaar tot ze verzonden is", () => {
+    const base = { kind: "factuur", status: "concept", sent_at: null, pdf_sent_at: null, okioki_sent_at: null, post_sent_at: null };
+    expect(iie(base)).toBe(true);
+    expect(iie({ ...base, pdf_sent_at: "2026-10-31" })).toBe(false);
+    expect(iie({ ...base, post_sent_at: "2026-10-31" })).toBe(false);
+    expect(iie({ ...base, kind: "creditnota" })).toBe(false);
+  });
+});
