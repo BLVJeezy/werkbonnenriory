@@ -16,15 +16,10 @@ it("probe", async () => {
   const doc = await PDFDocument.load(bytes);
   const c = doc.getPage(0).node.Contents();
   const items = c instanceof PDFArray ? c.asArray() : [c];
-  for (const item of items) {
-    const s = item instanceof PDFRef ? doc.context.lookup(item) : item;
-    console.log("ctor", s?.constructor?.name, "keys", Object.keys(s ?? {}).join(","));
-    const data: Uint8Array = (s as any).contents ?? new Uint8Array();
-    console.log("first bytes", Array.from(data.slice(0, 8)));
-    let text = "";
-    try { text = new TextDecoder("latin1").decode(inflateSync(data)); console.log("INFLATED"); }
-    catch (e) { text = new TextDecoder("latin1").decode(data); console.log("RAWBECAUSE", (e as Error).message); }
-    console.log("STREAMLEN", text.length);
-    console.log("HEAD>>>", text.slice(0, 400));
-  }
+  const s = items[0] instanceof PDFRef ? doc.context.lookup(items[0]) : items[0];
+  const text = new TextDecoder("latin1").decode(inflateSync((s as any).contents));
+  const i = text.indexOf("Tf");
+  console.log("TJCONTEXT>>>", JSON.stringify(text.slice(i - 120, i + 320)));
+  console.log("MATCHES", [...text.matchAll(/\/(F\d+)\s+([\d.]+)\s+Tf|\(((?:[^()\\]|\\.)*)\)\s*Tj/g)].length);
+  console.log("FINDTJ", text.includes("Tj"), "FINDTJ2", text.includes("TJ"));
 });
