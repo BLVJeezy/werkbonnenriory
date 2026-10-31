@@ -84,6 +84,17 @@ for (const [label, make] of [["factuur", () => createInvoicePdf(invoice)], ["off
   });
 }
 
+it("bewaart de regeleinden in de lange omschrijving zonder vraagtekens", async () => {
+  const data: InvoicePdfData = {
+    ...invoice,
+    lines: [{ description: "Titel van het product\nEerste zin.\nTweede zin.", quantity: 1, unit: "st", unitPrice: 10, amount: 10, vatRate: 21 }],
+    net: 10, vat: 2.1, total: 12.1,
+  };
+  const drawn = await drawnText(await createInvoicePdf(data));
+  expect(drawn.filter((d) => d.text.includes("zin.")).map((d) => d.text.trim())).toEqual(["Eerste zin.", "Tweede zin."]);
+  expect(drawn.some((d) => d.text.includes("?"))).toBe(false);
+});
+
 it("breekt een lange factuurlijst op zonder posten te verliezen", async () => {
   const many: InvoicePdfData = {
     ...invoice,
