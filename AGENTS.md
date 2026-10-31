@@ -42,3 +42,4 @@
 - Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.
 - Work order numbers are nullable; assign at first time entry or completion via triggers. Render unnumbered tasks as "Nieuw" via werkbonNr().
 - `cold-entry.ts` records the boot URL once, so a browser-restored page differs from a deliberate click.
+- Insurance estimates are `quotes` rows with `kind = 'verzekering'`; their photos are private `werkbon-fotos` paths in `photo_paths` (uploads under `bestek/`), appended to the quote PDF before the terms, and AI only suggests unsaved text without prices — keeps one numbering and signing flow.
