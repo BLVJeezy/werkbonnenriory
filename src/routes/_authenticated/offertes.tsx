@@ -315,13 +315,16 @@ function Offertes() {
           <div className="space-y-2">
             <Label>{bestek ? "Posten" : "Lijnen"}</Label>
             {lines.map((l, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-2">
-                <Textarea placeholder="Omschrijving (of kies product)" rows={Math.min(8, Math.max(1, l.description.split("\n").length))} className="min-h-10 min-w-48 flex-1 basis-full sm:basis-0" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} />
-                <SearchSelect className="basis-full sm:w-64 sm:basis-auto" placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={products.map(p => ({ value: p.id, label: p.name, search: `${p.alias ?? ''} ${p.description ?? ''}` }))} />
-                <Input type="number" step="any" min="0" className="w-20" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} />
-                <Input className="w-16" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} />
-                <Input type="number" step="0.01" min="0" placeholder="Prijs" className="w-28" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} />
-                <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
+              <div key={i} className="space-y-1.5 rounded-md border p-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input placeholder="Product of post" className="min-w-40 flex-1 basis-full font-bold sm:basis-0" value={l.title} onChange={(e) => setLine(i, { title: e.target.value })} aria-label="Productnaam" />
+                  <SearchSelect className="basis-full sm:w-64 sm:basis-auto" placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={products.map(p => ({ value: p.id, label: p.name, search: `${p.alias ?? ''} ${p.description ?? ''}` }))} />
+                  <Input type="number" step="any" min="0" className="w-20" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} aria-label="Aantal" />
+                  <Input className="w-16" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} aria-label="Eenheid" />
+                  <Input type="number" step="0.01" min="0" placeholder="Prijs" className="w-28" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} aria-label="Prijs" />
+                  <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
+                </div>
+                <Textarea placeholder="Lange omschrijving (optioneel, als bijvoegsel onder de productnaam)" rows={Math.min(8, Math.max(2, l.detail.split("\n").length))} className="min-h-10 text-sm" value={l.detail} onChange={(e) => setLine(i, { detail: e.target.value })} aria-label="Lange omschrijving" />
               </div>
             ))}
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
