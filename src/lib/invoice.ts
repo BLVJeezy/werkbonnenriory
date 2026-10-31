@@ -80,6 +80,11 @@ export function travelKmLine(km: number | null, kmRate: number, vatRate: number)
   return { description: `Verplaatsing heen en terug (${q} km)`, quantity: q, unit: "km", unitPrice: Number(kmRate) || 0, vatRate: Number(vatRate) || 0, discount: 0, group: null, hidePrice: false };
 }
 
+/** Pure: pulls the saved travel line out of invoice lines, so the editor can restore its checkbox. */
+export function splitTravelLine(lines: InvoiceLine[]) {
+  return { kmLine: lines.find((l) => l.unit === "km") ?? null, rest: lines.filter((l) => l.unit !== "km") };
+}
+
 /** Pure: per-line totals — excl. VAT after discount, and incl. VAT at the line's own rate. */
 export function lineTotals(l: { quantity: number; unitPrice: number; discount?: number; vatRate?: number }) {
   const qty = Number(l.quantity) || 0;
