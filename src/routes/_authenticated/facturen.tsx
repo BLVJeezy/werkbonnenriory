@@ -2,13 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Fragment, useState } from "react";
-import { SortTh, Th, tableCls, useSort } from "@/components/SortTable";
+import { SortTh, Th, rowTint, tableCls, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { euro } from "@/lib/billing";
+import { euro, workOrderRevenue } from "@/lib/billing";
+import { totalSeconds, type TimeEntry } from "@/lib/time";
+import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoices } from "@/lib/invoices.functions";
 import { isInvoiceEditable } from "@/lib/invoice";
@@ -30,6 +32,26 @@ export const Route = createFileRoute("/_authenticated/facturen")({
 });
 
 const STATUS: Record<string, string> = { concept: "Te verzenden", verzonden: "Verzonden", fout: "Mislukt" };
+
+type TodoRow = {
+  id: string;
+  number: number | null;
+  customer_name: string;
+  signed_at: string | null;
+  paid_amount: number | null;
+  paid_at: string | null;
+  vat_number: string | null;
+  scheduled_date: string | null;
+  scheduled_from: string | null;
+  scheduled_until: string | null;
+  activity_id: string | null;
+  distance_km: number | null;
+  vat_rate: number;
+  warranty: boolean;
+  time_entries: TimeEntry[];
+  materials: { quantity: number; unit_price: number }[];
+  technicians: { name: string } | null;
+};
 
 function woWhen(w: { scheduled_date: string | null; scheduled_from: string | null; scheduled_until: string | null; signed_at: string | null }) {
   const day = w.scheduled_date ? new Date(`${w.scheduled_date}T00:00`).toLocaleDateString("nl-BE") : w.signed_at ? new Date(w.signed_at).toLocaleDateString("nl-BE") : "—";
@@ -74,13 +96,14 @@ function Facturen() {
   const { data } = useQuery({
     queryKey: ["facturen"],
     queryFn: async () => {
-      const [w, i, s] = await Promise.all([
-        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
+      const [w, i, s, a] = await Promise.all([
+        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
+        supabase.from("activities").select("id, hourly_rate"),
       ]);
       const invoiced = new Set((i.data ?? []).map((x) => x.work_order_id));
-      return { todo: (w.data ?? []).filter((x) => !invoiced.has(x.id)), invoices: i.data ?? [], settings: s.data };
+      return { todo: (w.data ?? []).filter((x) => !invoiced.has(x.id)) as unknown as TodoRow[], invoices: i.data ?? [], settings: s.data, activities: a.data ?? [] };
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["facturen"] });
@@ -164,12 +187,27 @@ function Facturen() {
     setBusy(false);
   }
 
-  const todoSort = useSort(data?.todo ?? [], { nr: (w) => w.number, klant: (w) => w.customer_name, ploeg: (w) => w.technicians?.name, datum: (w) => w.scheduled_date ?? w.signed_at, betaald: (w) => (w.paid_at ? Number(w.paid_amount) : null) });
+  const kmRate = Number(data?.settings?.km_rate ?? 0);
+  const hourlyRateOf = (id: string | null) => Number(data?.activities.find((a) => a.id === id)?.hourly_rate ?? 0);
+  /** Prijs van een nog te factureren bon: het betaalde bedrag, anders het berekende totaal. */
+  const todoAmount = (w: TodoRow) =>
+    workOrderRevenue({
+      paidAmount: w.paid_amount == null ? null : Number(w.paid_amount),
+      seconds: totalSeconds(w.time_entries, Date.now()),
+      hourlyRate: hourlyRateOf(w.activity_id),
+      distanceKm: w.distance_km == null ? null : Number(w.distance_km),
+      kmRate,
+      materials: w.materials.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })),
+      vatRate: Number(w.vat_rate),
+      warranty: w.warranty,
+    });
+  const todoSort = useSort(data?.todo ?? [], { nr: (w) => w.number, klant: (w) => w.customer_name, ploeg: (w) => w.technicians?.name, datum: (w) => w.scheduled_date ?? w.signed_at, betaald: (w) => todoAmount(w) });
   const invSort = useSort(data?.invoices ?? [], { nr: (i) => i.number, klant: (i) => (i.customer as { name?: string }).name, datum: (i) => i.created_at, bedrag: (i) => Number(i.total), status: (i) => i.status });
   const [openInv, setOpenInv] = useState<string | null>(null);
   if (!data) return <p className="text-muted-foreground">Laden…</p>;
   const s = data.settings;
   const openIds = data.invoices.filter((i) => i.status !== "verzonden").map((i) => i.id);
+  const today = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD, lokale tijd
 
   return (
     <div className="space-y-8">
@@ -204,13 +242,13 @@ function Facturen() {
             </tr></thead>
             <tbody>
               {todoSort.sorted.map((w) => (
-                <tr key={w.id}>
+                <tr key={w.id} className={rowTint[workOrderRowState(w)]}>
                   <td><input type="checkbox" aria-label={`Selecteer werkbon ${werkbonNr(w.number)}`} disabled={busy} className="h-5 w-5 accent-primary" checked={selWo.includes(w.id)} onChange={() => toggle(selWo, setSelWo, w.id)} /></td>
                   <td><Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">{werkbonNr(w.number)}</Link></td>
                   <td>{w.customer_name}{w.vat_number && <div className="font-mono text-xs text-muted-foreground">{w.vat_number}</div>}<div className="text-xs text-muted-foreground sm:hidden">{w.technicians?.name ?? "Geen ploeg"} · {woWhen(w)}</div></td>
                   <td className="hidden sm:table-cell">{w.technicians?.name ?? <span className="text-muted-foreground">Geen ploeg</span>}</td>
                   <td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">{woWhen(w)}</td>
-                  <td className="whitespace-nowrap text-right font-mono">{w.paid_at ? euro(Number(w.paid_amount)) : <span className="font-sans text-xs text-muted-foreground">Open</span>}</td>
+                  <td className="whitespace-nowrap text-right font-mono">{euro(todoAmount(w))}</td>
                 </tr>
               ))}
               {!data.todo.length && <tr><td colSpan={6} className="text-muted-foreground">Alles is gefactureerd.</td></tr>}
@@ -243,11 +281,12 @@ function Facturen() {
             <tbody>
               {invSort.sorted.map((i) => {
                 const open = Number(i.total) - Number(i.paid_amount) > 0.005;
-                const paid = !open && i.kind !== "creditnota";
+                const state = invoiceRowState(i, today);
+                const paid = state === "paid";
                 const expanded = openInv === i.id;
                 return (
                   <Fragment key={i.id}>
-                    <tr>
+                     <tr className={rowTint[state]}>
                       <td><input type="checkbox" aria-label={`Selecteer factuur ${i.number}`} disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} /></td>
                       <td className="whitespace-nowrap font-mono font-bold">{i.number}{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
                       <td>{(i.customer as { name?: string }).name}{i.contract_reference && <div className="max-w-xs truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
@@ -257,6 +296,7 @@ function Facturen() {
                         <div className="flex flex-wrap gap-1">
                           <span className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{STATUS[i.status] ?? i.status}</span>
                           {paid && <span className="whitespace-nowrap rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Betaald</span>}
+                          {state === "overdue" && <span className="whitespace-nowrap rounded bg-overdue-foreground px-2 py-0.5 text-xs font-bold text-background">Vervallen</span>}
                         </div>
                         {i.send_error && <div className="max-w-xs truncate text-xs text-destructive" title={i.send_error}>{i.send_error}</div>}
                       </td>
