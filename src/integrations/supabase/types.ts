@@ -600,6 +600,7 @@ export type Database = {
           kind: string
           lines: Json
           net: number
+          note: string | null
           number: string
           okioki_sent_at: string | null
           paid_amount: number
@@ -633,6 +634,7 @@ export type Database = {
           kind?: string
           lines: Json
           net: number
+          note?: string | null
           number: string
           okioki_sent_at?: string | null
           paid_amount?: number
@@ -666,6 +668,7 @@ export type Database = {
           kind?: string
           lines?: Json
           net?: number
+          note?: string | null
           number?: string
           okioki_sent_at?: string | null
           paid_amount?: number
@@ -1657,6 +1660,7 @@ export type Database = {
           kind: string
           lines: Json
           net: number
+          note: string | null
           number: string
           okioki_sent_at: string | null
           paid_amount: number
