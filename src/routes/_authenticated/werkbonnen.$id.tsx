@@ -79,7 +79,9 @@ function Detail() {
   }, []);
 
   const role = useRole();
-  const perms = usePerms() ?? { showPrices: false, showContact: false, canPayment: false, showSigned: false };
+  const [signing, setSigning] = useState(false);
+  const basePerms = usePerms() ?? { showPrices: false, showContact: false, canPayment: false, showSigned: false };
+  const perms = signing ? { ...basePerms, showPrices: false, canPayment: false } : basePerms;
   const money = (n: number) => (perms.showPrices ? euro(n) : "");
   const [mat, setMat] = useState({ productId: "", quantity: "1" });
   const [signature, setSignature] = useState<string | null>(null);
@@ -203,6 +205,15 @@ function Detail() {
             <Button variant="outline" onClick={() => confirm("Handtekening wissen en opnieuw openen als taak?") && update({ status: wo.technician_id ? "toegewezen" : "nieuw", signature: null, signed_name: null, signed_at: null })}>
               Heropenen
             </Button>
+          )}
+          {role === "technician" && locked && !wo.paid_at && (
+            <Button variant="outline" onClick={async () => {
+              if (!confirm("Bon heropenen om iets aan te vullen? De klant moet daarna opnieuw aftekenen.")) return;
+              const { error } = await supabase.rpc("tech_reopen_work_order", { _id: id });
+              if (error) { toast.error(error.message); return; }
+              toast.success("Bon heropend");
+              refresh(); qc.invalidateQueries({ queryKey: ["work_orders"] });
+            }}>Heropenen</Button>
           )}
           {isAdmin && !locked && (
             <Button
@@ -628,20 +639,32 @@ function Detail() {
               {wo.signed_name ? <>Afgetekend door <strong>{wo.signed_name}</strong></> : wo.paid_at ? "Afgesloten na betaling" : "Werkbon afgesloten"} op {wo.signed_at && new Date(wo.signed_at).toLocaleString("nl-BE")}
             </p>
           </div>
+        ) : !signing ? (
+          <div className="flex flex-wrap gap-2">
+            <Button size="lg" disabled={!!running} onClick={() => setSigning(true)}>Klant laten aftekenen</Button>
+            <Button size="lg" variant="outline" disabled={!!running} onClick={async () => {
+              if (!confirm("Niemand aanwezig om af te tekenen. Bon afsluiten zonder handtekening?")) return;
+              await finishTask({ signature: null, signed_name: "Niemand aanwezig", signed_at: new Date().toISOString(), status: "afgetekend" });
+            }}>Niemand aanwezig</Button>
+            {running && <p className="w-full text-sm text-muted-foreground">Stop eerst de tijd.</p>}
+          </div>
         ) : (
           <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Prijzen zijn verborgen zolang de klant aftekent.</p>
             <SignaturePad onChange={setSignature} />
             <Input placeholder="Naam klant" value={signedName} onChange={(e) => setSignedName(e.target.value)} />
-            <Button
-              size="lg"
-              disabled={!signature || !signedName || !!running}
-              onClick={async () => {
-                await finishTask({ signature, signed_name: signedName, signed_at: new Date().toISOString(), status: "afgetekend" });
-              }}
-            >
-              Aftekenen → werkbon
-            </Button>
-            {running && <p className="text-sm text-muted-foreground">Stop eerst de tijd.</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="lg"
+                disabled={!signature || !signedName || !!running}
+                onClick={async () => {
+                  await finishTask({ signature, signed_name: signedName, signed_at: new Date().toISOString(), status: "afgetekend" });
+                }}
+              >
+                Aftekenen → werkbon
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => setSigning(false)}>Annuleren</Button>
+            </div>
           </div>
         )}
       </section>
