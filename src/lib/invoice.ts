@@ -1,7 +1,7 @@
 import { billableHours, computeTotals } from "./billing";
 import { formatSiteAddress, type SiteAddressParts } from "./address";
 
-export type InvoiceLine = { description: string; quantity: number; unit: string; unitPrice: number; amount: number; vatRate?: number; discount?: number; originalUnitPrice?: number };
+export type InvoiceLine = { description: string; quantity: number; unit: string; unitPrice: number; amount: number; vatRate?: number; discount?: number; originalUnitPrice?: number; group?: string; hidePrice?: boolean };
 export type InvoiceCustomer = {
   name: string; address: string | null; siteAddress: string | null; vatNumber: string | null; email: string | null;
   street: string | null; houseNumber: string | null; postalCode: string | null; city: string | null;
@@ -45,7 +45,7 @@ export function buildCreditNote(inv: { lines: InvoiceLine[]; vatRate: number; ne
 }
 
 /** Pure: free-form manual invoice lines with per-line VAT; used by the "Nieuwe factuur" form. */
-export function buildManualInvoice(lines: { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number }[]) {
+export function buildManualInvoice(lines: { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number; group?: string | null; hidePrice?: boolean }[]) {
   const rows: InvoiceLine[] = [];
   let net = 0, vat = 0;
   for (const l of lines) {
@@ -53,7 +53,10 @@ export function buildManualInvoice(lines: { description: string; quantity: numbe
     const price = Number(l.unitPrice) || 0;
     const rate = Number(l.vatRate) || 0;
     const amount = r2(qty * price);
-    rows.push({ description: l.description.trim(), quantity: qty, unit: l.unit.trim() || "st", unitPrice: price, amount, vatRate: rate });
+    const row: InvoiceLine = { description: l.description.trim(), quantity: qty, unit: l.unit.trim() || "st", unitPrice: price, amount, vatRate: rate };
+    const group = l.group?.trim();
+    if (group) { row.group = group; if (l.hidePrice) row.hidePrice = true; }
+    rows.push(row);
     net = r2(net + amount);
     vat = r2(vat + r2((amount * rate) / 100));
   }
@@ -78,4 +81,21 @@ export function addDays(isoDate: string, days: number) {
   const d = new Date(`${isoDate}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+/** Pure: splits invoice lines into consecutive title sections with their summed net subtotal (lines without title form untitled sections). */
+export function groupInvoiceLines(lines: InvoiceLine[]) {
+  const sections: { title: string | null; hidePrice: boolean; subtotal: number; lines: InvoiceLine[] }[] = [];
+  for (const l of lines) {
+    const title = l.group?.trim() || null;
+    const last = sections[sections.length - 1];
+    if (last && last.title === title) { last.lines.push(l); last.subtotal = r2(last.subtotal + l.amount); continue; }
+    sections.push({ title, hidePrice: !!(title && l.hidePrice), subtotal: l.amount, lines: [l] });
+  }
+  return sections;
+}
+
+/** An invoice may still be edited until any delivery leg (PDF mail, OkiOki, post) has gone out. */
+export function isInvoiceEditable(inv: { kind: string; status: string; sent_at: string | null; pdf_sent_at: string | null; okioki_sent_at: string | null; post_sent_at?: string | null }) {
+  return inv.kind !== "creditnota" && inv.status !== "verzonden" && !inv.sent_at && !inv.pdf_sent_at && !inv.okioki_sent_at && !inv.post_sent_at;
 }

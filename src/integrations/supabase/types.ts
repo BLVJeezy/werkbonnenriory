@@ -605,6 +605,10 @@ export type Database = {
           paid_amount: number
           paid_at: string | null
           pdf_sent_at: string | null
+          post_error: string | null
+          post_reference: string | null
+          post_requested_at: string | null
+          post_sent_at: string | null
           send_error: string | null
           sent_at: string | null
           sent_to: string | null
@@ -634,6 +638,10 @@ export type Database = {
           paid_amount?: number
           paid_at?: string | null
           pdf_sent_at?: string | null
+          post_error?: string | null
+          post_reference?: string | null
+          post_requested_at?: string | null
+          post_sent_at?: string | null
           send_error?: string | null
           sent_at?: string | null
           sent_to?: string | null
@@ -663,6 +671,10 @@ export type Database = {
           paid_amount?: number
           paid_at?: string | null
           pdf_sent_at?: string | null
+          post_error?: string | null
+          post_reference?: string | null
+          post_requested_at?: string | null
+          post_sent_at?: string | null
           send_error?: string | null
           sent_at?: string | null
           sent_to?: string | null
@@ -1650,6 +1662,10 @@ export type Database = {
           paid_amount: number
           paid_at: string | null
           pdf_sent_at: string | null
+          post_error: string | null
+          post_reference: string | null
+          post_requested_at: string | null
+          post_sent_at: string | null
           send_error: string | null
           sent_at: string | null
           sent_to: string | null

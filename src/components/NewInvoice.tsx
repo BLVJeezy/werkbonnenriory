@@ -6,65 +6,118 @@ import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { euro } from "@/lib/billing";
 import { vatRateForCustomer } from "@/lib/vat-number";
-import { buildManualInvoice } from "@/lib/invoice";
-import { createManualInvoice } from "@/lib/invoices.functions";
+import { buildManualInvoice, groupInvoiceLines, type InvoiceLine } from "@/lib/invoice";
+import { createManualInvoice, updateInvoice } from "@/lib/invoices.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { CustomerPicker } from "@/components/CustomerPicker";
+import { SearchSelect } from "@/components/SearchSelect";
 
-type Line = { description: string; quantity: string; unit: string; unitPrice: string; vatRate: string };
-const emptyLine: Line = { description: "", quantity: "1", unit: "st", unitPrice: "", vatRate: "21" };
+type Line = { kind: "line"; description: string; quantity: string; unit: string; unitPrice: string; vatRate: string };
+type Title = { kind: "title"; title: string; hidePrice: boolean };
+type Item = Line | Title;
 const VAT_OPTIONS = ["21", "12", "6", "0"];
 const num = (v: string) => Number(v.replace(",", ".")) || 0;
 
-export function NewInvoice({ onCreated }: { onCreated: () => void }) {
+type EditInvoice = { id: string; number: string; lines: unknown; vat_rate: number; contract_reference: string | null; customer: unknown };
+
+function itemsFromLines(lines: InvoiceLine[], fallbackVat: number): Item[] {
+  const out: Item[] = [];
+  let current: string | null = null;
+  for (const l of lines) {
+    const g = l.group?.trim() || null;
+    if (g && g !== current) out.push({ kind: "title", title: g, hidePrice: !!l.hidePrice });
+    current = g;
+    out.push({ kind: "line", description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), vatRate: String(l.vatRate ?? fallbackVat) });
+  }
+  return out;
+}
+
+export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invoice?: EditInvoice }) {
   const create = useServerFn(createManualInvoice);
+  const update = useServerFn(updateInvoice);
+  const editing = !!invoice;
   const [open, setOpen] = useState(false);
-  const [customerLabel, setCustomerLabel] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const [reference, setReference] = useState("");
-  const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
+  const [defaultVat, setDefaultVat] = useState("21");
+  const newLine = (): Line => ({ kind: "line", description: "", quantity: "1", unit: "st", unitPrice: "", vatRate: defaultVat });
+  const [items, setItems] = useState<Item[]>([]);
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], enabled: open, queryFn: () => allCustomers(supabase) });
-  const lab = (c: any) => [c.customer_number, c.name, [c.street, c.house_number].filter(Boolean).join(" "), c.city].filter(Boolean).join(" — ");
-  const chosen = customers.find((c: any) => lab(c) === customerLabel);
+  const { data: products = [] } = useQuery({ queryKey: ["products-invoice"], enabled: open, queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [] });
 
-  const parsed = useMemo(() => lines.map((l) => ({ description: l.description, quantity: num(l.quantity), unit: l.unit, unitPrice: num(l.unitPrice), vatRate: Number(l.vatRate) || 0 })), [lines]);
-  const calc = useMemo(() => buildManualInvoice(parsed), [parsed]);
+  const parsed = useMemo(() => {
+    let group: Title | null = null;
+    const rows = [];
+    for (const it of items) {
+      if (it.kind === "title") { group = it.title.trim() ? it : null; continue; }
+      rows.push({ description: it.description, quantity: num(it.quantity), unit: it.unit, unitPrice: num(it.unitPrice), vatRate: Number(it.vatRate) || 0, group: group?.title ?? null, hidePrice: group?.hidePrice ?? false });
+    }
+    return rows;
+  }, [items]);
+  const calc = useMemo(() => buildManualInvoice(parsed.filter((l) => l.description.trim())), [parsed]);
+  const subtotals = useMemo(() => groupInvoiceLines(calc.lines).filter((s) => s.title), [calc]);
 
-  function setLine(i: number, patch: Partial<Line>) {
-    setLines((ls) => ls.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  function setItem(i: number, patch: Partial<Line> | Partial<Title>) {
+    setItems((ls) => ls.map((x, j) => (j === i ? ({ ...x, ...patch } as Item) : x)));
+  }
+  function pickProduct(i: number, id: string) {
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    const long = (p.description ?? "").trim();
+    setItem(i, { description: long ? `${p.name}\n${long}` : p.name, unit: p.unit, unitPrice: String(p.price) });
   }
 
-  function chooseCustomer(label: string) {
-    setCustomerLabel(label);
-    const c = customers.find((x: any) => lab(x) === label);
+  function chooseCustomer(id: string) {
+    setCustomerId(id);
+    const c = customers.find((x) => x.id === id);
     if (!c) return;
     // BE/NL-btw-nummer verlegt de heffing (0%); Nederlandse particulieren 21%.
-    const def = vatRateForCustomer(c.vat_number, 21, undefined, { postalCode: c.postal_code });
-    if (def !== 21) setLines((ls) => ls.map((l) => ({ ...l, vatRate: String(def) })));
+    const def = String(vatRateForCustomer(c.vat_number, 21, undefined, { postalCode: c.postal_code }));
+    setDefaultVat(def);
+    if (!editing && def !== "21") setItems((ls) => ls.map((l) => (l.kind === "line" ? { ...l, vatRate: def } : l)));
   }
 
-  function reset() { setOpen(false); setCustomerLabel(""); setReference(""); setLines([{ ...emptyLine }]); }
+  function start() {
+    if (invoice) {
+      setItems(itemsFromLines((invoice.lines as InvoiceLine[]) ?? [], Number(invoice.vat_rate)));
+      setReference(invoice.contract_reference ?? "");
+      setDefaultVat(String(invoice.vat_rate));
+    } else setItems([newLine()]);
+    setOpen(true);
+  }
+  function reset() { setOpen(false); setCustomerId(""); setReference(""); setItems([]); setDefaultVat("21"); }
 
   async function save() {
-    if (!chosen) { toast.error("Kies eerst een klant"); return; }
     try {
-      await create({ data: { customerId: chosen.id, reference: reference.trim() || null, lines: parsed } });
-      toast.success("Factuur aangemaakt");
+      if (invoice) {
+        await update({ data: { invoiceId: invoice.id, customerId: customerId || null, reference, lines: parsed } });
+        toast.success(`Factuur ${invoice.number} aangepast`);
+      } else {
+        if (!customerId) { toast.error("Kies eerst een klant"); return; }
+        await create({ data: { customerId, reference: reference.trim() || null, lines: parsed } });
+        toast.success("Factuur aangemaakt");
+      }
       reset();
       onCreated();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Aanmaken mislukt"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
   }
 
-  if (!open) return <Button size="sm" onClick={() => setOpen(true)}>+ Nieuwe factuur</Button>;
+  if (!open) return editing
+    ? <Button variant="outline" size="sm" onClick={start}>Aanpassen</Button>
+    : <Button size="sm" onClick={start}>+ Nieuwe factuur</Button>;
+
+  const productOptions = products.map((p) => ({ value: p.id, label: `${p.name} — ${euro(Number(p.price))}`, search: `${p.alias ?? ""} ${p.description ?? ""}` }));
 
   return (
-    <div className="space-y-4 rounded-md border bg-card p-4">
-      <h3 className="text-lg font-black uppercase">Nieuwe factuur</h3>
+    <div className="w-full space-y-4 rounded-md border bg-card p-4">
+      <h3 className="text-lg font-black uppercase">{invoice ? `Factuur ${invoice.number} aanpassen` : "Nieuwe factuur"}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label>Klant</Label>
-          <CustomerPicker customers={customers} value={chosen?.id ?? ""} placeholder="Kies klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) chooseCustomer(lab(c)); }} />
+          <Label>Klant{invoice ? ` (huidig: ${(invoice.customer as { name?: string })?.name ?? "—"})` : ""}</Label>
+          <CustomerPicker customers={customers} value={customerId} placeholder={invoice ? "Andere klant kiezen (optioneel)…" : "Kies klant…"} onChange={chooseCustomer} />
         </div>
         <div className="space-y-1">
           <Label>Betreft (referentie, optioneel)</Label>
@@ -74,31 +127,43 @@ export function NewInvoice({ onCreated }: { onCreated: () => void }) {
 
       <div className="space-y-2">
         <Label>Factuurlijnen</Label>
-        {lines.map((l, i) => (
-          <div key={i} className="grid gap-2 sm:grid-cols-[1fr_90px_70px_110px_80px_40px] sm:items-end">
-            <div><Label className="sr-only">Omschrijving</Label>
-              <Input value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} placeholder="Omschrijving" /></div>
-            <div><Label className="sr-only">Aantal</Label>
-              <Input value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} placeholder="Aantal" inputMode="decimal" /></div>
-            <div><Label className="sr-only">Eenheid</Label>
-              <Input value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} placeholder="eenheid" /></div>
-            <div><Label className="sr-only">Prijs</Label>
-              <Input value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} placeholder="Prijs" inputMode="decimal" /></div>
-            <div><Label className="sr-only">Btw</Label>
-              <select aria-label="Btw" className="h-10 w-full rounded-md border bg-background px-2" value={l.vatRate} onChange={(e) => setLine(i, { vatRate: e.target.value })}>
+        {items.map((it, i) => it.kind === "title" ? (
+          <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border-l-4 border-primary bg-muted p-2">
+            <Input className="min-w-0 flex-1 font-bold" value={it.title} onChange={(e) => setItem(i, { title: e.target.value })} placeholder="Titel, bv. Dieptereiniging regenput" />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="h-4 w-4 accent-primary" checked={it.hidePrice} onChange={(e) => setItem(i, { hidePrice: e.target.checked })} />
+              Prijzen eronder verbergen
+            </label>
+            <span className="font-mono text-sm font-bold">{euro(subtotals.find((s) => s.title === it.title.trim())?.subtotal ?? 0)}</span>
+            <Button variant="outline" size="icon" aria-label="Titel verwijderen" onClick={() => setItems((ls) => ls.filter((_, j) => j !== i))}>✕</Button>
+          </div>
+        ) : (
+          <div key={i} className="space-y-2 rounded-md border p-2">
+            <SearchSelect placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={productOptions} />
+            <div className="grid gap-2 sm:grid-cols-[1fr_90px_70px_110px_80px_40px] sm:items-start">
+              <Textarea rows={Math.min(5, it.description.split("\n").length)} value={it.description} onChange={(e) => setItem(i, { description: e.target.value })} placeholder="Omschrijving" aria-label="Omschrijving" />
+              <Input value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} placeholder="Aantal" aria-label="Aantal" inputMode="decimal" />
+              <Input value={it.unit} onChange={(e) => setItem(i, { unit: e.target.value })} placeholder="eenheid" aria-label="Eenheid" />
+              <Input value={it.unitPrice} onChange={(e) => setItem(i, { unitPrice: e.target.value })} placeholder="Prijs" aria-label="Prijs" inputMode="decimal" />
+              <select aria-label="Btw" className="h-10 w-full rounded-md border bg-background px-2" value={it.vatRate} onChange={(e) => setItem(i, { vatRate: e.target.value })}>
                 {VAT_OPTIONS.map((v) => <option key={v} value={v}>{v}%</option>)}
-              </select></div>
-            <Button variant="outline" size="icon" aria-label="Lijn verwijderen" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}>✕</Button>
+              </select>
+              <Button variant="outline" size="icon" aria-label="Lijn verwijderen" disabled={items.filter((x) => x.kind === "line").length === 1} onClick={() => setItems((ls) => ls.filter((_, j) => j !== i))}>✕</Button>
+            </div>
           </div>
         ))}
-        <Button variant="outline" size="sm" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setItems((ls) => [...ls, newLine()])}>+ Lijn toevoegen</Button>
+          <Button variant="outline" size="sm" onClick={() => setItems((ls) => [...ls, { kind: "title", title: "", hidePrice: false }, newLine()])}>+ Titel toevoegen</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Lijnen onder een titel worden op de factuur samengeteld bij die titel.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
         <span className="font-mono text-sm">{euro(calc.net)} excl. btw · btw {euro(calc.vat)} · totaal <strong>{euro(calc.total)}</strong></span>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" onClick={reset}>Annuleren</Button>
-          <Button disabled={!chosen || !lines.some((l) => l.description.trim())} onClick={save}>Factuur aanmaken</Button>
+          <Button disabled={(!editing && !customerId) || !calc.lines.length} onClick={save}>{editing ? "Opslaan" : "Factuur aanmaken"}</Button>
         </div>
       </div>
     </div>
