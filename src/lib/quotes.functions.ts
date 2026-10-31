@@ -149,6 +149,50 @@ export const quoteFromTask = createServerFn({ method: "POST" })
     return row;
   });
 
+/** Creates a draft insurance estimate (bestek) from a completed work order, with its photos. */
+export const bestekFromWorkOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { workOrderId: string }) => i)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: wo } = await context.supabase.from("work_orders").select("*").eq("id", data.workOrderId).single();
+    if (!wo) throw new Error("Werkbon niet gevonden");
+    if (wo.status !== "afgetekend") throw new Error("Alleen een afgewerkte werkbon kan worden omgezet naar een bestek");
+    const { data: existing, error: existingError } = await context.supabase
+      .from("quotes").select("*").eq("source_work_order_id", wo.id).eq("kind", "verzekering").maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    if (existing) return existing;
+    const { data: photos, error: photosError } = await context.supabase
+      .from("work_order_photos").select("path").eq("work_order_id", wo.id).order("created_at");
+    if (photosError) throw new Error(photosError.message);
+    const { quoteLine } = await import("@/lib/quote");
+    const siteAddress = wo.use_site_address
+      ? [wo.site_street && `${wo.site_street} ${wo.site_house_number ?? ""}`.trim(), [wo.site_postal_code, wo.site_city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null
+      : null;
+    const customer: InvoiceCustomer = {
+      name: wo.customer_name, address: wo.address, siteAddress,
+      vatNumber: wo.vat_number, email: wo.billing_email || wo.email,
+      street: wo.street, houseNumber: wo.house_number, postalCode: wo.postal_code, city: wo.city,
+    };
+    const lines = (wo.description ?? "").trim()
+      ? [quoteLine((wo.description as string).trim().split("\n")[0] ?? "", 1, "forfait", 0)]
+      : [];
+    const t = quoteTotals(lines, Number(wo.vat_rate));
+    const { data: number, error: ne } = await context.supabase.rpc("next_quote_number");
+    if (ne) throw new Error(ne.message);
+    const { data: row, error } = await context.supabase.from("quotes").insert({
+      number, customer, lines, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
+      kind: "verzekering",
+      customer_id: wo.customer_id,
+      photo_paths: (photos ?? []).map((p: { path: string }) => p.path).slice(0, 40),
+      source_work_order_id: wo.id,
+      intro: wo.project_name ? `Betreft: ${wo.project_name}` : null,
+      technician_id: wo.technician_id,
+    }).select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 /** Sends the quote PDF from info@riory.be with a signing link the customer can use to approve. */
 export const sendQuote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
