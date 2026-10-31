@@ -34,7 +34,7 @@ import { activeTimeEntry } from "@/lib/time";
 import { allCustomers, customerKey } from '@/lib/customers';
 import { quoteFromTask } from '@/lib/quotes.functions';
 import { FilePenLine } from 'lucide-react';
-import { taskListRows, newTaskRows, plannedTaskRows } from '@/lib/task-list';
+import { taskListRows, activeTaskRows, newTaskRows, plannedTaskRows } from '@/lib/task-list';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 import type { Database } from '@/integrations/supabase/types';
 import { AppointmentMailSync } from '@/components/AppointmentMailSync';
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   component: Lijst,
 });
 
-const FILTERS = ["nieuw", "ingepland", "bezig", "afgetekend", "alle"] as const;
+const FILTERS = ["nieuw", "ingepland", "bezig", "alle"] as const;
 const FILTER_LABELS = { nieuw: "Nieuwe taken", ingepland: "Ingepland", bezig: "Bezig", afgetekend: "Afgewerkt", alle: "Alle" };
 const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", billing_email: "", vat_number: "", project_name: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
 
@@ -76,6 +76,7 @@ function Lijst() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders"],
     refetchInterval: 10000,
+    select: activeTaskRows,
     queryFn: async () =>
       taskListRows((await supabase.from("work_orders").select("*, technicians(name, color, manual_time_entry), time_entries(id, started_at, ended_at)").neq("status", "offerte").eq("quote_pending", false).order("created_at", { ascending: false })).data ?? []),
   });
@@ -412,7 +413,6 @@ type Row = SiteAddressParts & {
 
 function TechList({ rows }: { rows: Row[] }) {
   const b = crewBuckets(rows.filter((w) => w.status !== "afgetekend"));
-  const done = rows.filter((w) => w.status === "afgetekend");
   const group = (title: string, list: Row[], empty: string) => (
     <section className="space-y-3">
       <h2 className="text-xl font-black uppercase">{title}</h2>
@@ -426,12 +426,6 @@ function TechList({ rows }: { rows: Row[] }) {
       {group("Vandaag", b.today, "Geen taken vandaag.")}
       {group("Morgen", b.tomorrow, "Geen taken morgen.")}
       {b.unplanned.length > 0 && group("Nog in te plannen", b.unplanned, "")}
-      {done.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-xl font-black uppercase">Afgetekende werkbonnen</h2>
-          {done.map((w) => <RowLink key={w.id} w={w} label="Werkbon" />)}
-        </section>
-      )}
     </div>
   );
 }
