@@ -1271,6 +1271,7 @@ export type Database = {
       technicians: {
         Row: {
           can_payment: boolean
+          ccv_terminal_id: string | null
           color: string | null
           created_at: string
           email: string | null
@@ -1287,6 +1288,7 @@ export type Database = {
         }
         Insert: {
           can_payment?: boolean
+          ccv_terminal_id?: string | null
           color?: string | null
           created_at?: string
           email?: string | null
@@ -1303,6 +1305,7 @@ export type Database = {
         }
         Update: {
           can_payment?: boolean
+          ccv_terminal_id?: string | null
           color?: string | null
           created_at?: string
           email?: string | null
