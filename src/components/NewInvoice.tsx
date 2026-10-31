@@ -57,6 +57,7 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
   const [items, setItems] = useState<Item[]>([]);
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], enabled: open, queryFn: () => allCustomers(supabase) });
   const { data: products = [] } = useQuery({ queryKey: ["products-invoice"], enabled: open, queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [] });
+  const { data: activities = [] } = useQuery({ queryKey: ["activities-invoice"], enabled: open, queryFn: async () => (await supabase.from("activities").select("id, name, hourly_rate").order("name")).data ?? [] });
   const { data: settings } = useQuery({ queryKey: ["settings"], enabled: open, queryFn: async () => (await supabase.from("settings").select("km_rate, base_address").eq("id", 1).single()).data });
   const kmRate = Number(settings?.km_rate ?? 0);
 
