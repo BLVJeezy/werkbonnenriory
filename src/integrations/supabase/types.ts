@@ -1431,6 +1431,7 @@ export type Database = {
           signature: string | null
           signed_at: string | null
           signed_name: string | null
+          signing_code: string | null
           site_city: string | null
           site_contact_name: string | null
           site_contact_phone: string | null
@@ -1483,6 +1484,7 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          signing_code?: string | null
           site_city?: string | null
           site_contact_name?: string | null
           site_contact_phone?: string | null
@@ -1535,6 +1537,7 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          signing_code?: string | null
           site_city?: string | null
           site_contact_name?: string | null
           site_contact_phone?: string | null
