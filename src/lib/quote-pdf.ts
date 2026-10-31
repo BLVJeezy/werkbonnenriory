@@ -8,14 +8,24 @@ export type QuotePdfData = {
   customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; net: number; vat: number; total: number;
   company: { name: string; vat: string; iban: string | null; bic: string | null }; terms: string | null;
   signedName?: string | null; signedAt?: string | null; intro?: string | null;
+  /** 'verzekering' = bestek voor de brandverzekering, met oorzaak, vaststellingen en foto's. */
+  kind?: string; damageCause?: string | null; damageFindings?: string | null;
 };
+
+/** Embeds JPG/PNG bytes; other formats cannot go in the PDF. */
+export function photoKind(bytes: Uint8Array): "png" | "jpg" | null {
+  if (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return "png";
+  if (bytes[0] === 255 && bytes[1] === 216) return "jpg";
+  return null;
+}
 
 const W = 595.28, H = 841.89, M = 48;
 const money = (n: number) => `EUR ${n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const date = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("nl-BE");
 
 /** Worker-compatible quote PDF in the riory.be style, with the general terms appended on their own pages. */
-export async function createQuotePdf(d: QuotePdfData): Promise<Uint8Array> {
+export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Array[] = []): Promise<Uint8Array> {
+  const bestek = d.kind === "verzekering";
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -45,7 +55,7 @@ export async function createQuotePdf(d: QuotePdfData): Promise<Uint8Array> {
   const right = (t: string, x: number, yy: number, size: number, f = font, color = ink) => page.drawText(pr(t), { x: x - f.widthOfTextAtSize(pr(t), size), y: yy, size, font: f, color });
   chrome(true);
 
-  right("OFFERTE", W - M, H - 50, 22, bold);
+  right(bestek ? "BESTEK" : "OFFERTE", W - M, H - 50, 22, bold);
   right(d.number, W - M, H - 68, 14, bold, orange);
   right(`Datum ${date(d.issueDate)}`, W - M, H - 84, 9.5, font, muted);
   right(`Geldig tot ${date(d.validUntil)}`, W - M, H - 97, 9.5, font, muted);
@@ -56,7 +66,7 @@ export async function createQuotePdf(d: QuotePdfData): Promise<Uint8Array> {
   const panelH = cust.length * 14 + (c.siteAddress ? 14 : 0) + 26;
   page.drawRectangle({ x: M, y: y - panelH + 10, width: W - 2 * M, height: panelH, color: soft });
   page.drawRectangle({ x: M, y: y - panelH + 10, width: 4, height: panelH, color: orange });
-  page.drawText("OFFERTE VOOR", { x: M + 14, y: y - 4, size: 8.5, font: bold, color: muted });
+  page.drawText(bestek ? "BESTEK VOOR" : "OFFERTE VOOR", { x: M + 14, y: y - 4, size: 8.5, font: bold, color: muted });
   cust.forEach((l, i) => page.drawText(pr(l), { x: M + 14, y: y - 18 - i * 14, size: i === 0 ? 11.5 : 10.5, font: i === 0 ? bold : font, color: ink }));
   if (c.siteAddress) page.drawText(pr(`Werfadres: ${c.siteAddress}`), { x: M + 14, y: y - 18 - cust.length * 14, size: 9.5, font, color: muted });
   y -= panelH + 14;
@@ -70,6 +80,20 @@ export async function createQuotePdf(d: QuotePdfData): Promise<Uint8Array> {
     y -= 12;
   } else {
     y -= 8;
+  }
+
+  const block = (title: string, text: string | null | undefined) => {
+    if (!text?.trim()) return;
+    const ls = wrap(text, 10.5, W - 2 * M - 24);
+    ensure(Math.min(ls.length, 4) * 14 + 26);
+    page.drawText(title, { x: M, y, size: 8.5, font: bold, color: orange });
+    y -= 15;
+    ls.forEach((t) => { ensure(14); page.drawText(t, { x: M, y, size: 10.5, font, color: ink }); y -= 14; });
+    y -= 12;
+  };
+  if (bestek) {
+    block("OORZAAK VAN DE SCHADE", d.damageCause);
+    block("VASTSTELLINGEN", d.damageFindings);
   }
 
   const cols = { desc: M + 8, qty: W - M - 250, price: W - M - 100, amt: W - M - 8 };
@@ -107,13 +131,34 @@ export async function createQuotePdf(d: QuotePdfData): Promise<Uint8Array> {
   ensure(70);
   y -= 8;
   page.drawRectangle({ x: M, y: y - 44, width: W - 2 * M, height: 56, color: soft, borderColor: orange, borderWidth: 1.5 });
-  if (d.signedName && d.signedAt) {
+  if (bestek && !(d.signedName && d.signedAt)) {
+    page.drawText(pr("Bestek opgemaakt voor de schaderegeling met de verzekeraar."), { x: M + 12, y: y - 8, size: 10.5, font: bold, color: ink });
+    page.drawText(pr(`Prijzen geldig tot ${date(d.validUntil)}.${photos.length ? ` ${photos.length} foto's van de schade in bijlage.` : ""}`), { x: M + 12, y: y - 24, size: 9.5, font, color: ink });
+  } else if (d.signedName && d.signedAt) {
     page.drawText(pr(`Akkoord: ondertekend door ${d.signedName} op ${new Date(d.signedAt).toLocaleString("nl-BE")}.`), { x: M + 12, y: y - 8, size: 10.5, font: bold, color: ink });
   } else {
     page.drawText(pr("Akkoord? Onderteken deze offerte via de link in de e-mail."), { x: M + 12, y: y - 8, size: 10.5, font: bold, color: ink });
     page.drawText(pr(`Deze offerte is geldig tot ${date(d.validUntil)}.`), { x: M + 12, y: y - 24, size: 9.5, font, color: ink });
   }
   y -= 64;
+
+  // Photo annex (two per page) precedes the terms.
+  for (let i = 0; i < photos.length; i++) {
+    const bytes = photos[i]!;
+    const k = photoKind(bytes);
+    if (!k) throw new Error("Een foto heeft een niet-ondersteund formaat. Gebruik JPG of PNG.");
+    const image = k === "png" ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+    if (i % 2 === 0) {
+      page = doc.addPage([W, H]); chrome(false);
+      page.drawText(pr(`FOTO'S VAN DE SCHADE - ${d.number}`), { x: M, y, size: 11, font: bold, color: orange });
+      y -= 20;
+    }
+    const scale = Math.min((W - 2 * M) / image.width, 290 / image.height, 1);
+    const w = image.width * scale, h = image.height * scale;
+    page.drawText(pr(`Foto ${i + 1} van ${photos.length}`), { x: M, y, size: 9, font, color: muted });
+    page.drawImage(image, { x: M + (W - 2 * M - w) / 2, y: y - 12 - h, width: w, height: h });
+    y -= 320;
+  }
 
   await appendTermsPdf(doc);
   return doc.save();

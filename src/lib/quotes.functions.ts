@@ -49,13 +49,38 @@ async function quotePdfData(supabase: any, q: any): Promise<QuotePdfData> {
     terms: s?.terms_text ?? null,
     signedName: q.signed_name, signedAt: q.signed_at,
     intro: q.intro ?? null,
+    kind: q.kind, damageCause: q.damage_cause ?? null, damageFindings: q.damage_findings ?? null,
   };
 }
 
+/** Private photo bytes for an insurance estimate, read with the admin's RLS-scoped client. */
+async function quotePhotos(supabase: any, q: any): Promise<Uint8Array[]> {
+  if (q.kind !== "verzekering") return [];
+  const out: Uint8Array[] = [];
+  for (const path of (q.photo_paths ?? []) as string[]) {
+    const { data: file, error } = await supabase.storage.from("werkbon-fotos").download(path);
+    if (error || !file) throw new Error("Een foto van het bestek kon niet geladen worden");
+    out.push(new Uint8Array(await file.arrayBuffer()));
+  }
+  return out;
+}
+
+type QuoteExtra = { kind?: string; customerId?: string | null; damageCause?: string; damageFindings?: string; photoPaths?: string[] };
+const extraFields = (i: QuoteExtra) => {
+  const kind = i.kind === "verzekering" ? "verzekering" : "offerte";
+  return {
+    kind,
+    customer_id: i.customerId || null,
+    damage_cause: kind === "verzekering" ? i.damageCause?.trim() || null : null,
+    damage_findings: kind === "verzekering" ? i.damageFindings?.trim() || null : null,
+    photo_paths: kind === "verzekering" ? (i.photoPaths ?? []).filter((p) => typeof p === "string").slice(0, 40) : [],
+  };
+};
+
 export const createQuote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string }) => ({
-    customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null,
+  .inputValidator((i: { customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string } & QuoteExtra) => ({
+    customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null, extra: extraFields(i),
   }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -63,7 +88,7 @@ export const createQuote = createServerFn({ method: "POST" })
     const { data: number, error: ne } = await context.supabase.rpc("next_quote_number");
     if (ne) throw new Error(ne.message);
     const { data: row, error } = await context.supabase.from("quotes").insert({
-      number, customer: data.customer, lines: data.lines, vat_rate: data.vatRate, net: t.net, vat: t.vat, total: t.total, intro: data.intro,
+      number, customer: data.customer, lines: data.lines, vat_rate: data.vatRate, net: t.net, vat: t.vat, total: t.total, intro: data.intro, ...data.extra,
     }).select("*").single();
     if (error) throw new Error(error.message);
     return row;
@@ -72,8 +97,8 @@ export const createQuote = createServerFn({ method: "POST" })
 /** Updates a quote that is not yet approved; recomputes totals from the lines. */
 export const updateQuote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { quoteId: string; customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string }) => ({
-    quoteId: i.quoteId, customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null,
+  .inputValidator((i: { quoteId: string; customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string } & QuoteExtra) => ({
+    quoteId: i.quoteId, customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null, extra: extraFields(i),
   }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -82,7 +107,7 @@ export const updateQuote = createServerFn({ method: "POST" })
     if (q.status === "akkoord") throw new Error("Een ondertekende offerte kan niet meer gewijzigd worden");
     const t = quoteTotals(data.lines, data.vatRate);
     const { data: row, error } = await context.supabase.from("quotes").update({
-      customer: data.customer, lines: data.lines, vat_rate: data.vatRate, net: t.net, vat: t.vat, total: t.total, intro: data.intro,
+      customer: data.customer, lines: data.lines, vat_rate: data.vatRate, net: t.net, vat: t.vat, total: t.total, intro: data.intro, ...data.extra,
     }).eq("id", data.quoteId).select("*").single();
     if (error) throw new Error(error.message);
     return row;
@@ -135,15 +160,15 @@ export const sendQuote = createServerFn({ method: "POST" })
     const to = (q.customer as InvoiceCustomer).email;
     if (!to) throw new Error("Deze offerte heeft geen e-mailadres van de klant");
     const { createQuotePdf } = await import("@/lib/quote-pdf");
-    const pdf = b64(await createQuotePdf(await quotePdfData(context.supabase, q)));
+    const pdf = b64(await createQuotePdf(await quotePdfData(context.supabase, q), await quotePhotos(context.supabase, q)));
     const link = quoteSigningLink(q.token);
     const { prepareDocument } = await import('./document-tracking.server');
     const { linkText } = await import('./document-tracking');
     const tracking = await prepareDocument('offerte', q.id, `Offerte ${q.number}`, to, pdf);
     await tracking.send(() => sendMail(
       to,
-      `Offerte ${q.number} — Riory`,
-      linkText(`Beste ${(q.customer as InvoiceCustomer).name},\n\nIn de bijlage vindt u offerte ${q.number}.\n\nAkkoord? Onderteken de offerte via deze link:\n${link}\n\nMet vriendelijke groeten,\nRiory`, tracking.url),
+      `${q.kind === "verzekering" ? "Bestek" : "Offerte"} ${q.number} — Riory`,
+      linkText(`Beste ${(q.customer as InvoiceCustomer).name},\n\nIn de bijlage vindt u ${q.kind === "verzekering" ? "het bestek voor uw verzekering" : "offerte"} ${q.number}.\n\nAkkoord? Onderteken de offerte via deze link:\n${link}\n\nMet vriendelijke groeten,\nRiory`, tracking.url),
       { name: `Offerte-${q.number}.pdf`, contentType: "application/pdf", contentBytes: pdf },
     ));
     const { error } = await context.supabase.from("quotes").update({ status: "verzonden", sent_at: new Date().toISOString() }).eq("id", q.id);
@@ -159,7 +184,7 @@ export const quotePdf = createServerFn({ method: "POST" })
     const { data: q } = await context.supabase.from("quotes").select("*").eq("id", data.quoteId).single();
     if (!q) throw new Error("Offerte niet gevonden");
     const { createQuotePdf } = await import("@/lib/quote-pdf");
-    return { number: q.number as string, base64: b64(await createQuotePdf(await quotePdfData(context.supabase, q))) };
+    return { number: q.number as string, base64: b64(await createQuotePdf(await quotePdfData(context.supabase, q), await quotePhotos(context.supabase, q))) };
   });
 
 /** Converts an approved quote into a planned task with the quote's customer data and lines as description. */
