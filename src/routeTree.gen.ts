@@ -29,6 +29,7 @@ import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
+import { Route as WerkbonTekenenIdRouteImport } from './routes/werkbon-tekenen.$id'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
 import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.$token'
@@ -146,6 +147,11 @@ const OfferteTokenRoute = OfferteTokenRouteImport.update({
   path: '/offerte/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WerkbonTekenenIdRoute = WerkbonTekenenIdRouteImport.update({
+  id: '/werkbon-tekenen/$id',
+  path: '/werkbon-tekenen/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedWerkbonnenIndexRoute =
   AuthenticatedWerkbonnenIndexRouteImport.update({
     id: '/werkbonnen/',
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/producten': typeof AuthenticatedProductenRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/producten': typeof AuthenticatedProductenRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
@@ -339,6 +348,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/document/$token'
     | '/offerte/$token'
+    | '/werkbon-tekenen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/document/$token'
     | '/offerte/$token'
+    | '/werkbon-tekenen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/_authenticated/producten'
     | '/document/$token'
     | '/offerte/$token'
+    | '/werkbon-tekenen/$id'
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
@@ -427,6 +439,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   DocumentTokenRoute: typeof DocumentTokenRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
+  WerkbonTekenenIdRoute: typeof WerkbonTekenenIdRoute
   AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
   NieuwsbriefUitschrijvenTokenRoute: typeof NieuwsbriefUitschrijvenTokenRoute
@@ -581,6 +594,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OfferteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/werkbon-tekenen/$id': {
+      id: '/werkbon-tekenen/$id'
+      path: '/werkbon-tekenen/$id'
+      fullPath: '/werkbon-tekenen/$id'
+      preLoaderRoute: typeof WerkbonTekenenIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/werkbonnen/': {
       id: '/_authenticated/werkbonnen/'
       path: '/werkbonnen'
@@ -716,6 +736,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   DocumentTokenRoute: DocumentTokenRoute,
   OfferteTokenRoute: OfferteTokenRoute,
+  WerkbonTekenenIdRoute: WerkbonTekenenIdRoute,
   AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
   NieuwsbriefUitschrijvenTokenRoute: NieuwsbriefUitschrijvenTokenRoute,
