@@ -1753,6 +1753,7 @@ export type Database = {
         }
         Returns: string
       }
+      tech_reopen_work_order: { Args: { _id: string }; Returns: undefined }
       unsubscribe_newsletter: { Args: { p_hash: string }; Returns: boolean }
     }
     Enums: {

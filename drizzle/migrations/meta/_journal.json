@@ -470,6 +470,13 @@
       "when": 1793438120488,
       "tag": "0066_ccv_terminal_per_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793444304286,
+      "tag": "0067_tech_reopen_signed",
+      "breakpoints": true
     }
   ]
 }
