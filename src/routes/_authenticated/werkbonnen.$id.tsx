@@ -19,7 +19,7 @@ import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
-import { quoteFromTask } from "@/lib/quotes.functions";
+import { bestekFromWorkOrder, quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { werkbonNr } from "@/lib/werkbon-number";
@@ -89,6 +89,7 @@ function Detail() {
   const calcKm = useServerFn(computeDistance);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const makeQuote = useServerFn(quoteFromTask);
+  const makeBestek = useServerFn(bestekFromWorkOrder);
   const removePayment = useServerFn(removeWorkOrderPayment);
   const [removingPayment,setRemovingPayment] = useState(false);
   const [kmTried, setKmTried] = useState<string | null>(null);
@@ -229,6 +230,21 @@ function Detail() {
               }}
             >
               Omzetten naar offerte
+            </Button>
+          )}
+          {isAdmin && locked && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const q = await makeBestek({ data: { workOrderId: id } });
+                  qc.invalidateQueries({ queryKey: ["quotes"] });
+                  toast.success(`Bestek ${q.number} aangemaakt — vul het verder aan`);
+                  navigate({ to: "/offertes", search: { bewerk: q.id } });
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Bestek maken mislukt"); }
+              }}
+            >
+              Omzetten naar bestek
             </Button>
           )}
           {isAdmin && (

@@ -43,3 +43,4 @@
 - Work order numbers are nullable; assign at first time entry or completion via triggers. Render unnumbered tasks as "Nieuw" via werkbonNr().
 - `cold-entry.ts` records the boot URL once, so a browser-restored page differs from a deliberate click.
 - Insurance estimates are `quotes` rows with `kind = 'verzekering'`; their photos are private `werkbon-fotos` paths in `photo_paths` (uploads under `bestek/`), appended to the quote PDF before the terms, and AI only suggests unsaved text without prices — keeps one numbering and signing flow.
+- A completed work order converts to a bestek via `bestekFromWorkOrder` (admin-only, idempotent per work order); quote triggers (`archive_quote_source_task`, `guard_quote_task_visibility`, `refresh_quote_task_visibility`, `queue_processed_appointment_mail`) exclude `kind = 'verzekering'` so a bestek never archives or hides its source werkbon.
