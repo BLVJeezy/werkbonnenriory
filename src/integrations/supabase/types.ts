@@ -1726,6 +1726,10 @@ export type Database = {
         Returns: string
       }
       is_admin_or_marketing: { Args: never; Returns: boolean }
+      link_bank_transaction: {
+        Args: { p_invoice_id: string; p_transaction_key: string }
+        Returns: number
+      }
       login_email: { Args: { p_name: string }; Returns: string }
       my_crew_sees_signed: { Args: never; Returns: boolean }
       my_technician_id: { Args: never; Returns: string }
