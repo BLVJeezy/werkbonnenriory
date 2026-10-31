@@ -31,6 +31,7 @@ import { DocumentReport } from '@/components/DocumentReport';
 import { CustomerInvite } from '@/components/CustomerInvite';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
+import { startCcvPayment } from '@/lib/ccv.functions';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -41,6 +42,7 @@ function Detail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const startCcv = useServerFn(startCcvPayment);
   const key = ["work_order", id];
   const { data } = useQuery({
     queryKey: key,
@@ -597,6 +599,17 @@ function Detail() {
                     Betaald met {m}
                   </Button>
                 ))}
+                {!!techs.find((t) => t.id === wo.technician_id)?.ccv_terminal_id && (
+                  <Button
+                    disabled={!!running}
+                    onClick={async () => {
+                      try { await startCcv({ data: { workOrderId: id } }); }
+                      catch (e) { toast.error(e instanceof Error ? e.message : "CCV-betaling starten mislukt"); }
+                    }}
+                  >
+                    Afrekenen via CCV ({euro(totals.total)})
+                  </Button>
+                )}
               </div>
               {running && <p className="text-sm text-muted-foreground">Stop eerst de tijd.</p>}
             </>

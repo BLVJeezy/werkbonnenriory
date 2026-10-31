@@ -463,6 +463,13 @@
       "when": 1793279699893,
       "tag": "0065_activities_optional_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1793438120488,
+      "tag": "0066_ccv_terminal_per_crew",
+      "breakpoints": true
     }
   ]
 }
