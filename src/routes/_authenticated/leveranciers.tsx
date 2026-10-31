@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { saveSupplier } from '@/lib/suppliers.functions';
 import { PAYMENT_METHODS, VAT_RULES } from '@/lib/supplier-rules';
 import type { Database } from '@/integrations/supabase/types';
+import { SortTh, Th, tableCls, tableWrap, useSort } from '@/components/SortTable';
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
 export const Route = createFileRoute('/_authenticated/leveranciers')({
   head: () => ({ meta: [{ title: 'Leveranciers — Riory Werkbonnen' }, { name: 'description', content: 'Betaalwijzen en btw-regels per leverancier beheren.' }, { property: 'og:title', content: 'Leveranciers — Riory Werkbonnen' }, { property: 'og:description', content: 'Leveranciers en hun aankoopinstellingen.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
@@ -21,6 +22,8 @@ function Suppliers() {
   const { data: rows = [] } = useQuery({ queryKey: ['suppliers'], queryFn: async () => {
     const {data,error} = await supabase.from('suppliers').select('*').order('name'); if(error) throw error; return data;
   } });
+  const visible = rows.filter(r=>r.name.toLowerCase().includes(search.toLowerCase()));
+  const sort = useSort(visible, { naam: r=>r.name, btw: r=>r.vat_number, betaal: r=>r.payment_method, regel: r=>r.vat_rule, aftrek: r=>Number(r.vat_deductible_percent) }, 'naam');
   async function submit() {
     if (!edit) return; setBusy(true);
     try { await save({ data: edit }); await qc.invalidateQueries({ queryKey: ['suppliers'] }); setEdit(null); toast.success('Leverancier opgeslagen'); }
@@ -29,7 +32,17 @@ function Suppliers() {
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black uppercase">Leveranciers</h1></div>
     <Input aria-label="Leverancier zoeken" placeholder="Leverancier zoeken" value={search} onChange={e=>setSearch(e.target.value)} />
-    <ul className="divide-y border rounded-md">{rows.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())).map(r=><li key={r.id} className="flex flex-wrap items-center gap-3 p-3"><span className="font-bold">{r.name}</span><span className="text-sm text-muted-foreground">{r.vat_number}</span><span className="text-sm">{PAYMENT_METHODS[r.payment_method as keyof typeof PAYMENT_METHODS]} · {VAT_RULES[r.vat_rule as keyof typeof VAT_RULES]} · {r.vat_deductible_percent}% aftrekbaar</span><Button variant="outline" className="ml-auto" onClick={()=>setEdit(r)}>Bewerken</Button></li>)}</ul>
+    <div className={tableWrap}><table className={tableCls}>
+      <thead><tr><SortTh k="naam" sort={sort}>Naam</SortTh><SortTh k="btw" sort={sort} className="hidden sm:table-cell">Btw-nummer</SortTh><SortTh k="betaal" sort={sort} className="hidden md:table-cell">Betaalwijze</SortTh><SortTh k="regel" sort={sort} className="hidden md:table-cell">Btw-regel</SortTh><SortTh k="aftrek" sort={sort} right>Aftrekbaar</SortTh><Th /></tr></thead>
+      <tbody>{sort.sorted.map(r=><tr key={r.id}>
+        <td className="font-bold">{r.name}<div className="text-xs font-normal text-muted-foreground sm:hidden">{r.vat_number}</div></td>
+        <td className="hidden whitespace-nowrap font-mono text-xs text-muted-foreground sm:table-cell">{r.vat_number ?? '—'}</td>
+        <td className="hidden md:table-cell">{PAYMENT_METHODS[r.payment_method as keyof typeof PAYMENT_METHODS]}</td>
+        <td className="hidden md:table-cell">{VAT_RULES[r.vat_rule as keyof typeof VAT_RULES]}</td>
+        <td className="text-right font-mono">{r.vat_deductible_percent}%</td>
+        <td className="text-right"><Button variant="outline" size="sm" onClick={()=>setEdit(r)}>Bewerken</Button></td>
+      </tr>)}</tbody>
+    </table></div>
     {edit && <section className="space-y-4 border-t pt-4"><h2 className="text-xl font-bold">{edit.name}</h2><div className="grid gap-4 sm:grid-cols-2">
       <div><Label htmlFor="supplier-name">Naam</Label><Input id="supplier-name" value={edit.name} onChange={e=>setEdit({...edit,name:e.target.value})}/></div>
       <div><Label htmlFor="supplier-vat">Btw-nummer</Label><Input id="supplier-vat" value={edit.vat_number??''} onChange={e=>setEdit({...edit,vat_number:e.target.value||null})}/></div>

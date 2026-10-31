@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { euro } from "@/lib/billing";
+import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
 
 export const Route = createFileRoute("/_authenticated/betalingen")({
   head: () => ({ meta: [{ title: "Bankverrichtingen — Riory Werkbonnen" }, { name: "description", content: "Alle Ponto-bankverrichtingen, automatisch ververst." }, { property: "og:title", content: "Bankverrichtingen — Riory Werkbonnen" }, { property: "og:description", content: "Alle Ponto-bankverrichtingen, automatisch ververst." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -32,21 +33,40 @@ function Betalingen() {
       <p className="text-sm text-muted-foreground">Alle verrichtingen die Ponto binnenhaalt bij de automatische controle (elk uur). Afgepunte betalingen tonen het factuurnummer.</p>
       {isLoading && <p className="text-muted-foreground">Laden…</p>}
       {!isLoading && !data?.txs.length && <p className="text-muted-foreground">Nog geen verrichtingen opgehaald. Ze verschijnen hier na de eerstvolgende Ponto-controle.</p>}
-      <ul className="divide-y rounded-md border bg-card">
-        {data?.txs.map((t) => {
-          const match = data.matched.get(t.transaction_key);
-          const inkomend = Number(t.amount) > 0;
-          return (
-            <li key={t.transaction_key} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3">
-              <span className="text-sm text-muted-foreground">{t.execution_date ? new Date(`${t.execution_date}T00:00`).toLocaleDateString("nl-BE") : "—"}</span>
-              <span className="font-bold">{t.counterpart_name ?? "Onbekend"}</span>
-              <span className={`font-mono font-bold ${inkomend ? "text-accent-foreground" : "text-destructive"}`}>{inkomend ? "+" : ""}{euro(Number(t.amount))}</span>
-              {match && <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Afgepunt · {match}</span>}
-              {t.remittance && <span className="w-full text-xs text-muted-foreground [overflow-wrap:anywhere]">{t.remittance}</span>}
-            </li>
-          );
-        })}
-      </ul>
+      {!!data?.txs.length && <BankTable txs={data.txs} matched={data.matched} />}
+    </div>
+  );
+}
+
+type Tx = { transaction_key: string; execution_date: string | null; counterpart_name: string | null; amount: number | string; remittance: string | null };
+function BankTable({ txs, matched }: { txs: Tx[]; matched: Map<string, string> }) {
+  const sort = useSort(txs, { datum: (t) => t.execution_date, naam: (t) => t.counterpart_name, bedrag: (t) => Number(t.amount), status: (t) => matched.get(t.transaction_key) ?? null }, "datum", "desc");
+  return (
+    <div className={tableWrap}>
+      <table className={tableCls}>
+        <thead><tr>
+          <SortTh k="datum" sort={sort}>Datum</SortTh>
+          <SortTh k="naam" sort={sort}>Tegenpartij</SortTh>
+          <Th className="hidden md:table-cell">Mededeling</Th>
+          <SortTh k="bedrag" sort={sort} right>Bedrag</SortTh>
+          <SortTh k="status" sort={sort}>Afgepunt</SortTh>
+        </tr></thead>
+        <tbody>
+          {sort.sorted.map((t) => {
+            const match = matched.get(t.transaction_key);
+            const inkomend = Number(t.amount) > 0;
+            return (
+              <tr key={t.transaction_key}>
+                <td className="whitespace-nowrap text-muted-foreground">{t.execution_date ? new Date(`${t.execution_date}T00:00`).toLocaleDateString("nl-BE") : "—"}</td>
+                <td className="font-bold">{t.counterpart_name ?? "Onbekend"}<div className="max-w-xs truncate text-xs font-normal text-muted-foreground md:hidden">{t.remittance}</div></td>
+                <td className="hidden max-w-sm truncate text-xs text-muted-foreground md:table-cell" title={t.remittance ?? ""}>{t.remittance}</td>
+                <td className={`whitespace-nowrap text-right font-mono font-bold ${inkomend ? "text-accent-foreground" : "text-destructive"}`}>{inkomend ? "+" : ""}{euro(Number(t.amount))}</td>
+                <td>{match ? <span className="whitespace-nowrap rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{match}</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
