@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Afgewerkte werkbonnen op een aparte overzichtspagina, los van actieve taken.
+- [x] Afgewerkte werkbonnen op een aparte overzichtspagina, los van actieve taken; zoeken, ploeg/datumfilters, sortering en voorbeelden gecontroleerd.
 
 - [x] Boekhouding en Finance van Mail Assist AI volledig ingebouwd, met behoud van rekenmodules en tabbladen; geen iframe. Invoer, beoordeling, boeking, btw en bankverwerking getest.
 - [ ] Bestaande boekhoudgegevens importeren; wacht op export uit Mail Assist AI.
