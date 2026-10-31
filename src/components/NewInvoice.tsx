@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { euro } from "@/lib/billing";
 import { vatRateForCustomer } from "@/lib/vat-number";
-import { buildManualInvoice, groupInvoiceLines, lineTotals, splitTravelLine, travelKmLine, type InvoiceLine } from "@/lib/invoice";
+import { activityLineValues, buildManualInvoice, groupInvoiceLines, lineTotals, splitTravelLine, travelKmLine, type InvoiceLine } from "@/lib/invoice";
 import { formatAddress } from "@/lib/address";
 import { quoteDistance } from "@/lib/distance.functions";
 import { createManualInvoice, updateInvoice } from "@/lib/invoices.functions";
