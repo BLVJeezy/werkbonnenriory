@@ -143,8 +143,8 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
         ) : (
           <div key={i} className="space-y-2 rounded-md border p-2">
             <SearchSelect placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={productOptions} />
-            <div className="grid gap-2 sm:grid-cols-[1fr_80px_64px_100px_80px_76px_40px] sm:items-start">
-              <Textarea rows={Math.min(5, it.description.split("\n").length)} value={it.description} onChange={(e) => setItem(i, { description: e.target.value })} placeholder="Omschrijving" aria-label="Omschrijving" />
+            <Input className="font-bold" value={it.title} onChange={(e) => setItem(i, { title: e.target.value })} placeholder="Product of naam van de lijn" aria-label="Productnaam" />
+            <div className="grid gap-2 sm:grid-cols-[80px_64px_100px_80px_76px_40px] sm:items-start">
               <Input value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} placeholder="Aantal" aria-label="Aantal" inputMode="decimal" />
               <Input value={it.unit} onChange={(e) => setItem(i, { unit: e.target.value })} placeholder="eenheid" aria-label="Eenheid" />
               <Input value={it.unitPrice} onChange={(e) => setItem(i, { unitPrice: e.target.value })} placeholder="Prijs" aria-label="Prijs" inputMode="decimal" />
@@ -154,6 +154,7 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
               </select>
               <Button variant="outline" size="icon" aria-label="Lijn verwijderen" disabled={items.filter((x) => x.kind === "line").length === 1} onClick={() => setItems((ls) => ls.filter((_, j) => j !== i))}>✕</Button>
             </div>
+            <Textarea rows={Math.min(6, Math.max(2, it.detail.split("\n").length))} value={it.detail} onChange={(e) => setItem(i, { detail: e.target.value })} placeholder="Lange omschrijving (optioneel, komt als bijvoegsel onder de productnaam)" aria-label="Lange omschrijving" className="text-sm" />
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
