@@ -92,7 +92,7 @@ async function ensureSigningCode(supabase: any, workOrderId: string, existing: s
   for (let i = 0; i < 5; i++) {
     const buf = new Uint32Array(1);
     crypto.getRandomValues(buf);
-    const code = String(buf[0] % 1_000_000).padStart(6, "0");
+    const code = String((buf[0] ?? 0) % 1_000_000).padStart(6, "0");
     const { data, error } = await supabase
       .from("work_orders")
       .update({ signing_code: code })
