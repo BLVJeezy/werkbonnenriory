@@ -50,7 +50,7 @@ function Klanten() {
   }
 
   async function save(c: (typeof data)[number]) {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), vrij_beroep: form.vrij_beroep === "1" };
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), vrij_beroep: form["vrij_beroep"] === "1" };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -149,7 +149,7 @@ function Klanten() {
                           ))}
                         </div>
                         <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form.vrij_beroep === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
+                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
                           Vrij beroep — altijd 21% btw, ook met een btw-nummer
                         </label>
                         <div className="flex gap-2">
