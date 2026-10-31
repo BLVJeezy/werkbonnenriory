@@ -77,17 +77,28 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   right("EENHEIDSPRIJS", cols.price, y, 8.5, bold, white);
   right("BEDRAG", cols.amt, y, 8.5, bold, white);
   y -= 22;
-  d.lines.forEach((l, i) => {
-    const ls = wrap(`${l.description}${l.vatRate !== undefined ? ` (btw ${l.vatRate}%)` : ''}${l.discount ? ` — korting ${l.discount}%` : ''}`, 10, cols.qty - cols.desc - 20);
-    const h = ls.length * 13 + 8;
-    ensure(h);
-    if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
-    ls.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 13, size: 10, font, color: ink }));
-    right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
-    right(money(l.unitPrice), cols.price, y, 10);
-    right(money(l.amount), cols.amt, y, 10);
-    y -= h;
-  });
+  let row = 0;
+  for (const sec of groupInvoiceLines(d.lines)) {
+    if (sec.title) {
+      const ts = wrap(sec.title, 10.5, cols.qty - cols.desc - 20);
+      const th = ts.length * 14 + 8;
+      ensure(th);
+      ts.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
+      right(money(sec.subtotal), cols.amt, y, 10.5, bold);
+      y -= th;
+    }
+    for (const l of sec.lines) {
+      const indent = sec.title ? 12 : 0;
+      const ls = wrap(`${l.description}${l.vatRate !== undefined ? ` (btw ${l.vatRate}%)` : ''}${l.discount ? ` — korting ${l.discount}%` : ''}`, 10, cols.qty - cols.desc - 20 - indent);
+      const h = ls.length * 13 + 8;
+      ensure(h);
+      if (row++ % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
+      ls.forEach((t, j) => page.drawText(t, { x: cols.desc + indent, y: y - j * 13, size: 10, font, color: ink }));
+      right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
+      if (!sec.hidePrice) { right(money(l.unitPrice), cols.price, y, 10); right(money(l.amount), cols.amt, y, 10); }
+      y -= h;
+    }
+  }
   if (!d.lines.length) { page.drawText("Geen aanrekenbare posten.", { x: cols.desc, y, size: 10, font, color: muted }); y -= 18; }
 
   // Totals
