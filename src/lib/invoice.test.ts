@@ -81,4 +81,14 @@ describe("kilometers op een handmatige factuur", () => {
     expect(s[0]).toMatchObject({ title: "Dieptereiniging", subtotal: 150 });
     expect(s[1]).toMatchObject({ title: null, subtotal: 5.4 });
   });
+  it("haalt bewaarde kilometers terug uit de factuurlijnen", () => {
+    const saved = bmi([
+      { description: "Ruimen", quantity: 1, unit: "st", unitPrice: 150, vatRate: 21 },
+      travelKmLine(9.2, 1.45, 21)!,
+    ]);
+    const { kmLine, rest } = splitTravelLine(saved.lines);
+    expect(kmLine).toMatchObject({ unit: "km", quantity: 9.2, unitPrice: 1.45, vatRate: 21 });
+    expect(rest.map((l) => l.unit)).toEqual(["st"]);
+    expect(splitTravelLine(rest).kmLine).toBeNull();
+  });
 });
