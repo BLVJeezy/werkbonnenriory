@@ -15,9 +15,11 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
 import { Route as AuthenticatedBetalingenRouteImport } from './routes/_authenticated/betalingen'
+import { Route as AuthenticatedBoekhoudingRouteImport } from './routes/_authenticated/boekhouding'
 import { Route as AuthenticatedContractenRouteImport } from './routes/_authenticated/contracten'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
+import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFotosRouteImport } from './routes/_authenticated/fotos'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
@@ -39,6 +41,7 @@ import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/ap
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
 import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/public/bookkeeping/sales'
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
+import { Route as ApiPublicCronFinanceRouteImport } from './routes/api/public/cron/finance'
 import { Route as ApiPublicNieuwsbriefAfbeeldingFileRouteImport } from './routes/api/public/nieuwsbrief-afbeelding/$file'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
 import { Route as ApiPublicRemindersProcessRouteImport } from './routes/api/public/reminders/process'
@@ -74,6 +77,12 @@ const AuthenticatedBetalingenRoute = AuthenticatedBetalingenRouteImport.update({
   path: '/betalingen',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBoekhoudingRoute =
+  AuthenticatedBoekhoudingRouteImport.update({
+    id: '/boekhouding',
+    path: '/boekhouding',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedContractenRoute = AuthenticatedContractenRouteImport.update({
   id: '/contracten',
   path: '/contracten',
@@ -87,6 +96,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedFacturenRoute = AuthenticatedFacturenRouteImport.update({
   id: '/facturen',
   path: '/facturen',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFotosRoute = AuthenticatedFotosRouteImport.update({
@@ -205,6 +219,11 @@ const ApiPublicContractsProcessRoute =
     path: '/api/public/contracts/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronFinanceRoute = ApiPublicCronFinanceRouteImport.update({
+  id: '/api/public/cron/finance',
+  path: '/api/public/cron/finance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicNieuwsbriefAfbeeldingFileRoute =
   ApiPublicNieuwsbriefAfbeeldingFileRouteImport.update({
     id: '/api/public/nieuwsbrief-afbeelding/$file',
@@ -235,9 +254,11 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/betalingen': typeof AuthenticatedBetalingenRoute
+  '/boekhouding': typeof AuthenticatedBoekhoudingRoute
   '/contracten': typeof AuthenticatedContractenRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
+  '/finance': typeof AuthenticatedFinanceRoute
   '/fotos': typeof AuthenticatedFotosRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
@@ -259,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
+  '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
@@ -270,9 +292,11 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/betalingen': typeof AuthenticatedBetalingenRoute
+  '/boekhouding': typeof AuthenticatedBoekhoudingRoute
   '/contracten': typeof AuthenticatedContractenRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/facturen': typeof AuthenticatedFacturenRoute
+  '/finance': typeof AuthenticatedFinanceRoute
   '/fotos': typeof AuthenticatedFotosRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
@@ -294,6 +318,7 @@ export interface FileRoutesByTo {
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
+  '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
@@ -307,9 +332,11 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/_authenticated/betalingen': typeof AuthenticatedBetalingenRoute
+  '/_authenticated/boekhouding': typeof AuthenticatedBoekhoudingRoute
   '/_authenticated/contracten': typeof AuthenticatedContractenRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
+  '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/fotos': typeof AuthenticatedFotosRoute
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
@@ -331,6 +358,7 @@ export interface FileRoutesById {
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
+  '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
@@ -344,9 +372,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/aankoopfacturen'
     | '/betalingen'
+    | '/boekhouding'
     | '/contracten'
     | '/dashboard'
     | '/facturen'
+    | '/finance'
     | '/fotos'
     | '/instellingen'
     | '/kalender'
@@ -368,6 +398,7 @@ export interface FileRouteTypes {
     | '/api/public/aankoopfacturen/import'
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
+    | '/api/public/cron/finance'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
     | '/api/public/reminders/process'
@@ -379,9 +410,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/aankoopfacturen'
     | '/betalingen'
+    | '/boekhouding'
     | '/contracten'
     | '/dashboard'
     | '/facturen'
+    | '/finance'
     | '/fotos'
     | '/instellingen'
     | '/kalender'
@@ -403,6 +436,7 @@ export interface FileRouteTypes {
     | '/api/public/aankoopfacturen/import'
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
+    | '/api/public/cron/finance'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
     | '/api/public/reminders/process'
@@ -415,9 +449,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/aankoopfacturen'
     | '/_authenticated/betalingen'
+    | '/_authenticated/boekhouding'
     | '/_authenticated/contracten'
     | '/_authenticated/dashboard'
     | '/_authenticated/facturen'
+    | '/_authenticated/finance'
     | '/_authenticated/fotos'
     | '/_authenticated/instellingen'
     | '/_authenticated/kalender'
@@ -439,6 +475,7 @@ export interface FileRouteTypes {
     | '/api/public/aankoopfacturen/import'
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
+    | '/api/public/cron/finance'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
     | '/api/public/reminders/process'
@@ -460,6 +497,7 @@ export interface RootRouteChildren {
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
   ApiPublicBookkeepingSalesRoute: typeof ApiPublicBookkeepingSalesRoute
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
+  ApiPublicCronFinanceRoute: typeof ApiPublicCronFinanceRoute
   ApiPublicNieuwsbriefAfbeeldingFileRoute: typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
   ApiPublicRemindersProcessRoute: typeof ApiPublicRemindersProcessRoute
@@ -510,6 +548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBetalingenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/boekhouding': {
+      id: '/_authenticated/boekhouding'
+      path: '/boekhouding'
+      fullPath: '/boekhouding'
+      preLoaderRoute: typeof AuthenticatedBoekhoudingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/contracten': {
       id: '/_authenticated/contracten'
       path: '/contracten'
@@ -529,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/facturen'
       fullPath: '/facturen'
       preLoaderRoute: typeof AuthenticatedFacturenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/finance': {
+      id: '/_authenticated/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof AuthenticatedFinanceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/fotos': {
@@ -678,6 +730,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicContractsProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/finance': {
+      id: '/api/public/cron/finance'
+      path: '/api/public/cron/finance'
+      fullPath: '/api/public/cron/finance'
+      preLoaderRoute: typeof ApiPublicCronFinanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/nieuwsbrief-afbeelding/$file': {
       id: '/api/public/nieuwsbrief-afbeelding/$file'
       path: '/api/public/nieuwsbrief-afbeelding/$file'
@@ -712,9 +771,11 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAankoopfacturenRoute: typeof AuthenticatedAankoopfacturenRoute
   AuthenticatedBetalingenRoute: typeof AuthenticatedBetalingenRoute
+  AuthenticatedBoekhoudingRoute: typeof AuthenticatedBoekhoudingRoute
   AuthenticatedContractenRoute: typeof AuthenticatedContractenRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
+  AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFotosRoute: typeof AuthenticatedFotosRoute
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
@@ -731,9 +792,11 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAankoopfacturenRoute: AuthenticatedAankoopfacturenRoute,
   AuthenticatedBetalingenRoute: AuthenticatedBetalingenRoute,
+  AuthenticatedBoekhoudingRoute: AuthenticatedBoekhoudingRoute,
   AuthenticatedContractenRoute: AuthenticatedContractenRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
+  AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFotosRoute: AuthenticatedFotosRoute,
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
@@ -765,6 +828,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
   ApiPublicBookkeepingSalesRoute: ApiPublicBookkeepingSalesRoute,
   ApiPublicContractsProcessRoute: ApiPublicContractsProcessRoute,
+  ApiPublicCronFinanceRoute: ApiPublicCronFinanceRoute,
   ApiPublicNieuwsbriefAfbeeldingFileRoute:
     ApiPublicNieuwsbriefAfbeeldingFileRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
