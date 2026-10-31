@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useRole, useLargeText } from "@/lib/use-role";
 import { largeTextOn, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
 import { Menu, X } from "lucide-react";
+import { OverdueAfterNoticeAlert } from "@/components/OverdueAfterNoticeAlert";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -142,6 +143,7 @@ function Layout() {
       {role === "marketing" && !marketingAllowed ? null : <main className={fullScreen ? 'min-h-0 w-full min-w-0 flex-1 overflow-hidden' : 'mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6'}>
         <Outlet />
       </main>}
+      {role === "admin" && <OverdueAfterNoticeAlert />}
     </div>
   );
 }
