@@ -40,6 +40,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { AppointmentMailSync } from '@/components/AppointmentMailSync';
 import { CustomerPicker } from '@/components/CustomerPicker';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
+import { sortRows, type SortDir, type SortValue } from '@/lib/sort-rows';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
   head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -59,6 +60,8 @@ function Lijst() {
   const makeQuote = useServerFn(quoteFromTask);
   const [quotingId, setQuotingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [taskSort, setTaskSort] = useState("standaard");
+  const [taskDir, setTaskDir] = useState<SortDir>("asc");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("nieuw");
   const [crewView, setCrewView] = useState("");
   useEffect(() => { setCrewView(localStorage.getItem("admin_crew_view") ?? ""); }, []);
@@ -103,7 +106,8 @@ function Lijst() {
     setForm((f) => ({ ...f, name: c.name, street: c.street ?? "", house_number: c.house_number ?? "", postal_code: c.postal_code ?? "", city: c.city ?? "", phone: c.phone ?? "", email: c.email ?? "", billing_email: c.billing_email ?? "", vat_number: c.vat_number ?? "", project_name: c.project_name ?? "", vat_rate: String(vatRateForCustomer(c.vat_number ?? "", Number(f.vat_rate), undefined, { postalCode: c.postal_code })) }));
   }
   const filtered = filter === "alle" ? data : filter === "nieuw" ? newTaskRows(data) : filter === "ingepland" ? plannedTaskRows(data) : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
-  const rows = [...filtered].sort((a, b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
+  const byKey: Record<string, (w: (typeof filtered)[number]) => SortValue> = { standaard: () => null, datum: (w) => w.scheduled_date, nr: (w) => w.number, klant: (w) => w.customer_name, ploeg: (w) => w.technicians?.name, plaats: (w) => w.site_city || w.city };
+  const rows = sortRows(filtered, byKey[taskSort] ?? byKey.standaard, taskDir).sort((a, b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
   async function patch(id: string, p: Database["public"]["Tables"]["work_orders"]["Update"]) {
     const { error } = await supabase.from("work_orders").update(p).eq("id", id);
     if (error) toast.error(error.message);
@@ -305,6 +309,13 @@ function Lijst() {
             {FILTER_LABELS[f]} ({f === "nieuw" ? newTaskRows(data).length : f === "ingepland" ? plannedTaskRows(data).length : f === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)).length : f === "alle" ? data.length : data.filter(w => w.status === f).length})
           </Button>
         ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Label htmlFor="taak-sort" className="text-xs font-bold uppercase text-muted-foreground">Sorteren op</Label>
+        <select id="taak-sort" className="h-9 rounded-md border bg-background px-2" value={taskSort} onChange={(e) => setTaskSort(e.target.value)}>
+          <option value="standaard">Standaard</option><option value="datum">Datum</option><option value="nr">Nummer</option><option value="klant">Klant</option><option value="ploeg">Ploeg</option><option value="plaats">Plaats</option>
+        </select>
+        <Button size="sm" variant="outline" disabled={taskSort === "standaard"} onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button>
       </div>
       <div className="grid gap-3">
         {rows.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen taken.</div>}
