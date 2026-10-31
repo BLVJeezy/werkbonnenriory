@@ -526,6 +526,13 @@
       "when": 1793481426178,
       "tag": "0074_manual_bank_invoice_link",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1793481919804,
+      "tag": "0075_finance_bookkeeping_core",
+      "breakpoints": true
     }
   ]
 }

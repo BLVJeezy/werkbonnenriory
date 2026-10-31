@@ -193,6 +193,33 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          created_at: string
+          enterprise_number: string | null
+          id: string
+          name: string
+          simpla_bound: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enterprise_number?: string | null
+          id?: string
+          name: string
+          simpla_bound?: boolean
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          enterprise_number?: string | null
+          id?: string
+          name?: string
+          simpla_bound?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       contract_billing_queue: {
         Row: {
           contract_id: string
@@ -537,6 +564,990 @@ export type Database = {
             columns: ["delivery_id"]
             isOneToOne: false
             referencedRelation: "document_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_accounts: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          number: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          number: string
+          source?: string
+          user_id?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          number?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_audit: {
+        Row: {
+          action: string
+          company_id: string | null
+          created_at: string
+          detail: Json | null
+          entity: string
+          entity_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fin_bank_tx: {
+        Row: {
+          amount: number
+          bank_account: string | null
+          company_id: string
+          counterparty: string | null
+          created_at: string
+          dedupe_key: string
+          description: string | null
+          entry_id: string | null
+          id: string
+          matched_invoice_id: string | null
+          tx_date: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_account?: string | null
+          company_id: string
+          counterparty?: string | null
+          created_at?: string
+          dedupe_key: string
+          description?: string | null
+          entry_id?: string | null
+          id?: string
+          matched_invoice_id?: string | null
+          tx_date: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          bank_account?: string | null
+          company_id?: string
+          counterparty?: string | null
+          created_at?: string
+          dedupe_key?: string
+          description?: string | null
+          entry_id?: string | null
+          id?: string
+          matched_invoice_id?: string | null
+          tx_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_bank_tx_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bank_tx_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "fin_journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bank_tx_matched_invoice_id_fkey"
+            columns: ["matched_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "fin_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_budgets: {
+        Row: {
+          amount: number
+          category: string
+          company_id: string
+          id: string
+          month: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          company_id: string
+          id?: string
+          month: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          company_id?: string
+          id?: string
+          month?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_budgets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_competitor_metrics: {
+        Row: {
+          competitor_id: string
+          employees: number | null
+          equity: number | null
+          fiscal_year: number
+          gross_margin: number | null
+          id: string
+          profit: number | null
+          retrieved_at: string
+          revenue: number | null
+          scope: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          competitor_id: string
+          employees?: number | null
+          equity?: number | null
+          fiscal_year: number
+          gross_margin?: number | null
+          id?: string
+          profit?: number | null
+          retrieved_at: string
+          revenue?: number | null
+          scope?: string
+          source: string
+          user_id?: string
+        }
+        Update: {
+          competitor_id?: string
+          employees?: number | null
+          equity?: number | null
+          fiscal_year?: number
+          gross_margin?: number | null
+          id?: string
+          profit?: number | null
+          retrieved_at?: string
+          revenue?: number | null
+          scope?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_competitor_metrics_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "fin_competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_competitors: {
+        Row: {
+          created_at: string
+          enterprise_number: string | null
+          id: string
+          identity_confirmed: boolean
+          is_own: boolean
+          name: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enterprise_number?: string | null
+          id?: string
+          identity_confirmed?: boolean
+          is_own?: boolean
+          name: string
+          note?: string | null
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          enterprise_number?: string | null
+          id?: string
+          identity_confirmed?: boolean
+          is_own?: boolean
+          name?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fin_entries: {
+        Row: {
+          account: string | null
+          amount: number
+          category: string
+          company_id: string
+          created_at: string
+          dedupe_key: string
+          description: string | null
+          id: string
+          kind: string
+          level: string
+          month: string
+          source: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          account?: string | null
+          amount: number
+          category?: string
+          company_id: string
+          created_at?: string
+          dedupe_key: string
+          description?: string | null
+          id?: string
+          kind: string
+          level?: string
+          month: string
+          source?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Update: {
+          account?: string | null
+          amount?: number
+          category?: string
+          company_id?: string
+          created_at?: string
+          dedupe_key?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          level?: string
+          month?: string
+          source?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_investments: {
+        Row: {
+          capitalizable_amount: number | null
+          company_id: string
+          created_at: string
+          disposal_date: string | null
+          id: string
+          invoice_line_id: string | null
+          is_land: boolean
+          method: string
+          name: string
+          opening_accumulated: number
+          opening_cutoff: string | null
+          purchase_amount: number | null
+          residual_value: number
+          start_date: string | null
+          useful_life_months: number | null
+          user_id: string
+        }
+        Insert: {
+          capitalizable_amount?: number | null
+          company_id: string
+          created_at?: string
+          disposal_date?: string | null
+          id?: string
+          invoice_line_id?: string | null
+          is_land?: boolean
+          method?: string
+          name: string
+          opening_accumulated?: number
+          opening_cutoff?: string | null
+          purchase_amount?: number | null
+          residual_value?: number
+          start_date?: string | null
+          useful_life_months?: number | null
+          user_id?: string
+        }
+        Update: {
+          capitalizable_amount?: number | null
+          company_id?: string
+          created_at?: string
+          disposal_date?: string | null
+          id?: string
+          invoice_line_id?: string | null
+          is_land?: boolean
+          method?: string
+          name?: string
+          opening_accumulated?: number
+          opening_cutoff?: string | null
+          purchase_amount?: number | null
+          residual_value?: number
+          start_date?: string | null
+          useful_life_months?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_investments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_investments_invoice_line_id_fkey"
+            columns: ["invoice_line_id"]
+            isOneToOne: false
+            referencedRelation: "fin_invoice_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_invoice_lines: {
+        Row: {
+          account: string | null
+          category: string | null
+          company_id: string | null
+          confidence: number | null
+          description: string | null
+          ex_vat: number
+          id: string
+          invoice_id: string
+          is_investment: boolean
+          suggestion_rule_id: string | null
+          user_id: string
+          vat: number
+        }
+        Insert: {
+          account?: string | null
+          category?: string | null
+          company_id?: string | null
+          confidence?: number | null
+          description?: string | null
+          ex_vat?: number
+          id?: string
+          invoice_id: string
+          is_investment?: boolean
+          suggestion_rule_id?: string | null
+          user_id?: string
+          vat?: number
+        }
+        Update: {
+          account?: string | null
+          category?: string | null
+          company_id?: string | null
+          confidence?: number | null
+          description?: string | null
+          ex_vat?: number
+          id?: string
+          invoice_id?: string
+          is_investment?: boolean
+          suggestion_rule_id?: string | null
+          user_id?: string
+          vat?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "fin_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_invoices: {
+        Row: {
+          bank_ref: string | null
+          company_id: string
+          counterparty: string | null
+          created_at: string
+          direction: string
+          doc_type: string
+          due_date: string | null
+          id: string
+          invoice_date: string | null
+          number: string | null
+          original_invoice_id: string | null
+          paid_at: string | null
+          review_status: string
+          source: string
+          source_ref: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          bank_ref?: string | null
+          company_id: string
+          counterparty?: string | null
+          created_at?: string
+          direction: string
+          doc_type?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          number?: string | null
+          original_invoice_id?: string | null
+          paid_at?: string | null
+          review_status?: string
+          source?: string
+          source_ref?: string | null
+          status?: string
+          user_id?: string
+        }
+        Update: {
+          bank_ref?: string | null
+          company_id?: string
+          counterparty?: string | null
+          created_at?: string
+          direction?: string
+          doc_type?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          number?: string | null
+          original_invoice_id?: string | null
+          paid_at?: string | null
+          review_status?: string
+          source?: string
+          source_ref?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_invoices_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "fin_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_journal_entries: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          entry_date: string
+          id: string
+          journal: string
+          reference: string | null
+          source: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          entry_date: string
+          id?: string
+          journal: string
+          reference?: string | null
+          source: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          entry_date?: string
+          id?: string
+          journal?: string
+          reference?: string | null
+          source?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_journal_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_journal_lines: {
+        Row: {
+          account: string
+          company_id: string
+          credit: number
+          debit: number
+          description: string | null
+          entry_id: string
+          id: string
+          user_id: string
+          vat_grid: string | null
+        }
+        Insert: {
+          account: string
+          company_id: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          entry_id: string
+          id?: string
+          user_id?: string
+          vat_grid?: string | null
+        }
+        Update: {
+          account?: string
+          company_id?: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          entry_id?: string
+          id?: string
+          user_id?: string
+          vat_grid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_journal_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "fin_journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_loan_schedule: {
+        Row: {
+          capital: number
+          company_id: string
+          created_at: string
+          credit_account: string | null
+          debit_account: string
+          due_date: string
+          id: string
+          interest: number
+          kind: string
+          loan_key: string
+          loan_name: string
+          reference: string | null
+          user_id: string
+        }
+        Insert: {
+          capital?: number
+          company_id: string
+          created_at?: string
+          credit_account?: string | null
+          debit_account: string
+          due_date: string
+          id?: string
+          interest?: number
+          kind: string
+          loan_key: string
+          loan_name: string
+          reference?: string | null
+          user_id?: string
+        }
+        Update: {
+          capital?: number
+          company_id?: string
+          created_at?: string
+          credit_account?: string | null
+          debit_account?: string
+          due_date?: string
+          id?: string
+          interest?: number
+          kind?: string
+          loan_key?: string
+          loan_name?: string
+          reference?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_loan_schedule_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_loans: {
+        Row: {
+          annual_rate: number
+          company_id: string
+          created_at: string
+          id: string
+          months: number
+          name: string
+          principal: number
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          annual_rate: number
+          company_id: string
+          created_at?: string
+          id?: string
+          months: number
+          name: string
+          principal: number
+          start_date: string
+          user_id?: string
+        }
+        Update: {
+          annual_rate?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          months?: number
+          name?: string
+          principal?: number
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_loans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_months: {
+        Row: {
+          bank_complete: boolean
+          company_id: string
+          costs_complete: boolean
+          id: string
+          month: string
+          note: string | null
+          revenue_complete: boolean
+          user_id: string
+        }
+        Insert: {
+          bank_complete?: boolean
+          company_id: string
+          costs_complete?: boolean
+          id?: string
+          month: string
+          note?: string | null
+          revenue_complete?: boolean
+          user_id?: string
+        }
+        Update: {
+          bank_complete?: boolean
+          company_id?: string
+          costs_complete?: boolean
+          id?: string
+          month?: string
+          note?: string | null
+          revenue_complete?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_months_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_recurring: {
+        Row: {
+          active: boolean
+          amount: number
+          company_id: string
+          created_at: string
+          credit_account: string
+          day_of_month: number
+          debit_account: string
+          description: string
+          end_month: string | null
+          id: string
+          journal: string
+          start_month: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          company_id: string
+          created_at?: string
+          credit_account: string
+          day_of_month?: number
+          debit_account: string
+          description: string
+          end_month?: string | null
+          id?: string
+          journal?: string
+          start_month: string
+          user_id?: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          company_id?: string
+          created_at?: string
+          credit_account?: string
+          day_of_month?: number
+          debit_account?: string
+          description?: string
+          end_month?: string | null
+          id?: string
+          journal?: string
+          start_month?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_recurring_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_rules: {
+        Row: {
+          account: string
+          category: string
+          company_id: string
+          enabled: boolean
+          hits: number
+          id: string
+          keyword: string
+          scope: string
+          supplier_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account: string
+          category: string
+          company_id: string
+          enabled?: boolean
+          hits?: number
+          id?: string
+          keyword?: string
+          scope?: string
+          supplier_key: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          account?: string
+          category?: string
+          company_id?: string
+          enabled?: boolean
+          hits?: number
+          id?: string
+          keyword?: string
+          scope?: string
+          supplier_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_supplier_imports: {
+        Row: {
+          bill_date: string | null
+          bill_number: string | null
+          id: string
+          simpla_id: string
+          supplier_name: string | null
+          total_ex_vat: number
+          total_inc_vat: number
+          user_id: string
+        }
+        Insert: {
+          bill_date?: string | null
+          bill_number?: string | null
+          id?: string
+          simpla_id: string
+          supplier_name?: string | null
+          total_ex_vat?: number
+          total_inc_vat?: number
+          user_id?: string
+        }
+        Update: {
+          bill_date?: string | null
+          bill_number?: string | null
+          id?: string
+          simpla_id?: string
+          supplier_name?: string | null
+          total_ex_vat?: number
+          total_inc_vat?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fin_sync_status: {
+        Row: {
+          company_id: string
+          id: string
+          last_error: string | null
+          last_error_at: string | null
+          last_success_at: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_success_at?: string | null
+          source: string
+          user_id?: string
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          last_error?: string | null
+          last_error_at?: string | null
+          last_success_at?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_sync_status_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_tasks: {
+        Row: {
+          body_text: string | null
+          created_at: string
+          due_date: string | null
+          finance_company_id: string
+          finance_event_key: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body_text?: string | null
+          created_at?: string
+          due_date?: string | null
+          finance_company_id: string
+          finance_event_key: string
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          user_id?: string
+        }
+        Update: {
+          body_text?: string | null
+          created_at?: string
+          due_date?: string | null
+          finance_company_id?: string
+          finance_event_key?: string
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_tasks_finance_company_id_fkey"
+            columns: ["finance_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1710,6 +2721,19 @@ export type Database = {
         Returns: string
       }
       ensure_approved_quote_task: { Args: { p_id: string }; Returns: string }
+      fin_post_entry: {
+        Args: {
+          _company: string
+          _date: string
+          _description: string
+          _journal: string
+          _lines: Json
+          _reference: string
+          _source: string
+          _source_ref: string
+        }
+        Returns: string
+      }
       forward_external_appointment: {
         Args: { p_id: string; p_instruction: string }
         Returns: string
@@ -1735,6 +2759,9 @@ export type Database = {
       my_technician_id: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
+      owns_company: { Args: { _company: string }; Returns: boolean }
+      owns_competitor: { Args: { _c: string }; Returns: boolean }
+      owns_fin_invoice: { Args: { _inv: string }; Returns: boolean }
       photo_overview: {
         Args: never
         Returns: {
