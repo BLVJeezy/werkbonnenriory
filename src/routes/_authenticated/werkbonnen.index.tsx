@@ -107,7 +107,7 @@ function Lijst() {
   }
   const filtered = filter === "alle" ? data : filter === "nieuw" ? newTaskRows(data) : filter === "ingepland" ? plannedTaskRows(data) : filter === "bezig" ? data.filter((w) => activeTimeEntry(w.time_entries)) : data.filter((w) => w.status === filter);
   const byKey: Record<string, (w: (typeof filtered)[number]) => SortValue> = { standaard: () => null, datum: (w) => w.scheduled_date, nr: (w) => w.number, klant: (w) => w.customer_name, ploeg: (w) => w.technicians?.name, plaats: (w) => w.site_city || w.city };
-  const rows = sortRows(filtered, byKey[taskSort] ?? byKey.standaard, taskDir).sort((a, b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
+  const rows = sortRows(filtered, byKey[taskSort] ?? (() => null), taskDir).sort((a, b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
   async function patch(id: string, p: Database["public"]["Tables"]["work_orders"]["Update"]) {
     const { error } = await supabase.from("work_orders").update(p).eq("id", id);
     if (error) toast.error(error.message);

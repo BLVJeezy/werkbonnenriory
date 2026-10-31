@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { sortRows, type SortDir, type SortValue } from "@/lib/sort-rows";
 import { cn } from "@/lib/utils";
 
-export function useSort<T, K extends string>(rows: T[], getters: Record<K, (row: T) => SortValue>, initial: K | null = null, initialDir: SortDir = "asc") {
+export function useSort<T, K extends string>(rows: T[], getters: Record<K, (row: T) => SortValue>, initial: NoInfer<K> | null = null, initialDir: SortDir = "asc") {
   const [key, setKey] = useState<K | null>(initial);
   const [dir, setDir] = useState<SortDir>(initialDir);
   const sorted = useMemo(() => (key ? sortRows(rows, getters[key], dir) : rows), [rows, key, dir]); // eslint-disable-line react-hooks/exhaustive-deps
