@@ -6,3 +6,4 @@
 - [x] App-icoon in Riory-huisstijl voor de admin (favicon + apple-touch-icon) én als JPG-download.
 - [x] Knop 'Terug naar nog in te plannen' op takenlijst en kalender.
 - [x] Eerste betalingsherinnering automatisch na vervaldatum (dagelijks).
+- [x] Klantnummers opnieuw overal zichtbaar: nieuwe klanten krijgen automatisch het volgende 6-cijferige nummer; ontbrekende nummers aangevuld.
