@@ -86,7 +86,7 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
   function pickActivity(i: number, id: string) {
     const a = activities.find((x) => x.id === id);
     if (!a) return;
-    setItem(i, { title: a.name, detail: "", unit: "u", unitPrice: a.hourly_rate == null ? "" : String(a.hourly_rate) });
+    setItem(i, activityLineValues(a));
   }
 
   function addressOf(c: Record<string, unknown> | null): string | null {

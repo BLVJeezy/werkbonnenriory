@@ -85,6 +85,11 @@ export function splitTravelLine(lines: InvoiceLine[]) {
   return { kmLine: lines.find((l) => l.unit === "km") ?? null, rest: lines.filter((l) => l.unit !== "km") };
 }
 
+/** Pure: wat een gekozen activiteit op een factuurlijn zet — naam, eenheid uren en het tarief van die activiteit. */
+export function activityLineValues(a: { name: string; hourly_rate: number | null }) {
+  return { title: a.name, detail: "", unit: "u", unitPrice: a.hourly_rate == null ? "" : String(a.hourly_rate) };
+}
+
 /** Pure: per-line totals — excl. VAT after discount, and incl. VAT at the line's own rate. */
 export function lineTotals(l: { quantity: number; unitPrice: number; discount?: number; vatRate?: number }) {
   const qty = Number(l.quantity) || 0;
