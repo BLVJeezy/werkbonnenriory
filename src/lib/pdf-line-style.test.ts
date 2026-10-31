@@ -1,26 +1,39 @@
 import { expect, it } from "vitest";
+import { inflateSync } from "node:zlib";
 import { PDFDict, PDFDocument, PDFName, PDFRef } from "pdf-lib";
 import { createInvoicePdf, type InvoicePdfData } from "./invoice-pdf";
 import { createQuotePdf, type QuotePdfData } from "./quote-pdf";
 
 type Drawn = { text: string; baseFont: string; size: string; order: number };
 
+const deref = (doc: PDFDocument, value: unknown) => (value instanceof PDFRef ? doc.context.lookup(value) : value);
+
 /** Reads every text run of a PDF page together with the font and size that was active when it was drawn. */
 async function drawnText(bytes: Uint8Array, pageIndex = 0): Promise<Drawn[]> {
   const doc = await PDFDocument.load(bytes);
   const page = doc.getPage(pageIndex);
   const contents = page.node.Contents();
-  const stream = contents instanceof PDFRef ? doc.lookup(contents) : contents;
-  const raw = (stream as { getContentsString(): string }).getContentsString();
+  const items = contents instanceof PDFArray ? contents.asArray() : contents ? [contents] : [];
+  const raw = items
+    .map((item) => {
+      const stream = deref(doc, item) as { contents?: Uint8Array };
+      const data = stream.contents ?? new Uint8Array();
+      try {
+        return new TextDecoder("latin1").decode(inflateSync(data));
+      } catch {
+        return new TextDecoder("latin1").decode(data);
+      }
+    })
+    .join("\n");
 
-  const resources = page.node.Resources();
-  const fontDict = resources ? (doc.lookup(resources) as PDFDict).lookup(PDFName.of("Font")) : undefined;
+  const resources = deref(doc, page.node.Resources());
+  const fontDict = resources instanceof PDFDict ? deref(doc, resources.lookup(PDFName.of("Font"))) : undefined;
   const baseFonts = new Map<string, string>();
   if (fontDict instanceof PDFDict) {
     for (const [name, ref] of fontDict.entries()) {
-      const obj = doc.lookup(ref);
+      const obj = deref(doc, ref);
       const baseFont = obj instanceof PDFDict ? obj.get(PDFName.of("BaseFont")) : undefined;
-      baseFonts.set(String(name), baseFont ? String(baseFont) : "");
+      baseFonts.set(String(name).replace(/^\//, ""), baseFont ? String(baseFont) : "");
     }
   }
 
@@ -48,9 +61,9 @@ const quote: QuotePdfData = {
   company, terms: null,
 };
 
-for (const [label, bytes] of [["factuur", () => createInvoicePdf(invoice)], ["offerte", () => createQuotePdf(quote)]] as const) {
+for (const [label, make] of [["factuur", () => createInvoicePdf(invoice)], ["offerte", () => createQuotePdf(quote)]] as const) {
   it(`zet op de ${label} de productnaam vet en de lange omschrijving eronder in een kleiner lettertype`, async () => {
-    const drawn = await drawnText(await bytes());
+    const drawn = await drawnText(await make());
     const title = drawn.find((d) => d.text.includes("Dieptereiniging regenput"));
     const detail = drawn.find((d) => d.text.includes("hogedruk"));
     expect(title, "productnaam staat op het document").toBeDefined();
