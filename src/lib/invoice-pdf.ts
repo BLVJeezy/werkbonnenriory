@@ -6,6 +6,7 @@ import { invoiceTaxGroups } from './contract-billing';
 import { invoiceVatNotices } from './invoice-vat-notices';
 import { invoicePaymentReference } from './invoice-payment-reference';
 import { buildSepaQr } from './sepa-qr';
+import { splitLineText } from './line-text';
 import QRCode from 'qrcode';
 
 export type InvoicePdfData = {
@@ -32,11 +33,11 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   const logo = await doc.embedPng(RIORY_LOGO_PNG_BASE64);
   const ink = rgb(0.118, 0.18, 0.204), orange = rgb(0.953, 0.573, 0), muted = rgb(0.42, 0.46, 0.48), soft = rgb(0.996, 0.957, 0.902), white = rgb(1, 1, 1);
   const pr = (t: string) => [...t].map((c) => { try { font.encodeText(c); return c; } catch { return "?"; } }).join("");
-  const wrap = (text: string, size: number, width: number) => {
+  const wrap = (text: string, size: number, width: number, f = font) => {
     const out: string[] = [];
     for (const block of pr(text).split(/\r?\n/)) {
       let cur = "";
-      for (const w of block.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (font.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
+      for (const w of block.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (f.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
       out.push(cur);
     }
     return out;
