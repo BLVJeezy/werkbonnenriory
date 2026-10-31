@@ -505,6 +505,13 @@
       "when": 1793455094110,
       "tag": "0071_invoice_note",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793475133887,
+      "tag": "0072_insurance_quotes",
+      "breakpoints": true
     }
   ]
 }
