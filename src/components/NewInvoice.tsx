@@ -82,6 +82,40 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
     setItem(i, { title: p.name, detail: (p.description ?? "").trim(), unit: p.unit, unitPrice: String(p.price) });
   }
 
+  function addressOf(c: Record<string, unknown> | null): string | null {
+    if (!c) return null;
+    const part = (snake: string, camel: string) => {
+      const v = c[snake] ?? c[camel];
+      return typeof v === "string" && v.trim() ? v.trim() : null;
+    };
+    return formatAddress({ street: part("street", "street"), house_number: part("house_number", "houseNumber"), postal_code: part("postal_code", "postalCode"), city: part("city", "city") });
+  }
+
+  function currentCustomer(): Record<string, unknown> | null {
+    if (customerId) return (customers.find((x) => x.id === customerId) ?? null) as Record<string, unknown> | null;
+    return (invoice?.customer as Record<string, unknown>) ?? null;
+  }
+
+  async function computeKm(c: Record<string, unknown> | null) {
+    const address = addressOf(c);
+    if (!address) { toast.error("De klant heeft geen adres"); return false; }
+    setKmBusy(true);
+    try {
+      const r = await calcKm({ data: { address } });
+      if (r.km == null) { toast.error("Afstand niet gevonden voor dit adres"); return false; }
+      setKm(r.km);
+      return true;
+    } catch { toast.error("Afstand berekenen mislukt"); return false; }
+    finally { setKmBusy(false); }
+  }
+
+  async function toggleKm(on: boolean) {
+    if (!on) { setKmOn(false); setKm(null); setKmVat(null); return; }
+    const c = currentCustomer();
+    if (!c) { toast.error("Kies eerst een klant"); return; }
+    if (await computeKm(c)) setKmOn(true);
+  }
+
   function chooseCustomer(id: string) {
     setCustomerId(id);
     const c = customers.find((x) => x.id === id);
@@ -90,6 +124,8 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
     const def = String(vatRateForCustomer(c.vat_number, 21, undefined, { postalCode: c.postal_code }));
     setDefaultVat(def);
     if (!editing && def !== "21") setItems((ls) => ls.map((l) => (l.kind === "line" ? { ...l, vatRate: def } : l)));
+    // Kies je een andere klant terwijl kilometers aanstaan, dan hoort de afstand bij die klant.
+    if (kmOn) { setKmVat(null); void computeKm(c as Record<string, unknown>); }
   }
 
   function start() {
