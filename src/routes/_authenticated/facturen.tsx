@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { SortTh, Th, tableCls, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,12 @@ export const Route = createFileRoute("/_authenticated/facturen")({
 });
 
 const STATUS: Record<string, string> = { concept: "Te verzenden", verzonden: "Verzonden", fout: "Mislukt" };
+
+function woWhen(w: { scheduled_date: string | null; scheduled_from: string | null; scheduled_until: string | null; signed_at: string | null }) {
+  const day = w.scheduled_date ? new Date(`${w.scheduled_date}T00:00`).toLocaleDateString("nl-BE") : w.signed_at ? new Date(w.signed_at).toLocaleDateString("nl-BE") : "—";
+  const time = w.scheduled_from ? ` ${w.scheduled_from.slice(0, 5)}${w.scheduled_until ? `–${w.scheduled_until.slice(0, 5)}` : ""}` : w.signed_at ? ` ${new Date(w.signed_at).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}` : "";
+  return day + time;
+}
 
 function Facturen() {
   const qc = useQueryClient();
@@ -157,6 +164,9 @@ function Facturen() {
     setBusy(false);
   }
 
+  const todoSort = useSort(data?.todo ?? [], { nr: (w) => w.number, klant: (w) => w.customer_name, ploeg: (w) => w.technicians?.name, datum: (w) => w.scheduled_date ?? w.signed_at, betaald: (w) => (w.paid_at ? Number(w.paid_amount) : null) });
+  const invSort = useSort(data?.invoices ?? [], { nr: (i) => i.number, klant: (i) => (i.customer as { name?: string }).name, datum: (i) => i.created_at, bedrag: (i) => Number(i.total), status: (i) => i.status });
+  const [openInv, setOpenInv] = useState<string | null>(null);
   if (!data) return <p className="text-muted-foreground">Laden…</p>;
   const s = data.settings;
   const openIds = data.invoices.filter((i) => i.status !== "verzonden").map((i) => i.id);
