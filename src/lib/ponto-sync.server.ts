@@ -1,6 +1,7 @@
 import { decryptConnectionKey } from "./connectionKeyCrypto.server";
 import { matchInvoice, type PontoTransaction } from "./ponto-match";
 import { matchPurchasePayment } from './purchase-payment';
+import { storePontoTransactions } from './ponto-store';
 
 const API = "https://api.myponto.com";
 
@@ -83,11 +84,9 @@ export async function syncPontoPayments(supabase: any) {
   for (const accountId of accountIds) {
     const txs = await recentTransactions(token, accountId);
     if (txs.length) {
-      const { error: storeError } = await supabase.from("ponto_transactions").upsert(
+      await storePontoTransactions(supabase,
         txs.map((tx) => ({ transaction_key: tx.key, account_id: accountId, amount: tx.amount, remittance: tx.remittanceInformation, counterpart_name: tx.counterpartName, execution_date: tx.executionDate ? tx.executionDate.slice(0, 10) : null })),
-        { onConflict: "transaction_key" },
       );
-      if (storeError) throw new Error(storeError.message);
     }
     for (const tx of txs) {
       if (usedKeys.has(tx.key)) continue;
