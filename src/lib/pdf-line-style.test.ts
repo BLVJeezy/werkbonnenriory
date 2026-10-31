@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { inflateSync } from "node:zlib";
-import { PDFDict, PDFDocument, PDFName, PDFRef } from "pdf-lib";
+import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRef } from "pdf-lib";
 import { createInvoicePdf, type InvoicePdfData } from "./invoice-pdf";
 import { createQuotePdf, type QuotePdfData } from "./quote-pdf";
 
