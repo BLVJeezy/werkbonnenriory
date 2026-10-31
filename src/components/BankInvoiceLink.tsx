@@ -31,7 +31,7 @@ export function BankInvoiceLink({ transaction, onClose }: { transaction: BankTra
     setSaveError(null);
     try {
       await link({ data: { transactionKey: transaction.transaction_key, invoiceId: selected.id } });
-      await Promise.all(["ponto_transactions", "facturen", "bank-link-invoices", "dashboard", "payment-reminder-escalations"].map(key => qc.invalidateQueries({ queryKey: [key] })));
+      await Promise.all(["ponto_transactions", "facturen", "bank-link-invoices", "dashboard-omzet", "payment-reminder-escalations"].map(key => qc.invalidateQueries({ queryKey: [key] })));
       toast.success(`Betaling gekoppeld aan factuur ${selected.number}`);
       onClose();
     } catch (err) {
