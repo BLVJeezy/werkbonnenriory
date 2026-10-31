@@ -56,3 +56,29 @@ describe("factuurtitels", () => {
     expect(iie({ ...base, kind: "creditnota" })).toBe(false);
   });
 });
+
+import { travelKmLine } from "./invoice";
+describe("kilometers op een handmatige factuur", () => {
+  it("maakt dezelfde verplaatsingslijn als bij offertes", () => {
+    expect(travelKmLine(12, 0.45, 21)).toMatchObject({
+      description: "Verplaatsing heen en terug (12 km)", quantity: 12, unit: "km", unitPrice: 0.45, vatRate: 21, group: null,
+    });
+  });
+  it("geen lijn zonder afstand", () => {
+    expect(travelKmLine(null, 0.45, 21)).toBeNull();
+    expect(travelKmLine(0, 0.45, 21)).toBeNull();
+  });
+  it("telt mee in de factuurtotalen en blijft los van een titel", () => {
+    const travel = travelKmLine(12, 0.45, 21)!;
+    const inv = bmi([
+      { description: "Ruimen", quantity: 1, unit: "st", unitPrice: 150, vatRate: 21, group: "Dieptereiniging" },
+      travel,
+    ]);
+    expect(inv.net).toBe(155.4);
+    expect(inv.vat).toBe(32.63);
+    expect(inv.total).toBe(188.03);
+    const s = gil(inv.lines);
+    expect(s[0]).toMatchObject({ title: "Dieptereiniging", subtotal: 150 });
+    expect(s[1]).toMatchObject({ title: null, subtotal: 5.4 });
+  });
+});
