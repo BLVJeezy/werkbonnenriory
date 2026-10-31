@@ -1,0 +1,1 @@
+ALTER TABLE public.invoices ADD COLUMN post_requested_at timestamptz, ADD COLUMN post_sent_at timestamptz, ADD COLUMN post_reference text, ADD COLUMN post_error text;
