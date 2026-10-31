@@ -67,6 +67,19 @@ export function buildManualInvoice(lines: { description: string; quantity: numbe
   return { lines: rows, vatRate: rows[0]?.vatRate ?? 21, net, vat, total: r2(net + vat) };
 }
 
+/** Shape the "Nieuwe factuur" form posts to the server. */
+export type ManualInvoiceLine = {
+  description: string; quantity: number; unit: string; unitPrice: number; vatRate: number;
+  discount?: number; group?: string | null; hidePrice?: boolean;
+};
+
+/** Pure: the travel line used by quotes and manual invoices — round trip in km at the km rate. */
+export function travelKmLine(km: number | null, kmRate: number, vatRate: number): ManualInvoiceLine | null {
+  const q = Number(km) || 0;
+  if (q <= 0) return null;
+  return { description: `Verplaatsing heen en terug (${q} km)`, quantity: q, unit: "km", unitPrice: Number(kmRate) || 0, vatRate: Number(vatRate) || 0, discount: 0, group: null, hidePrice: false };
+}
+
 /** Pure: per-line totals — excl. VAT after discount, and incl. VAT at the line's own rate. */
 export function lineTotals(l: { quantity: number; unitPrice: number; discount?: number; vatRate?: number }) {
   const qty = Number(l.quantity) || 0;
