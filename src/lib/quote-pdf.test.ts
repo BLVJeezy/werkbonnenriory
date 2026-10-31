@@ -5,7 +5,7 @@ import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 
 const base: QuotePdfData = {
   number: "OFF-9", issueDate: "2026-10-31", validUntil: "2026-11-30",
-  customer: { name: "Test", address: null, siteAddress: null, vatNumber: null, email: null },
+  customer: { name: "Test", street: null, houseNumber: null, postalCode: null, city: null, address: null, siteAddress: null, vatNumber: null, email: null },
   lines: [], vatRate: 6, net: 0, vat: 0, total: 0,
   company: { name: "Riory bv", vat: "BE0840931404", iban: null, bic: null }, terms: null,
 };

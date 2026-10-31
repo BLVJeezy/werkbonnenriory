@@ -8,3 +8,4 @@
 - [x] Eerste betalingsherinnering automatisch na vervaldatum (dagelijks).
 - [x] Klantnummers opnieuw overal zichtbaar: nieuwe klanten krijgen automatisch het volgende 6-cijferige nummer; ontbrekende nummers aangevuld.
 - [x] Facturenlijst: kolom Betaald toont altijd een bedrag; rij groen bij betaald, wit bij open, rood bij vervallen.
+- [x] Facturen en offertes: productnaam vetgedrukt met de lange omschrijving eronder als bijvoegsel, ook op de klantondertekenpagina; regeleinden blijven behouden.

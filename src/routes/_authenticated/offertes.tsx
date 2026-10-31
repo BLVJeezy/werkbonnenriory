@@ -12,6 +12,7 @@ import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
+import { splitLineText } from "@/lib/line-text";
 import { assignQuoteCrew, convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
@@ -28,8 +29,10 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { description: string; quantity: string; unit: string; unitPrice: string };
-const emptyLine: Line = { description: "", quantity: "1", unit: "st", unitPrice: "" };
+type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string };
+const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "" };
+/** The stored line text keeps its old shape: product name on the first line, long description below it. */
+const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
 
 function Offertes() {
   const qc = useQueryClient();
@@ -88,8 +91,8 @@ function Offertes() {
 
   const parsedLines: InvoiceLine[] = [
     ...lines
-      .filter((l) => l.description.trim())
-      .map((l) => quoteLine(l.description.trim(), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
+      .filter((l) => lineText(l))
+      .map((l) => quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
     ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
   ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
@@ -122,8 +125,7 @@ function Offertes() {
   function pickProduct(i: number, productId: string) {
     const p = products.find((x) => x.id === productId);
     if (p) {
-      const long = (p.description ?? "").trim();
-      setLine(i, { description: long ? `${p.name}\n${long}` : p.name, unit: p.unit, unitPrice: String(p.price) });
+      setLine(i, { title: p.name, detail: (p.description ?? "").trim(), unit: p.unit, unitPrice: String(p.price) });
     }
   }
 
@@ -141,7 +143,10 @@ function Offertes() {
     const kmLine = all.find((l) => l.unit === "km");
     setKmOn(!!kmLine);
     setKm(kmLine ? kmLine.quantity : null);
-    const ls = all.filter((l) => l.unit !== "km").map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
+    const ls = all.filter((l) => l.unit !== "km").map((l) => {
+      const t = splitLineText(l.description);
+      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) };
+    });
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
   }
@@ -216,8 +221,11 @@ function Offertes() {
       if (d.intro) setIntro(d.intro);
       setDamageCause(d.cause);
       setDamageFindings(d.findings);
-      const keep = lines.filter((l) => l.description.trim());
-      setLines([...keep, ...d.lines.map((l) => ({ description: l.description, quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" }))]);
+      const keep = lines.filter((l) => lineText(l));
+      setLines([...keep, ...d.lines.map((l) => {
+        const t = splitLineText(l.description);
+        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" };
+      })]);
       toast.success("Voorstel ingevuld — kijk alles na en vul de prijzen in");
     } catch (e) { toast.error(e instanceof Error ? e.message : "AI-voorstel mislukt"); }
     finally { setAiBusy(false); }
@@ -313,13 +321,16 @@ function Offertes() {
           <div className="space-y-2">
             <Label>{bestek ? "Posten" : "Lijnen"}</Label>
             {lines.map((l, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-2">
-                <Textarea placeholder="Omschrijving (of kies product)" rows={Math.min(8, Math.max(1, l.description.split("\n").length))} className="min-h-10 min-w-48 flex-1 basis-full sm:basis-0" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} />
-                <SearchSelect className="basis-full sm:w-64 sm:basis-auto" placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={products.map(p => ({ value: p.id, label: p.name, search: `${p.alias ?? ''} ${p.description ?? ''}` }))} />
-                <Input type="number" step="any" min="0" className="w-20" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} />
-                <Input className="w-16" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} />
-                <Input type="number" step="0.01" min="0" placeholder="Prijs" className="w-28" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} />
-                <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
+              <div key={i} className="space-y-1.5 rounded-md border p-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input placeholder="Product of post" className="min-w-40 flex-1 basis-full font-bold sm:basis-0" value={l.title} onChange={(e) => setLine(i, { title: e.target.value })} aria-label="Productnaam" />
+                  <SearchSelect className="basis-full sm:w-64 sm:basis-auto" placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={products.map(p => ({ value: p.id, label: p.name, search: `${p.alias ?? ''} ${p.description ?? ''}` }))} />
+                  <Input type="number" step="any" min="0" className="w-20" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} aria-label="Aantal" />
+                  <Input className="w-16" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} aria-label="Eenheid" />
+                  <Input type="number" step="0.01" min="0" placeholder="Prijs" className="w-28" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} aria-label="Prijs" />
+                  <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
+                </div>
+                <Textarea placeholder="Lange omschrijving (optioneel, als bijvoegsel onder de productnaam)" rows={Math.min(8, Math.max(2, l.detail.split("\n").length))} className="min-h-10 text-sm" value={l.detail} onChange={(e) => setLine(i, { detail: e.target.value })} aria-label="Lange omschrijving" />
               </div>
             ))}
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>

@@ -6,6 +6,7 @@ import { invoiceTaxGroups } from './contract-billing';
 import { invoiceVatNotices } from './invoice-vat-notices';
 import { invoicePaymentReference } from './invoice-payment-reference';
 import { buildSepaQr } from './sepa-qr';
+import { splitLineText } from './line-text';
 import QRCode from 'qrcode';
 
 export type InvoicePdfData = {
@@ -30,13 +31,14 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const logo = await doc.embedPng(RIORY_LOGO_PNG_BASE64);
-  const ink = rgb(0.118, 0.18, 0.204), orange = rgb(0.953, 0.573, 0), muted = rgb(0.42, 0.46, 0.48), soft = rgb(0.996, 0.957, 0.902), white = rgb(1, 1, 1);
+  const ink = rgb(0.118, 0.18, 0.204), orange = rgb(0.953, 0.573, 0), muted = rgb(0.42, 0.46, 0.48), soft = rgb(0.996, 0.957, 0.902), white = rgb(1, 1, 1), annex = rgb(0.945, 0.78, 0.55);
   const pr = (t: string) => [...t].map((c) => { try { font.encodeText(c); return c; } catch { return "?"; } }).join("");
-  const wrap = (text: string, size: number, width: number) => {
+  const wrap = (text: string, size: number, width: number, f = font) => {
     const out: string[] = [];
-    for (const block of pr(text).split(/\r?\n/)) {
+    for (const block of text.split(/\r?\n/)) {
+      const clean = pr(block);
       let cur = "";
-      for (const w of block.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (font.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
+      for (const w of clean.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (f.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
       out.push(cur);
     }
     return out;
@@ -82,7 +84,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   let row = 0;
   for (const sec of groupInvoiceLines(d.lines)) {
     if (sec.title) {
-      const ts = wrap(sec.title, 10.5, cols.qty - cols.desc - 20);
+      const ts = wrap(sec.title, 10.5, cols.qty - cols.desc - 20, bold);
       const th = ts.length * 14 + 8;
       ensure(th);
       ts.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
@@ -91,11 +93,26 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
     }
     for (const l of sec.lines) {
       const indent = sec.title ? 12 : 0;
-      const ls = wrap(`${l.description}${l.vatRate !== undefined ? ` (btw ${l.vatRate}%)` : ''}${l.discount ? ` — korting ${l.discount}%` : ''}`, 10, cols.qty - cols.desc - 20 - indent);
-      const h = ls.length * 13 + 8;
+      const x = cols.desc + indent;
+      const w = cols.qty - cols.desc - 20 - indent;
+      const { title, detail } = splitLineText(l.description);
+      const meta = [l.vatRate !== undefined ? `btw ${l.vatRate}%` : "", l.discount ? `korting ${l.discount}%` : ""].filter(Boolean).join(" · ");
+      const tl = wrap(title, 10.5, w, bold);
+      const dl = detail ? wrap(detail, 9, w - 14) : [];
+      const lastTitle = tl[tl.length - 1] ?? "";
+      const metaInline = !!meta && bold.widthOfTextAtSize(lastTitle, 10.5) + 8 + font.widthOfTextAtSize(pr(meta), 8.5) <= w;
+      const h = tl.length * 14 + (meta && !metaInline ? 11 : 0) + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
       ensure(h);
       if (row++ % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
-      ls.forEach((t, j) => page.drawText(t, { x: cols.desc + indent, y: y - j * 13, size: 10, font, color: ink }));
+      tl.forEach((t, j) => page.drawText(t, { x, y: y - j * 14, size: 10.5, font: bold, color: ink }));
+      let ty = y - tl.length * 14;
+      if (meta && metaInline) page.drawText(pr(meta), { x: x + bold.widthOfTextAtSize(lastTitle, 10.5) + 8, y: y - (tl.length - 1) * 14, size: 8.5, font, color: muted });
+      else if (meta) { page.drawText(pr(meta), { x, y: ty - 1, size: 8.5, font, color: muted }); ty -= 11; }
+      if (dl.length) {
+        const top = ty - 5;
+        page.drawRectangle({ x: x + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
+        dl.forEach((t, j) => page.drawText(t, { x: x + 12, y: top - j * 11.5, size: 9, font, color: muted }));
+      }
       right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
       if (!sec.hidePrice) { right(money(l.originalUnitPrice ?? l.unitPrice), cols.price, y, 10); right(money(l.amount), cols.amt, y, 10); }
       y -= h;

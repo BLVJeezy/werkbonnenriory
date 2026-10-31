@@ -2,6 +2,7 @@ import { appendTermsPdf } from "./terms-pdf";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
+import { splitLineText } from "./line-text";
 
 export type QuotePdfData = {
   number: string; issueDate: string; validUntil: string;
@@ -30,13 +31,14 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const logo = await doc.embedPng(RIORY_LOGO_PNG_BASE64);
-  const ink = rgb(0.118, 0.18, 0.204), orange = rgb(0.953, 0.573, 0), muted = rgb(0.42, 0.46, 0.48), soft = rgb(0.996, 0.957, 0.902), white = rgb(1, 1, 1);
+  const ink = rgb(0.118, 0.18, 0.204), orange = rgb(0.953, 0.573, 0), muted = rgb(0.42, 0.46, 0.48), soft = rgb(0.996, 0.957, 0.902), white = rgb(1, 1, 1), annex = rgb(0.945, 0.78, 0.55);
   const pr = (t: string) => [...t].map((c) => { try { font.encodeText(c); return c; } catch { return "?"; } }).join("");
-  const wrap = (text: string, size: number, width: number) => {
+  const wrap = (text: string, size: number, width: number, f = font) => {
     const out: string[] = [];
-    for (const block of pr(text).split(/\r?\n/)) {
+    for (const block of text.split(/\r?\n/)) {
+      const clean = pr(block);
       let cur = "";
-      for (const w of block.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (font.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
+      for (const w of clean.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (f.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
       out.push(cur);
     }
     return out;
@@ -104,11 +106,19 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   right("BEDRAG", cols.amt, y, 8.5, bold, white);
   y -= 22;
   d.lines.forEach((l, i) => {
-    const ls = wrap(l.description, 10, cols.qty - cols.desc - 20);
-    const h = ls.length * 13 + 8;
+    const w = cols.qty - cols.desc - 20;
+    const { title, detail } = splitLineText(l.description);
+    const tl = wrap(title, 10.5, w, bold);
+    const dl = detail ? wrap(detail, 9, w - 14) : [];
+    const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
     ensure(h);
     if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
-    ls.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 13, size: 10, font, color: ink }));
+    tl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
+    if (dl.length) {
+      const top = y - tl.length * 14 - 5;
+      page.drawRectangle({ x: cols.desc + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
+      dl.forEach((t, j) => page.drawText(t, { x: cols.desc + 12, y: top - j * 11.5, size: 9, font, color: muted }));
+    }
     right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
     right(money(l.unitPrice), cols.price, y, 10);
     right(money(l.amount), cols.amt, y, 10);
