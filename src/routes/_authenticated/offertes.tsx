@@ -12,6 +12,7 @@ import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
+import { splitLineText } from "@/lib/line-text";
 import { assignQuoteCrew, convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
@@ -28,8 +29,10 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { description: string; quantity: string; unit: string; unitPrice: string };
-const emptyLine: Line = { description: "", quantity: "1", unit: "st", unitPrice: "" };
+type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string };
+const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "" };
+/** The stored line text keeps its old shape: product name on the first line, long description below it. */
+const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
 
 function Offertes() {
   const qc = useQueryClient();
@@ -88,8 +91,8 @@ function Offertes() {
 
   const parsedLines: InvoiceLine[] = [
     ...lines
-      .filter((l) => l.description.trim())
-      .map((l) => quoteLine(l.description.trim(), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
+      .filter((l) => lineText(l))
+      .map((l) => quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
     ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
   ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
@@ -122,8 +125,7 @@ function Offertes() {
   function pickProduct(i: number, productId: string) {
     const p = products.find((x) => x.id === productId);
     if (p) {
-      const long = (p.description ?? "").trim();
-      setLine(i, { description: long ? `${p.name}\n${long}` : p.name, unit: p.unit, unitPrice: String(p.price) });
+      setLine(i, { title: p.name, detail: (p.description ?? "").trim(), unit: p.unit, unitPrice: String(p.price) });
     }
   }
 
@@ -141,7 +143,7 @@ function Offertes() {
     const kmLine = all.find((l) => l.unit === "km");
     setKmOn(!!kmLine);
     setKm(kmLine ? kmLine.quantity : null);
-    const ls = all.filter((l) => l.unit !== "km").map((l) => ({ description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
+    const ls = all.filter((l) => l.unit !== "km").map((l) => ({ ...splitLineText(l.description), quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) }));
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
   }
@@ -216,8 +218,8 @@ function Offertes() {
       if (d.intro) setIntro(d.intro);
       setDamageCause(d.cause);
       setDamageFindings(d.findings);
-      const keep = lines.filter((l) => l.description.trim());
-      setLines([...keep, ...d.lines.map((l) => ({ description: l.description, quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" }))]);
+      const keep = lines.filter((l) => lineText(l));
+      setLines([...keep, ...d.lines.map((l) => ({ ...splitLineText(l.description), quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" }))]);
       toast.success("Voorstel ingevuld — kijk alles na en vul de prijzen in");
     } catch (e) { toast.error(e instanceof Error ? e.message : "AI-voorstel mislukt"); }
     finally { setAiBusy(false); }
