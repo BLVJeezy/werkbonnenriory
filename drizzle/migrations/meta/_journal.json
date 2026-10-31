@@ -519,6 +519,13 @@
       "when": 1793481146253,
       "tag": "0073_add_customer_vrij_beroep",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793481426178,
+      "tag": "0074_manual_bank_invoice_link",
+      "breakpoints": true
     }
   ]
 }
