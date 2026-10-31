@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ function Klanten() {
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
   const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number].filter(Boolean).join(' ') })), q).map(c => c.value));
   const rows = data.filter(c => matchingIds.has(c.id));
+  const sort = useSort(rows, { nr: c => c.customer_number, naam: c => c.name, plaats: c => c.city, tel: c => c.phone, mail: c => c.email, btw: c => c.vat_number });
 
   function openEdit(c: (typeof data)[number]) {
     setEditing(editing === c.id ? null : c.id);
@@ -100,49 +102,64 @@ function Klanten() {
         </label>
       </div>
       <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam of adres…" value={q} onChange={(e) => setQ(e.target.value)} />
-      <div className="divide-y rounded-md border bg-card">
-        {rows.length === 0 && <p className="p-4 text-muted-foreground">Geen klanten.</p>}
-        {rows.map((c) => (
-          <div key={c.id} className="p-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="min-w-48 flex-1">
-                <div className="font-bold"><span className="mr-2 font-mono text-sm text-muted-foreground">{c.customer_number}</span>{c.name}</div>
-                {c.customer_numbers?.length>1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
-                <div className="text-sm text-muted-foreground">{formatAddress(c) || "Geen adres"}</div>
-              </div>
-              <div className="text-sm">{[c.phone, c.email, c.billing_email && `factuur: ${c.billing_email}`, c.vat_number].filter(Boolean).join(" · ")}</div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{editing === c.id ? "Sluiten" : "Bewerken"}</Button>
-                <Button size="sm" variant="ghost" onClick={async () => {
-                  if (!confirm(`${c.name} verwijderen uit klanten?`)) return;
-                  await supabase.from("customers").delete().eq("id", c.id);
-                  qc.invalidateQueries({ queryKey: ["customers"] });
-                }}>Verwijderen</Button>
-              </div>
-            </div>
-            {projects.filter(p=>p.customer_id===c.id).map(p=><div key={p.id} className="mt-2 border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-            {editing === c.id && (
-              <div className="mt-3 space-y-2 rounded-md border bg-muted/30 p-3">
-                <div className="flex flex-wrap gap-2">
-                  {FIELDS.map((f) => (
-                    <label key={f.key} className={`space-y-1 ${f.className}`}>
-                      <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
-                      <Input
-                        value={form[f.key] ?? ""}
-                        onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                        placeholder={f.label}
-                      />
-                    </label>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
-                  <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+      <div className={tableWrap}>
+        <table className={tableCls}>
+          <thead><tr>
+            <SortTh k="nr" sort={sort}>Nr.</SortTh>
+            <SortTh k="naam" sort={sort}>Naam</SortTh>
+            <SortTh k="plaats" sort={sort} className="hidden md:table-cell">Adres</SortTh>
+            <SortTh k="tel" sort={sort} className="hidden lg:table-cell">Telefoon</SortTh>
+            <SortTh k="mail" sort={sort} className="hidden lg:table-cell">E-mail</SortTh>
+            <SortTh k="btw" sort={sort} className="hidden xl:table-cell">Btw-nummer</SortTh>
+            <Th />
+          </tr></thead>
+          <tbody>
+            {sort.sorted.length === 0 && <tr><td colSpan={7} className="text-muted-foreground">Geen klanten.</td></tr>}
+            {sort.sorted.map((c) => {
+              const own = projects.filter(p => p.customer_id === c.id);
+              return (
+                <Fragment key={c.id}>
+                  <tr>
+                    <td className="whitespace-nowrap font-mono text-xs text-muted-foreground">{c.customer_number}</td>
+                    <td className="font-bold">{c.name}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
+                    <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
+                    <td className="hidden max-w-56 truncate lg:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
+                    <td className="hidden whitespace-nowrap font-mono text-xs xl:table-cell">{c.vat_number ?? "—"}</td>
+                    <td className="whitespace-nowrap text-right">
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{editing === c.id ? "Sluiten" : "Details"}</Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
+                        if (!confirm(`${c.name} verwijderen uit klanten?`)) return;
+                        await supabase.from("customers").delete().eq("id", c.id);
+                        qc.invalidateQueries({ queryKey: ["customers"] });
+                      }}>Verwijderen</Button>
+                    </td>
+                  </tr>
+                  {editing === c.id && (
+                    <tr className="bg-muted/30"><td colSpan={7}>
+                      <div className="space-y-2">
+                        {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
+                        {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
+                        <div className="flex flex-wrap gap-2">
+                          {FIELDS.map((f) => (
+                            <label key={f.key} className={`space-y-1 ${f.className}`}>
+                              <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
+                              <Input value={form[f.key] ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.label} />
+                            </label>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
+                          <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
+                        </div>
+                      </div>
+                    </td></tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
