@@ -19,7 +19,7 @@ import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
-import { quoteFromTask } from "@/lib/quotes.functions";
+import { bestekFromWorkOrder, quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { werkbonNr } from "@/lib/werkbon-number";
