@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { euro } from "@/lib/billing";
 import { vatRateForCustomer } from "@/lib/vat-number";
-import { buildManualInvoice, groupInvoiceLines, lineTotals, splitTravelLine, travelKmLine, type InvoiceLine } from "@/lib/invoice";
+import { activityLineValues, buildManualInvoice, groupInvoiceLines, lineTotals, splitTravelLine, travelKmLine, type InvoiceLine } from "@/lib/invoice";
 import { formatAddress } from "@/lib/address";
 import { quoteDistance } from "@/lib/distance.functions";
 import { createManualInvoice, updateInvoice } from "@/lib/invoices.functions";
@@ -57,6 +57,7 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
   const [items, setItems] = useState<Item[]>([]);
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], enabled: open, queryFn: () => allCustomers(supabase) });
   const { data: products = [] } = useQuery({ queryKey: ["products-invoice"], enabled: open, queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [] });
+  const { data: activities = [] } = useQuery({ queryKey: ["activities-invoice"], enabled: open, queryFn: async () => (await supabase.from("activities").select("id, name, hourly_rate").order("name")).data ?? [] });
   const { data: settings } = useQuery({ queryKey: ["settings"], enabled: open, queryFn: async () => (await supabase.from("settings").select("km_rate, base_address").eq("id", 1).single()).data });
   const kmRate = Number(settings?.km_rate ?? 0);
 
@@ -80,6 +81,12 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
     const p = products.find((x) => x.id === id);
     if (!p) return;
     setItem(i, { title: p.name, detail: (p.description ?? "").trim(), unit: p.unit, unitPrice: String(p.price) });
+  }
+  // Activiteit = arbeidsloon: naam op de lijn, eenheid uren, tarief van die activiteit.
+  function pickActivity(i: number, id: string) {
+    const a = activities.find((x) => x.id === id);
+    if (!a) return;
+    setItem(i, activityLineValues(a));
   }
 
   function addressOf(c: Record<string, unknown> | null): string | null {
@@ -164,6 +171,7 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
     : <Button size="sm" onClick={start}>+ Nieuwe factuur</Button>;
 
   const productOptions = products.map((p) => ({ value: p.id, label: `${p.name} — ${euro(Number(p.price))}`, search: `${p.alias ?? ""} ${p.description ?? ""}` }));
+  const activityOptions = activities.map((a) => ({ value: a.id, label: a.hourly_rate == null ? `${a.name} — geen tarief` : `${a.name} — ${euro(Number(a.hourly_rate))}/uur`, search: a.name }));
 
   return (
     <div className="w-full space-y-4 rounded-md border bg-card p-4">
@@ -193,7 +201,10 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
           </div>
         ) : (
           <div key={i} className="space-y-2 rounded-md border p-2">
-            <SearchSelect placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={productOptions} />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <SearchSelect placeholder="Activiteit kiezen…" searchPlaceholder="Zoek activiteit…" value="" onChange={(id) => pickActivity(i, id)} options={activityOptions} />
+              <SearchSelect placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={productOptions} />
+            </div>
             <Input className="font-bold" value={it.title} onChange={(e) => setItem(i, { title: e.target.value })} placeholder="Product of naam van de lijn" aria-label="Productnaam" />
             <div className="grid gap-2 sm:grid-cols-[80px_64px_100px_80px_76px_40px] sm:items-start">
               <Input value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} placeholder="Aantal" aria-label="Aantal" inputMode="decimal" />

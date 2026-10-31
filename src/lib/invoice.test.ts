@@ -92,3 +92,15 @@ describe("kilometers op een handmatige factuur", () => {
     expect(splitTravelLine(rest).kmLine).toBeNull();
   });
 });
+
+import { activityLineValues } from "./invoice";
+describe("activiteit op een handmatige factuur", () => {
+  it("zet naam, eenheid uren en het tarief van de activiteit op de lijn", () => {
+    expect(activityLineValues({ name: "Herstelling/grondwerk.", hourly_rate: 137.5 })).toEqual({
+      title: "Herstelling/grondwerk.", detail: "", unit: "u", unitPrice: "137.5",
+    });
+  });
+  it("activiteit zonder tarief krijgt geen prijs", () => {
+    expect(activityLineValues({ name: "Ledigen septische put", hourly_rate: null }).unitPrice).toBe("");
+  });
+});
