@@ -73,7 +73,7 @@ function Finance() {
   if (loading) return <p className="text-sm text-muted-foreground">Laden…</p>;
   if (!user) return <p className="text-sm text-destructive">Alleen voor beheerder.</p>;
   return (
-    <div className="min-w-0 bg-background text-foreground">
+    <div className="min-w-0 overflow-x-clip bg-background text-foreground">
       <div className="mx-auto max-w-6xl space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <Link to="/werkbonnen"><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Taken</Button></Link>
