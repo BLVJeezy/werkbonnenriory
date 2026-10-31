@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { SignaturePad } from "@/components/SignaturePad";
 import { euro } from "@/lib/billing";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
+import { splitLineText } from "@/lib/line-text";
 import { getQuoteByToken, signQuote } from "@/lib/quotes.functions";
 
 export const Route = createFileRoute("/offerte/$token")({
@@ -49,13 +50,19 @@ function OfferteTekenen() {
       <h1 className="text-3xl font-black uppercase">Offerte {q.number}</h1>
       <p className="text-muted-foreground">Voor {c.name} · {new Date(q.created_at).toLocaleDateString("nl-BE")}</p>
       <ul className="divide-y rounded-md border bg-card">
-        {lines.map((l, i) => (
-          <li key={i} className="flex items-center gap-3 p-3">
-            <span className="flex-1">{l.description}</span>
-            <span className="font-mono text-sm">{l.quantity} {l.unit}</span>
-            <span className="font-mono text-sm">{euro(l.amount)}</span>
-          </li>
-        ))}
+        {lines.map((l, i) => {
+          const { title, detail } = splitLineText(l.description);
+          return (
+            <li key={i} className="flex items-start gap-3 p-3">
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">{title}</span>
+                {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
+              </span>
+              <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
+              <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>
+            </li>
+          );
+        })}
       </ul>
       <dl className="ml-auto grid w-64 grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
         <dt>Totaal excl. btw</dt><dd className="text-right">{euro(Number(q.net))}</dd>
