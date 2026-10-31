@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useRole, useLargeText } from "@/lib/use-role";
+import { useRole, useLargeText, usePerms } from "@/lib/use-role";
 import { largeTextOn, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
 import { Menu, X } from "lucide-react";
 import { OverdueAfterNoticeAlert } from "@/components/OverdueAfterNoticeAlert";
@@ -30,6 +30,7 @@ function Layout() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const role = useRole();
+  const perms = usePerms();
   const adminSet = useLargeText();
   const [device, setDevice] = useState<DeviceChoice>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -110,6 +111,7 @@ function Layout() {
                 <Link to="/medewerkers" className={navCls} activeProps={active}>Medewerkers</Link>
               </>
             )}
+            {(role === "admin" || (role === "technician" && perms?.showSigned)) && <Link to="/afgewerkte-werkbonnen" className={navCls} activeProps={active}>Afgewerkte werkbonnen</Link>}
             {role === "technician" && (
               <Button
                 size="sm"

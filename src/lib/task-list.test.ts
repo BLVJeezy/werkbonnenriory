@@ -1,5 +1,21 @@
 import { expect, it } from 'vitest';
-import { taskListRows, newTaskRows, plannedTaskRows } from './task-list';
+import { taskListRows, newTaskRows, plannedTaskRows, activeTaskRows, completedWorkOrderRows } from './task-list';
+
+it('keeps completed work orders out of the active task page', () => {
+  expect(activeTaskRows([
+    { id: 'active', status: 'toegewezen' },
+    { id: 'completed', status: 'afgetekend' },
+    { id: 'quote', status: 'offerte' },
+  ]).map(row => row.id)).toEqual(['active']);
+});
+
+it('shows signed and paid completed work orders on the separate page, not active tasks', () => {
+  expect(completedWorkOrderRows([
+    { id: 'signed', status: 'afgetekend', paid_method: null },
+    { id: 'paid', status: 'afgetekend', paid_method: 'cash' },
+    { id: 'active', status: 'bezig', paid_method: null },
+  ]).map(row => row.id)).toEqual(['signed', 'paid']);
+});
 
 it('removes converted quote tasks while preserving open and completed work orders', () => {
   expect(taskListRows([

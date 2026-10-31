@@ -43,6 +43,7 @@
 - Quote scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.
 - Work order numbers are nullable; assign at first time entry or completion via triggers. Render unnumbered tasks as "Nieuw" via werkbonNr().
+- Active tasks and completed work orders use separate pages with shared status selectors; completed reads retain crew RLS and visibility flags so separating lists never broadens access.
 - `cold-entry.ts` records the boot URL once, so a browser-restored page differs from a deliberate click.
 - Insurance estimates are `quotes` rows with `kind = 'verzekering'`; their photos are private `werkbon-fotos` paths in `photo_paths` (uploads under `bestek/`), appended to the quote PDF before the terms, and AI only suggests unsaved text without prices — keeps one numbering and signing flow.
 - A completed work order converts to a bestek via `bestekFromWorkOrder` (admin-only, idempotent per work order); quote triggers (`archive_quote_source_task`, `guard_quote_task_visibility`, `refresh_quote_task_visibility`, `queue_processed_appointment_mail`) exclude `kind = 'verzekering'` so a bestek never archives or hides its source werkbon.
