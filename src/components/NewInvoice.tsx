@@ -15,13 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { CustomerPicker } from "@/components/CustomerPicker";
 import { SearchSelect } from "@/components/SearchSelect";
 
-type Line = { kind: "line"; description: string; quantity: string; unit: string; unitPrice: string; vatRate: string };
+type Line = { kind: "line"; description: string; quantity: string; unit: string; unitPrice: string; vatRate: string; discount: string };
 type Title = { kind: "title"; title: string; hidePrice: boolean };
 type Item = Line | Title;
 const VAT_OPTIONS = ["21", "12", "6", "0"];
 const num = (v: string) => Number(v.replace(",", ".")) || 0;
 
-type EditInvoice = { id: string; number: string; lines: unknown; vat_rate: number; contract_reference: string | null; customer: unknown };
+type EditInvoice = { id: string; number: string; lines: unknown; vat_rate: number; contract_reference: string | null; customer: unknown; note?: string | null };
 
 function itemsFromLines(lines: InvoiceLine[], fallbackVat: number): Item[] {
   const out: Item[] = [];
@@ -30,7 +30,7 @@ function itemsFromLines(lines: InvoiceLine[], fallbackVat: number): Item[] {
     const g = l.group?.trim() || null;
     if (g && g !== current) out.push({ kind: "title", title: g, hidePrice: !!l.hidePrice });
     current = g;
-    out.push({ kind: "line", description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), vatRate: String(l.vatRate ?? fallbackVat) });
+    out.push({ kind: "line", description: l.description, quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.originalUnitPrice ?? l.unitPrice), vatRate: String(l.vatRate ?? fallbackVat), discount: l.discount ? String(l.discount) : "" });
   }
   return out;
 }
@@ -42,8 +42,9 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
   const [open, setOpen] = useState(false);
   const [customerId, setCustomerId] = useState("");
   const [reference, setReference] = useState("");
+  const [note, setNote] = useState("");
   const [defaultVat, setDefaultVat] = useState("21");
-  const newLine = (): Line => ({ kind: "line", description: "", quantity: "1", unit: "st", unitPrice: "", vatRate: defaultVat });
+  const newLine = (): Line => ({ kind: "line", description: "", quantity: "1", unit: "st", unitPrice: "", vatRate: defaultVat, discount: "" });
   const [items, setItems] = useState<Item[]>([]);
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], enabled: open, queryFn: () => allCustomers(supabase) });
   const { data: products = [] } = useQuery({ queryKey: ["products-invoice"], enabled: open, queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [] });
@@ -53,7 +54,7 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
     const rows = [];
     for (const it of items) {
       if (it.kind === "title") { group = it.title.trim() ? it : null; continue; }
-      rows.push({ description: it.description, quantity: num(it.quantity), unit: it.unit, unitPrice: num(it.unitPrice), vatRate: Number(it.vatRate) || 0, group: group?.title ?? null, hidePrice: group?.hidePrice ?? false });
+      rows.push({ description: it.description, quantity: num(it.quantity), unit: it.unit, unitPrice: num(it.unitPrice), vatRate: Number(it.vatRate) || 0, discount: num(it.discount), group: group?.title ?? null, hidePrice: group?.hidePrice ?? false });
     }
     return rows;
   }, [items]);
@@ -84,20 +85,21 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
     if (invoice) {
       setItems(itemsFromLines((invoice.lines as InvoiceLine[]) ?? [], Number(invoice.vat_rate)));
       setReference(invoice.contract_reference ?? "");
+      setNote(invoice.note ?? "");
       setDefaultVat(String(invoice.vat_rate));
     } else setItems([newLine()]);
     setOpen(true);
   }
-  function reset() { setOpen(false); setCustomerId(""); setReference(""); setItems([]); setDefaultVat("21"); }
+  function reset() { setOpen(false); setCustomerId(""); setReference(""); setNote(""); setItems([]); setDefaultVat("21"); }
 
   async function save() {
     try {
       if (invoice) {
-        await update({ data: { invoiceId: invoice.id, customerId: customerId || null, reference, lines: parsed } });
+        await update({ data: { invoiceId: invoice.id, customerId: customerId || null, reference, note, lines: parsed } });
         toast.success(`Factuur ${invoice.number} aangepast`);
       } else {
         if (!customerId) { toast.error("Kies eerst een klant"); return; }
-        await create({ data: { customerId, reference: reference.trim() || null, lines: parsed } });
+        await create({ data: { customerId, reference: reference.trim() || null, note: note.trim() || null, lines: parsed } });
         toast.success("Factuur aangemaakt");
       }
       reset();
@@ -140,11 +142,12 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
         ) : (
           <div key={i} className="space-y-2 rounded-md border p-2">
             <SearchSelect placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={productOptions} />
-            <div className="grid gap-2 sm:grid-cols-[1fr_90px_70px_110px_80px_40px] sm:items-start">
+            <div className="grid gap-2 sm:grid-cols-[1fr_80px_64px_100px_80px_76px_40px] sm:items-start">
               <Textarea rows={Math.min(5, it.description.split("\n").length)} value={it.description} onChange={(e) => setItem(i, { description: e.target.value })} placeholder="Omschrijving" aria-label="Omschrijving" />
               <Input value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} placeholder="Aantal" aria-label="Aantal" inputMode="decimal" />
               <Input value={it.unit} onChange={(e) => setItem(i, { unit: e.target.value })} placeholder="eenheid" aria-label="Eenheid" />
               <Input value={it.unitPrice} onChange={(e) => setItem(i, { unitPrice: e.target.value })} placeholder="Prijs" aria-label="Prijs" inputMode="decimal" />
+              <Input value={it.discount} onChange={(e) => setItem(i, { discount: e.target.value })} placeholder="Korting %" aria-label="Korting %" inputMode="decimal" />
               <select aria-label="Btw" className="h-10 w-full rounded-md border bg-background px-2" value={it.vatRate} onChange={(e) => setItem(i, { vatRate: e.target.value })}>
                 {VAT_OPTIONS.map((v) => <option key={v} value={v}>{v}%</option>)}
               </select>
@@ -157,6 +160,11 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
           <Button variant="outline" size="sm" onClick={() => setItems((ls) => [...ls, { kind: "title", title: "", hidePrice: false }, newLine()])}>+ Titel toevoegen</Button>
         </div>
         <p className="text-xs text-muted-foreground">Lijnen onder een titel worden op de factuur samengeteld bij die titel.</p>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Uitleg op de factuur (optioneel)</Label>
+        <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="bv. Extra werken op vraag van de klant uitgevoerd op 12/10." />
       </div>
 
       <div className="flex flex-wrap items-center gap-4">

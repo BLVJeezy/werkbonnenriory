@@ -52,14 +52,14 @@ export const createInvoices = createServerFn({ method: "POST" })
     return { created, skipped, sent, failed };
   });
 
-type ManualLine = { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number; group?: string | null; hidePrice?: boolean };
+type ManualLine = { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number; discount?: number; group?: string | null; hidePrice?: boolean };
 
 /** Handmade invoice from the "Nieuwe factuur" form: existing customer or free-form customer, own lines, per-line VAT. */
 export const createManualInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: {
     customerId?: string | null; customer?: { name: string; street?: string | null; houseNumber?: string | null; postalCode?: string | null; city?: string | null; vatNumber?: string | null; email?: string | null } | null;
-    reference?: string | null; lines: ManualLine[];
+    reference?: string | null; note?: string | null; lines: ManualLine[];
   }) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -85,13 +85,15 @@ export const createManualInvoice = createServerFn({ method: "POST" })
       p_kind: "factuur", p_contract_reference: data.reference?.trim() || "",
     });
     if (error) throw new Error(error.message);
+    const note = data.note?.trim().slice(0, 4000);
+    if (note && row) await supabase.from("invoices").update({ note } as never).eq("id", (row as { id: string }).id);
     return row;
   });
 
 /** Reopens an unsent invoice: replaces customer (optional), reference and lines; number and dates stay. */
 export const updateInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { invoiceId: string; customerId?: string | null; reference?: string | null; lines: ManualLine[] }) => {
+  .inputValidator((i: { invoiceId: string; customerId?: string | null; reference?: string | null; note?: string | null; lines: ManualLine[] }) => {
     if (typeof i?.invoiceId !== "string" || !Array.isArray(i.lines)) throw new Error("Ongeldige factuur");
     return i;
   })
@@ -112,6 +114,7 @@ export const updateInvoice = createServerFn({ method: "POST" })
       customer = { ...customer, name: c.name, vatNumber: c.vat_number?.trim() || null, email: c.billing_email?.trim() || c.email?.trim() || null, street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city, address: null };
     }
     const patch: any = { customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, send_error: null };
+    if (data.note !== undefined) patch.note = data.note?.trim().slice(0, 4000) || null;
     if (data.reference !== undefined && (inv.contract_reference !== null || !inv.work_order_id)) patch.contract_reference = data.reference?.trim() || "";
     const { error } = await supabase.from("invoices").update(patch).eq("id", inv.id).is("sent_at", null).is("pdf_sent_at", null).is("okioki_sent_at", null).is("post_sent_at", null);
     if (error) throw new Error(error.message);

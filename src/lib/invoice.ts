@@ -45,15 +45,19 @@ export function buildCreditNote(inv: { lines: InvoiceLine[]; vatRate: number; ne
 }
 
 /** Pure: free-form manual invoice lines with per-line VAT; used by the "Nieuwe factuur" form. */
-export function buildManualInvoice(lines: { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number; group?: string | null; hidePrice?: boolean }[]) {
+export function buildManualInvoice(lines: { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number; discount?: number; group?: string | null; hidePrice?: boolean }[]) {
   const rows: InvoiceLine[] = [];
   let net = 0, vat = 0;
   for (const l of lines) {
     const qty = Number(l.quantity) || 0;
     const price = Number(l.unitPrice) || 0;
     const rate = Number(l.vatRate) || 0;
-    const amount = r2(qty * price);
-    const row: InvoiceLine = { description: l.description.trim(), quantity: qty, unit: l.unit.trim() || "st", unitPrice: price, amount, vatRate: rate };
+    const disc = Math.min(100, Math.max(0, Number(l.discount) || 0));
+    // Korting zit in de nettoprijs (UBL: aantal x prijs = bedrag); de lijstprijs blijft bewaard.
+    const net1 = disc ? Math.round(price * (1 - disc / 100) * 1e6) / 1e6 : price;
+    const amount = r2(qty * net1);
+    const row: InvoiceLine = { description: l.description.trim(), quantity: qty, unit: l.unit.trim() || "st", unitPrice: net1, amount, vatRate: rate };
+    if (disc) { row.discount = disc; row.originalUnitPrice = price; }
     const group = l.group?.trim();
     if (group) { row.group = group; if (l.hidePrice) row.hidePrice = true; }
     rows.push(row);

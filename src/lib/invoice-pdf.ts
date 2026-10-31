@@ -16,6 +16,8 @@ export type InvoicePdfData = {
   title?: string;
   /** Reference line under the customer block, defaults to the work order number. */
   reference?: string;
+  /** Free explanation written by the admin, shown under the totals. */
+  note?: string | null;
 };
 
 const W = 595.28, H = 841.89, M = 48;
@@ -95,7 +97,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
       if (row++ % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
       ls.forEach((t, j) => page.drawText(t, { x: cols.desc + indent, y: y - j * 13, size: 10, font, color: ink }));
       right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
-      if (!sec.hidePrice) { right(money(l.unitPrice), cols.price, y, 10); right(money(l.amount), cols.amt, y, 10); }
+      if (!sec.hidePrice) { right(money(l.originalUnitPrice ?? l.unitPrice), cols.price, y, 10); right(money(l.amount), cols.amt, y, 10); }
       y -= h;
     }
   }
@@ -115,6 +117,15 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   } else tot(`Btw ${d.vatRate}%`, money(d.vat));
   page.drawLine({ start: { x: W - M - 230, y: y + 14 }, end: { x: W - M, y: y + 14 }, thickness: 1.5, color: orange });
   tot("Totaal incl. btw", money(d.total), true);
+  if (d.note?.trim()) {
+    const nl = wrap(d.note.trim(), 9.5, W - 2 * M);
+    ensure(24 + nl.length * 13);
+    y -= 8;
+    page.drawText("UITLEG", { x: M, y, size: 9.5, font: bold, color: ink });
+    y -= 15;
+    for (const line of nl) { ensure(13); page.drawText(line, { x: M, y, size: 9.5, font, color: ink }); y -= 13; }
+    y -= 6;
+  }
   for (const notice of invoiceVatNotices(d)) {
     const lines = wrap(notice.text, 9, W - 2 * M);
     ensure(24 + lines.length * 12);

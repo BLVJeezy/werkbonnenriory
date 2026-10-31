@@ -25,3 +25,14 @@ describe("buildManualInvoice", () => {
     expect(inv.total).toBe(10);
   });
 });
+
+import { buildManualInvoice as bmi } from "./invoice";
+describe("kortingspercentage per lijn", () => {
+  it("10% korting op 2 x 100 geeft 180 netto", () => {
+    const r = bmi([{ description: "x", quantity: 2, unit: "st", unitPrice: 100, vatRate: 21, discount: 10 }]);
+    expect(r.lines[0]!.amount).toBe(180);
+    expect(r.lines[0]!.originalUnitPrice).toBe(100);
+    expect(r.net).toBe(180);
+    expect(r.vat).toBe(37.8);
+  });
+});

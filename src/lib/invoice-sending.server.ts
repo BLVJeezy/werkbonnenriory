@@ -26,7 +26,7 @@ export async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> 
     customer: inv.customer as InvoiceCustomer, lines: inv.lines as InvoiceLine[], vatRate: Number(inv.vat_rate),
     net: Number(inv.net), vat: Number(inv.vat), total: Number(inv.total), paidAmount: Number(inv.paid_amount),
     company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null },
-    terms: s?.terms_text ?? null,
+    terms: s?.terms_text ?? null, note: inv.note ?? null,
     ...(extra ?? {}),
   };
 }
