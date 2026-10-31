@@ -39,3 +39,10 @@ it("includes every intervention photo in the PDF attached to the customer mail, 
 it("does not silently send a PDF missing an unsupported photo", async () => {
   await expect(createWerkbonPdf(data, [new Uint8Array([1, 2, 3])])).rejects.toThrow('niet-ondersteund formaat');
 });
+
+it("always carries the signing link and code in the customer mail", () => {
+  const message = werkbonPdfMessage(data, "test@example.test", "PDF_BASE64", undefined, { url: "https://werkbonnenriory.lovable.app/werkbon-tekenen/abc", code: "123456" });
+  expect(message.body.content).toContain("https://werkbonnenriory.lovable.app/werkbon-tekenen/abc");
+  expect(message.body.content).toContain("123456");
+  expect(message.body.content).toContain("digitaal ondertekenen");
+});
