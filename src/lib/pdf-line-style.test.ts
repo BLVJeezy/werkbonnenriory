@@ -39,12 +39,20 @@ async function drawnText(bytes: Uint8Array, pageIndex = 0): Promise<Drawn[]> {
 
   const out: Drawn[] = [];
   let font = "", size = "", order = 0;
-  for (const m of raw.matchAll(/\/(F\d+)\s+([\d.]+)\s+Tf|\(((?:[^()\\]|\\.)*)\)\s*Tj/g)) {
+  const ops = /\/([^\s/]+)\s+([\d.]+)\s+Tf|<([0-9A-Fa-f]+)>\s*Tj|\(((?:[^()\\]|\\.)*)\)\s*Tj/g;
+  for (const m of raw.matchAll(ops)) {
     if (m[1]) { font = m[1]; size = m[2]; continue; }
-    out.push({ text: m[2] ?? "", baseFont: baseFonts.get(font) ?? "", size, order: order++ });
+    const text = m[3] !== undefined ? hexText(m[3]) : (m[4] ?? "").replace(/\\([()\\])/g, "$1");
+    out.push({ text, baseFont: baseFonts.get(font) ?? "", size, order: order++ });
   }
   return out;
 }
+
+const hexText = (hex: string) => {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return new TextDecoder("latin1").decode(bytes);
+};
 
 const line = { description: "Dieptereiniging regenput\nPut leeggepompt en met hogedruk gereinigd.", quantity: 2, unit: "st", unitPrice: 100, amount: 200 };
 const customer = { name: "Test", address: null, siteAddress: null, vatNumber: null, email: null };
