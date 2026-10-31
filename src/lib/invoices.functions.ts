@@ -111,7 +111,7 @@ export const updateInvoice = createServerFn({ method: "POST" })
       if (!c) throw new Error("Klant niet gevonden");
       customer = { ...customer, name: c.name, vatNumber: c.vat_number?.trim() || null, email: c.billing_email?.trim() || c.email?.trim() || null, street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city, address: null };
     }
-    const patch: Record<string, unknown> = { customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, send_error: null };
+    const patch: any = { customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, send_error: null };
     if (data.reference !== undefined && (inv.contract_reference !== null || !inv.work_order_id)) patch.contract_reference = data.reference?.trim() || "";
     const { error } = await supabase.from("invoices").update(patch).eq("id", inv.id).is("sent_at", null).is("pdf_sent_at", null).is("okioki_sent_at", null).is("post_sent_at", null);
     if (error) throw new Error(error.message);
