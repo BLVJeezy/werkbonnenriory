@@ -56,6 +56,9 @@ function Detail() {
         supabase.from("activities").select("*").order("name"),
         supabase.from("settings").select("*").eq("id", 1).single(),
       ]);
+      // Vrij beroep van de gekoppelde klant: die klant krijgt altijd 21% btw, ook met een btw-nummer.
+      const cid = (w.data as { customer_id?: string | null } | null)?.customer_id;
+      const cust = cid ? await supabase.from("customers").select("vrij_beroep").eq("id", cid).maybeSingle() : { data: null };
       return {
         wo: w.data,
         times: t.data ?? [],
@@ -64,6 +67,7 @@ function Detail() {
         prods: prods.data ?? [],
         acts: acts.data ?? [],
         settings: st.data,
+        vrijBeroep: !!cust.data?.vrij_beroep,
       };
     },
   });
