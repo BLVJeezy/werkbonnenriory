@@ -43,7 +43,7 @@ import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { sortRows, type SortDir, type SortValue } from '@/lib/sort-rows';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/")({
-  head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Taken en afgetekende werkbonnen met klant- en werfgegevens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "Taken — Riory" }, { name: "description", content: "Actieve taken met klant- en werfgegevens, planning en ploegtoewijzing." }, { property: "og:title", content: "Taken — Riory" }, { property: "og:description", content: "Actieve taken met klant- en werfgegevens, planning en ploegtoewijzing." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>): { dag?: string } =>
     typeof s["dag"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["dag"]) ? { dag: s["dag"] } : {},
   component: Lijst,
