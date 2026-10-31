@@ -1,6 +1,7 @@
 import { FinanceTasks } from "@/components/FinanceTasks";
 import { syncWerkbonnenSales } from "@/lib/finance-sales.functions";
 import { syncFinancePurchases } from "@/lib/finance-purchases.functions";
+import { pontoStatus } from "@/lib/ponto.functions";
 import { unapproveInvoice } from "@/lib/undo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,7 +64,7 @@ function Finance() {
 
   useEffect(() => {
     if (!company) return;
-    syncFinanceTasks(company.id).then((r) => { if (r.created || r.resolved) toast.info(`Finance: ${r.created} nieuwe taak/taken, ${r.resolved} automatisch afgesloten`); }).catch(() => toast.error("Financetaken konden niet geëvalueerd worden (leesfout) — er is niets gewijzigd."));
+    syncFinanceTasks(company.id).then((r) => { if (r.created || r.resolved) toast.info(`Finance: ${r.created} nieuwe taak/taken, ${r.resolved} automatisch afgesloten`); qc.invalidateQueries({ queryKey: ["fin", "tasks"] }); }).catch(() => toast.error("Financetaken konden niet geëvalueerd worden (leesfout) — er is niets gewijzigd."));
   }, [company]);
 
   const refresh = () => { qc.invalidateQueries({ queryKey: ["fin"] }); if (company) syncFinanceTasks(company.id).catch(() => toast.error("Financetaken niet bijgewerkt (leesfout)")); };
@@ -912,6 +913,8 @@ function Concurrenten() {
 
 function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: () => void }) {
   const syncPurchases = useServerFn(syncFinancePurchases);
+  const loadPonto = useServerFn(pontoStatus);
+  const { data: ponto } = useQuery({ queryKey: ["ponto"], queryFn: () => loadPonto() });
   const [busy, setBusy] = useState(false);
   const sync = useQuery({ queryKey: ["fin", "sync", c], queryFn: async () => (await db.from("fin_sync_status").select("*").eq("company_id", c).eq("source", "simpla").maybeSingle()).data });
   const bind = async () => {
@@ -926,6 +929,7 @@ function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: 
   const importSimpla = async () => {
     if (!bound) return void toast.error("Koppel Simpla eerst aan dit bedrijf");
     setBusy(true);
+    try {
     const purchaseResult = await syncPurchases();
     if (!purchaseResult.ok) { setBusy(false); return void toast.error(purchaseResult.error); }
     const si = await fetchAll((a, b) => supabase.from("fin_supplier_imports").select("*").order("id").range(a, b));
@@ -944,6 +948,7 @@ function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: 
     }
     const ap = await applyLearnedRules(c).catch(() => null);
     setBusy(false); toast.success(`${n} nieuwe Simpla-facturen overgenomen${ap ? `, ${ap.approved} automatisch ingedeeld en goedgekeurd` : ""}`); onDone();
+    } catch { toast.error("Simpla-aankoopinlezing mislukt"); } finally { setBusy(false); }
   };
   return (
     <div className="grid gap-3 lg:grid-cols-2">
@@ -951,11 +956,11 @@ function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: 
         <p className="text-sm">{bound ? "Dit bedrijf is gekoppeld aan de Simpla-administratie." : "Niet gekoppeld: de Simpla-token hoort bij één administratie. Koppel die eerst aan het juiste bedrijf."} Laatste geslaagde sync: {sync.data?.last_success_at ? new Date(sync.data.last_success_at).toLocaleString("nl-BE") : "nog geen"}{sync.data?.last_error ? ` · laatste fout: ${sync.data.last_error}` : ""}.</p><p className="mt-1 text-sm">Facturen worden op Simpla-ID overgenomen; opnieuw uitvoeren maakt geen dubbels. Simpla geeft geen vervaldatum of grootboekrekening mee — die vul je aan bij beoordeling.</p>
         {!bound && <Button size="sm" variant="outline" className="mt-2 mr-2" onClick={bind}>Simpla koppelen aan dit bedrijf</Button>}<Button size="sm" className="mt-2" disabled={busy || !bound} onClick={importSimpla}>{busy ? "Bezig…" : "Overnemen in dit bedrijf"}</Button>
       </Card>
-      <Card title="Ponto (bank) — niet gekoppeld">
-        <p className="text-sm">Niet beschikbaar: er zijn geen Ponto-gegevens ingesteld. Voor een echte koppeling is een Ponto Connect-account (Isabel Group) met client-ID, client-secret en goedgekeurde OAuth-toegang nodig. Tot dan: importeer bankafschriften als CSV/XLSX via Invoer (type “Bank/kas”).</p>
+      <Card title={`Ponto (bank) — ${ponto?.connected ? "gekoppeld" : "niet gekoppeld"}`}>
+        <p className="text-sm">{ponto?.connected ? "De bestaande Ponto-koppeling wordt gebruikt. Bankrekeningen en verrichtingen zijn bereikbaar via Boekhouding → Bank." : "Ponto is nog niet gekoppeld. Stel de koppeling in bij Facturen of importeer bankuittreksels als CSV/XLSX."}</p>
       </Card>
       <Card title="Automatische financetaken">
-        <p className="text-sm">Taken worden aangemaakt bij het openen van Finance en na elke wijziging hier. Een beveiligde dagelijkse evaluatie bestaat aan serverzijde, maar wordt nog niet automatisch ingepland. Er worden nooit automatisch mails of betalingen verstuurd.</p>
+        <p className="text-sm">Taken worden aangemaakt bij het openen van Finance en na elke wijziging hier. Er worden vanuit Finance nooit automatisch mails of betalingen verstuurd.</p>
       </Card>
     </div>
   );

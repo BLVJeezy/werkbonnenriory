@@ -53,6 +53,8 @@
   --color-paid-foreground: var(--paid-foreground);
   --color-overdue: var(--overdue);
   --color-overdue-foreground: var(--overdue-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-ring-offset-background: var(--background);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -70,6 +72,8 @@
 }
 
 :root {
+  --success: var(--paid-foreground);
+  --warning: var(--primary);
   --radius: 0.375rem;
   --running: oklch(0.34 0.09 155);
   --running-foreground: oklch(0.99 0.005 155);
@@ -112,6 +116,8 @@
 }
 
 .dark {
+  --success: var(--paid-foreground);
+  --warning: var(--primary);
   --running: oklch(0.8 0.13 155);
   --running-foreground: oklch(0.18 0.035 155);
   --paid: oklch(0.3 0.07 155);

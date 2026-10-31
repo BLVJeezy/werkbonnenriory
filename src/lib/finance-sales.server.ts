@@ -27,7 +27,8 @@ export async function syncFinanceSales(db: any, userId: string) {
     }
     const numberKey = dubbelSleutel(doc.nummer, doc.credit);
     if (numberKey && numbers.has(numberKey)) { overgeslagen++; continue; }
-    const { data: inv, error } = await db.from("fin_invoices").insert({ user_id: userId, company_id: company.id, direction: "verkoop", doc_type: doc.credit ? "creditnota" : "factuur", counterparty: doc.klant, number: doc.nummer, invoice_date: doc.datum, due_date: raw.due_date, source: "werkbonnen", source_ref: doc.ref }).select("id").single();
+    const paid = raw.kind !== "creditnota" && Number(raw.paid_amount) >= Number(raw.total) && Number(raw.total) > 0;
+    const { data: inv, error } = await db.from("fin_invoices").insert({ user_id: userId, company_id: company.id, direction: "verkoop", doc_type: doc.credit ? "creditnota" : "factuur", counterparty: doc.klant, number: doc.nummer, invoice_date: doc.datum, due_date: raw.due_date, source: "werkbonnen", source_ref: doc.ref, status: paid ? "betaald" : "open", paid_at: paid ? raw.paid_at?.slice(0, 10) ?? null : null, bank_ref: paid ? `werkbonnen:${raw.id}` : null }).select("id").single();
     if (error) { if (error.code === "23505") { overgeslagen++; continue; } throw new Error("Verkoopfactuur overnemen mislukt"); }
     const lines = doc.lijnen.map(line => ({ user_id: userId, invoice_id: inv.id, description: line.omschrijving, ex_vat: line.ex, vat: line.vat, account: revenue, category: "omzet" }));
     const { error: lineError } = await db.from("fin_invoice_lines").insert(lines);
