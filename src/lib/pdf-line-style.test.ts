@@ -11,7 +11,7 @@ async function drawnText(bytes: Uint8Array, pageIndex = 0): Promise<Drawn[]> {
   const page = doc.getPage(pageIndex);
   const contents = page.node.Contents();
   const stream = contents instanceof PDFRef ? doc.lookup(contents) : contents;
-  const raw = new TextDecoder("latin1").decode((stream as { decode(): Uint8Array }).decode());
+  const raw = (stream as { getContentsString(): string }).getContentsString();
 
   const resources = page.node.Resources();
   const fontDict = resources ? (doc.lookup(resources) as PDFDict).lookup(PDFName.of("Font")) : undefined;
@@ -62,11 +62,16 @@ for (const [label, bytes] of [["factuur", () => createInvoicePdf(invoice)], ["of
   });
 }
 
-it("houdt de factuurlijst binnen één pagina bij vele regels met bijvoegsel", async () => {
+it("breekt een lange factuurlijst op zonder posten te verliezen", async () => {
   const many: InvoicePdfData = {
     ...invoice,
     lines: Array.from({ length: 12 }, (_, i) => ({ ...line, description: `Lijn ${i + 1}\nBijvoegsel met wat langere tekst die nog wat woorden bevat.` })),
   };
-  const doc = await PDFDocument.load(await createInvoicePdf(many));
-  expect(doc.getPageCount()).toBe(10); // 1 factuurpagina + 9 voorwaardenpagina's
+  const bytes = await createInvoicePdf(many);
+  const doc = await PDFDocument.load(bytes);
+  const pages: string[] = [];
+  for (let i = 0; i < doc.getPageCount(); i++) pages.push((await drawnText(bytes, i)).map((d) => d.text).join(" "));
+  expect(doc.getPageCount()).toBeGreaterThan(10); // de voorwaarden volgen na de factuurpagina's
+  expect(pages.join(" ")).toContain("Lijn 12");
+  expect(pages.join(" ")).toContain("Bijvoegsel met wat langere tekst");
 });
