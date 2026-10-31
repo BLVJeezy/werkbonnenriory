@@ -2,7 +2,7 @@ import { isUrgentMail } from "./urgent-mail";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { formatAddress, formatSiteAddress } from "@/lib/address";
-import { customerVatNumber, vatRateForCustomer } from "@/lib/vat-number";
+import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "@/lib/vat-number";
 
 export const MAILBOX_ADDRESS = "afspraak@riory.be";
 const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev";
