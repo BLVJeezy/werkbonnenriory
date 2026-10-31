@@ -1,0 +1,2 @@
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS vrij_beroep boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.customers.vrij_beroep IS 'Klant oefent een vrij beroep uit: altijd 21% btw, ook met een Belgisch of Nederlands btw-nummer (geen verlegging).';

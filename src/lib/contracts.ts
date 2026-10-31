@@ -33,7 +33,7 @@ export async function planContracts(sb: SupabaseClient<Database>) {
         email: k?.email ?? null,
         billing_email: k?.billing_email ?? null,
         vat_number: k?.vat_number ?? null,
-        vat_rate: vatRateForCustomer(k?.vat_number ?? "", Number(k?.default_vat_rate ?? 21), undefined, { postalCode: k?.postal_code }),
+        vat_rate: vatRateForCustomer(k?.vat_number ?? "", Number(k?.default_vat_rate ?? 21), undefined, { postalCode: k?.postal_code, vrijBeroep: !!k?.vrij_beroep }),
         project_name: c.name,
         description: c.description,
         technician_id: c.technician_id,

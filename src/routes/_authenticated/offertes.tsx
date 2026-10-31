@@ -285,7 +285,7 @@ function Offertes() {
                   setKm(null);
                   if (kmOn) setKmOn(false);
                   const c = customers.find((x) => x.id === id);
-                  if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate), undefined, { postalCode: c.postal_code })));
+                  if (c) setVatRate(String(vatRateForCustomer(c.vat_number ?? "", Number(vatRate), undefined, { postalCode: c.postal_code, vrijBeroep: !!c.vrij_beroep })));
                 }} />
               )}
             </div>

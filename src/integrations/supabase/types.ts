@@ -429,6 +429,7 @@ export type Database = {
           project_name: string | null
           street: string | null
           vat_number: string | null
+          vrij_beroep: boolean
         }
         Insert: {
           billing_email?: string | null
@@ -448,6 +449,7 @@ export type Database = {
           project_name?: string | null
           street?: string | null
           vat_number?: string | null
+          vrij_beroep?: boolean
         }
         Update: {
           billing_email?: string | null
@@ -467,6 +469,7 @@ export type Database = {
           project_name?: string | null
           street?: string | null
           vat_number?: string | null
+          vrij_beroep?: boolean
         }
         Relationships: []
       }

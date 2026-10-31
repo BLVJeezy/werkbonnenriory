@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { customerVatNumber, vatRateForCustomer } from "./vat-number";
+import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "./vat-number";
 
 it("keeps the customer VAT number extracted from mail", () => {
   expect(customerVatNumber(" BE 0123.456.789 ")).toBe("BE 0123.456.789");
@@ -57,4 +57,23 @@ it("requires confirmed age over 10 years, not a newer home or missing age", () =
 
 it("keeps the BE number rule at 0% even when old private-home criteria are present", () => {
   expect(vatRateForCustomer("BE 0123.456.789", 21, { customerType: "private", olderThanTenYears: true })).toBe(0);
+});
+
+it("always assigns 21% to a customer with a liberal profession, even with a BE or NL VAT number", () => {
+  expect(vatRateForCustomer("BE 0123.456.789", 0, undefined, { vrijBeroep: true })).toBe(21);
+  expect(vatRateForCustomer("NL123456789B01", 6, undefined, { vrijBeroep: true })).toBe(21);
+  expect(vatRateForCustomer(null, 6, { customerType: "private", olderThanTenYears: true }, { vrijBeroep: true })).toBe(21);
+});
+
+it("keeps 0% for a business with a BE VAT number when the customer is not a liberal profession", () => {
+  expect(vatRateForCustomer("BE 0123.456.789", 21, undefined, { vrijBeroep: false })).toBe(0);
+});
+
+it("recognises a liberal profession only when the mail itself says vrij beroep", () => {
+  expect(mentionsVrijBeroep("Ik ben arts, dus vrij beroep")).toBe(true);
+  expect(mentionsVrijBeroep("VRIJ BEROEP")).toBe(true);
+  expect(mentionsVrijBeroep("advocaat — vrij-beroep")).toBe(true);
+  expect(mentionsVrijBeroep("zelfstandig beroep")).toBe(false);
+  expect(mentionsVrijBeroep("vrij will ik beroep doen op een specialist")).toBe(false);
+  expect(mentionsVrijBeroep(null)).toBe(false);
 });

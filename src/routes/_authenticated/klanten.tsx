@@ -46,11 +46,11 @@ function Klanten() {
 
   function openEdit(c: (typeof data)[number]) {
     setEditing(editing === c.id ? null : c.id);
-    setForm(Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])));
+    setForm({ ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])), vrij_beroep: c.vrij_beroep ? "1" : "" });
   }
 
   async function save(c: (typeof data)[number]) {
-    const patch = customerPatch(form as Partial<CustomerRow>);
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), vrij_beroep: form["vrij_beroep"] === "1" };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -121,7 +121,7 @@ function Klanten() {
                 <Fragment key={c.id}>
                   <tr>
                     <td className="max-w-24 truncate font-mono text-xs text-muted-foreground" title={c.customer_number ?? ""}>{c.customer_number}</td>
-                    <td className="font-bold">{c.name}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="font-bold">{c.name}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
                     <td className="hidden max-w-56 truncate 2xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
@@ -148,6 +148,10 @@ function Klanten() {
                             </label>
                           ))}
                         </div>
+                        <label className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
+                          Vrij beroep — altijd 21% btw, ook met een btw-nummer
+                        </label>
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>

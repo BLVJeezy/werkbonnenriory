@@ -2,7 +2,7 @@ import { isUrgentMail } from "./urgent-mail";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { formatAddress, formatSiteAddress } from "@/lib/address";
-import { customerVatNumber, vatRateForCustomer } from "@/lib/vat-number";
+import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "@/lib/vat-number";
 
 export const MAILBOX_ADDRESS = "afspraak@riory.be";
 const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev";
@@ -164,7 +164,9 @@ export const importFromMailbox = createServerFn({ method: "POST" })
     for (const m of fresh) {
       try {
         const x = await extractWithAI(lovableKey, m);
-        const { error } = await context.supabase.from("work_orders").insert({
+        // Vrij beroep wordt letterlijk in de mail zelf gezocht; dat bepaalt de btw van deze taak.
+        const vrij = mentionsVrijBeroep(`${m.subject ?? ""}\n${m.body?.content ?? ""}`);
+        const { data: created, error } = await context.supabase.from("work_orders").insert({
           customer_name: x.customer_name || m.from?.emailAddress?.name || "Onbekend",
           street: x.street,
           house_number: x.house_number,
@@ -183,15 +185,20 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           billing_email: x.billing_email,
           vat_number: customerVatNumber(x.vat_number),
           project_name: x.project_name,
-          vat_rate: vatRateForCustomer(x.vat_number, 21, { customerType: x.customer_type, olderThanTenYears: x.home_older_than_ten_years }, { postalCode: x.postal_code }),
+          vat_rate: vatRateForCustomer(x.vat_number, 21, { customerType: x.customer_type, olderThanTenYears: x.home_older_than_ten_years }, { postalCode: x.postal_code, vrijBeroep: vrij }),
           description: x.description,
           urgent: isUrgentMail(m.subject, m.body?.content),
           source_message_id: m.id,
           source_mailbox_user_id: context.userId,
           source_subject: m.subject ?? null,
           received_at: m.receivedDateTime ?? null,
-        });
+        }).select("customer_id").single();
         if (error) throw new Error(error.message);
+        // Een mail die "vrij beroep" zegt, maakt de klant duurzaam vrij beroep; de beheerder kan het later nog corrigeren.
+        if (vrij && created?.customer_id) {
+          const { error: flagError } = await context.supabase.from("customers").update({ vrij_beroep: true }).eq("id", created.customer_id);
+          if (flagError) console.error("Vrij beroep niet bewaard bij de klant:", flagError.message);
+        }
         imported++;
       } catch (e) {
         console.error(e);
