@@ -19,6 +19,8 @@ import { DocumentReport } from '@/components/DocumentReport';
 import { allCustomers } from '@/lib/customers';
 import { CustomerPicker } from '@/components/CustomerPicker';
 import { SearchSelect } from '@/components/SearchSelect';
+import { InsurancePhotoPicker } from '@/components/InsurancePhotoPicker';
+import { suggestInsuranceQuote } from '@/lib/insurance-quote-ai.functions';
 
 export const Route = createFileRoute("/_authenticated/offertes")({
   validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
@@ -51,6 +53,15 @@ function Offertes() {
   const [kmOn, setKmOn] = useState(false);
   const [km, setKm] = useState<number | null>(null);
   const [kmBusy, setKmBusy] = useState(false);
+  const [kind, setKind] = useState<"offerte" | "verzekering">("offerte");
+  const [editCustomerId, setEditCustomerId] = useState<string | null>(null);
+  const [damageCause, setDamageCause] = useState("");
+  const [damageFindings, setDamageFindings] = useState("");
+  const [photoPaths, setPhotoPaths] = useState<string[]>([]);
+  const [aiNotes, setAiNotes] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const suggest = useServerFn(suggestInsuranceQuote);
+  const bestek = kind === "verzekering";
 
   const { data: quotes = [] } = useQuery({
     queryKey: ["quotes"],
@@ -121,6 +132,11 @@ function Offertes() {
     setEditCustomer(q.customer as InvoiceCustomer);
     setVatRate(String(q.vat_rate));
     setIntro(q.intro ?? "");
+    setKind(q.kind === "verzekering" ? "verzekering" : "offerte");
+    setEditCustomerId(q.customer_id ?? null);
+    setDamageCause(q.damage_cause ?? "");
+    setDamageFindings(q.damage_findings ?? "");
+    setPhotoPaths(q.photo_paths ?? []);
     const all = q.lines as InvoiceLine[];
     const kmLine = all.find((l) => l.unit === "km");
     setKmOn(!!kmLine);
@@ -138,6 +154,7 @@ function Offertes() {
     setLines([{ ...emptyLine }]);
     setKmOn(false);
     setKm(null);
+    setKind("offerte"); setEditCustomerId(null); setDamageCause(""); setDamageFindings(""); setPhotoPaths([]); setAiNotes("");
     if (bewerk) navigate({ to: "/offertes", search: {}, replace: true });
   }
 
@@ -173,11 +190,12 @@ function Offertes() {
     if (!customer) { toast.error("Kies een klant"); return; }
     setBusy(true);
     const win = window.open("", "_blank");
+    const extra = { kind, customerId: editId ? editCustomerId : customerId, damageCause, damageFindings, photoPaths };
     try {
       const saved = editId
-        ? await update({ data: { quoteId: editId, customer, lines: parsedLines, vatRate: Number(vatRate), intro } })
-        : await create({ data: { customer, lines: parsedLines, vatRate: Number(vatRate), intro } });
-      toast.success(editId ? "Offerte bijgewerkt" : "Offerte aangemaakt");
+        ? await update({ data: { quoteId: editId, customer, lines: parsedLines, vatRate: Number(vatRate), intro, ...extra } })
+        : await create({ data: { customer, lines: parsedLines, vatRate: Number(vatRate), intro, ...extra } });
+      toast.success(bestek ? (editId ? "Bestek bijgewerkt" : "Bestek aangemaakt") : editId ? "Offerte bijgewerkt" : "Offerte aangemaakt");
       const id = saved.id as string;
       closeForm();
       refresh();
@@ -187,6 +205,22 @@ function Offertes() {
       toast.error(e instanceof Error ? e.message : "Opslaan mislukt");
     }
     setBusy(false);
+  }
+
+  async function aiVoorstel() {
+    setAiBusy(true);
+    try {
+      const r = await suggest({ data: { notes: aiNotes, photoPaths: photoPaths.slice(0, 8) } });
+      if (!r.draft) { toast.error(r.error ?? "Geen voorstel"); return; }
+      const d = r.draft;
+      if (d.intro) setIntro(d.intro);
+      setDamageCause(d.cause);
+      setDamageFindings(d.findings);
+      const keep = lines.filter((l) => l.description.trim());
+      setLines([...keep, ...d.lines.map((l) => ({ description: l.description, quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" }))]);
+      toast.success("Voorstel ingevuld — kijk alles na en vul de prijzen in");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "AI-voorstel mislukt"); }
+    finally { setAiBusy(false); }
   }
 
   async function verstuur(id: string) {
@@ -227,6 +261,11 @@ function Offertes() {
 
       {showForm && (
         <form onSubmit={maak} className="space-y-3 rounded-md border bg-card p-4">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Soort">
+            {([["offerte", "Gewone offerte"], ["verzekering", "Bestek brandverzekering"]] as const).map(([k, label]) => (
+              <Button key={k} type="button" size="sm" variant={kind === k ? "default" : "outline"} aria-pressed={kind === k} onClick={() => setKind(k)}>{label}</Button>
+            ))}
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="min-w-0 space-y-1">
               <Label>Klant</Label>
@@ -249,8 +288,30 @@ function Offertes() {
               </select>
             </div>
           </div>
+          {bestek && (
+            <div className="space-y-3 rounded-md border border-primary/40 bg-muted/40 p-3">
+              <div className="space-y-1">
+                <Label>Foto’s van de schade</Label>
+                <InsurancePhotoPicker customerId={editId ? editCustomerId : customerId || null} value={photoPaths} onChange={setPhotoPaths} />
+              </div>
+              <div className="space-y-1">
+                <Label>Notities voor de AI (wat is er gebeurd, wat zag je ter plaatse)</Label>
+                <Textarea rows={3} placeholder="bv. Brand in keuken op 12/10 door frietketel. Plafond zwart van roet, kasten verbrand, muren rookschade in living…" value={aiNotes} onChange={(e) => setAiNotes(e.target.value)} />
+                <Button type="button" size="sm" variant="outline" disabled={aiBusy || (!aiNotes.trim() && !photoPaths.length)} onClick={() => void aiVoorstel()}>{aiBusy ? "AI schrijft voorstel…" : "AI-voorstel maken"}</Button>
+                <p className="text-xs text-muted-foreground">De AI vult oorzaak, vaststellingen en posten in op basis van je notities en de eerste 8 gekozen foto’s. Prijzen vul je zelf in. Kijk alles na: de verzekeraar beslist zelf over de dekking.</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Oorzaak van de schade</Label>
+                <Textarea rows={3} value={damageCause} onChange={(e) => setDamageCause(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Vaststellingen</Label>
+                <Textarea rows={5} value={damageFindings} onChange={(e) => setDamageFindings(e.target.value)} />
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
-            <Label>Lijnen</Label>
+            <Label>{bestek ? "Posten" : "Lijnen"}</Label>
             {lines.map((l, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2">
                 <Textarea placeholder="Omschrijving (of kies product)" rows={Math.min(8, Math.max(1, l.description.split("\n").length))} className="min-h-10 min-w-48 flex-1 basis-full sm:basis-0" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} />
@@ -274,7 +335,7 @@ function Offertes() {
             {kmOn && km != null && <span className="font-mono font-normal">{km} km × {euro(kmRate)} = {euro(km * kmRate)}</span>}
           </label>
           <p className="font-mono text-sm">Totaal: {euro(totals.net)} excl. btw · {euro(totals.total)} incl. btw</p>
-          <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
+          <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : bestek ? "Bestek aanmaken en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
         </form>
       )}
 
@@ -284,7 +345,7 @@ function Offertes() {
           const c = q.customer as InvoiceCustomer;
           return (
             <li key={q.id} className="grid min-w-0 grid-cols-2 items-center gap-2 p-3 sm:flex sm:flex-wrap sm:gap-3">
-              <span className="font-mono font-bold">{q.number}</span>
+              <span className="font-mono font-bold">{q.number}{q.kind === "verzekering" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">Bestek</span>}</span>
               <span className="col-span-full row-start-1 min-w-0 break-words font-semibold sm:flex-1">{c.name}</span>
               <select aria-label={`Ploeg offerte ${q.number}`} className="col-span-full h-10 w-full min-w-0 rounded-md border bg-background px-2 text-foreground sm:h-9 sm:w-auto" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
                 setBusy(true);

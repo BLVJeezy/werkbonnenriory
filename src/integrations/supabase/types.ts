@@ -1078,11 +1078,16 @@ export type Database = {
         Row: {
           created_at: string
           customer: Json
+          customer_id: string | null
+          damage_cause: string | null
+          damage_findings: string | null
           id: string
           intro: string | null
+          kind: string
           lines: Json
           net: number
           number: string
+          photo_paths: string[]
           sent_at: string | null
           signature: string | null
           signed_at: string | null
@@ -1099,11 +1104,16 @@ export type Database = {
         Insert: {
           created_at?: string
           customer: Json
+          customer_id?: string | null
+          damage_cause?: string | null
+          damage_findings?: string | null
           id?: string
           intro?: string | null
+          kind?: string
           lines: Json
           net: number
           number: string
+          photo_paths?: string[]
           sent_at?: string | null
           signature?: string | null
           signed_at?: string | null
@@ -1120,11 +1130,16 @@ export type Database = {
         Update: {
           created_at?: string
           customer?: Json
+          customer_id?: string | null
+          damage_cause?: string | null
+          damage_findings?: string | null
           id?: string
           intro?: string | null
+          kind?: string
           lines?: Json
           net?: number
           number?: string
+          photo_paths?: string[]
           sent_at?: string | null
           signature?: string | null
           signed_at?: string | null
