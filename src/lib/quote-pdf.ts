@@ -35,9 +35,10 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   const pr = (t: string) => [...t].map((c) => { try { font.encodeText(c); return c; } catch { return "?"; } }).join("");
   const wrap = (text: string, size: number, width: number, f = font) => {
     const out: string[] = [];
-    for (const block of pr(text).split(/\r?\n/)) {
+    for (const block of text.split(/\r?\n/)) {
+      const clean = pr(block);
       let cur = "";
-      for (const w of block.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (f.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
+      for (const w of clean.split(" ")) { const t = cur ? `${cur} ${w}` : w; if (f.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = w; } else cur = t; }
       out.push(cur);
     }
     return out;
