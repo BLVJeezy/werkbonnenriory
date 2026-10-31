@@ -7,3 +7,4 @@
 - [x] Knop 'Terug naar nog in te plannen' op takenlijst en kalender.
 - [x] Eerste betalingsherinnering automatisch na vervaldatum (dagelijks).
 - [x] Klantnummers opnieuw overal zichtbaar: nieuwe klanten krijgen automatisch het volgende 6-cijferige nummer; ontbrekende nummers aangevuld.
+- [x] Facturenlijst: kolom Betaald toont altijd een bedrag; rij groen bij betaald, wit bij open, rood bij vervallen.
