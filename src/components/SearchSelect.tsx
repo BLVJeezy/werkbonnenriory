@@ -14,15 +14,16 @@ type Props = {
   searchPlaceholder?: string;
   id?: string;
   className?: string;
+  modal?: boolean;
 };
 
-export function SearchSelect({ options, value, onChange, placeholder, searchPlaceholder = "Zoeken…", id, className }: Props) {
+export function SearchSelect({ options, value, onChange, placeholder, searchPlaceholder = "Zoeken…", id, className, modal = false }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const matches = filterChoices(options, query);
   const selected = options.find(option => option.value === value);
   return (
-    <Popover open={open} onOpenChange={next => { setOpen(next); if (!next) setQuery(""); }}>
+    <Popover modal={modal} open={open} onOpenChange={next => { setOpen(next); if (!next) setQuery(""); }}>
       <PopoverTrigger asChild>
         <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={placeholder} className={cn("h-10 w-full min-w-0 max-w-full justify-between gap-2 overflow-hidden font-normal", className)}>
           <span className="min-w-0 flex-1 truncate text-left">{selected?.label ?? placeholder}</span>
