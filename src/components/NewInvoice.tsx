@@ -216,6 +216,12 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
           <Button variant="outline" size="sm" onClick={() => setItems((ls) => [...ls, newLine()])}>+ Lijn toevoegen</Button>
           <Button variant="outline" size="sm" onClick={() => setItems((ls) => [...ls, { kind: "title", title: "", hidePrice: false }, newLine()])}>+ Titel toevoegen</Button>
         </div>
+        <label className="flex flex-wrap items-center gap-2 text-sm font-bold">
+          <input type="checkbox" className="h-4 w-4 accent-primary" checked={kmOn} disabled={kmBusy} onChange={(e) => void toggleKm(e.target.checked)} />
+          Kilometers aanrekenen (heen en terug vanaf {settings?.base_address ?? "het vertrekadres"})
+          {kmBusy && <span className="font-normal text-muted-foreground">berekenen…</span>}
+          {kmOn && km != null && <span className="font-mono font-normal">{km} km × {euro(kmRate)} = {euro(km * kmRate)}</span>}
+        </label>
         <p className="text-xs text-muted-foreground">Lijnen onder een titel worden op de factuur samengeteld bij die titel.</p>
       </div>
 
