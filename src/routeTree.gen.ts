@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
+import { Route as AuthenticatedAfgewerkteWerkbonnenRouteImport } from './routes/_authenticated/afgewerkte-werkbonnen'
 import { Route as AuthenticatedBetalingenRouteImport } from './routes/_authenticated/betalingen'
 import { Route as AuthenticatedBoekhoudingRouteImport } from './routes/_authenticated/boekhouding'
 import { Route as AuthenticatedContractenRouteImport } from './routes/_authenticated/contracten'
@@ -70,6 +71,12 @@ const AuthenticatedAankoopfacturenRoute =
   AuthenticatedAankoopfacturenRouteImport.update({
     id: '/aankoopfacturen',
     path: '/aankoopfacturen',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAfgewerkteWerkbonnenRoute =
+  AuthenticatedAfgewerkteWerkbonnenRouteImport.update({
+    id: '/afgewerkte-werkbonnen',
+    path: '/afgewerkte-werkbonnen',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedBetalingenRoute = AuthenticatedBetalingenRouteImport.update({
@@ -253,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
   '/betalingen': typeof AuthenticatedBetalingenRoute
   '/boekhouding': typeof AuthenticatedBoekhoudingRoute
   '/contracten': typeof AuthenticatedContractenRoute
@@ -291,6 +299,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
   '/betalingen': typeof AuthenticatedBetalingenRoute
   '/boekhouding': typeof AuthenticatedBoekhoudingRoute
   '/contracten': typeof AuthenticatedContractenRoute
@@ -331,6 +340,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
+  '/_authenticated/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
   '/_authenticated/betalingen': typeof AuthenticatedBetalingenRoute
   '/_authenticated/boekhouding': typeof AuthenticatedBoekhoudingRoute
   '/_authenticated/contracten': typeof AuthenticatedContractenRoute
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/aankoopfacturen'
+    | '/afgewerkte-werkbonnen'
     | '/betalingen'
     | '/boekhouding'
     | '/contracten'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/aankoopfacturen'
+    | '/afgewerkte-werkbonnen'
     | '/betalingen'
     | '/boekhouding'
     | '/contracten'
@@ -448,6 +460,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/aankoopfacturen'
+    | '/_authenticated/afgewerkte-werkbonnen'
     | '/_authenticated/betalingen'
     | '/_authenticated/boekhouding'
     | '/_authenticated/contracten'
@@ -539,6 +552,13 @@ declare module '@tanstack/react-router' {
       path: '/aankoopfacturen'
       fullPath: '/aankoopfacturen'
       preLoaderRoute: typeof AuthenticatedAankoopfacturenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/afgewerkte-werkbonnen': {
+      id: '/_authenticated/afgewerkte-werkbonnen'
+      path: '/afgewerkte-werkbonnen'
+      fullPath: '/afgewerkte-werkbonnen'
+      preLoaderRoute: typeof AuthenticatedAfgewerkteWerkbonnenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/betalingen': {
@@ -770,6 +790,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAankoopfacturenRoute: typeof AuthenticatedAankoopfacturenRoute
+  AuthenticatedAfgewerkteWerkbonnenRoute: typeof AuthenticatedAfgewerkteWerkbonnenRoute
   AuthenticatedBetalingenRoute: typeof AuthenticatedBetalingenRoute
   AuthenticatedBoekhoudingRoute: typeof AuthenticatedBoekhoudingRoute
   AuthenticatedContractenRoute: typeof AuthenticatedContractenRoute
@@ -791,6 +812,8 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAankoopfacturenRoute: AuthenticatedAankoopfacturenRoute,
+  AuthenticatedAfgewerkteWerkbonnenRoute:
+    AuthenticatedAfgewerkteWerkbonnenRoute,
   AuthenticatedBetalingenRoute: AuthenticatedBetalingenRoute,
   AuthenticatedBoekhoudingRoute: AuthenticatedBoekhoudingRoute,
   AuthenticatedContractenRoute: AuthenticatedContractenRoute,
