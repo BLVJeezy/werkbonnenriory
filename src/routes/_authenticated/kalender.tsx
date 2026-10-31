@@ -182,7 +182,7 @@ function Kalender() {
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
-      <div className="col-span-full flex flex-wrap items-center gap-2"><CustomerInvite task={w} /></div>
+      <div className="col-span-full flex flex-wrap items-center gap-2"><CustomerInvite task={w} />{w.scheduled_date && <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => plan(w.id, null)}>Terug naar nog in te plannen</Button>}</div>
       </div>
     </div>
   );

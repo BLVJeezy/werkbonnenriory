@@ -332,7 +332,10 @@ function Lijst() {
                 {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
               <Button size="sm" variant={w.urgent ? "destructive" : "outline"} className="h-9" onClick={() => patch(w.id, { urgent: !w.urgent })}>{w.urgent ? "Dringend ✓" : "Markeer dringend"}</Button>
-              <CustomerInvite task={w} className="sm:col-span-4 justify-self-start" />
+              <div className="flex flex-wrap items-center gap-2 sm:col-span-4">
+                <CustomerInvite task={w} className="justify-self-start" />
+                {w.scheduled_date && <Button size="sm" variant="outline" className="h-9" onClick={() => patch(w.id, { scheduled_date: null })}>Terug naar nog in te plannen</Button>}
+              </div>
             </div>
           ) : undefined} extra={
             <>
