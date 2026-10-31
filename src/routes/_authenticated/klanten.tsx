@@ -105,12 +105,12 @@ function Klanten() {
       <div className={tableWrap}>
         <table className={tableCls}>
           <thead><tr>
-            <SortTh k="nr" sort={sort}>Nr.</SortTh>
+            <SortTh k="nr" sort={sort} className="w-px">Nr.</SortTh>
             <SortTh k="naam" sort={sort}>Naam</SortTh>
             <SortTh k="plaats" sort={sort} className="hidden md:table-cell">Adres</SortTh>
             <SortTh k="tel" sort={sort} className="hidden lg:table-cell">Telefoon</SortTh>
-            <SortTh k="mail" sort={sort} className="hidden lg:table-cell">E-mail</SortTh>
-            <SortTh k="btw" sort={sort} className="hidden xl:table-cell">Btw-nummer</SortTh>
+            <SortTh k="mail" sort={sort} className="hidden xl:table-cell">E-mail</SortTh>
+            <SortTh k="btw" sort={sort} className="hidden 2xl:table-cell">Btw-nummer</SortTh>
             <Th />
           </tr></thead>
           <tbody>
@@ -124,8 +124,8 @@ function Klanten() {
                     <td className="font-bold">{c.name}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
-                    <td className="hidden max-w-56 truncate lg:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
-                    <td className="hidden whitespace-nowrap font-mono text-xs xl:table-cell">{c.vat_number ?? "—"}</td>
+                    <td className="hidden max-w-56 truncate xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
+                    <td className="hidden whitespace-nowrap font-mono text-xs 2xl:table-cell">{c.vat_number ?? "—"}</td>
                     <td className="whitespace-nowrap text-right">
                       <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{editing === c.id ? "Sluiten" : "Details"}</Button>
                       <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
