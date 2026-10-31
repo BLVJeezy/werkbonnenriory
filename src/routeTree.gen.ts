@@ -41,6 +41,7 @@ import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/publ
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicNieuwsbriefAfbeeldingFileRouteImport } from './routes/api/public/nieuwsbrief-afbeelding/$file'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
+import { Route as ApiPublicRemindersProcessRouteImport } from './routes/api/public/reminders/process'
 import { Route as ApiPublicReviewsInvoicesRouteImport } from './routes/api/public/reviews/invoices'
 
 const IndexRoute = IndexRouteImport.update({
@@ -215,6 +216,12 @@ const ApiPublicPontoSyncRoute = ApiPublicPontoSyncRouteImport.update({
   path: '/api/public/ponto/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRemindersProcessRoute =
+  ApiPublicRemindersProcessRouteImport.update({
+    id: '/api/public/reminders/process',
+    path: '/api/public/reminders/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicReviewsInvoicesRoute =
   ApiPublicReviewsInvoicesRouteImport.update({
     id: '/api/public/reviews/invoices',
@@ -254,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
 }
 export interface FileRoutesByTo {
@@ -288,6 +296,7 @@ export interface FileRoutesByTo {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
 }
 export interface FileRoutesById {
@@ -324,6 +333,7 @@ export interface FileRoutesById {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
 }
 export interface FileRouteTypes {
@@ -360,6 +370,7 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
   id:
     | '__root__'
@@ -429,6 +441,7 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
   fileRoutesById: FileRoutesById
 }
@@ -449,6 +462,7 @@ export interface RootRouteChildren {
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicNieuwsbriefAfbeeldingFileRoute: typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
+  ApiPublicRemindersProcessRoute: typeof ApiPublicRemindersProcessRoute
   ApiPublicReviewsInvoicesRoute: typeof ApiPublicReviewsInvoicesRoute
 }
 
@@ -678,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPontoSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/reminders/process': {
+      id: '/api/public/reminders/process'
+      path: '/api/public/reminders/process'
+      fullPath: '/api/public/reminders/process'
+      preLoaderRoute: typeof ApiPublicRemindersProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/reviews/invoices': {
       id: '/api/public/reviews/invoices'
       path: '/api/public/reviews/invoices'
@@ -747,6 +768,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicNieuwsbriefAfbeeldingFileRoute:
     ApiPublicNieuwsbriefAfbeeldingFileRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
+  ApiPublicRemindersProcessRoute: ApiPublicRemindersProcessRoute,
   ApiPublicReviewsInvoicesRoute: ApiPublicReviewsInvoicesRoute,
 }
 export const routeTree = rootRouteImport
