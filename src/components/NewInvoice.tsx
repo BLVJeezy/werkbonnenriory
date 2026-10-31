@@ -48,10 +48,17 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
   const [defaultVat, setDefaultVat] = useState("21");
+  const [kmOn, setKmOn] = useState(false);
+  const [km, setKm] = useState<number | null>(null);
+  const [kmVat, setKmVat] = useState<string | null>(null);
+  const [kmBusy, setKmBusy] = useState(false);
+  const calcKm = useServerFn(quoteDistance);
   const newLine = (): Line => ({ kind: "line", title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", vatRate: defaultVat, discount: "" });
   const [items, setItems] = useState<Item[]>([]);
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], enabled: open, queryFn: () => allCustomers(supabase) });
   const { data: products = [] } = useQuery({ queryKey: ["products-invoice"], enabled: open, queryFn: async () => (await supabase.from("products").select("*").order("name")).data ?? [] });
+  const { data: settings } = useQuery({ queryKey: ["settings"], enabled: open, queryFn: async () => (await supabase.from("settings").select("km_rate, base_address").eq("id", 1).single()).data });
+  const kmRate = Number(settings?.km_rate ?? 0);
 
   const parsed = useMemo(() => {
     let group: Title | null = null;
@@ -60,8 +67,9 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
       if (it.kind === "title") { group = it.title.trim() ? it : null; continue; }
       rows.push({ description: [it.title.trim(), it.detail.trim()].filter(Boolean).join("\n"), quantity: num(it.quantity), unit: it.unit, unitPrice: num(it.unitPrice), vatRate: Number(it.vatRate) || 0, discount: num(it.discount), group: group?.title ?? null, hidePrice: group?.hidePrice ?? false });
     }
-    return rows;
-  }, [items]);
+    const travel = kmOn ? travelKmLine(km, kmRate, Number(kmVat ?? defaultVat)) : null;
+    return travel ? [...rows, travel] : rows;
+  }, [items, kmOn, km, kmVat, kmRate, defaultVat]);
   const calc = useMemo(() => buildManualInvoice(parsed.filter((l) => l.description.trim())), [parsed]);
   const subtotals = useMemo(() => groupInvoiceLines(calc.lines).filter((s) => s.title), [calc]);
 
