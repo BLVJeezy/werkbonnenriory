@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { euro } from "@/lib/billing";
 import { vatRateForCustomer } from "@/lib/vat-number";
-import { buildManualInvoice, groupInvoiceLines, type InvoiceLine } from "@/lib/invoice";
+import { buildManualInvoice, groupInvoiceLines, lineTotals, type InvoiceLine } from "@/lib/invoice";
 import { createManualInvoice, updateInvoice } from "@/lib/invoices.functions";
 import { splitLineText } from "@/lib/line-text";
 import { Button } from "@/components/ui/button";
@@ -154,6 +154,10 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
               </select>
               <Button variant="outline" size="icon" aria-label="Lijn verwijderen" disabled={items.filter((x) => x.kind === "line").length === 1} onClick={() => setItems((ls) => ls.filter((_, j) => j !== i))}>✕</Button>
             </div>
+            {num(it.unitPrice) > 0 && (() => {
+              const t = lineTotals({ quantity: num(it.quantity), unitPrice: num(it.unitPrice), discount: num(it.discount), vatRate: Number(it.vatRate) || 0 });
+              return <p className="text-right font-mono text-sm text-muted-foreground">Lijntotaal: {euro(t.excl)} excl. btw · <strong className="text-foreground">{euro(t.incl)} incl. btw</strong></p>;
+            })()}
             <Textarea rows={Math.min(6, Math.max(2, it.detail.split("\n").length))} value={it.detail} onChange={(e) => setItem(i, { detail: e.target.value })} placeholder="Lange omschrijving (optioneel, komt als bijvoegsel onder de productnaam)" aria-label="Lange omschrijving" className="text-sm" />
           </div>
         ))}
