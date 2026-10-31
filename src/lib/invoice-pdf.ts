@@ -1,7 +1,7 @@
 import { appendTermsPdf } from "./terms-pdf";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
-import type { InvoiceCustomer, InvoiceLine } from "./invoice";
+import { groupInvoiceLines, type InvoiceCustomer, type InvoiceLine } from "./invoice";
 import { invoiceTaxGroups } from './contract-billing';
 import { invoiceVatNotices } from './invoice-vat-notices';
 import { invoicePaymentReference } from './invoice-payment-reference';

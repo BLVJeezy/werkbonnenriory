@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { addDays, buildCreditNote, buildInvoice, buildManualInvoice, isFullyPaid, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
+import { addDays, buildCreditNote, buildInvoice, buildManualInvoice, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
 import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from "@/lib/mail-senders";
@@ -52,12 +52,14 @@ export const createInvoices = createServerFn({ method: "POST" })
     return { created, skipped, sent, failed };
   });
 
+type ManualLine = { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number; group?: string | null; hidePrice?: boolean };
+
 /** Handmade invoice from the "Nieuwe factuur" form: existing customer or free-form customer, own lines, per-line VAT. */
 export const createManualInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: {
     customerId?: string | null; customer?: { name: string; street?: string | null; houseNumber?: string | null; postalCode?: string | null; city?: string | null; vatNumber?: string | null; email?: string | null } | null;
-    reference?: string | null; lines: { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number }[];
+    reference?: string | null; lines: ManualLine[];
   }) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -84,6 +86,51 @@ export const createManualInvoice = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return row;
+  });
+
+/** Reopens an unsent invoice: replaces customer (optional), reference and lines; number and dates stay. */
+export const updateInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { invoiceId: string; customerId?: string | null; reference?: string | null; lines: ManualLine[] }) => {
+    if (typeof i?.invoiceId !== "string" || !Array.isArray(i.lines)) throw new Error("Ongeldige factuur");
+    return i;
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabase } = context;
+    const { data: inv } = await supabase.from("invoices").select("*").eq("id", data.invoiceId).single();
+    if (!inv) throw new Error("Factuur niet gevonden");
+    if (!isInvoiceEditable(inv)) throw new Error("Deze factuur is al verzonden en kan niet meer aangepast worden. Maak een creditnota.");
+    if (inv.delivery_lock_until && new Date(inv.delivery_lock_until) > new Date()) throw new Error("De factuur wordt net verzonden; probeer zo opnieuw.");
+    const rows = data.lines.filter((l) => l.description.trim()).slice(0, 80);
+    if (!rows.length) throw new Error("Vul minstens één lijn met omschrijving in");
+    const calc = buildManualInvoice(rows);
+    let customer = inv.customer as InvoiceCustomer;
+    if (data.customerId) {
+      const { data: c } = await supabase.from("customers").select("*").eq("id", data.customerId).single();
+      if (!c) throw new Error("Klant niet gevonden");
+      customer = { ...customer, name: c.name, vatNumber: c.vat_number?.trim() || null, email: c.billing_email?.trim() || c.email?.trim() || null, street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city, address: null };
+    }
+    const patch: Record<string, unknown> = { customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, send_error: null };
+    if (data.reference !== undefined && (inv.contract_reference !== null || !inv.work_order_id)) patch.contract_reference = data.reference?.trim() || "";
+    const { error } = await supabase.from("invoices").update(patch).eq("id", inv.id).is("sent_at", null).is("pdf_sent_at", null).is("okioki_sent_at", null).is("post_sent_at", null);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Briefpost via bpost: staged until bpost delivers the API credentials (BPOST_API_KEY). */
+export const sendInvoiceByPost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { invoiceId: string }) => { if (typeof i?.invoiceId !== "string") throw new Error("Ongeldige factuur"); return i; })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: inv } = await context.supabase.from("invoices").select("id, customer, post_sent_at").eq("id", data.invoiceId).single();
+    if (!inv) throw new Error("Factuur niet gevonden");
+    if (inv.post_sent_at) throw new Error("Deze factuur is al per post verstuurd.");
+    const c = inv.customer as InvoiceCustomer;
+    if (!c.street || !c.postalCode || !c.city) throw new Error("Het postadres van de klant is onvolledig (straat, postcode en plaats nodig).");
+    if (!process.env["BPOST_API_KEY"]) throw new Error("Briefpost via bpost is nog niet actief: de API-gegevens van bpost ontbreken nog.");
+    throw new Error("Briefpost via bpost wordt geactiveerd zodra bpost de API-gegevens bevestigt.");
   });
 
 export const sendInvoices = createServerFn({ method: "POST" })
