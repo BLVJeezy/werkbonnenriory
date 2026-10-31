@@ -85,3 +85,26 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
     }).catch(() => { if (result.sent) result = { sent: false, reason: 'send_failed' }; });
     return result;
   });
+
+/** Every werkbon mail carries a 6-digit signing code; generated once per work order, reused on resend. */
+async function ensureSigningCode(supabase: any, workOrderId: string, existing: string | null): Promise<string | null> {
+  if (existing) return existing;
+  for (let i = 0; i < 5; i++) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    const code = String(buf[0] % 1_000_000).padStart(6, "0");
+    const { data, error } = await supabase
+      .from("work_orders")
+      .update({ signing_code: code })
+      .eq("id", workOrderId)
+      .is("signing_code", null)
+      .select("signing_code")
+      .maybeSingle();
+    if (data?.signing_code) return data.signing_code;
+    if (!error) {
+      const { data: row } = await supabase.from("work_orders").select("signing_code").eq("id", workOrderId).single();
+      if (row?.signing_code) return row.signing_code;
+    }
+  }
+  return null;
+}
