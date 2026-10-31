@@ -130,14 +130,19 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
 
   function start() {
     if (invoice) {
-      setItems(itemsFromLines((invoice.lines as InvoiceLine[]) ?? [], Number(invoice.vat_rate)));
+      const all = (invoice.lines as InvoiceLine[]) ?? [];
+      const kmLine = all.find((l) => l.unit === "km");
+      setKmOn(!!kmLine);
+      setKm(kmLine ? Number(kmLine.quantity) : null);
+      setKmVat(kmLine?.vatRate != null ? String(kmLine.vatRate) : null);
+      setItems(itemsFromLines(all.filter((l) => l.unit !== "km"), Number(invoice.vat_rate)));
       setReference(invoice.contract_reference ?? "");
       setNote(invoice.note ?? "");
       setDefaultVat(String(invoice.vat_rate));
     } else setItems([newLine()]);
     setOpen(true);
   }
-  function reset() { setOpen(false); setCustomerId(""); setReference(""); setNote(""); setItems([]); setDefaultVat("21"); }
+  function reset() { setOpen(false); setCustomerId(""); setReference(""); setNote(""); setItems([]); setDefaultVat("21"); setKmOn(false); setKm(null); setKmVat(null); }
 
   async function save() {
     try {
