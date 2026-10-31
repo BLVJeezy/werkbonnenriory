@@ -25,9 +25,10 @@ export async function createWerkbonPdf(data: WerkbonData, photos: readonly Uint8
   }).join("");
   const wrap = (text: string, size: number, width: number, f = font) => {
     const out: string[] = [];
-    for (const block of printable(text).split(/\r?\n/)) {
+    for (const block of text.split(/\r?\n/)) {
+      const clean = printable(block);
       let cur = "";
-      for (const word of block.split(" ")) {
+      for (const word of clean.split(" ")) {
         const t = cur ? `${cur} ${word}` : word;
         if (f.widthOfTextAtSize(t, size) > width && cur) { out.push(cur); cur = word; } else cur = t;
       }
