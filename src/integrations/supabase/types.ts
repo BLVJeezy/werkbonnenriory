@@ -2721,6 +2721,17 @@ export type Database = {
         Returns: string
       }
       ensure_approved_quote_task: { Args: { p_id: string }; Returns: string }
+      fin_capitalize_invoice_line: {
+        Args: {
+          _asset_account: string
+          _life: number
+          _line: string
+          _name: string
+          _residual?: number
+          _start: string
+        }
+        Returns: string
+      }
       fin_post_entry: {
         Args: {
           _company: string
