@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { euro } from "@/lib/billing";
 import { vatRateForCustomer } from "@/lib/vat-number";
-import { buildManualInvoice, groupInvoiceLines, lineTotals, travelKmLine, type InvoiceLine } from "@/lib/invoice";
+import { buildManualInvoice, groupInvoiceLines, lineTotals, splitTravelLine, travelKmLine, type InvoiceLine } from "@/lib/invoice";
 import { formatAddress } from "@/lib/address";
 import { quoteDistance } from "@/lib/distance.functions";
 import { createManualInvoice, updateInvoice } from "@/lib/invoices.functions";
@@ -131,11 +131,11 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
   function start() {
     if (invoice) {
       const all = (invoice.lines as InvoiceLine[]) ?? [];
-      const kmLine = all.find((l) => l.unit === "km");
+      const { kmLine, rest } = splitTravelLine(all);
       setKmOn(!!kmLine);
       setKm(kmLine ? Number(kmLine.quantity) : null);
       setKmVat(kmLine?.vatRate != null ? String(kmLine.vatRate) : null);
-      setItems(itemsFromLines(all.filter((l) => l.unit !== "km"), Number(invoice.vat_rate)));
+      setItems(itemsFromLines(rest, Number(invoice.vat_rate)));
       setReference(invoice.contract_reference ?? "");
       setNote(invoice.note ?? "");
       setDefaultVat(String(invoice.vat_rate));

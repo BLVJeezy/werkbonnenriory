@@ -57,7 +57,7 @@ describe("factuurtitels", () => {
   });
 });
 
-import { travelKmLine } from "./invoice";
+import { splitTravelLine, travelKmLine } from "./invoice";
 describe("kilometers op een handmatige factuur", () => {
   it("maakt dezelfde verplaatsingslijn als bij offertes", () => {
     expect(travelKmLine(12, 0.45, 21)).toMatchObject({
