@@ -3,7 +3,8 @@
 - [x] Afgewerkte werkbonnen op een aparte overzichtspagina, los van actieve taken; zoeken, ploeg/datumfilters, sortering en voorbeelden gecontroleerd.
 
 - [x] Boekhouding en Finance van Mail Assist AI volledig ingebouwd, met behoud van rekenmodules en tabbladen; geen iframe. Invoer, beoordeling, boeking, btw en bankverwerking getest.
-- [ ] Bestaande boekhoudgegevens importeren; wacht op export uit Mail Assist AI.
+- [x] Riory BV-balans per 31/10/2026 geïmporteerd: 91 rekeningsaldi, sluitende balans en resultaat gecontroleerd.
+- [ ] Afzonderlijke historische boekingen, facturen, bankkoppelingen en overige Finance-gegevens importeren; wacht op detail-export uit Mail Assist AI. De balans bevat geen maandverdeling of btw-roosters.
 
 - [x] Bankverrichtingen handmatig aan een factuur koppelen, met veilige betaalregistratie en controle in de app.
 
