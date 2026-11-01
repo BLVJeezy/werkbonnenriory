@@ -22,6 +22,7 @@ import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { sendWerkbonEmail } from '@/lib/werkbon-mail.functions';
 import { InvoicePaymentDetails } from '@/components/InvoicePaymentDetails';
 import { invoicePaymentReference } from '@/lib/invoice-payment-reference';
+import { CreditNoteSettle } from '@/components/CreditNoteSettle';
 
 export const Route = createFileRoute("/_authenticated/facturen")({
   head: () => ({ meta: [{ title: "Facturen — Riory Werkbonnen" }, { name: "description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:title", content: "Facturen — Riory Werkbonnen" }, { property: "og:description", content: "Riory-facturen als PDF naar klanten en als UBL naar OkiOki." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -263,11 +264,11 @@ function Facturen() {
                       <td className="whitespace-nowrap font-mono font-bold">{i.number}{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
                       <td>{(i.customer as { name?: string }).name}{i.contract_reference && <div className="max-w-xs truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
                       <td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">{new Date(i.created_at).toLocaleDateString("nl-BE")}</td>
-                      <td className="whitespace-nowrap text-right font-mono">{euro(Number(i.total))}</td>
+                      <td className={`whitespace-nowrap text-right font-mono ${i.kind === "creditnota" ? "font-bold text-destructive" : ""}`}>{euro(i.kind === "creditnota" ? -Math.abs(Number(i.total)) : Number(i.total))}</td>
                       <td>
                         <div className="flex flex-wrap gap-1">
                           <span className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{STATUS[i.status] ?? i.status}</span>
-                          {paid && <span className="whitespace-nowrap rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Betaald</span>}
+                          {paid && <span className="whitespace-nowrap rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{i.kind === "creditnota" ? "Verrekend" : "Betaald"}</span>}
                           {state === "overdue" && <span className="whitespace-nowrap rounded bg-overdue-foreground px-2 py-0.5 text-xs font-bold text-background">Vervallen</span>}
                         </div>
                         {i.send_error && <div className="max-w-xs truncate text-xs text-destructive" title={i.send_error}>{i.send_error}</div>}
@@ -296,6 +297,7 @@ function Facturen() {
                             {i.work_order_id && <WorkOrderPreview workOrderId={i.work_order_id} size="sm" />}
                             {i.work_order_id && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendWerkbon(i.work_order_id!)}>Werkbon verzenden</Button>}
                             {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
+                            {i.kind === "creditnota" && <CreditNoteSettle credit={i} invoices={data.invoices} onDone={refresh} />}
                             {i.kind !== "creditnota" && open && <PaymentReminders invoiceId={i.id} />}
                             {i.kind !== "creditnota" && open && <InvoicePaymentDetails invoice={i} company={{ name: s?.company_name ?? "Riory bv", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null }} />}
                             {isInvoiceEditable(i) && <NewInvoice invoice={i} creditNote={i.kind === "creditnota"} onCreated={refresh} />}
