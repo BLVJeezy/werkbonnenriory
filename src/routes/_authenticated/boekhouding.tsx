@@ -567,6 +567,20 @@ function Bank({ c }: { c: string }) {
     const { error } = await db.rpc("fin_settle_paid_invoice" as any, { _transaction: t.id, _invoice: inv.id, _bank_account: t.bank_account ?? bankAcc, _counter_account: inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten, _gross: grossOf(t) ?? undefined });
     if (error) throw new Error(error.message);
   };
+  // Eigen rekeningen (55x) herkennen aan hun IBAN, zodat overboekingen daartussen als interne verrekening geboekt worden.
+  const normIban = (s: string) => s.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  const ownByIban = new Map<string, string>();
+  for (const a of accounts) {
+    if (!String(a.number).startsWith("55")) continue;
+    const m = String(a.name ?? "").match(/[A-Z]{2}\d{2}[\dA-Z ]{8,30}/i);
+    if (m) ownByIban.set(normIban(m[0]), String(a.number));
+  }
+  // Geeft het eigen grootboeknummer van de tegenrekening bij een overboeking tussen eigen rekeningen.
+  const ownTransfer = (t: any) => {
+    if (!t.counterparty_account) return undefined;
+    const nr = ownByIban.get(normIban(String(t.counterparty_account)));
+    return nr && nr !== (t.bank_account ?? bankAcc) ? nr : undefined;
+  };
   // Kaartuitbetalingen (Europabank): koppelen op het bruto bedrag uit de mededeling; commissie gaat naar 653000.
   const grossOf = (t: any) => cardGross(t.description, Number(t.amount));
   const effAmt = (t: any) => grossOf(t) ?? Math.abs(Number(t.amount));
@@ -618,8 +632,25 @@ function Bank({ c }: { c: string }) {
   // Automatisch afletteren: alleen als verrichting precies één passende factuur heeft én die factuur maar bij één verrichting past.
   const autoBusy = useRef(false); const autoTried = useRef(new Set<string>());
   useEffect(() => {
-    if (autoBusy.current || !accounts.length || !tx.length || (!open.length && !paidNoTx.length)) return;
-    const todo = tx.filter((t) => !t.entry_id);
+    if (autoBusy.current || !accounts.length || !tx.length) return;
+    // Overboekingen tussen eigen rekeningen (bv. 550200 → 550700) altijd meteen intern verrekenen.
+    const transfers = tx.filter((t) => !t.entry_id && !autoTried.current.has(t.id) && ownTransfer(t));
+    if (transfers.length) {
+      transfers.forEach((t) => autoTried.current.add(t.id));
+      autoBusy.current = true;
+      (async () => {
+        let n = 0;
+        for (const t of transfers) {
+          try { const id = await post(c, "bank", t.tx_date, `Overboeking eigen rekening · ${t.description || t.counterparty || ""}`.trim(), null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, ownTransfer(t)!)); await linkEntry(t.id, id); n++; }
+          catch { /* blijft open voor handmatige boeking */ }
+        }
+        if (n) toast.success(`${n} overboeking(en) tussen eigen rekeningen verrekend`);
+        autoBusy.current = false; refresh();
+      })();
+      return;
+    }
+    if (!open.length && !paidNoTx.length) return;
+    const todo = tx.filter((t) => !t.entry_id && !ownTransfer(t));
     const fresh = (t: any) => !autoTried.current.has(t.id);
     const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025); };
     const pairs = todo.map((t) => [t, candOf(t)] as const).filter(([, cs]) => cs.length === 1);
@@ -754,7 +785,7 @@ function Bank({ c }: { c: string }) {
         <div className="max-h-[60dvh] space-y-2 overflow-y-auto">
           {vis.map((t) => {
             const amt = Number(t.amount);
-            const cands = open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025);
+            const cands = ownTransfer(t) ? [] : open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025);
             return (
               <div key={t.id} className="rounded border border-border p-2 text-sm">
                 <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
