@@ -93,7 +93,7 @@ function Finance() {
         <div className="flex gap-1 overflow-x-auto pb-1">
           {TABS.map((t) => <Button key={t} size="sm" variant={search.tab === t ? "default" : "outline"} onClick={() => setTab(t)} className="capitalize">{t}</Button>)}
         </div>
-        {company && <FinanceTasks companyId={company.id} />}
+        {company && search.tab === "overzicht" && <FinanceTasks companyId={company.id} />}
         {company && (
           <>
             {search.tab === "overzicht" && <Overzicht c={company.id} year={year} />}
