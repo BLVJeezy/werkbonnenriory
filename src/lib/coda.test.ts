@@ -10,7 +10,7 @@ const rec21 = (opts: { sign: "0" | "1"; cents: number; booking: string; ref?: st
   put(0, "21");
   put(10, pad(opts.ref ?? "REF123", 21));
   put(31, opts.sign + String(opts.cents).padStart(14, "0"));
-  put(47, opts.booking); // valutadatum
+  put(46, opts.booking); // valutadatum
   put(115, opts.booking); // boekingsdatum
   return l.join("");
 };
