@@ -624,6 +624,13 @@
       "when": 1793539501520,
       "tag": "0088_fin_bank_tx_counterparty_account",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1793543128883,
+      "tag": "0089_credit_note_settlement",
+      "breakpoints": true
     }
   ]
 }
