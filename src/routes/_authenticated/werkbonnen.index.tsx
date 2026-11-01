@@ -173,9 +173,15 @@ function Lijst() {
       return;
     }
     qc.invalidateQueries({ queryKey: ["customers"] });
+    const wasDirect = direct;
     setForm(emptyForm);
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
+    if (wasDirect) {
+      toast.success("Werkbon aangemaakt — vul ze verder in");
+      navigate({ to: "/werkbonnen/$id", params: { id: created.id } });
+      return;
+    }
     toast.success("Taak aangemaakt");
     if (dag) navigate({ to: "/kalender" });
   }
