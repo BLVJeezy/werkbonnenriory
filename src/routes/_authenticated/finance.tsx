@@ -354,6 +354,9 @@ function Facturen({ c, focus, onDone }: { c: string; focus?: string | undefined;
   const qc = useQueryClient();
   const rules = useRules(c).data ?? [];
   const [query, setQuery] = useState("");
+  const [todo, setTodo] = useState(true);
+  const [pick, setPick] = useState<Record<string, string>>({});
+  const { data: accounts = [] } = useQuery({ queryKey: ["fin", "accounts", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_accounts").select("*").eq("company_id", c).order("number").range(a, b))) as any[] });
   const [applying, setApplying] = useState(false);
   const runRules = async () => {
     setApplying(true);
@@ -364,12 +367,13 @@ function Facturen({ c, focus, onDone }: { c: string; focus?: string | undefined;
   const { data: inv = [] } = useQuery({ queryKey: ["fin", "inv", c], queryFn: () => fetchAll<any>((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(*)").eq("company_id", c).order("invoice_date", { ascending: false }).order("id").range(a, b)) });
   const matches = useMemo(() => {
     const terms = query.trim().toLocaleLowerCase("nl-BE").split(/\s+/).filter(Boolean);
-    if (!terms.length) return inv;
-    return inv.filter((i: any) => {
+    const base = todo ? inv.filter((i: any) => i.review_status === "te_beoordelen") : inv;
+    if (!terms.length) return base;
+    return base.filter((i: any) => {
       const haystack = [i.counterparty, i.number, i.invoice_date, i.source_ref, ...(i.fin_invoice_lines ?? []).map((l: any) => l.description)].filter(Boolean).join(" ").toLocaleLowerCase("nl-BE");
       return terms.every((term) => haystack.includes(term));
     });
-  }, [inv, query]);
+  }, [inv, query, todo]);
   const [sel, setSel] = useState<string | undefined>(focus);
   const [n, setN] = useState({ direction: "aankoop", doc_type: "factuur", counterparty: "", number: "", invoice_date: "", due_date: "", description: "", ex_vat: "", vat: "", original: "" });
   const create = async () => {
@@ -381,6 +385,21 @@ function Facturen({ c, focus, onDone }: { c: string; focus?: string | undefined;
     setSel(i.id); qc.invalidateQueries({ queryKey: ["fin"] }); onDone();
   };
   const cur = inv.find((i: any) => i.id === sel);
+  const quickBook = async (i: any) => {
+    const nr = String(i._nr ?? pick[i.id] ?? "").trim();
+    const acc = accounts.find((a: any) => a.number === nr && a.active);
+    if (!acc) return void toast.error("Kies een bestaande grootboekrekening");
+    for (const l of i.fin_invoice_lines ?? []) {
+      if (l.account && l.category) continue;
+      const { error } = await db.from("fin_invoice_lines").update({ account: l.account || acc.number, category: l.category || acc.name }).eq("id", l.id);
+      if (error) return void toast.error(`Opslaan mislukt: ${error.message}`);
+    }
+    const { error } = await db.from("fin_invoices").update({ review_status: "goedgekeurd" }).eq("id", i.id);
+    if (error) return void toast.error(`Goedkeuren mislukt: ${error.message}`);
+    await db.from("fin_audit").insert({ company_id: c, entity: "factuur", entity_id: i.id, action: "snel_ingeboekt", detail: { account: acc.number } });
+    toast.success(`${i.counterparty ?? "Factuur"} ingeboekt op ${acc.number}`);
+    qc.invalidateQueries({ queryKey: ["fin"] }); onDone();
+  };
   return (
     <div className="grid gap-3 lg:grid-cols-[1fr_1.3fr]">
       <div className="space-y-3">
@@ -408,13 +427,29 @@ function Facturen({ c, focus, onDone }: { c: string; focus?: string | undefined;
           <Input aria-label="Facturen zoeken" placeholder="Zoek factuur, leverancier, nummer of datum" className="pl-9 pr-9" value={query} onChange={(e) => setQuery(e.target.value)} />
           {query && <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full" aria-label="Zoekopdracht wissen" onClick={() => setQuery("")}><X className="size-4" /></Button>}
         </div>
-        <p className="text-xs text-muted-foreground">{query.trim() ? `${matches.length} van ${inv.length} facturen gevonden` : `${inv.length} facturen`}</p>
+        <div className="flex gap-1" role="group" aria-label="Facturen tonen">
+          <Button size="sm" variant={todo ? "default" : "outline"} onClick={() => setTodo(true)}>Nog in te boeken ({inv.filter((i: any) => i.review_status === "te_beoordelen").length})</Button>
+          <Button size="sm" variant={todo ? "outline" : "default"} onClick={() => setTodo(false)}>Alle facturen ({inv.length})</Button>
+        </div>
+        <datalist id="fin-accounts-quick">{accounts.filter((a: any) => a.active).map((a: any) => <option key={a.id} value={a.number}>{a.name}</option>)}</datalist>
+        <p className="text-xs text-muted-foreground">{query.trim() ? `${matches.length} facturen gevonden` : `${matches.length} facturen`}</p>
         <div className="max-h-[60dvh] space-y-1 overflow-y-auto">
           {matches.map((i: any) => {
             const tot = i.fin_invoice_lines.reduce((a: number, l: any) => a + Number(l.ex_vat) + Number(l.vat), 0);
-            return <Button variant="ghost" key={i.id} onClick={() => setSel(i.id)} className={"w-full rounded border p-2 text-left text-sm " + (sel === i.id ? "border-primary" : "border-border")}>
-              <span className="font-medium">{i.counterparty ?? "?"}</span> {i.number} · {i.invoice_date} · {i.doc_type === "creditnota" ? "−" : ""}{eur(tot)} · {i.status}{i.review_status === "te_beoordelen" && <span className="ml-1 rounded bg-warning/20 px-1 text-xs text-warning">beoordelen</span>}
+            const row = <Button variant="ghost" key={i.id} onClick={() => setSel(i.id)} className={"h-auto w-full whitespace-normal rounded border p-2 text-left text-sm " + (sel === i.id ? "border-primary" : "border-border")}>
+              <span><span className="font-medium">{i.counterparty ?? "?"}</span> {i.number} · {i.invoice_date} · {i.doc_type === "creditnota" ? "−" : ""}{eur(tot)} · {i.status}{i.review_status === "te_beoordelen" && <span className="ml-1 rounded bg-warning/20 px-1 text-xs text-warning">beoordelen</span>}</span>
             </Button>;
+            if (!todo) return row;
+            const nr = pick[i.id] ?? (i.fin_invoice_lines ?? []).find((l: any) => l.account)?.account ?? suggest(rules, i.counterparty, i.fin_invoice_lines?.[0]?.description)?.account ?? "";
+            const name = accounts.find((a: any) => a.number === nr)?.name;
+            return <div key={i.id} className="space-y-1">
+              {row}
+              <div className="flex items-center gap-1 pl-2">
+                <Input aria-label={`Grootboekrekening voor ${i.counterparty ?? "factuur"} ${i.number ?? ""}`} list="fin-accounts-quick" className="h-8 w-32" placeholder="Rekening" value={nr} onChange={(e) => setPick({ ...pick, [i.id]: e.target.value })} />
+                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{name ?? (nr ? "onbekende rekening" : "")}</span>
+                <Button size="sm" disabled={!name} onClick={() => { setPick({ ...pick, [i.id]: nr }); void quickBook({ ...i, _nr: nr }); }}>Inboeken</Button>
+              </div>
+            </div>;
           })}
           {!matches.length && <p className="py-3 text-sm text-muted-foreground">{query.trim() ? "Geen facturen gevonden." : "Nog geen facturen."}</p>}
         </div>
