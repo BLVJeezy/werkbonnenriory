@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Factuurmails rechtstreeks via een externe verzenddienst, met behoud van PDF/UBL en OkiOki; aflevering en vermoedelijke opening apart tonen. Activering wacht op de verzenddienstkoppeling en domeinverificatie.
+
 - [x] Voorbeeld van de offerte-mails getoond (met en zonder keuzemogelijkheden), als afbeelding opgeslagen in Files.
 - [x] Offertemail verduidelijkt dat de prijs pas definitief is na het maken van een keuze, enkel wanneer de offerte keuzemogelijkheden bevat; drie tests geslaagd.
 
