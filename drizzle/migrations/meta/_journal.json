@@ -617,6 +617,13 @@
       "when": 1793538894692,
       "tag": "0087_fin_reconcile_total_ambiguous",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1793539501520,
+      "tag": "0088_fin_bank_tx_counterparty_account",
+      "breakpoints": true
     }
   ]
 }
