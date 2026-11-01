@@ -603,6 +603,13 @@
       "when": 1793538031960,
       "tag": "0085_fin_card_fee_descriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1793538725185,
+      "tag": "0086_fin_card_fee_rounding",
+      "breakpoints": true
     }
   ]
 }
