@@ -22,7 +22,7 @@ export function CardFeeReport({ companyId }: { companyId: string }) {
   });
   const sum = data.reduce((s: number, r: any) => s + r.fee, 0);
   const exportCsv = () => {
-    const rows = [["Datum", "Factuur", "Omschrijving", "Bruto (klant 400000)", "Netto (bank)", "Commissie (653000)"],
+    const rows = [["Datum", "Factuur", "Omschrijving", "Bruto (klant)", "Netto (bank)", "Commissie (653000)"],
       ...data.map((r: any) => [r.date, r.invoice, r.text, r.gross.toFixed(2).replace(".", ","), r.net.toFixed(2).replace(".", ","), r.fee.toFixed(2).replace(".", ",")])];
     const csv = rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
     const a = document.createElement("a");
