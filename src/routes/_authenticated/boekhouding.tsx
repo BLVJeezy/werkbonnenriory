@@ -14,7 +14,7 @@ import { dedupeKey, isPrivateCompany, parseAmount } from "@/lib/finance";
 import { MAR } from "@/lib/mar";
 import { undoEntry } from "@/lib/undo";
 import { pontoAccounts, pontoSync } from "@/lib/finance-ponto.functions";
-import { syncWerkbonnenSales } from "@/lib/finance-sales.functions";
+import { useFinanceSales } from "@/lib/use-finance-sales";
 import { useServerFn } from "@tanstack/react-start";
 import {
   accountClass, controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, r2, statements, trialBalance, vatReport,
@@ -58,20 +58,7 @@ function Boekhouding() {
   const qcRoot = useQueryClient();
   useEffect(() => { if (c) postDueRecurring(c).then((n) => { if (n) { toast.success(`${n} vaste boeking(en) automatisch geboekt`); qcRoot.invalidateQueries({ queryKey: ["fin"] }); } }).catch(() => {}); }, [c, qcRoot]);
   useEffect(() => { if (c) postDueLoans(c).then((n) => { if (n) { toast.success(`${n} kredietboeking(en) automatisch geboekt`); qcRoot.invalidateQueries({ queryKey: ["fin"] }); } }).catch(() => {}); }, [c, qcRoot]);
-  const wbFn = useServerFn(syncWerkbonnenSales);
-  const [wbBusy, setWbBusy] = useState(false);
-  const runWb = async (manueel: boolean) => {
-    setWbBusy(true);
-    try {
-      const r = await wbFn();
-      if (!r.ok) { if (manueel) toast.error(r.error); return; }
-      if (r.nieuw || manueel) toast.success(`Werkbonnen: ${r.nieuw} nieuw, ${r.geboekt} geboekt${r.teBeoordelen ? `, ${r.teBeoordelen} te beoordelen` : ""}`);
-      if (r.nieuw) qcRoot.invalidateQueries({ queryKey: ["fin"] });
-    } catch { if (manueel) toast.error("Ophalen uit Werkbonnen mislukt"); }
-    finally { setWbBusy(false); }
-  };
-  const isRiory = !!companies.data?.find((x) => x.id === c)?.simpla_bound;
-  useEffect(() => { if (isRiory) void runWb(false); }, [isRiory]); // eslint-disable-line react-hooks/exhaustive-deps
+  useFinanceSales(!!user && companies.data?.find((x) => x.id === c)?.name.trim().toLowerCase() === "riory bv");
   if (loading) return <p className="text-sm text-muted-foreground">Laden…</p>;
   if (!user) return <p className="text-sm text-destructive">Alleen voor beheerder.</p>;
   return (
@@ -83,9 +70,6 @@ function Boekhouding() {
           <select className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={c} onChange={(e) => setC(e.target.value)}>
             {companies.data?.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>
-          {companies.data?.find((x) => x.id === c)?.simpla_bound && (
-            <Button size="sm" variant="outline" disabled={wbBusy} onClick={() => runWb(true)}>{wbBusy ? "Ophalen…" : "Verkoopfacturen uit Werkbonnen"}</Button>
-          )}
         </div>
         <p className="text-xs text-muted-foreground print:hidden">Opvolgboekhouding: houdt je cijfers bij en is exporteerbaar voor je boekhouder. De officiële boekhouding en btw-aangifte blijven bij je boekhouder.</p>
         <div className="flex gap-1 overflow-x-auto pb-1 print:hidden">
