@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { createTechnicianLogin, deleteTechnician } from "@/lib/technicians.functions";
 import { createExternalCrew } from "@/lib/appointments.functions";
 import { MarketingUsers } from "@/components/MarketingUsers";
+import { MessageCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { crewWhatsAppLink } from "@/lib/crew-whatsapp";
 
 const empty = { name: "", phone: "", password: "" };
 
@@ -19,6 +22,13 @@ export function PloegenBeheer() {
   const remove = useServerFn(deleteTechnician);
   const [f, setF] = useState(empty);
   const [busy, setBusy] = useState(false);
+  const [invitation, setInvitation] = useState<{ name: string; phone: string } | null>(null);
+  let invitationLink = "";
+  let invitationError = "";
+  if (invitation) {
+    try { invitationLink = crewWhatsAppLink(invitation.name, invitation.phone); }
+    catch (error) { invitationError = error instanceof Error ? error.message : "Ongeldig telefoonnummer"; }
+  }
   const { data = [] } = useQuery({
     queryKey: ["technicians"],
     queryFn: async () => (await supabase.from("technicians").select("*").order("name")).data ?? [],
@@ -30,6 +40,7 @@ export function PloegenBeheer() {
     try {
       await create({ data: f });
       toast.success(`Login aangemaakt voor ploeg ${f.name}`);
+      setInvitation({ name: f.name.trim(), phone: f.phone });
       setF(empty);
       qc.invalidateQueries({ queryKey: ["technicians"] });
     } catch (err) {
@@ -49,7 +60,7 @@ export function PloegenBeheer() {
       <form onSubmit={add} className="grid gap-2 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Input placeholder="Naam ploeg (= loginnaam)" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <Input placeholder="Telefoon" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-        <Input placeholder="Wachtwoord (min. 6 tekens)" type="text" required minLength={6} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+        <Input placeholder="Wachtwoord (min. 6 tekens)" type="password" required minLength={6} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
         <Button disabled={busy} className="sm:col-span-2">
           {busy ? "Aanmaken…" : "Ploeg + login aanmaken"}
         </Button>
@@ -95,6 +106,7 @@ export function PloegenBeheer() {
                 {!t.external_planning && <Input name="ccv" aria-label="CCV Terminal ID" placeholder="CCV Terminal ID" className="h-8 w-40" defaultValue={t.ccv_terminal_id ?? ""} />}
                 {t.external_planning && <Input name="email" type="email" required aria-label="E-mailadres ploeg" className="h-8 w-56" defaultValue={t.email ?? ""} />}
                 <Button size="sm" variant="outline" type="submit">Opslaan</Button>
+                {!t.external_planning && t.user_id && <Button size="sm" variant="outline" type="button" onClick={() => setInvitation({ name: t.name, phone: t.phone ?? "" })}><MessageCircle className="size-4" />Uitnodigen via WhatsApp</Button>}
               </form>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                 {(
@@ -141,6 +153,19 @@ export function PloegenBeheer() {
           </li>
         ))}
       </ul>
+      <Dialog open={invitation !== null} onOpenChange={(open) => { if (!open) setInvitation(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{invitation?.name} uitnodigen</DialogTitle>
+            <DialogDescription>De uitnodiging bevat de inloglink en ploegnaam. Bezorg het wachtwoord afzonderlijk. Je verstuurt het bericht zelf in WhatsApp.</DialogDescription>
+          </DialogHeader>
+          <Input aria-label="WhatsApp-telefoonnummer" type="tel" placeholder="Bijvoorbeeld +32 470 12 34 56" value={invitation?.phone ?? ""} onChange={(e) => setInvitation((current) => current ? { ...current, phone: e.target.value } : null)} />
+          {invitationError && <p className="text-sm text-destructive" role="alert">{invitationError}</p>}
+          <Button asChild disabled={!invitationLink}>
+            {invitationLink ? <a href={invitationLink} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" />Openen in WhatsApp</a> : <span><MessageCircle className="size-4" />Openen in WhatsApp</span>}
+          </Button>
+        </DialogContent>
+      </Dialog>
       <MarketingUsers />
     </div>
   );
