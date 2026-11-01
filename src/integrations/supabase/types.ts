@@ -680,6 +680,7 @@ export type Database = {
           bank_account: string | null
           company_id: string
           counterparty: string | null
+          counterparty_account: string | null
           created_at: string
           dedupe_key: string
           description: string | null
@@ -694,6 +695,7 @@ export type Database = {
           bank_account?: string | null
           company_id: string
           counterparty?: string | null
+          counterparty_account?: string | null
           created_at?: string
           dedupe_key: string
           description?: string | null
@@ -708,6 +710,7 @@ export type Database = {
           bank_account?: string | null
           company_id?: string
           counterparty?: string | null
+          counterparty_account?: string | null
           created_at?: string
           dedupe_key?: string
           description?: string | null

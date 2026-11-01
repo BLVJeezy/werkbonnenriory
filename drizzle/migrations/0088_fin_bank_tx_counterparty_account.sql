@@ -1,0 +1,1 @@
+ALTER TABLE public.fin_bank_tx ADD COLUMN counterparty_account TEXT;
