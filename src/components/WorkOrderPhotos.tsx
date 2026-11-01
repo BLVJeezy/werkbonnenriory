@@ -24,7 +24,8 @@ export function WorkOrderPhotos({ workOrderId, locked }: { workOrderId: string; 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
     setBusy(true);
-    for (const f of Array.from(files)) {
+    for (const original of Array.from(files)) {
+      const f = await compressImage(original);
       const ext = f.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${workOrderId}/${crypto.randomUUID()}.${ext}`;
       const up = await supabase.storage.from(BUCKET).upload(path, f, { contentType: f.type || "image/jpeg" });
