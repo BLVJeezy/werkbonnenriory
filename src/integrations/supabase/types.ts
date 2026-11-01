@@ -2028,10 +2028,46 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_booking_rules: {
+        Row: {
+          account: string
+          id: string
+          match_key: string
+          supplier_id: string | null
+          updated_at: string
+          uses: number
+        }
+        Insert: {
+          account: string
+          id?: string
+          match_key: string
+          supplier_id?: string | null
+          updated_at?: string
+          uses?: number
+        }
+        Update: {
+          account?: string
+          id?: string
+          match_key?: string
+          supplier_id?: string | null
+          updated_at?: string
+          uses?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_booking_rules_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_invoices: {
         Row: {
           bank_payment_ref: string | null
           bank_transaction_key: string | null
+          booked_at: string | null
           created_at: string
           due_date: string | null
           email_message_id: string | null
@@ -2046,6 +2082,7 @@ export type Database = {
           payment_method: string
           payment_ref: string | null
           pdf_path: string | null
+          peppyrus_message_id: string | null
           simpla_bill_id: number | null
           source: string
           status: string
@@ -2062,6 +2099,7 @@ export type Database = {
         Insert: {
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
+          booked_at?: string | null
           created_at?: string
           due_date?: string | null
           email_message_id?: string | null
@@ -2076,6 +2114,7 @@ export type Database = {
           payment_method?: string
           payment_ref?: string | null
           pdf_path?: string | null
+          peppyrus_message_id?: string | null
           simpla_bill_id?: number | null
           source?: string
           status?: string
@@ -2092,6 +2131,7 @@ export type Database = {
         Update: {
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
+          booked_at?: string | null
           created_at?: string
           due_date?: string | null
           email_message_id?: string | null
@@ -2106,6 +2146,7 @@ export type Database = {
           payment_method?: string
           payment_ref?: string | null
           pdf_path?: string | null
+          peppyrus_message_id?: string | null
           simpla_bill_id?: number | null
           source?: string
           status?: string
@@ -2319,6 +2360,7 @@ export type Database = {
       }
       suppliers: {
         Row: {
+          bic: string | null
           created_at: string
           iban: string | null
           id: string
@@ -2330,6 +2372,7 @@ export type Database = {
           vat_rule: string
         }
         Insert: {
+          bic?: string | null
           created_at?: string
           iban?: string | null
           id?: string
@@ -2341,6 +2384,7 @@ export type Database = {
           vat_rule?: string
         }
         Update: {
+          bic?: string | null
           created_at?: string
           iban?: string | null
           id?: string

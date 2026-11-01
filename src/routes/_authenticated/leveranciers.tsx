@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { saveSupplier } from '@/lib/suppliers.functions';
 import { PAYMENT_METHODS, VAT_RULES } from '@/lib/supplier-rules';
+import { supplierBankWarnings } from '@/lib/purchase-booking';
 import type { Database } from '@/integrations/supabase/types';
 import { SortTh, Th, tableCls, tableWrap, useSort } from '@/components/SortTable';
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
@@ -31,11 +32,13 @@ function Suppliers() {
   }
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black uppercase">Leveranciers</h1></div>
+    {rows.some(r=>supplierBankWarnings(r).length) && <p className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm font-bold">⚠ {rows.filter(r=>supplierBankWarnings(r).length).length} leverancier(s) zonder volledige IBAN/BIC. Elke leverancier heeft deze gegevens nodig.</p>}
+    <p className="text-sm text-muted-foreground">De standaard betaalwijze geldt voor alle nog niet afgeletterde facturen van die leverancier.</p>
     <Input aria-label="Leverancier zoeken" placeholder="Leverancier zoeken" value={search} onChange={e=>setSearch(e.target.value)} />
     <div className={tableWrap}><table className={tableCls}>
       <thead><tr><SortTh k="naam" sort={sort}>Naam</SortTh><SortTh k="btw" sort={sort} className="hidden sm:table-cell">Btw-nummer</SortTh><SortTh k="betaal" sort={sort} className="hidden md:table-cell">Betaalwijze</SortTh><SortTh k="regel" sort={sort} className="hidden md:table-cell">Btw-regel</SortTh><SortTh k="aftrek" sort={sort} right>Aftrekbaar</SortTh><Th /></tr></thead>
       <tbody>{sort.sorted.map(r=><tr key={r.id}>
-        <td className="font-bold">{r.name}<div className="text-xs font-normal text-muted-foreground sm:hidden">{r.vat_number}</div></td>
+        <td className="font-bold">{r.name}{supplierBankWarnings(r).length>0 && <span className="ml-2 rounded bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground">{!r.iban && !r.bic ? 'IBAN + BIC ontbreken' : !r.iban ? 'IBAN ontbreekt' : 'BIC ontbreekt'}</span>}<div className="text-xs font-normal text-muted-foreground sm:hidden">{r.vat_number}</div></td>
         <td className="hidden whitespace-nowrap font-mono text-xs text-muted-foreground sm:table-cell">{r.vat_number ?? '—'}</td>
         <td className="hidden md:table-cell">{PAYMENT_METHODS[r.payment_method as keyof typeof PAYMENT_METHODS]}</td>
         <td className="hidden md:table-cell">{VAT_RULES[r.vat_rule as keyof typeof VAT_RULES]}</td>
@@ -47,6 +50,8 @@ function Suppliers() {
       <div><Label htmlFor="supplier-name">Naam</Label><Input id="supplier-name" value={edit.name} onChange={e=>setEdit({...edit,name:e.target.value})}/></div>
       <div><Label htmlFor="supplier-vat">Btw-nummer</Label><Input id="supplier-vat" value={edit.vat_number??''} onChange={e=>setEdit({...edit,vat_number:e.target.value||null})}/></div>
       <div><Label htmlFor="supplier-iban">IBAN</Label><Input id="supplier-iban" value={edit.iban??''} onChange={e=>setEdit({...edit,iban:e.target.value||null})}/></div>
+      <div><Label htmlFor="supplier-bic">BIC</Label><Input id="supplier-bic" value={edit.bic??''} onChange={e=>setEdit({...edit,bic:e.target.value.toUpperCase()||null})}/></div>
+      {supplierBankWarnings(edit).length>0 && <p className="text-sm font-bold text-destructive sm:col-span-2">⚠ {supplierBankWarnings(edit).join(' · ')} — nodig om te betalen.</p>}
       <div><Label htmlFor="supplier-payment">Standaard betaalwijze</Label><select id="supplier-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={e=>setEdit({...edit,payment_method:e.target.value})}>{Object.entries(PAYMENT_METHODS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
       <div><Label htmlFor="supplier-rule">Btw-regel</Label><select id="supplier-rule" className="h-10 w-full rounded-md border bg-background px-3" value={edit.vat_rule} onChange={e=>setEdit({...edit,vat_rule:e.target.value})}>{Object.entries(VAT_RULES).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
       <div><Label htmlFor="supplier-deductible">Btw aftrekbaar (%)</Label><Input id="supplier-deductible" type="number" min="0" max="100" value={edit.vat_deductible_percent} onChange={e=>setEdit({...edit,vat_deductible_percent:Number(e.target.value)})}/></div>

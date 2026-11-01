@@ -11,10 +11,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ReceiptScanner } from '@/components/ReceiptScanner';
 import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from '@/lib/supplier-rules';
 import { Link } from '@tanstack/react-router';
-import { pontoStatus, syncPontoNow } from '@/lib/ponto.functions';
 import { canExportPurchase } from '@/lib/purchase-payment';
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
+import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
+import { daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { attachPurchasePdf, importReceipt, importPurchaseInvoices, importPurchasesFromSimpla, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
@@ -27,7 +28,7 @@ type Row = {
   invoice_number: string | null; invoice_date: string | null; due_date: string | null;
   lines: PurchaseLine[]; net: number; vat: number; total: number; payment_ref: string | null;
   status: string; pdf_path: string | null; created_at: string; kind: 'factuur' | 'creditnota'; paid_at: string | null; bank_payment_ref: string | null;
-  payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number;
+  payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number; supplier_id?: string | null; booked_at?: string | null;
 };
 
 const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Afgeletterd", betaling_klaargezet: 'Betaling klaargezet' };
@@ -39,16 +40,40 @@ function Aankoopfacturen() {
   const doSimpla = useServerFn(importPurchasesFromSimpla);
   const uploadPdf = useServerFn(attachPurchasePdf);
   const uploadTicket = useServerFn(importReceipt);
-  const syncPayments = useServerFn(syncPontoNow);
-  const getPonto = useServerFn(pontoStatus);
-  const { data: ponto } = useQuery({ queryKey: ['ponto'], queryFn: () => getPonto() });
+  const getPeppyrus = useServerFn(peppyrusStatus);
+  const doPeppyrus = useServerFn(importFromPeppyrus);
+  const getAccounts = useServerFn(listExpenseAccounts);
+  const suggest = useServerFn(suggestPurchaseAccounts);
+  const book = useServerFn(bookPurchaseInvoice);
+  const { data: peppyrus } = useQuery({ queryKey: ['peppyrus'], queryFn: () => getPeppyrus() });
+  const { data: accounts = [] } = useQuery({ queryKey: ['expense-accounts'], queryFn: () => getAccounts() });
+  const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: async () => (await supabase.from('suppliers').select('*').order('name')).data ?? [] });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  async function controleerBetalingen() {
+  const [tab, setTab] = useState<'te_controleren' | 'goedgekeurd' | 'betaald' | 'alle'>('te_controleren');
+  const [drag, setDrag] = useState(false);
+  const [sources, setSources] = useState<Record<number, string>>({});
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
+  async function vanPeppyrus() {
     setBusy(true);
-    try { const r = await syncPayments(); toast.success(`${r.purchaseMatched.length} aankoopfacturen afgeletterd`); await refresh(); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['ponto'] }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'Betalingen controleren mislukt'); }
-    setBusy(false);
+    try { const r = await doPeppyrus(); toast.success(`${r.imported} Peppol-factuur/facturen ontvangen${r.skipped ? `, ${r.skipped} al aanwezig` : ''}`); r.errors.forEach(e => toast.error(e)); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Peppyrus ophalen mislukt'); }
+    setBusy(false); refresh();
   }
+  async function stelVoor(row: Row) {
+    try {
+      const r = await suggest({ data: { supplierId: row.supplier_id ?? null, supplierName: row.supplier_name, lines: row.lines } });
+      setEdit(e => e && e.id === row.id ? { ...e, lines: e.lines.map((l, i) => l.account ? l : { ...l, account: r[i]?.account ?? null }) } : e);
+      setSources(Object.fromEntries(r.map((x, i) => [i, x.source ?? ''])));
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Rekeningvoorstel mislukt'); }
+  }
+  async function boek() {
+    if (!edit) return;
+    setBusy(true);
+    try { await slaOp(false, true); await book({ data: { id: edit.id, lines: edit.lines } }); toast.success('Lijnen geboekt — keuzes onthouden voor volgende facturen'); setEdit(null); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Boeken mislukt'); }
+    setBusy(false); refresh();
+  }
+  async function leesBestanden(files: FileList | File[]) { for (const f of Array.from(files)) await leesTicket(f); }
   async function vanSimpla() {
     setBusy(true);
     try { const r = await doSimpla(); toast.success(`${r.imported} openstaande factuur/facturen uit Simpla ingelezen${r.skipped ? `, ${r.skipped} al aanwezig` : ""}`); }
@@ -109,7 +134,9 @@ function Aankoopfacturen() {
 
   async function betaal() {
     const chosen = rows.filter((r) => sel.includes(r.id) && canExportPurchase({ ...r, total: Number(r.total) }));
-    if (!chosen.length) { toast.error("Selecteer goedgekeurde facturen"); return; }
+    const locked = rows.filter((r) => sel.includes(r.id) && paymentMethodLock(r.payment_method, r.status));
+    if (locked.length) toast.warning(`${locked.length} factuur/facturen overgeslagen: domiciliëring, kaart of cash wordt nooit manueel betaald`);
+    if (!chosen.length) { toast.error("Selecteer goedgekeurde facturen met betaalwijze overschrijving"); return; }
     if (!confirm(`Betaalbestand maken voor ${chosen.length} facturen (${euro(chosen.reduce((s, r) => s + Number(r.total), 0))})? Elke factuur wordt op zijn vervaldag betaald. Laad het bestand daarna in je banktoepassing.`)) return;
     setBusy(true);
     try {
@@ -134,7 +161,8 @@ function Aankoopfacturen() {
   }
 
   async function openControle(row: Row) {
-    setEdit({ ...row, lines: (row.lines ?? []) as PurchaseLine[] }); setPdfUrl(null);
+    setEdit({ ...row, lines: (row.lines ?? []) as PurchaseLine[] }); setPdfUrl(null); setSources({});
+    if (row.status !== 'betaald' && (row.lines ?? []).some((l) => !(l as PurchaseLine).account)) void stelVoor({ ...row, lines: (row.lines ?? []) as PurchaseLine[] });
     if (row.pdf_path) {
       const { data, error } = await supabase.storage.from('aankoopfacturen').createSignedUrl(row.pdf_path, 3600);
       if (error) toast.error('PDF laden mislukt');
@@ -154,22 +182,23 @@ function Aankoopfacturen() {
     setBusy(false);
   }
 
-  async function slaOp(approve = false) {
+  async function slaOp(approve = false, silent = false) {
     if (!edit) return;
-    setBusy(true);
+    if (!silent) setBusy(true);
     try {
       await update({
         data: {
-          id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+          id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id ?? null, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
           invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
           lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
         },
       });
       if (approve) await setStatus({ data: { ids: [edit.id], status: 'goedgekeurd' } });
-      toast.success("Opgeslagen");
       qc.invalidateQueries({ queryKey: ['suppliers'] });
+      if (silent) return;
+      toast.success("Opgeslagen");
       setEdit(null);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
+    } catch (e) { if (silent) throw e; toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
     setBusy(false);
     refresh();
   }
@@ -180,41 +209,80 @@ function Aankoopfacturen() {
     lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
   }) : [];
 
+  const editSupplier = edit ? suppliers.find((x) => x.id === edit.supplier_id) : null;
+  const bankWarnings = edit ? supplierBankWarnings(editSupplier ?? (edit.supplier_iban ? { iban: edit.supplier_iban, bic: null } : null)) : [];
+  const visible = rows.filter((r) => tab === 'alle' ? true : tab === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === tab);
+  const count = (t: string) => rows.filter((r) => t === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === t).length;
+  const payable = visible.filter((r) => canExportPurchase({ ...r, total: Number(r.total) }));
+  const isPaid = edit?.status === 'betaald';
+  const signedTotal = edit ? (edit.kind === 'creditnota' ? -Math.abs(Number(edit.total)) : Number(edit.total)) : 0;
+  const upd = (i: number, patch: Partial<PurchaseLine>) => edit && setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-black uppercase">Aankoopfacturen</h1>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="/leveranciers">Leveranciers</Link></Button>
-          <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Nu inlezen vanuit mail"}</Button>
+          <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>
+          <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Inlezen vanuit mail"}</Button>
           <Button variant="outline" disabled={busy} onClick={vanSimpla}>Inlezen uit Simpla</Button>
-          {ponto?.connected ? <Button variant="outline" disabled={busy} onClick={controleerBetalingen}>Betalingen controleren</Button> : <Button variant="outline" asChild><Link to="/facturen">Ponto koppelen</Link></Button>}
-          <Button variant="outline" disabled={!sel.length || busy} onClick={() => markeer("goedgekeurd")}>Goedkeuren ({sel.length})</Button>
-          <Button disabled={!sel.length || busy} onClick={betaal}>Betaalbestand maken</Button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-y py-4"><ReceiptScanner disabled={busy} onScan={leesTicket}/><Label htmlFor="receipt-upload">Kasticket of aankoopdocument inlezen</Label><Input id="receipt-upload" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={busy} className="max-w-sm" onChange={e=>{void leesTicket(e.target.files?.[0]);e.target.value='';}}/>{busy && <span role="status">Document wordt verwerkt…</span>}</div>
-      {ponto?.lastSync && <p className="text-sm text-muted-foreground">Laatste betalingscontrole: {new Date(ponto.lastSync).toLocaleString('nl-BE')}</p>}
+
+      <div
+        role="button" tabIndex={0} aria-label="Facturen of kastickets hierheen slepen"
+        onClick={() => document.getElementById('receipt-upload')?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('receipt-upload')?.click(); }}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
+        onDrop={(e) => { e.preventDefault(); setDrag(false); void leesBestanden(e.dataTransfer.files); }}
+        className={`flex cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-6 text-center ${drag ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}
+      >
+        <span className="font-bold">Sleep hier facturen, buitenlandse facturen of btw-ticketjes</span>
+        <span className="text-sm text-muted-foreground">PDF, JPG, PNG of WebP — leverancier, lijnen, vervaldag en betalingskenmerk worden automatisch uitgelezen</span>
+        <input id="receipt-upload" type="file" multiple hidden accept="application/pdf,image/jpeg,image/png,image/webp" disabled={busy} onChange={(e) => { if (e.target.files) void leesBestanden(e.target.files); e.target.value = ''; }} />
+        {busy && <span role="status">Document wordt verwerkt…</span>}
+      </div>
+      <div className="flex flex-wrap items-center gap-3"><ReceiptScanner disabled={busy} onScan={leesTicket} /><span className="text-sm text-muted-foreground">Afletteren van betalingen gebeurt automatisch in Boekhouding → Bank.</span></div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {([['te_controleren', 'Te controleren'], ['goedgekeurd', 'Gecontroleerd'], ['betaald', 'Betaald'], ['alle', 'Alle']] as const).map(([k, l]) => (
+          <Button key={k} size="sm" variant={tab === k ? 'default' : 'outline'} onClick={() => { setTab(k); setSel([]); }}>{l}{k !== 'alle' ? ` (${count(k)})` : ''}</Button>
+        ))}
+        <div className="ml-auto flex flex-wrap gap-2">
+          {payable.length > 0 && <Button size="sm" variant="outline" onClick={() => setSel(payable.map((r) => r.id))}>Alles betaalbaar selecteren ({payable.length})</Button>}
+          <Button size="sm" variant="outline" disabled={!sel.length || busy} onClick={() => markeer("goedgekeurd")}>Gecontroleerd ({sel.length})</Button>
+          <Button size="sm" disabled={!sel.length || busy} onClick={betaal}>SEPA-betaalbestand maken</Button>
+        </div>
+      </div>
 
       <ul className="divide-y rounded-md border bg-card">
-        {rows.length === 0 && <li className="p-4 text-muted-foreground">Nog geen aankoopfacturen.</li>}
-        {rows.map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center gap-3 p-3">
+        {visible.length === 0 && <li className="p-4 text-muted-foreground">Geen aankoopfacturen in deze lijst.</li>}
+        {visible.map((r) => {
+          const paid = r.status === 'betaald';
+          const due = dueLabel(daysUntilDue(r.due_date, today));
+          const lock = paymentMethodLock(r.payment_method, r.status);
+          const sup = suppliers.find((x) => x.id === r.supplier_id);
+          const bankMissing = !paid && supplierBankWarnings(sup ?? null).length > 0;
+          return (
+          <li key={r.id} className={`flex flex-wrap items-center gap-3 p-3 ${paid ? 'bg-accent/40' : due.overdue ? 'bg-destructive/10' : ''}`}>
             <input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} onChange={() => toggle(r.id)} />
             <span className="font-bold">{r.supplier_name}</span>
             <span className="font-mono text-sm">{r.invoice_number ?? "—"}</span>
             {r.kind === 'creditnota' && <span className="text-sm font-bold text-destructive">Creditnota</span>}
             <span className="text-sm text-muted-foreground">vervaldag {d(r.due_date)}</span>
-            <span className="text-xs">{PAYMENT_METHODS[r.payment_method as keyof typeof PAYMENT_METHODS]}</span>
+            {!paid && <span className={`rounded px-2 py-0.5 text-xs font-bold ${due.overdue ? 'bg-destructive text-destructive-foreground' : due.soon ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>{due.text}</span>}
+            {lock && <span className="rounded border border-destructive px-2 py-0.5 text-xs font-bold text-destructive">{lock}</span>}
+            {bankMissing && <span className="text-xs font-bold text-destructive">⚠ IBAN/BIC leverancier</span>}
+            {r.booked_at && <span className="text-xs text-muted-foreground">Geboekt</span>}
             <span className="ml-auto font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</span>
-            <span className={`rounded px-2 py-0.5 text-xs font-bold ${r.status === "betaald" ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              {STATUS[r.status] ?? r.status}
+            <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+              {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
             </span>
-            {r.paid_at && <span className="text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>Betaald op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
-            {r.pdf_path ? <Button variant="outline" size="sm" onClick={() => { if (r.pdf_path) void bekijkPdf(r.pdf_path); }}>Origineel</Button> : <span className="text-xs text-destructive">PDF ontbreekt</span>}
-            <Button variant="outline" size="sm" onClick={() => openControle({ ...r, kind: r.kind === 'creditnota' ? 'creditnota' : 'factuur', lines: (r.lines ?? []) as PurchaseLine[] })}>{r.status === 'betaald' ? 'Bekijken' : 'Controleren'}</Button>
-          </li>
-        ))}
+            {r.paid_at && <span className="text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
+            <Button variant="outline" size="sm" onClick={() => openControle({ ...r, kind: r.kind === 'creditnota' ? 'creditnota' : 'factuur', lines: (r.lines ?? []) as PurchaseLine[] })}>{paid ? 'Bekijken' : 'Controleren'}</Button>
+          </li>);
+        })}
       </ul>
 
       {edit && (
@@ -223,53 +291,82 @@ function Aankoopfacturen() {
             <h2 className="text-lg font-black uppercase">Controleren: {edit.supplier_name}</h2>
             <Button variant="outline" size="sm" className="ml-auto" onClick={() => setEdit(null)}>Sluiten</Button>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Checkbox id="purchase-credit" checked={edit.kind === 'creditnota'} disabled={edit.status === 'betaald' || edit.status === 'betaling_klaargezet'} onCheckedChange={checked => setEdit({ ...edit, kind: checked === true ? 'creditnota' : 'factuur' })} />
-            <Label htmlFor="purchase-credit">Dit is een creditnota</Label>
-            <Label className="ml-auto" htmlFor="purchase-pdf">Origineel PDF toevoegen</Label>
-            <Input id="purchase-pdf" aria-label="Origineel PDF toevoegen" className="max-w-72" type="file" accept="application/pdf,.pdf" disabled={busy} onChange={e => { void voegPdfToe(e.target.files?.[0], edit); e.target.value = ''; }} />
-          </div>
-          {pdfUrl ? (edit.pdf_path?.endsWith('.pdf') ? <iframe title="Originele aankoopfactuur" src={pdfUrl} className="h-[650px] w-full border" /> : <img alt="Origineel kasticket" src={pdfUrl} className="max-h-[650px] max-w-full object-contain border" />) : <p className="text-sm text-destructive">Het originele PDF ontbreekt. Simpla geeft momenteel alleen de bestandsnaam door; voeg het gedownloade PDF hierboven toe.</p>}
-          <fieldset disabled={edit.status === 'betaald' || edit.status === 'betaling_klaargezet'} className="space-y-3">
-          {warnings.length > 0 && (
-            <ul className="space-y-1 rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
-              {warnings.map((w) => <li key={w}>⚠ {w}</li>)}
-            </ul>
-          )}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div><Label htmlFor="purchase-payment">Betaalwijze</Label><select id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={e=>setEdit({...edit,payment_method:e.target.value})}>{Object.entries(PAYMENT_METHODS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
-            <div className="text-sm"><Label>Aftrekbare btw</Label><p className="font-mono">{euro(deductibleVat(Number(edit.vat),Number(edit.vat_deductible_percent)))} ({edit.vat_deductible_percent}%)</p></div>
-            {supplierVatWarning(Number(edit.net),Number(edit.vat),edit.supplier_vat_rule) && <p className="text-sm text-destructive">{supplierVatWarning(Number(edit.net),Number(edit.vat),edit.supplier_vat_rule)}</p>}
-            <div className="space-y-1"><Label>Leverancier</Label><Input value={edit.supplier_name} onChange={(e) => setEdit({ ...edit, supplier_name: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Btw-nummer</Label><Input value={edit.supplier_vat ?? ""} onChange={(e) => setEdit({ ...edit, supplier_vat: e.target.value || null })} /></div>
-            <div className="space-y-1"><Label>IBAN leverancier</Label><Input value={edit.supplier_iban ?? ""} onChange={(e) => setEdit({ ...edit, supplier_iban: e.target.value || null })} /></div>
-            <div className="space-y-1"><Label>Factuurnummer</Label><Input value={edit.invoice_number ?? ""} onChange={(e) => setEdit({ ...edit, invoice_number: e.target.value || null })} /></div>
-            <div className="space-y-1"><Label>Factuurdatum</Label><Input type="date" value={edit.invoice_date ?? ""} onChange={(e) => setEdit({ ...edit, invoice_date: e.target.value || null })} /></div>
-            <div className="space-y-1"><Label>Vervaldag</Label><Input type="date" value={edit.due_date ?? ""} onChange={(e) => setEdit({ ...edit, due_date: e.target.value || null })} /></div>
-            <div className="space-y-1"><Label>Netto</Label><Input type="number" step="0.01" value={edit.net} onChange={(e) => setEdit({ ...edit, net: Number(e.target.value) })} /></div>
-            <div className="space-y-1"><Label>Btw</Label><Input type="number" step="0.01" value={edit.vat} onChange={(e) => setEdit({ ...edit, vat: Number(e.target.value) })} /></div>
-            <div className="space-y-1"><Label>Totaal</Label><Input type="number" step="0.01" value={edit.total} onChange={(e) => setEdit({ ...edit, total: Number(e.target.value) })} /></div>
-            <div className="space-y-1 sm:col-span-3"><Label>Mededeling / gestructureerde referentie</Label><Input value={edit.payment_ref ?? ""} onChange={(e) => setEdit({ ...edit, payment_ref: e.target.value || null })} /></div>
-          </div>
-          <div className="space-y-2">
-            <Label>Lijnen</Label>
-            {edit.lines.map((l, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-2">
-                <Input className="min-w-48 flex-1" value={l.description} onChange={(e) => setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, description: e.target.value } : x)) })} />
-                <Input type="number" step="any" className="w-20" value={l.quantity} onChange={(e) => setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, quantity: Number(e.target.value) } : x)) })} />
-                <Input className="w-16" value={l.unit} onChange={(e) => setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, unit: e.target.value } : x)) })} />
-                <Input type="number" step="0.01" className="w-28" value={l.unitPrice} onChange={(e) => setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, unitPrice: Number(e.target.value) } : x)) })} />
-                <span className="w-24 text-right font-mono text-sm">{euro(l.amount)}</span>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setEdit({ ...edit, lines: edit.lines.filter((_, n) => n !== i) })}>✕</Button>
+          {isPaid && <div className="rounded-md border-2 border-accent bg-accent p-3 text-lg font-black text-accent-foreground">✓ BETAALD{edit.paid_at ? ` op ${new Date(edit.paid_at).toLocaleDateString('nl-BE')}` : ''} — afgeletterd in de boekhouding</div>}
+          {!isPaid && paymentMethodLock(edit.payment_method, edit.status) && <div className="rounded-md border-2 border-destructive p-3 font-bold text-destructive">{paymentMethodLock(edit.payment_method, edit.status)} — blijft zo gelabeld tot de betaling is afgeletterd.</div>}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-2">
+              {pdfUrl ? (edit.pdf_path?.endsWith('.pdf') ? <iframe title="Voorbeeld aankoopfactuur" src={pdfUrl} className="h-[75vh] w-full border" /> : <img alt="Voorbeeld aankoopdocument" src={pdfUrl} className="max-h-[75vh] max-w-full border object-contain" />) : <p className="text-sm text-destructive">Het originele document ontbreekt; voeg het PDF hieronder toe.</p>}
+              <div className="flex flex-wrap items-center gap-2">
+                <Label htmlFor="purchase-pdf">Origineel PDF toevoegen</Label>
+                <Input id="purchase-pdf" className="max-w-72" type="file" accept="application/pdf,.pdf" disabled={busy} onChange={e => { void voegPdfToe(e.target.files?.[0], edit); e.target.value = ''; }} />
+                {edit.pdf_path && <Button variant="outline" size="sm" onClick={() => { if (edit.pdf_path) void bekijkPdf(edit.pdf_path); }}>In nieuw venster</Button>}
               </div>
-            ))}
-            <Button type="button" size="sm" variant="outline" onClick={() => setEdit({ ...edit, lines: [...edit.lines, { description: "", quantity: 1, unit: "st", unitPrice: 0, amount: 0 }] })}>+ Lijn toevoegen</Button>
+            </div>
+            <fieldset disabled={isPaid || edit.status === 'betaling_klaargezet'} className="space-y-3">
+              {[...bankWarnings, ...warnings].length > 0 && (
+                <ul className="space-y-1 rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
+                  {[...new Set([...bankWarnings, ...warnings])].map((w) => <li key={w}>⚠ {w}</li>)}
+                </ul>
+              )}
+              <div className="flex items-center gap-2">
+                <Checkbox id="purchase-credit" checked={edit.kind === 'creditnota'} onCheckedChange={checked => setEdit({ ...edit, kind: checked === true ? 'creditnota' : 'factuur' })} />
+                <Label htmlFor="purchase-credit">Dit is een creditnota</Label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1 sm:col-span-2"><Label htmlFor="purchase-supplier">Leverancier</Label>
+                  <select id="purchase-supplier" className="h-10 w-full rounded-md border bg-background px-3" value={edit.supplier_id ?? ''} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: s2.iban ?? edit.supplier_iban, payment_method: s2.payment_method } as Row); }}>
+                    <option value="">— Uitgelezen: {edit.supplier_name} —</option>
+                    {suppliers.map((x) => <option key={x.id} value={x.id}>{x.name}{x.vat_number ? ` (${x.vat_number})` : ''}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1"><Label>Btw-nummer</Label><Input value={edit.supplier_vat ?? ""} onChange={(e) => setEdit({ ...edit, supplier_vat: e.target.value || null })} /></div>
+                <div className="space-y-1"><Label>IBAN leverancier</Label><Input value={edit.supplier_iban ?? ""} onChange={(e) => setEdit({ ...edit, supplier_iban: e.target.value || null })} /></div>
+                <div className="space-y-1"><Label htmlFor="purchase-payment">Betaalwijze</Label><select id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={e=>setEdit({...edit,payment_method:e.target.value})}>{Object.entries(PAYMENT_METHODS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
+                <div className="space-y-1"><Label>Factuurnummer</Label><Input value={edit.invoice_number ?? ""} onChange={(e) => setEdit({ ...edit, invoice_number: e.target.value || null })} /></div>
+                <div className="space-y-1"><Label>Factuurdatum</Label><Input type="date" value={edit.invoice_date ?? ""} onChange={(e) => setEdit({ ...edit, invoice_date: e.target.value || null })} /></div>
+                <div className="space-y-1"><Label>Vervaldag</Label><Input type="date" value={edit.due_date ?? ""} onChange={(e) => setEdit({ ...edit, due_date: e.target.value || null })} /></div>
+                <div className="space-y-1 sm:col-span-2"><Label>Betalingskenmerk</Label><Input value={edit.payment_ref ?? ""} placeholder={edit.invoice_number ? `Geen kenmerk — mededeling wordt "Factuur ${edit.invoice_number}"` : ''} onChange={(e) => setEdit({ ...edit, payment_ref: e.target.value || null })} />
+                  <p className="text-xs text-muted-foreground">Mededeling bij betaling: {paymentCommunication(edit.payment_ref, edit.invoice_number) ?? '—'}</p></div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2"><Label>Lijnen en boeking</Label><Button type="button" size="sm" variant="outline" className="ml-auto" disabled={busy} onClick={() => void stelVoor(edit)}>Rekeningen voorstellen</Button></div>
+                {edit.lines.map((l, i) => (
+                  <div key={i} className="space-y-1 rounded-md border p-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input className="min-w-40 flex-1" value={l.description} onChange={(e) => upd(i, { description: e.target.value })} />
+                      <Input type="number" step="any" className="w-20" aria-label="Aantal" value={l.quantity} onChange={(e) => upd(i, { quantity: Number(e.target.value) })} />
+                      <Input type="number" step="0.01" className="w-24" aria-label="Eenheidsprijs" value={l.unitPrice} onChange={(e) => upd(i, { unitPrice: Number(e.target.value) })} />
+                      <Input type="number" step="0.01" className="w-24" aria-label="Bedrag" value={l.amount} onChange={(e) => upd(i, { amount: Number(e.target.value) })} />
+                      <Button type="button" size="sm" variant="ghost" aria-label="Lijn verwijderen" onClick={() => setEdit({ ...edit, lines: edit.lines.filter((_, n) => n !== i) })}>✕</Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select aria-label="Grootboekrekening" className={`h-9 flex-1 rounded-md border bg-background px-2 text-sm ${!l.account ? 'border-destructive' : ''}`} value={l.account ?? ''} onChange={(e) => upd(i, { account: e.target.value || null })}>
+                        <option value="">— Kies rekening —</option>
+                        {accounts.map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}
+                      </select>
+                      {sources[i] && <span className="text-xs text-muted-foreground">{sources[i] === 'geleerd' ? 'geleerd' : 'AI-voorstel'}</span>}
+                    </div>
+                  </div>
+                ))}
+                <Button type="button" size="sm" variant="outline" onClick={() => setEdit({ ...edit, lines: [...edit.lines, { description: "", quantity: 1, unit: "st", unitPrice: 0, amount: 0 }] })}>+ Lijn toevoegen</Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div><Label>Netto</Label><Input type="number" step="0.01" value={edit.net} onChange={(e) => setEdit({ ...edit, net: Number(e.target.value) })} /></div>
+                <div><Label>Btw</Label><Input type="number" step="0.01" value={edit.vat} onChange={(e) => setEdit({ ...edit, vat: Number(e.target.value) })} /></div>
+                <div><Label>Totaal</Label><Input type="number" step="0.01" value={edit.total} onChange={(e) => setEdit({ ...edit, total: Number(e.target.value) })} /></div>
+              </div>
+              <p className="text-xs text-muted-foreground">Aftrekbare btw: {euro(deductibleVat(Number(edit.vat),Number(edit.vat_deductible_percent)))} ({edit.vat_deductible_percent}%){supplierVatWarning(Number(edit.net),Number(edit.vat),edit.supplier_vat_rule) ? ` — ${supplierVatWarning(Number(edit.net),Number(edit.vat),edit.supplier_vat_rule)}` : ''}</p>
+              <div className={`flex items-center justify-between rounded-md border-2 p-3 ${isPaid ? 'border-accent bg-accent text-accent-foreground' : 'border-primary'}`}>
+                <span className="font-black uppercase">{isPaid ? 'Betaald' : edit.kind === 'creditnota' ? 'Te ontvangen' : 'Totaal te betalen'}</span>
+                <span className="font-mono text-2xl font-black">{euro(signedTotal)}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button disabled={busy} onClick={() => slaOp()}>Opslaan</Button>
+                <Button variant="outline" disabled={busy || edit.lines.some((l) => !l.account)} onClick={boek}>Lijnen boeken</Button>
+                <Button variant="outline" disabled={busy} onClick={() => slaOp(true)}>Opslaan en gecontroleerd</Button>
+              </div>
+            </fieldset>
           </div>
-          <div className="flex gap-2">
-            <Button disabled={busy} onClick={() => slaOp()}>Opslaan</Button>
-            <Button variant="outline" disabled={busy} onClick={() => slaOp(true)}>Opslaan en goedkeuren</Button>
-          </div>
-          </fieldset>
         </section>
       )}
     </div>
