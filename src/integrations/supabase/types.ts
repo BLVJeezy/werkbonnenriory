@@ -381,6 +381,38 @@ export type Database = {
           },
         ]
       }
+      crew_password_invitations: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          technician_id: string
+          token_hash: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          technician_id: string
+          token_hash: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          technician_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_password_invitations_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: true
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_projects: {
         Row: {
           city: string | null
@@ -2648,6 +2680,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_crew_password_invitation: {
+        Args: { p_hash: string }
+        Returns: string
+      }
       convert_approved_quote: { Args: { p_id: string }; Returns: string }
       create_contract_completion_invoice: {
         Args: {
