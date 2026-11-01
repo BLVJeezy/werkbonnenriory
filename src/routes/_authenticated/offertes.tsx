@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
-import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
+import { quoteLine, quoteOptionsTotals, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { splitLineText } from "@/lib/line-text";
 import { assignQuoteCrew, convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
@@ -29,8 +29,8 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string };
-const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "" };
+type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean };
+const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", optional: false };
 /** The stored line text keeps its old shape: product name on the first line, long description below it. */
 const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
 
@@ -92,10 +92,11 @@ function Offertes() {
   const parsedLines: InvoiceLine[] = [
     ...lines
       .filter((l) => lineText(l))
-      .map((l) => quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
+      .map((l) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0), optional: l.optional })),
     ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
   ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
+  const optionsTotals = quoteOptionsTotals(parsedLines, Number(vatRate));
 
   async function toggleKm(on: boolean) {
     setKmOn(on);
@@ -145,7 +146,7 @@ function Offertes() {
     setKm(kmLine ? kmLine.quantity : null);
     const ls = all.filter((l) => l.unit !== "km").map((l) => {
       const t = splitLineText(l.description);
-      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) };
+      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), optional: !!l.optional };
     });
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
@@ -224,7 +225,7 @@ function Offertes() {
       const keep = lines.filter((l) => lineText(l));
       setLines([...keep, ...d.lines.map((l) => {
         const t = splitLineText(l.description);
-        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" };
+        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "", optional: false };
       })]);
       toast.success("Voorstel ingevuld — kijk alles na en vul de prijzen in");
     } catch (e) { toast.error(e instanceof Error ? e.message : "AI-voorstel mislukt"); }
