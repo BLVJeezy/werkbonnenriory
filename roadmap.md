@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Aankoopfacturen: Peppyrus voorbereid (niet live), leverancierskeuze, lijnen boeken met lerende voorstellen, sleepvak, totaal/betaald-markering, SEPA-bulk, betaalwijze per leverancier met label, IBAN/BIC-waarschuwing.
-- [ ] Aankoopfacturen: betalingskenmerk uitlezen, anders factuurnummer als mededeling.
-- [ ] Aankoopfacturen: vervaldag-aftelling per factuur in de lijst; vervallen duidelijk aangeduid.
+- [x] Aankoopfacturen: Peppyrus voorbereid (wacht op API-sleutel), leverancierskeuze, lijnen boeken met lerende voorstellen, sleepvak, totaal/betaald-markering, SEPA-bulk, betaalwijze per leverancier met label, IBAN/BIC-waarschuwing.
+- [x] Aankoopfacturen: betalingskenmerk uitlezen, anders factuurnummer als mededeling.
+- [x] Aankoopfacturen: vervaldag-aftelling per factuur in de lijst; vervallen duidelijk aangeduid.
 
 - [x] Factuurmails blijven via Outlook (boekhouding@riory.be) op verzoek van de gebruiker; Brevo/Gmail niet gebruikt. Klantfactuurmail vraagt nu een Outlook-leesbevestiging; openingsmeting via Document openen blijft.
 
