@@ -6,15 +6,12 @@ import { SortTh, Th, rowTint, tableCls, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { euro, workOrderRevenue } from "@/lib/billing";
 import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoices } from "@/lib/invoices.functions";
 import { isInvoiceEditable } from "@/lib/invoice";
-import { disconnectPonto, pontoStatus, savePontoCredentials, syncPontoNow } from "@/lib/ponto.functions";
 import { QrCode, Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
 import { PaymentReminders } from "@/components/PaymentReminders";
@@ -66,10 +63,6 @@ function Facturen() {
   const getPdf = useServerFn(invoicePdf);
   const creditNote = useServerFn(createCreditNote);
   const toAccountant = useServerFn(sendAllToAccountant);
-  const savePonto = useServerFn(savePontoCredentials);
-  const dropPonto = useServerFn(disconnectPonto);
-  const getPontoStatus = useServerFn(pontoStatus);
-  const syncPonto = useServerFn(syncPontoNow);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const byPost = useServerFn(sendInvoiceByPost);
   async function sendPost(id: string, number: string) {
@@ -90,11 +83,9 @@ function Facturen() {
   const [selWo, setSelWo] = useState<string[]>([]);
   const [selInv, setSelInv] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [pontoId, setPontoId] = useState("");
-  const [pontoSecret, setPontoSecret] = useState("");
-  const { data: ponto } = useQuery({ queryKey: ["ponto"], queryFn: () => getPontoStatus() });
   const { data } = useQuery({
     queryKey: ["facturen"],
+    refetchInterval: 10_000,
     queryFn: async () => {
       const [w, i, s, a] = await Promise.all([
         supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
@@ -167,26 +158,6 @@ function Facturen() {
     a.href = url; a.download = `Factuur-${r.number}.pdf`; a.click();
     URL.revokeObjectURL(url);
   }
-  async function connectPonto() {
-    setBusy(true);
-    try {
-      await savePonto({ data: { clientId: pontoId, clientSecret: pontoSecret } });
-      setPontoId(""); setPontoSecret("");
-      toast.success("Ponto gekoppeld");
-      qc.invalidateQueries({ queryKey: ["ponto"] });
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Koppelen mislukt"); }
-    setBusy(false);
-  }
-  async function checkPonto() {
-    setBusy(true);
-    try {
-      const r = await syncPonto();
-      toast.success(r.matched.length ? `${r.matched.length} factuur/facturen afgepunt: ${r.matched.join(", ")}` : `${r.checked} openstaande facturen gecontroleerd, geen nieuwe betalingen gevonden`);
-      refresh();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Controle mislukt"); }
-    setBusy(false);
-  }
-
   const kmRate = Number(data?.settings?.km_rate ?? 0);
   const hourlyRateOf = (id: string | null) => Number(data?.activities.find((a) => a.id === id)?.hourly_rate ?? 0);
   /** Prijs van een nog te factureren bon: het betaalde bedrag, anders het berekende totaal. */
@@ -341,33 +312,7 @@ function Facturen() {
         </div>
       </section>
 
-      <section className="space-y-3 rounded-md border bg-card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-lg font-black uppercase">Automatisch afpunten via Ponto</h2>
-          {ponto?.connected && (
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {ponto.lastSync && <span className="text-xs text-muted-foreground">Laatste controle: {new Date(ponto.lastSync).toLocaleString("nl-BE")}</span>}
-              <Button size="sm" disabled={busy} onClick={checkPonto}>Betalingen controleren</Button>
-              <Button variant="outline" size="sm" disabled={busy} onClick={async () => { if (confirm("Ponto-koppeling verwijderen?")) { await dropPonto(); qc.invalidateQueries({ queryKey: ["ponto"] }); } }}>Loskoppelen</Button>
-            </div>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Openstaande facturen worden elk uur automatisch als betaald gemarkeerd wanneer een bankbetaling met hetzelfde bedrag én het factuurnummer in de mededeling binnenkomt.
-        </p>
-        {ponto?.connected ? (
-          <p className="text-sm font-bold text-accent-foreground">Ponto is gekoppeld. De client ID en het secret zijn versleuteld opgeslagen en worden hier niet getoond.</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <p className="text-sm text-muted-foreground sm:col-span-2">
-              Maak in je Ponto-dashboard (myponto.com) een eigen integratie aan met scope "Rekeninginformatie", selecteer je bankrekening en plak hier de client ID en het client secret (wordt maar één keer getoond).
-            </p>
-            <div className="space-y-1"><Label>Client ID</Label><Input value={pontoId} onChange={(e) => setPontoId(e.target.value)} autoComplete="off" /></div>
-            <div className="space-y-1"><Label>Client secret</Label><Input type="password" value={pontoSecret} onChange={(e) => setPontoSecret(e.target.value)} autoComplete="new-password" /></div>
-            <div className="sm:col-span-2"><Button size="sm" disabled={busy || !pontoId.trim() || !pontoSecret.trim()} onClick={connectPonto}>Ponto koppelen</Button></div>
-          </div>
-        )}
-      </section>
+      <Link to="/boekhouding" search={{ tab: "bank" }}><Button variant="outline">Bankbetalingen afpunten</Button></Link>
     </div>
   );
 }

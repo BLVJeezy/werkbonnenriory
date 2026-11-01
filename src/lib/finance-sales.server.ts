@@ -6,7 +6,7 @@ export async function syncFinanceSales(db: any, userId: string) {
   const { data: company, error } = await db.from("companies").select("id").eq("user_id", userId).ilike("name", "Riory BV").maybeSingle();
   if (error || !company) return { ok: false as const, error: "De Riory-administratie is niet beschikbaar." };
   const invoices = await fetchAll<any>((a, b) => db.from("invoices").select("id,number,kind,credit_for,issue_date,due_date,customer,lines,net,vat,vat_rate,status,paid_amount,total,paid_at").order("id").range(a, b));
-  const have = await fetchAll<any>((a, b) => db.from("fin_invoices").select("id,source_ref,number,doc_type,status,review_status").eq("company_id", company.id).eq("direction", "verkoop").order("id").range(a, b));
+  const have = await fetchAll<any>((a, b) => db.from("fin_invoices").select("id,source_ref,number,doc_type,status,review_status,paid_amount").eq("company_id", company.id).eq("direction", "verkoop").order("id").range(a, b));
   const refs = new Map(have.map(row => [row.source_ref, row]));
   const byNumber = new Map(have.map(row => [dubbelSleutel(row.number, row.doc_type === "creditnota"), row]));
   const numbers = new Set(have.map(row => dubbelSleutel(row.number, row.doc_type === "creditnota")));
@@ -21,8 +21,8 @@ export async function syncFinanceSales(db: any, userId: string) {
     const numberKey = dubbelSleutel(doc.nummer, doc.credit);
     const existing = refs.get(doc.ref) ?? (numberKey ? byNumber.get(numberKey) : undefined);
     if (existing) {
-      if (!doc.credit && existing.status !== "betaald" && Number(raw.paid_amount) >= Number(raw.total) && Number(raw.total) > 0) {
-        const { error } = await db.from("fin_invoices").update({ status: "betaald", paid_at: raw.paid_at?.slice(0, 10) ?? null, bank_ref: `werkbonnen:${raw.id}` }).eq("id", existing.id);
+      if (!doc.credit && (Number(existing.paid_amount ?? 0) !== Number(raw.paid_amount) || (existing.status !== "betaald" && Number(raw.paid_amount) >= Number(raw.total))) && Number(raw.total) > 0) {
+        const { error } = await db.from("fin_invoices").update({ paid_amount: Number(raw.paid_amount), status: Number(raw.paid_amount) >= Number(raw.total) ? "betaald" : "open", paid_at: raw.paid_at?.slice(0, 10) ?? null, bank_ref: `werkbonnen:${raw.id}` }).eq("id", existing.id);
         if (error) throw new Error("Betaalstatus synchroniseren mislukt");
         bijgewerkt++;
       }
