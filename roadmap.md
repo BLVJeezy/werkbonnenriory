@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Voorbeeld van de offerte-mails tonen (met en zonder keuzemogelijkheden).
-- [ ] Offertemail verduidelijkt dat de prijs pas definitief is na het maken van een keuze, enkel bij keuzemogelijkheden.
+- [x] Voorbeeld van de offerte-mails getoond (met en zonder keuzemogelijkheden), als afbeelding opgeslagen in Files.
+- [x] Offertemail verduidelijkt dat de prijs pas definitief is na het maken van een keuze, enkel wanneer de offerte keuzemogelijkheden bevat; drie tests geslaagd.
 
 - [x] Productfoto’s via slepen toevoegen en ontbreken van fotogegevens veilig afhandelen; sleepload, productopslag, offerte/PDF/klantbeeld gecontroleerd, zeven tests geslaagd.
 
