@@ -25,8 +25,17 @@ export async function financePontoAccounts(db: any) {
 export async function financePontoSync(db: any, userId: string, input: { companyId: string; bankAccount: string; since: string }) {
   const key = await token(db);
   const accounts = (await get(key, "/accounts?page[limit]=100")).data ?? [];
+  // Koppel elke bankrekening via haar IBAN aan de juiste grootboekrekening (bv. 550200, 550400).
+  const { data: ledger } = await db.from("fin_accounts").select("number, name").eq("company_id", input.companyId).like("number", "55%");
+  const normIban = (s: string) => s.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  const ledgerByIban = new Map<string, string>();
+  for (const a of ledger ?? []) {
+    const m = String(a.name ?? "").match(/[A-Z]{2}\d{2}[\dA-Z ]{8,30}/i);
+    if (m) ledgerByIban.set(normIban(m[0]), String(a.number));
+  }
   let fetched = 0, inserted = 0;
   for (const account of accounts) {
+    const bankAccount = ledgerByIban.get(normIban(String(account.attributes?.reference ?? ""))) ?? input.bankAccount;
     let path: string | null = `/accounts/${encodeURIComponent(account.id)}/transactions?page[limit]=100`;
     const seen = new Set<string>();
     while (path && !seen.has(path)) {
