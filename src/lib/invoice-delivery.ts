@@ -31,6 +31,8 @@ export function invoiceMail(to: string, number: string, contentBytes: string, fo
 export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur", docUrl?: string, paid = false) {
   const m = invoiceMail(to, number, pdfBytes, "pdf", label, docUrl, paid);
   return { message: { ...m.message,
+    // Outlook asks the customer's mail program for a read receipt; the customer may decline, so absence never means "unread".
+    isReadReceiptRequested: true,
     bccRecipients: [{ emailAddress: { address: OKIOKI_INVOICE_EMAIL } }],
     attachments: [...m.message.attachments, file({ name: `${label}-${number}.xml`, contentType: "application/xml", contentBytes: ublBytes })],
   } };
