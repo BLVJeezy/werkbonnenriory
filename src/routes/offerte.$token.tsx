@@ -21,6 +21,7 @@ function OfferteTekenen() {
   const sign = useServerFn(signQuote);
   const [signature, setSignature] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [chosen, setChosen] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: q, error: loadError } = useQuery({ queryKey: ["quote", token], queryFn: () => get({ data: { token } }) });
@@ -31,15 +32,19 @@ function OfferteTekenen() {
   const c = q.customer as InvoiceCustomer;
   const allLines = q.lines as InvoiceLine[];
   const lines = allLines.filter((l) => !l.optional);
-  const optionLines = allLines.filter((l) => l.optional);
+  const optionLines = allLines.map((l, i) => ({ line: l, index: i })).filter((x) => x.line.optional);
   const signed = q.status === "akkoord";
+  const vatRate = Number(q.vat_rate);
+  const chosenNet = optionLines.filter((x) => chosen.has(x.index)).reduce((s, x) => s + x.line.amount, 0);
+  const chosenTotal = Math.round(chosenNet * (1 + vatRate / 100) * 100) / 100;
+  const grandTotal = Math.round((Number(q.total) + chosenTotal) * 100) / 100;
 
   async function onderteken() {
     if (!signature || !name.trim()) return;
     setBusy(true);
     setError(null);
     try {
-      await sign({ data: { token, signature: signature!, name } });
+      await sign({ data: { token, signature: signature!, name, options: [...chosen] } });
       window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ondertekenen mislukt");
