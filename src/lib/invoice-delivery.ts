@@ -13,8 +13,10 @@ export function needsOkioki(_customer?: Pick<InvoiceCustomer, "vatNumber">) {
 type Att = { name: string; contentType: string; contentBytes: string };
 const file = (a: Att) => ({ "@odata.type": "#microsoft.graph.fileAttachment", ...a });
 
-export function invoiceMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur", docUrl?: string) {
-  const text = `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Betalen kan eenvoudig met de betaalcode op de factuur\n✓ U ontvangt een bevestiging zodra uw betaling verwerkt is\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`;
+export function invoiceMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur", docUrl?: string, paid = false) {
+  const text = paid
+    ? `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Deze ${label.toLowerCase()} is al betaald — bedankt!\n✓ U hoeft verder niets te doen\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`
+    : `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Betalen kan eenvoudig met de betaalcode op de factuur\n✓ U ontvangt een bevestiging zodra uw betaling verwerkt is\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`;
   return { message: {
     subject: `${label} ${number} — Riory`,
     body: format === "pdf"
@@ -26,8 +28,8 @@ export function invoiceMail(to: string, number: string, contentBytes: string, fo
 }
 
 /** Customer mail with PDF + UBL, OkiOki in BCC so the customer cannot see it. */
-export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur", docUrl?: string) {
-  const m = invoiceMail(to, number, pdfBytes, "pdf", label, docUrl);
+export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur", docUrl?: string, paid = false) {
+  const m = invoiceMail(to, number, pdfBytes, "pdf", label, docUrl, paid);
   return { message: { ...m.message,
     bccRecipients: [{ emailAddress: { address: OKIOKI_INVOICE_EMAIL } }],
     attachments: [...m.message.attachments, file({ name: `${label}-${number}.xml`, contentType: "application/xml", contentBytes: ublBytes })],
