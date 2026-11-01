@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Laadprobleem op /index onderzoeken en herstellen.
-- [ ] Importknop uit werkbonnen verwijderen en verkoopfacturen rechtstreeks verbinden met Boekhouding/Finance.
+- [x] /index stuurt door naar Taken; met beheerderlogin gecontroleerd, geen paginafouten.
+- [x] Werkbon-importknop verwijderd; lokale verkoopfacturen automatisch aan Riory BV gekoppeld, los van Simpla-aankopen. Geïmporteerde nummers behouden; 10 betaalde lokale facturen correct gekoppeld zonder dubbele boeking. Gerichte tests geslaagd.
 
 - [x] Afgewerkte werkbonnen op een aparte overzichtspagina, los van actieve taken; zoeken, ploeg/datumfilters, sortering en voorbeelden gecontroleerd.
 
