@@ -6,6 +6,7 @@ export interface CodaTransaction {
   tx_date: string; // ISO yyyy-mm-dd (boekingsdatum)
   amount: number; // positief = bijschrijving
   counterparty: string | null;
+  counterparty_account: string | null; // rekeningnummer van de tegenpartij
   description: string | null;
   reference: string | null; // bankreferentie, handig voor dedupe
 }
@@ -45,6 +46,7 @@ export function parseCoda(text: string): CodaTransaction[] {
         tx_date: booking,
         amount: Math.round(sign * cents) / 100,
         counterparty: null,
+        counterparty_account: null,
         description: null,
         reference: clean(line.slice(10, 31)) || null,
       };
@@ -55,7 +57,7 @@ export function parseCoda(text: string): CodaTransaction[] {
       const name = clean(line.slice(47, 82));
       if (name) current.counterparty = name;
       const account = clean(line.slice(10, 45));
-      if (account && !current.description) current.description = account;
+      if (account) current.counterparty_account = account;
     } else if (type === "31" && current) {
       // Informatierecord: mededeling vanaf positie 40.
       const part = clean(line.slice(40));
