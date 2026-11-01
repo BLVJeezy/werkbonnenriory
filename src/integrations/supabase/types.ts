@@ -2800,6 +2800,15 @@ export type Database = {
         Returns: Json
       }
       fin_restore_archive: { Args: { _data: Json }; Returns: Json }
+      fin_settle_paid_invoice: {
+        Args: {
+          _bank_account: string
+          _counter_account: string
+          _invoice: string
+          _transaction: string
+        }
+        Returns: string
+      }
       forward_external_appointment: {
         Args: { p_id: string; p_instruction: string }
         Returns: string
