@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Label Eerste klant aanvinken in Kalender/Taken, zichtbaar voor ploeg in overzicht en detail; opslaan en verwijderen controleren.
+
 - [x] WhatsApp-uitnodiging met ploeguitleg en persoonlijke wachtwoordkeuze. Aanmaak, wachtwoord opslaan, ploeglogin en weigering van hergebruik gecontroleerd; 7 tests geslaagd. Tijdelijke testploegen verwijderd, geen WhatsApp verzonden.
 
 - [x] Nieuwe interne ploegen via WhatsApp uitnodigen na aanmaken of vanuit de ploegenlijst; uitgebreid met eigen wachtwoordkeuze hierboven.
