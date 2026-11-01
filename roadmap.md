@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Bankafpunting centraliseren in Boekhouding en betalingen veilig laten doorwerken in Facturatie.
+
 - [x] /index stuurt door naar Taken; met beheerderlogin gecontroleerd, geen paginafouten.
 - [x] Werkbon-importknop verwijderd; lokale verkoopfacturen automatisch aan Riory BV gekoppeld, los van Simpla-aankopen. Geïmporteerde nummers behouden; 10 betaalde lokale facturen correct gekoppeld zonder dubbele boeking. Gerichte tests geslaagd.
 
