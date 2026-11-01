@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { euro } from "@/lib/billing";
@@ -10,7 +10,7 @@ import { BankInvoiceLink, type BankTransaction } from "@/components/BankInvoiceL
 
 export const Route = createFileRoute("/_authenticated/betalingen")({
   head: () => ({ meta: [{ title: "Bankverrichtingen — Riory Werkbonnen" }, { name: "description", content: "Alle Ponto-bankverrichtingen, automatisch ververst." }, { property: "og:title", content: "Bankverrichtingen — Riory Werkbonnen" }, { property: "og:description", content: "Alle Ponto-bankverrichtingen, automatisch ververst." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
-  component: Betalingen,
+  beforeLoad: () => { throw redirect({ to: "/boekhouding", search: { tab: "bank" }, replace: true }); },
 });
 
 function Betalingen() {

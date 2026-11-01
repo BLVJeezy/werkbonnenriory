@@ -554,6 +554,13 @@
       "when": 1793516784619,
       "tag": "0078_finance_restore_timeout",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1793517953435,
+      "tag": "0079_bookkeeping_invoice_payments",
+      "breakpoints": true
     }
   ]
 }

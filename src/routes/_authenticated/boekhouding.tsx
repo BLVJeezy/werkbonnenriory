@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PontoConnection } from "@/components/PontoConnection";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
@@ -493,12 +494,12 @@ function Btw({ c }: { c: string }) {
 function Bank({ c }: { c: string }) {
   const qc = useQueryClient();
   const { data: accounts = [] } = useAccounts(c);
-  const { data: tx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).range(a, b))) as any[] });
+  const { data: tx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).range(a, b))) as any[], refetchInterval: 30_000 });
   const { data: open = [] } = useQuery({ queryKey: ["fin", "open-inv", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).neq("status", "betaald")).data ?? [] });
   const [bankAcc, setBankAcc] = useState("550000");
   const ctl = controlAccounts(accounts.map((a) => a.number));
   useEffect(() => { if (accounts.length) setBankAcc(ctl.bank); }, [accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  const refresh = () => qc.invalidateQueries({ queryKey: ["fin"] });
+  const refresh = async () => { await Promise.all(["fin", "facturen", "ponto_transactions", "dashboard-omzet", "bank-link-invoices"].map(key => qc.invalidateQueries({ queryKey: [key] }))); };
   const total = (i: any) => r2(i.fin_invoice_lines.reduce((a: number, l: any) => a + Number(l.ex_vat) + Number(l.vat), 0) * (i.doc_type === "creditnota" ? -1 : 1));
   const onFile = async (f: File) => {
     const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
@@ -513,12 +514,16 @@ function Bank({ c }: { c: string }) {
     const { error } = await db.from("fin_bank_tx").upsert(payload, { onConflict: "company_id,dedupe_key", ignoreDuplicates: true });
     error ? toast.error("Import mislukt") : toast.success(`${payload.length} bankverrichtingen ingelezen (dubbels genegeerd)`); refresh();
   };
+  const reconcile = async (t: any, inv: any) => {
+    const { data, error } = await db.rpc("fin_reconcile_bank", { _transaction: t.id, _invoice: inv.id, _bank_account: t.bank_account ?? bankAcc, _counter_account: inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten });
+    if (error) throw new Error(error.message);
+    return data;
+  };
+  const remaining = (i: any) => r2(Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
   const match = async (t: any, inv: any) => {
     const counter = inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten;
     try {
-      const id = await post(c, "bank", t.tx_date, `Betaling ${inv.counterparty ?? ""} ${inv.number ?? ""}`, inv.number, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, counter));
-      await db.from("fin_bank_tx").update({ matched_invoice_id: inv.id, entry_id: id }).eq("id", t.id);
-      await db.from("fin_invoices").update({ status: "betaald", paid_at: t.tx_date, bank_ref: t.id }).eq("id", inv.id);
+      await reconcile(t, inv);
       toast.success("Afgeletterd en geboekt"); refresh();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -548,22 +553,9 @@ function Bank({ c }: { c: string }) {
   const vis = tx.filter((t) => !t.entry_id && (!zq || `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount}`.toLowerCase().includes(zq))).slice(0, zq ? 1000 : 200);
   const invHits = zq.length >= 2 ? open.filter((i: any) => `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zq)) : [];
   const afpunten = async (lijst: any[], facturen: any[]) => {
-    const isAankoop = facturen.every((i) => i.direction === "aankoop");
-    if (!facturen.every((i) => i.direction === facturen[0].direction)) return void toast.error("Kies enkel verkoop- óf enkel aankoopfacturen");
-    const counter = isAankoop ? ctl.leveranciers : ctl.klanten;
-    const kenmerk = `Afpunten ${new Date().toISOString().slice(0, 10)} #${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-    const nrs = facturen.map((i) => i.number).filter(Boolean).join(", ");
-    if (!confirm(`${lijst.length} betaling(en) boeken op ${counter} en ${facturen.length} factuur/facturen als betaald markeren?`)) return;
-    let ok = 0, fout = 0;
-    for (const t of lijst) {
-      try {
-        const id = await post(c, "bank", t.tx_date, `${kenmerk} · ${t.counterparty ?? ""} ${nrs}`.trim(), kenmerk, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, counter));
-        await db.from("fin_bank_tx").update({ entry_id: id, matched_invoice_id: facturen.length === 1 ? facturen[0].id : null }).eq("id", t.id); ok++;
-      } catch { fout++; }
-    }
-    if (ok) { const laatste = lijst.map((t) => t.tx_date).sort().pop(); await db.from("fin_invoices").update({ status: "betaald", paid_at: laatste, bank_ref: kenmerk }).in("id", facturen.map((i) => i.id)); }
-    fout ? toast.error(`${ok} geboekt, ${fout} mislukt`) : toast.success(`${ok} betaling(en) afgepunt tegen ${facturen.length} factuur/facturen`);
-    setSel(new Set()); setSelInv(new Set()); refresh();
+    if (lijst.length !== 1 || facturen.length !== 1) return void toast.error("Koppel één betaling aan één factuur; gedeeltelijke betalingen blijven open.");
+    await match(lijst[0], facturen[0]);
+    setSel(new Set()); setSelInv(new Set());
   };
   // Automatisch afletteren: alleen als verrichting precies één passende factuur heeft én die factuur maar bij één verrichting past.
   const autoBusy = useRef(false); const autoTried = useRef(new Set<string>());
@@ -571,7 +563,7 @@ function Bank({ c }: { c: string }) {
     if (autoBusy.current || !accounts.length || !tx.length || !open.length) return;
     const todo = tx.filter((t) => !t.entry_id);
     const fresh = (t: any) => !autoTried.current.has(t.id);
-    const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(Math.abs(total(i)) - Math.abs(amt)) < 0.025); };
+    const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - Math.abs(amt)) < 0.025); };
     const pairs = todo.map((t) => [t, candOf(t)] as const).filter(([, cs]) => cs.length === 1);
     const usage = new Map<string, number>();
     for (const t of todo) for (const i of candOf(t)) usage.set(i.id, (usage.get(i.id) ?? 0) + 1);
@@ -592,9 +584,7 @@ function Bank({ c }: { c: string }) {
       for (const [t, cs] of sure) {
         const inv = cs[0]; const counter = inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten;
         try {
-          const id = await post(c, "bank", t.tx_date, `Betaling ${inv.counterparty ?? ""} ${inv.number ?? ""}`, inv.number, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, counter));
-          await db.from("fin_bank_tx").update({ matched_invoice_id: inv.id, entry_id: id }).eq("id", t.id);
-          await db.from("fin_invoices").update({ status: "betaald", paid_at: t.tx_date, bank_ref: t.id }).eq("id", inv.id);
+          await reconcile(t, inv);
           n++;
         } catch { /* blijft manueel te verwerken */ }
       }
@@ -625,6 +615,7 @@ function Bank({ c }: { c: string }) {
   return (
     <div className="space-y-3">
       <AccountList accounts={accounts} />
+      <Link to="/facturen"><Button size="sm" variant="outline">Naar facturen</Button></Link>
       <PontoCard c={c} bankAcc={bankAcc} onDone={refresh} />
       <Card title="Bankuittreksels importeren">
         <div className="flex flex-wrap items-center gap-2">
@@ -652,7 +643,7 @@ function Bank({ c }: { c: string }) {
                   {invHits.map((i: any) => (
                     <label key={i.id} className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2"><input type="checkbox" checked={selInv.has(i.id)} onChange={() => setSelInv((x) => { const n = new Set(x); n.has(i.id) ? n.delete(i.id) : n.add(i.id); return n; })} />{i.invoice_date} · {i.counterparty} {i.number} <span className="text-xs text-muted-foreground">{i.direction === "aankoop" ? "aankoop" : "verkoop"}{i.doc_type === "creditnota" ? " · creditnota" : ""}</span></span>
-                      <span>{eur(total(i))}</span>
+                      <span>{eur(remaining(i))}</span>
                     </label>
                   ))}
                 </div>
@@ -661,7 +652,7 @@ function Bank({ c }: { c: string }) {
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">
                   <span>Betalingen {eur(somTx)} · facturen {eur(somInv)}</span>
                   <span className={Math.abs(verschil) < 0.01 ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>{Math.abs(verschil) < 0.01 ? "Sluit exact" : `Verschil ${eur(verschil)} blijft openstaan`}</span>
-                  <Button size="sm" disabled={!s.length || !gekozen.length} onClick={() => afpunten(s, gekozen)}>Afpunten</Button>
+                  <Button size="sm" disabled={s.length !== 1 || gekozen.length !== 1} onClick={() => afpunten(s, gekozen)}>Afpunten</Button>
                 </div>
               )}
             </div>
@@ -692,7 +683,7 @@ function Bank({ c }: { c: string }) {
         <div className="max-h-[60dvh] space-y-2 overflow-y-auto">
           {vis.map((t) => {
             const amt = Number(t.amount);
-            const cands = open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(Math.abs(total(i)) - Math.abs(amt)) < 0.025);
+            const cands = open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - Math.abs(amt)) < 0.025);
             return (
               <div key={t.id} className="rounded border border-border p-2 text-sm">
                 <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
@@ -726,7 +717,7 @@ function Bank({ c }: { c: string }) {
           {openVis.map((i: any) => (
             <div key={i.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
               <span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span> <span className="text-xs text-muted-foreground">{i.direction === "aankoop" ? "aankoop" : "verkoop"}{i.doc_type === "creditnota" ? " · creditnota" : ""}</span></span>
-              <span>{eur(total(i))}</span>
+              <span>{eur(remaining(i))}</span>
             </div>
           ))}
         </div>
@@ -811,6 +802,7 @@ function PontoCard({ c, bankAcc, onDone }: { c: string; bankAcc: string; onDone:
   };
   return (
     <Card title="Ponto – live bankrekeningen">
+      <PontoConnection />
       {error ? <p className="text-sm text-destructive">Ponto niet bereikbaar: {(error as Error).message}</p> : !accs ? <p className="text-sm text-muted-foreground">Laden…</p> : (
         <div className="mb-2 grid gap-2 sm:grid-cols-2">
           {accs.map((a: any) => (
