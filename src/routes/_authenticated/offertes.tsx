@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
-import { quoteLine, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
+import { quoteLine, quoteOptionsTotals, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { splitLineText } from "@/lib/line-text";
 import { assignQuoteCrew, convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
@@ -29,8 +29,8 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string };
-const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "" };
+type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean };
+const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", optional: false };
 /** The stored line text keeps its old shape: product name on the first line, long description below it. */
 const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
 
@@ -92,10 +92,11 @@ function Offertes() {
   const parsedLines: InvoiceLine[] = [
     ...lines
       .filter((l) => lineText(l))
-      .map((l) => quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0)),
+      .map((l) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0), optional: l.optional })),
     ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
   ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
+  const optionsTotals = quoteOptionsTotals(parsedLines, Number(vatRate));
 
   async function toggleKm(on: boolean) {
     setKmOn(on);
@@ -145,7 +146,7 @@ function Offertes() {
     setKm(kmLine ? kmLine.quantity : null);
     const ls = all.filter((l) => l.unit !== "km").map((l) => {
       const t = splitLineText(l.description);
-      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice) };
+      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), optional: !!l.optional };
     });
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
@@ -224,7 +225,7 @@ function Offertes() {
       const keep = lines.filter((l) => lineText(l));
       setLines([...keep, ...d.lines.map((l) => {
         const t = splitLineText(l.description);
-        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "" };
+        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "", optional: false };
       })]);
       toast.success("Voorstel ingevuld — kijk alles na en vul de prijzen in");
     } catch (e) { toast.error(e instanceof Error ? e.message : "AI-voorstel mislukt"); }
@@ -331,6 +332,10 @@ function Offertes() {
                   <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
                 </div>
                 <Textarea placeholder="Lange omschrijving (optioneel, als bijvoegsel onder de productnaam)" rows={Math.min(8, Math.max(2, l.detail.split("\n").length))} className="min-h-10 text-sm" value={l.detail} onChange={(e) => setLine(i, { detail: e.target.value })} aria-label="Lange omschrijving" />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={l.optional} onChange={(e) => setLine(i, { optional: e.target.checked })} />
+                  Optie — de klant kan deze lijn meenemen, maar hij telt niet mee in het totaal
+                </label>
               </div>
             ))}
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
@@ -346,6 +351,7 @@ function Offertes() {
             {kmOn && km != null && <span className="font-mono font-normal">{km} km × {euro(kmRate)} = {euro(km * kmRate)}</span>}
           </label>
           <p className="font-mono text-sm">Totaal: {euro(totals.net)} excl. btw · {euro(totals.total)} incl. btw</p>
+          {optionsTotals.net > 0 && <p className="font-mono text-sm text-muted-foreground">Opties (niet inbegrepen): {euro(optionsTotals.net)} excl. btw · {euro(optionsTotals.total)} incl. btw</p>}
           <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : bestek ? "Bestek aanmaken en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
         </form>
       )}

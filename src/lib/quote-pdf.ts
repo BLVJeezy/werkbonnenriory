@@ -21,6 +21,7 @@ export function photoKind(bytes: Uint8Array): "png" | "jpg" | null {
 }
 
 const W = 595.28, H = 841.89, M = 48;
+const r2 = (n: number) => Math.round(n * 100) / 100;
 const money = (n: number) => `EUR ${n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const date = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("nl-BE");
 
@@ -99,32 +100,37 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   }
 
   const cols = { desc: M + 8, qty: W - M - 250, price: W - M - 100, amt: W - M - 8 };
+  const mainLines = d.lines.filter((l) => !l.optional);
+  const optionLines = d.lines.filter((l) => l.optional);
+  const drawLines = (rows: InvoiceLine[]) => {
+    rows.forEach((l, i) => {
+      const w = cols.qty - cols.desc - 20;
+      const { title, detail } = splitLineText(l.description);
+      const tl = wrap(title, 10.5, w, bold);
+      const dl = detail ? wrap(detail, 9, w - 14) : [];
+      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
+      ensure(h);
+      if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
+      tl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
+      if (dl.length) {
+        const top = y - tl.length * 14 - 5;
+        page.drawRectangle({ x: cols.desc + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
+        dl.forEach((t, j) => page.drawText(t, { x: cols.desc + 12, y: top - j * 11.5, size: 9, font, color: muted }));
+      }
+      right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
+      right(money(l.unitPrice), cols.price, y, 10);
+      right(money(l.amount), cols.amt, y, 10);
+      y -= h;
+    });
+  };
   page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: ink });
   page.drawText("OMSCHRIJVING", { x: cols.desc, y, size: 8.5, font: bold, color: white });
   right("AANTAL", cols.qty + 40, y, 8.5, bold, white);
   right("EENHEIDSPRIJS", cols.price, y, 8.5, bold, white);
   right("BEDRAG", cols.amt, y, 8.5, bold, white);
   y -= 22;
-  d.lines.forEach((l, i) => {
-    const w = cols.qty - cols.desc - 20;
-    const { title, detail } = splitLineText(l.description);
-    const tl = wrap(title, 10.5, w, bold);
-    const dl = detail ? wrap(detail, 9, w - 14) : [];
-    const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
-    ensure(h);
-    if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
-    tl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
-    if (dl.length) {
-      const top = y - tl.length * 14 - 5;
-      page.drawRectangle({ x: cols.desc + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
-      dl.forEach((t, j) => page.drawText(t, { x: cols.desc + 12, y: top - j * 11.5, size: 9, font, color: muted }));
-    }
-    right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
-    right(money(l.unitPrice), cols.price, y, 10);
-    right(money(l.amount), cols.amt, y, 10);
-    y -= h;
-  });
-  if (!d.lines.length) { page.drawText("Geen posten.", { x: cols.desc, y, size: 10, font, color: muted }); y -= 18; }
+  drawLines(mainLines);
+  if (!mainLines.length && !optionLines.length) { page.drawText("Geen posten.", { x: cols.desc, y, size: 10, font, color: muted }); y -= 18; }
 
   ensure(90);
   y -= 10;
@@ -137,6 +143,23 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   tot(`Btw ${d.vatRate}%`, money(d.vat));
   page.drawLine({ start: { x: W - M - 230, y: y + 14 }, end: { x: W - M, y: y + 14 }, thickness: 1.5, color: orange });
   tot("Totaal incl. btw", money(d.total), true);
+
+  if (optionLines.length) {
+    const optNet = r2(optionLines.reduce((s, l) => s + l.amount, 0));
+    const optVat = r2((optNet * d.vatRate) / 100);
+    ensure(60);
+    y -= 6;
+    page.drawText("OPTIES - NIET INBEGREPEN IN HET TOTAAL", { x: M, y, size: 8.5, font: bold, color: orange });
+    y -= 8;
+    page.drawText(pr("De klant kan deze opties meenemen; ze worden pas aangerekend als ze gekozen worden."), { x: M, y, size: 8.5, font, color: muted });
+    y -= 14;
+    drawLines(optionLines);
+    ensure(50);
+    y -= 6;
+    tot("Opties excl. btw", money(optNet));
+    tot(`Btw ${d.vatRate}%`, money(optVat));
+    tot("Opties incl. btw", money(r2(optNet + optVat)), true);
+  }
 
   ensure(70);
   y -= 8;
