@@ -631,6 +631,13 @@
       "when": 1793543128883,
       "tag": "0089_credit_note_settlement",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1793543167912,
+      "tag": "0090_credit_note_settlement_no_note",
+      "breakpoints": true
     }
   ]
 }
