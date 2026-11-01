@@ -1,4 +1,5 @@
 import { brandedBody } from "./mail-html";
+import { quoteMailText } from "./quote-mail-text";
 import { createServerFn } from "@tanstack/react-start";
 import { quoteSigningLink } from "@/lib/quote-signing-link";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -220,7 +221,7 @@ export const sendQuote = createServerFn({ method: "POST" })
     await tracking.send(() => sendMail(
       to,
       `${q.kind === "verzekering" ? "Bestek" : "Offerte"} ${q.number} — Riory`,
-      linkText(`Beste ${(q.customer as InvoiceCustomer).name},\n\nIn de bijlage vindt u ${q.kind === "verzekering" ? "het bestek voor uw verzekering" : "offerte"} ${q.number}.\n\nAkkoord? Onderteken de offerte via deze link:\n${link}\n\nMet vriendelijke groeten,\nRiory`, tracking.url),
+      linkText(quoteMailText({ kind: q.kind, number: q.number as string, customerName: (q.customer as InvoiceCustomer).name, link, lines: (q.lines as InvoiceLine[]) ?? [] }), tracking.url),
       { name: `Offerte-${q.number}.pdf`, contentType: "application/pdf", contentBytes: pdf },
     ));
     const { error } = await context.supabase.from("quotes").update({ status: "verzonden", sent_at: new Date().toISOString() }).eq("id", q.id);
