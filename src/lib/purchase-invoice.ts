@@ -1,4 +1,4 @@
-export type PurchaseLine = { description: string; quantity: number; unit: string; unitPrice: number; amount: number };
+export type PurchaseLine = { description: string; quantity: number; unit: string; unitPrice: number; amount: number; account?: string | null };
 
 export type ParsedPurchaseInvoice = {
   supplierName: string;
@@ -35,6 +35,7 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
       unit: str(lo["unit"]) ?? "st",
       unitPrice,
       amount: r2(num(lo["amount"]) || quantity * unitPrice),
+      ...(str(lo["account"]) ? { account: str(lo["account"]) } : {}),
     };
   });
   const linesNet = r2(lines.reduce((s, l) => s + l.amount, 0));
