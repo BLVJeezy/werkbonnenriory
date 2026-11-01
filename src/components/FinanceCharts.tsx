@@ -49,6 +49,13 @@ export function MonthlyBars({ rows }: { rows: ChartRow[] }) {
   </svg>;
 }
 
+// Stapt naar een rond bedrag (1/2/2,5/5 × 10^n) zodat roosterlijnen en hun labels leesbaar blijven.
+function niceStep(span: number) {
+  const raw = span / 4;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+  return ([1, 2, 2.5, 5, 10].find((m) => raw <= m * pow) ?? 10) * pow;
+}
+
 export function MonthlyProfit({ rows }: { rows: ChartRow[] }) {
   const values = rows.flatMap((r) => r.profit == null ? [] : [r.profit]);
   const min = Math.min(0, ...values);
@@ -56,8 +63,13 @@ export function MonthlyProfit({ rows }: { rows: ChartRow[] }) {
   const span = Math.max(1, max - min);
   const y = (value: number) => 180 - ((value - min) / span) * 155;
   const zeroY = y(0);
+  // Roosterlijnen op mooie ronde bedragen; de nul-lijn krijgt een eigen, duidelijkere lijn.
+  const step = niceStep(span);
+  const first = Math.ceil(min / step - 1e-9);
+  const last = Math.floor(max / step + 1e-9);
+  const grid = Array.from({ length: Math.max(0, last - first + 1) }, (_, i) => (first + i) * step).filter((v) => Math.abs(v) > step / 1000);
   return <svg viewBox="0 0 720 230" className="h-64 w-full" role="img" aria-label="Lijndiagram resultaat per maand">
-    {[0, 0.5, 1].map((fraction) => { const v = min + fraction * span; return Math.abs(v) < 0.005 ? null : <g key={fraction}><line x1="45" x2="710" y1={180 - fraction * 155} y2={180 - fraction * 155} stroke="var(--border)" /><text x="38" y={184 - fraction * 155} textAnchor="end" fill="var(--muted-foreground)" fontSize="11">{compactEur(v)}</text></g>; })}
+    {grid.map((v) => <g key={v}><line x1="45" x2="710" y1={y(v)} y2={y(v)} stroke="var(--border)" /><text x="38" y={y(v) + 4} textAnchor="end" fill="var(--muted-foreground)" fontSize="11">{compactEur(v)}</text></g>)}
     {/* Nul-lijn duidelijk markeren, zodat een verliesmaand meteen opvalt. */}
     <line x1="45" x2="710" y1={zeroY} y2={zeroY} stroke="var(--muted-foreground)" strokeWidth="1.5" />
     <text x="38" y={zeroY + 4} textAnchor="end" fill="var(--muted-foreground)" fontSize="11" fontWeight="700">0</text>
