@@ -2,6 +2,7 @@
 
 - [ ] Factuurmails rechtstreeks via een externe verzenddienst, met behoud van PDF/UBL en OkiOki; aflevering en vermoedelijke opening apart tonen. Activering wacht op de verzenddienstkoppeling en domeinverificatie.
 - [ ] Uitleg geven voor het veilig aanmaken en koppelen van de Brevo-API-sleutel.
+- [ ] Vaststellen welke stap van de Brevo-koppeling niet werkt en het concrete probleem verhelpen; wacht op foutmelding of schermafbeelding.
 
 - [x] Voorbeeld van de offerte-mails getoond (met en zonder keuzemogelijkheden), als afbeelding opgeslagen in Files.
 - [x] Offertemail verduidelijkt dat de prijs pas definitief is na het maken van een keuze, enkel wanneer de offerte keuzemogelijkheden bevat; drie tests geslaagd.
