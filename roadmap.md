@@ -4,7 +4,7 @@
 
 - [x] Boekhouding en Finance van Mail Assist AI volledig ingebouwd, met behoud van rekenmodules en tabbladen; geen iframe. Invoer, beoordeling, boeking, btw en bankverwerking getest.
 - [x] Riory BV-balans per 31/10/2026 geïmporteerd: 91 rekeningsaldi, sluitende balans en resultaat gecontroleerd.
-- [ ] Volledige aangeleverde Boekhouding/Finance-export importeren, relaties en eigendom behouden, eerdere cumulatieve balans vervangen zonder dubbeltelling en in de app controleren.
+- [x] Volledige Boekhouding/Finance-export overgenomen: 3 administraties, 4.512 boekingen/10.051 lijnen, 1.575 facturen, investeringen, leningen, budgetten, regels en historie. 1.678 bestaande Ponto-verrichtingen herkend, 60 nieuwere behouden; cumulatieve Excel-boeking vervangen. Evenwicht, aantallen, facturen en bankkoppelingen in de app gecontroleerd; 38 rekentests geslaagd.
 
 - [x] Bankverrichtingen handmatig aan een factuur koppelen, met veilige betaalregistratie en controle in de app.
 
