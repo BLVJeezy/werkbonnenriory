@@ -115,3 +115,12 @@ describe("buildManualCreditNote", () => {
     expect(c.lines[0]?.amount).toBe(-100);
   });
 });
+
+describe("garantie op factuur", () => {
+  it("toont volledige arbeid en km met reductielijnen, totaal zonder eerste uur en km", () => {
+    const wo = { id: "w", number: 1, customer_name: "K", address: null, email: null, billing_email: null, vat_number: null, street: null, house_number: null, postal_code: null, city: null, use_site_address: false, site_street: null, site_house_number: null, site_postal_code: null, site_city: null, distance_km: 20, warranty: true, vat_rate: 21, paid_amount: null, paid_at: null } as unknown as Parameters<typeof buildInvoice>[0]["wo"];
+    const r = buildInvoice({ wo, activity: { name: "Ontstopping", hourly_rate: 80 }, seconds: 2 * 3600, materials: [], kmRate: 0.5 });
+    expect(r.lines.map((l) => l.amount)).toEqual([160, 10, -80, -10]);
+    expect(r.net).toBe(80);
+  });
+});
