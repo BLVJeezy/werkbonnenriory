@@ -8,7 +8,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     const request = getRequest();
     if (new URL(request.url).pathname === "/index") {
-      return new Response(null, { status: 307, headers: { Location: "/werkbonnen" } });
+      return new Response(null, { status: 307, headers: { Location: "/dashboard" } });
     }
     return await next();
   } catch (error) {
