@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Productfoto’s uploaden/beheren en automatisch opnemen in offertebewerker, PDF en klantondertekenpagina; volledige opslagflow controleren.
+
 - [x] Eerste klant aanvinken in Kalender/Taken; gedeeld label in ploegoverzicht en detail. Opslaan na herladen en uitschakelen gecontroleerd; testmarkering verwijderd.
 
 - [x] WhatsApp-uitnodiging met ploeguitleg en persoonlijke wachtwoordkeuze. Aanmaak, wachtwoord opslaan, ploeglogin en weigering van hergebruik gecontroleerd; 7 tests geslaagd. Tijdelijke testploegen verwijderd, geen WhatsApp verzonden.
