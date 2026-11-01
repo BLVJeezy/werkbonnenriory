@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reloadForModuleError } from "@/lib/module-recovery";
 
 function NotFoundComponent() {
   return (
@@ -40,6 +41,7 @@ function NotFoundComponent() {
 function ErrorComponent({ error }: ErrorComponentProps) {
   console.error(error);
   useEffect(() => {
+    reloadForModuleError(error);
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
@@ -116,33 +118,25 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-// Na een nieuwe versie kan een open tabblad verouderde onderdelen proberen te laden
-// ("Importing a module script failed"). Herlaad dan één keer automatisch.
-if (typeof window !== "undefined") {
-  const KEY = "riory-chunk-reload";
-  const isChunkError = (msg: string) =>
-    /Importing a module script failed|Failed to fetch dynamically imported module|error loading dynamically imported module/i.test(msg);
-  const reloadOnce = () => {
-    const last = Number(sessionStorage.getItem(KEY) || 0);
-    if (Date.now() - last < 10000) return;
-    sessionStorage.setItem(KEY, String(Date.now()));
-    window.location.reload();
-  };
-  window.addEventListener("vite:preloadError", (e) => {
-    e.preventDefault();
-    reloadOnce();
-  });
-  window.addEventListener("unhandledrejection", (e) => {
-    if (isChunkError(String((e.reason as Error)?.message ?? e.reason))) reloadOnce();
-  });
-  window.addEventListener("error", (e) => {
-    if (isChunkError(String(e.message))) reloadOnce();
-  });
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  useEffect(() => {
+    const preload = (event: Event) => {
+      event.preventDefault();
+      reloadForModuleError(new Error("Failed to fetch dynamically imported module"));
+    };
+    const rejection = (event: PromiseRejectionEvent) => { reloadForModuleError(event.reason); };
+    const failure = (event: ErrorEvent) => { reloadForModuleError(event.error ?? event.message); };
+    window.addEventListener("vite:preloadError", preload);
+    window.addEventListener("unhandledrejection", rejection);
+    window.addEventListener("error", failure);
+    return () => {
+      window.removeEventListener("vite:preloadError", preload);
+      window.removeEventListener("unhandledrejection", rejection);
+      window.removeEventListener("error", failure);
+    };
+  }, []);
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
