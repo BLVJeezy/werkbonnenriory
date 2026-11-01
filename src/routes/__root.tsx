@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { reloadForModuleError } from "@/lib/module-recovery";
+import { earlyModuleRecoveryScript, reloadForModuleError } from "@/lib/module-recovery";
 
 function NotFoundComponent() {
   return (
@@ -108,6 +108,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="nl">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: earlyModuleRecoveryScript }} />
         <HeadContent />
       </head>
       <body>
