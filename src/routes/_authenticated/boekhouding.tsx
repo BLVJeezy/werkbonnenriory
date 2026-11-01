@@ -1,3 +1,4 @@
+import { CardFeeReport } from "@/components/CardFeeReport";
 import { SAVINGS_ACCOUNT, markSavingsQuarterDone } from "@/lib/savings-quarter";
 import { cardGross } from "@/lib/card-gross";
 import { parseCoda } from "@/lib/coda";
@@ -682,6 +683,7 @@ function Bank({ c }: { c: string }) {
       <AccountList accounts={accounts} />
       <Link to="/facturen"><Button size="sm" variant="outline">Naar facturen</Button></Link>
       <PontoCard c={c} bankAcc={bankAcc} onDone={refresh} />
+      <CardFeeReport companyId={c} />
       <Card title={`Spaarrekening inladen (${SAVINGS_ACCOUNT})`}>
         <SavingsDropZone onFile={onSavingsFile} />
         <p className="mt-1 text-xs text-muted-foreground">Uittreksel van de spaarrekening; alle verrichtingen worden op rekening {SAVINGS_ACCOUNT} ingelezen. Dubbels worden genegeerd.</p>
