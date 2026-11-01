@@ -23,7 +23,7 @@ export function brandedMailHtml(text: string, contactEmail = 'info@riory.be', im
     const line = (lines[i] ?? '').trim();
     if (URL_RE.test(line)) {
       const prev = parts.at(-1) ?? '';
-      const label = /Document openen/i.test(prev) ? 'Document openen' : /afspraak/i.test(line) ? 'Afspraak kiezen' : /offerte/i.test(line) ? 'Offerte ondertekenen' : /werkbon-tekenen/i.test(line) ? 'Werkbon ondertekenen' : 'Openen';
+      const label = /Document openen/i.test(prev) ? 'Document openen' : /afspraak\/klant/i.test(line) ? 'Afspraak bevestigen' : /afspraak/i.test(line) ? 'Afspraak kiezen' : /offerte/i.test(line) ? 'Offerte ondertekenen' : /werkbon-tekenen/i.test(line) ? 'Werkbon ondertekenen' : 'Openen';
       if (/Document openen:?<\/p>$/.test(prev)) parts.pop();
       parts.push(button(line, label, label === 'Document openen'));
       continue;
