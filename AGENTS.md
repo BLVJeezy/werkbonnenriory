@@ -36,7 +36,7 @@
 - invoice-payment-reference shares modulo-97 across PDF/UBL/reminders/QR; EPC v2 uses free text (structured is RF-only), retaining digits for Ponto. Open PDFs embed QR. Stripe stays off unless asked.
 - Quotes use OFF numbering and secret-token signing; privileged reads stay inside handlers. Approval atomically creates one task via `ensure_approved_quote_task` (`work_order_id` prevents duplicates); source worksite and crew persist, `quote_approved` drives labels.
 - Quote signing emails use the canonical published app URL through the tested signing-link helper, never the request origin, because preview and internal hosts are inaccessible to customers.
-- Credit notes are `invoices` rows with `kind = 'creditnota'` and `credit_for` to the original; same numbering, reversed by tested `buildCreditNote`. `work_order_id` is nullable and not unique: credit notes share it, manual invoices have none and reuse `contract_reference`.
+- Credit notes share invoice numbering and nullable/non-unique work_order_id. Editors share isInvoiceEditable; credit previews/saves use buildManualCreditNote to preserve negative totals and lock settled notes.
 - Product RLS enforces admin_only. Private photo paths snapshot onto quote lines; token reads sign only those files, PDFs embed bytes. Retain files for saved quotes.
 - Invoices/credit notes use a separate, sender-verified Outlook connection; other mails retain theirs. Accountant exports attach UBL only.
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.

@@ -53,7 +53,17 @@ describe("factuurtitels", () => {
     expect(iie(base)).toBe(true);
     expect(iie({ ...base, pdf_sent_at: "2026-10-31" })).toBe(false);
     expect(iie({ ...base, post_sent_at: "2026-10-31" })).toBe(false);
-    expect(iie({ ...base, kind: "creditnota" })).toBe(false);
+    expect(iie({ ...base, kind: "creditnota", paid_amount: 0 })).toBe(true);
+  });
+  it("creditnota aanpasbaar zolang niet verzonden of verrekend", () => {
+    const base = { kind: "creditnota", status: "concept", sent_at: null, pdf_sent_at: null, okioki_sent_at: null, post_sent_at: null, paid_amount: 0 };
+    expect(iie(base)).toBe(true);
+    expect(iie({ ...base, paid_amount: -25 })).toBe(false);
+    expect(iie({ ...base, status: "verzonden" })).toBe(false);
+    expect(iie({ ...base, sent_at: "2026-11-01" })).toBe(false);
+    expect(iie({ ...base, pdf_sent_at: "2026-11-01" })).toBe(false);
+    expect(iie({ ...base, okioki_sent_at: "2026-11-01" })).toBe(false);
+    expect(iie({ ...base, post_sent_at: "2026-11-01" })).toBe(false);
   });
 });
 

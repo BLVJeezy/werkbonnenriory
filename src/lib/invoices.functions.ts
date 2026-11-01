@@ -103,7 +103,7 @@ export const updateInvoice = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: inv } = await supabase.from("invoices").select("*").eq("id", data.invoiceId).single();
     if (!inv) throw new Error("Factuur niet gevonden");
-    if (!isInvoiceEditable(inv)) throw new Error("Deze factuur is al verzonden en kan niet meer aangepast worden. Maak een creditnota.");
+    if (!isInvoiceEditable(inv)) throw new Error(inv.kind === "creditnota" ? "Deze creditnota is al verzonden of verrekend en kan niet meer aangepast worden." : "Deze factuur is al verzonden en kan niet meer aangepast worden. Maak een creditnota.");
     if (inv.delivery_lock_until && new Date(inv.delivery_lock_until) > new Date()) throw new Error("De factuur wordt net verzonden; probeer zo opnieuw.");
     const rows = data.lines.filter((l) => l.description.trim()).slice(0, 80);
     if (!rows.length) throw new Error("Vul minstens één lijn met omschrijving in");
@@ -117,8 +117,11 @@ export const updateInvoice = createServerFn({ method: "POST" })
     const patch: any = { customer, lines: calc.lines, vat_rate: calc.vatRate, net: calc.net, vat: calc.vat, total: calc.total, send_error: null };
     if (data.note !== undefined) patch.note = data.note?.trim().slice(0, 4000) || null;
     if (data.reference !== undefined && (inv.contract_reference !== null || !inv.work_order_id)) patch.contract_reference = data.reference?.trim() || "";
-    const { error } = await supabase.from("invoices").update(patch).eq("id", inv.id).is("sent_at", null).is("pdf_sent_at", null).is("okioki_sent_at", null).is("post_sent_at", null);
+    let query = supabase.from("invoices").update(patch).eq("id", inv.id).neq("status", "verzonden").is("sent_at", null).is("pdf_sent_at", null).is("okioki_sent_at", null).is("post_sent_at", null);
+    if (inv.kind === "creditnota") query = query.eq("paid_amount", 0);
+    const { data: updated, error } = await query.select("id").maybeSingle();
     if (error) throw new Error(error.message);
+    if (!updated) throw new Error("Het document is intussen verzonden of verrekend. Vernieuw de lijst.");
     return { ok: true };
   });
 

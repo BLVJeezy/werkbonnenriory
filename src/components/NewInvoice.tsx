@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { euro } from "@/lib/billing";
 import { vatRateForCustomer } from "@/lib/vat-number";
-import { activityLineValues, buildManualInvoice, groupInvoiceLines, lineTotals, splitTravelLine, travelKmLine, type InvoiceLine } from "@/lib/invoice";
+import { activityLineValues, buildManualCreditNote, buildManualInvoice, groupInvoiceLines, lineTotals, splitTravelLine, travelKmLine, type InvoiceLine } from "@/lib/invoice";
 import { formatAddress } from "@/lib/address";
 import { quoteDistance } from "@/lib/distance.functions";
 import { createManualInvoice, updateInvoice } from "@/lib/invoices.functions";
@@ -72,7 +72,7 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
     const travel = kmOn ? travelKmLine(km, kmRate, Number(kmVat ?? defaultVat)) : null;
     return travel ? [...rows, travel] : rows;
   }, [items, kmOn, km, kmVat, kmRate, defaultVat]);
-  const calc = useMemo(() => buildManualInvoice(parsed.filter((l) => l.description.trim())), [parsed]);
+  const calc = useMemo(() => (creditNote ? buildManualCreditNote : buildManualInvoice)(parsed.filter((l) => l.description.trim())), [parsed, creditNote]);
   const subtotals = useMemo(() => groupInvoiceLines(calc.lines).filter((s) => s.title), [calc]);
 
   function setItem(i: number, patch: Partial<Line> | Partial<Title>) {
@@ -156,7 +156,7 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
     try {
       if (invoice) {
         await update({ data: { invoiceId: invoice.id, customerId: customerId || null, reference, note, lines: parsed } });
-        toast.success(`Factuur ${invoice.number} aangepast`);
+        toast.success(`${docLabel} ${invoice.number} aangepast`);
       } else {
         if (!customerId) { toast.error("Kies eerst een klant"); return; }
         await create({ data: { customerId, reference: reference.trim() || null, note: note.trim() || null, lines: parsed, creditNote } });
@@ -176,7 +176,7 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
 
   return (
     <div className="w-full space-y-4 rounded-md border bg-card p-4">
-      <h3 className="text-lg font-black uppercase">{invoice ? `Factuur ${invoice.number} aanpassen` : creditNote ? "Nieuwe creditnota" : "Nieuwe factuur"}</h3>
+      <h3 className="text-lg font-black uppercase">{invoice ? `${docLabel} ${invoice.number} aanpassen` : creditNote ? "Nieuwe creditnota" : "Nieuwe factuur"}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Klant{invoice ? ` (huidig: ${(invoice.customer as { name?: string })?.name ?? "—"})` : ""}</Label>
