@@ -172,7 +172,7 @@ export async function createWerkbonPdf(data: WerkbonData, photos: readonly Uint8
 export function werkbonPdfMessage(data: WerkbonData, recipient: string, pdfBase64: string, docUrl?: string, signing?: { url: string; code: string }) {
   let text = `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u uw werkbon ${werkbonNr(data.number)} als pdf.`;
   if (signing) {
-    text += `\n\nU kunt de werkbon digitaal ondertekenen in minder dan een minuut:\n${signing.url}\n! Uw persoonlijke code: ${signing.code} — vink de werkbon aan en vul deze code in.`;
+    text += `\n\nU kunt de werkbon digitaal ondertekenen in minder dan een minuut:\n${signing.url}\n! Uw persoonlijke code: ${signing.code} — vul deze code in op de tekenpagina.`;
   }
   text += `\n\n✓ Ondertekenen kan op gsm, tablet of computer\n✓ U ontvangt meteen een bevestiging\n✓ Vragen? Antwoord gewoon op deze mail`;
   text += `\n\nMet vriendelijke groeten,\nRiory`;
