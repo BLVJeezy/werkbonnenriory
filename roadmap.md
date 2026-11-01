@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Laadprobleem op /index onderzoeken en herstellen.
+- [ ] Importknop uit werkbonnen verwijderen en verkoopfacturen rechtstreeks verbinden met Boekhouding/Finance.
+
 - [x] Afgewerkte werkbonnen op een aparte overzichtspagina, los van actieve taken; zoeken, ploeg/datumfilters, sortering en voorbeelden gecontroleerd.
 
 - [x] Boekhouding en Finance van Mail Assist AI volledig ingebouwd, met behoud van rekenmodules en tabbladen; geen iframe. Invoer, beoordeling, boeking, btw en bankverwerking getest.
