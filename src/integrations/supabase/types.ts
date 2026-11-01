@@ -2745,6 +2745,7 @@ export type Database = {
         }
         Returns: string
       }
+      fin_restore_archive: { Args: { _data: Json }; Returns: Json }
       forward_external_appointment: {
         Args: { p_id: string; p_instruction: string }
         Returns: string
