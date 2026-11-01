@@ -69,6 +69,7 @@ export function uniqueEntryName(name: string, used: Set<string>): string {
 
 /** "riory-fotos-wb-101-mario-franceschi-bilzen-2026-10-15.zip" / "riory-fotos-3-interventies.zip" */
 export function photoZipName(sources: PhotoSource[]): string {
-  if (sources.length === 1) return `riory-fotos-${photoFolderName(sources[0])}.zip`;
+  const only = sources[0];
+  if (sources.length === 1 && only) return `riory-fotos-${photoFolderName(only)}.zip`;
   return `riory-fotos-${sources.length}-interventies.zip`;
 }

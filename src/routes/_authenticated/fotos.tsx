@@ -10,15 +10,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { deliverFile } from "@/lib/file-download";
-import { buildPhotoZip, fetchPhoto, prepareGroupDownload, type DownloadGroup, type PreparedFile } from "@/lib/photo-download";
-import { photoFileName } from "@/lib/photo-naming";
+import { buildPhotoZip, fetchPhoto, prepareGroupDownload, type PreparedFile } from "@/lib/photo-download";
+import { photoFileName, type PhotoSource } from "@/lib/photo-naming";
 
 export const Route = createFileRoute("/_authenticated/fotos")({
   head: () => ({ meta: [{ title: "Foto's — Riory Werkbonnen" }, { name: "description", content: "Alle werfoto's gesorteerd per interventie, te downloaden voor marketing." }, { property: "og:title", content: "Foto's — Riory Werkbonnen" }, { property: "og:description", content: "Alle werfoto's gesorteerd per interventie, te downloaden voor marketing." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Fotos,
 });
 
-type Group = DownloadGroup & { photos: { id: string; path: string; url: string | null }[] };
+type Group = PhotoSource & {
+  id: string;
+  description: string;
+  notes: string;
+  photos: { id: string; path: string; url: string | null }[];
+};
 
 /** Above this many photos we ask first: the whole ZIP is built in the browser. */
 const CONFIRM_ABOVE = 120;
