@@ -15,4 +15,10 @@ describe("WhatsApp-uitnodiging voor ploegen", () => {
     expect(() => crewWhatsAppLink("Ploeg", "")).toThrow();
     expect(() => crewWhatsAppLink("Ploeg", "0470abc123456")).toThrow();
   });
+  it("deelt de persoonlijke wachtwoordkeuze via de gepubliceerde pagina", () => {
+    const setupUrl = `https://werkbonnenriory.lovable.app/ploeg-uitnodiging#${"a".repeat(64)}`;
+    const text = new URL(crewWhatsAppLink("Ploeg", "0470123456", setupUrl)).searchParams.get("text");
+    expect(text).toContain(setupUrl);
+    expect(() => crewWhatsAppLink("Ploeg", "0470123456", "https://ander.example/")).toThrow();
+  });
 });

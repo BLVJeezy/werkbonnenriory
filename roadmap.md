@@ -1,6 +1,8 @@
 # Roadmap
 
-- [x] Nieuwe interne ploegen via WhatsApp uitnodigen na aanmaken of vanuit de ploegenlijst; wachtwoord afzonderlijk. Uitnodiging met beheerderlogin en drie telefoonnummertests gecontroleerd; geen bericht verstuurd.
+- [x] WhatsApp-uitnodiging met ploeguitleg en persoonlijke wachtwoordkeuze. Aanmaak, wachtwoord opslaan, ploeglogin en weigering van hergebruik gecontroleerd; 7 tests geslaagd. Tijdelijke testploegen verwijderd, geen WhatsApp verzonden.
+
+- [x] Nieuwe interne ploegen via WhatsApp uitnodigen na aanmaken of vanuit de ploegenlijst; uitgebreid met eigen wachtwoordkeuze hierboven.
 
 - [x] Bankafpunting en Ponto-bediening naar Boekhouding; oude Bank-link verwijst door. Atomair afpunten werkt betalingen en boekingen samen bij; deelbetalingen blijven open en overbetalingen worden geweigerd. Navigatie, bestaande betaalstatus en foutpad gecontroleerd; geen echte betaling handmatig geregistreerd tijdens controle.
 

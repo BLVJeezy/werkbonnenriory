@@ -561,6 +561,13 @@
       "when": 1793517953435,
       "tag": "0079_bookkeeping_invoice_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1793521032146,
+      "tag": "0080_crew_password_invitations",
+      "breakpoints": true
     }
   ]
 }
