@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Bankafpunting centraliseren in Boekhouding en betalingen veilig laten doorwerken in Facturatie.
+- [x] Bankafpunting en Ponto-bediening naar Boekhouding; oude Bank-link verwijst door. Atomair afpunten werkt betalingen en boekingen samen bij; deelbetalingen blijven open en overbetalingen worden geweigerd. Navigatie, bestaande betaalstatus en foutpad gecontroleerd; geen echte betaling handmatig geregistreerd tijdens controle.
 
 - [x] /index stuurt door naar Taken; met beheerderlogin gecontroleerd, geen paginafouten.
 - [x] Werkbon-importknop verwijderd; lokale verkoopfacturen automatisch aan Riory BV gekoppeld, los van Simpla-aankopen. Geïmporteerde nummers behouden; 10 betaalde lokale facturen correct gekoppeld zonder dubbele boeking. Gerichte tests geslaagd.
