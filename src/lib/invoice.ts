@@ -136,8 +136,8 @@ export function groupInvoiceLines(lines: InvoiceLine[]) {
 }
 
 /** An invoice may still be edited until any delivery leg (PDF mail, OkiOki, post) has gone out. */
-export function isInvoiceEditable(inv: { kind: string; status: string; sent_at: string | null; pdf_sent_at: string | null; okioki_sent_at: string | null; post_sent_at?: string | null }) {
-  return inv.kind !== "creditnota" && inv.status !== "verzonden" && !inv.sent_at && !inv.pdf_sent_at && !inv.okioki_sent_at && !inv.post_sent_at;
+export function isInvoiceEditable(inv: { kind: string; status: string; sent_at: string | null; pdf_sent_at: string | null; okioki_sent_at: string | null; post_sent_at?: string | null; paid_amount?: number | null }) {
+  return !(inv.kind === "creditnota" && Number(inv.paid_amount ?? 0) !== 0) && inv.status !== "verzonden" && !inv.sent_at && !inv.pdf_sent_at && !inv.okioki_sent_at && !inv.post_sent_at;
 }
 
 /** Pure: a stand-alone credit note (no original invoice) from manual lines; all amounts negative. */
