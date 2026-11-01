@@ -25,7 +25,9 @@ export function ProductPhotoEditor({ value: storedPaths, onChange, title = "Prod
   const value = productPhotoPaths(storedPaths);
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  async function upload(files: FileList | null) {
+  const [dragging, setDragging] = useState(false);
+  async function upload(files: FileList | File[] | null) {
+    if (busy || disabled) return;
     if (!files?.length) return;
     setBusy(true);
     try {
@@ -42,9 +44,14 @@ export function ProductPhotoEditor({ value: storedPaths, onChange, title = "Prod
     } catch (e) { toast.error(e instanceof Error ? e.message : "Foto toevoegen mislukt"); }
     finally { setBusy(false); if (input.current) input.current.value = ""; }
   }
-  return <div className="w-full space-y-2">
+  return <div className={`w-full space-y-2 rounded-md border-2 border-dashed p-3 ${dragging ? "border-primary bg-accent" : "border-border"}`}
+    aria-label={`Foto’s slepen bij ${title}`}
+    onDragOver={e => { e.preventDefault(); if (!busy && !disabled) { e.dataTransfer.dropEffect = "copy"; setDragging(true); } }}
+    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false); }}
+    onDrop={e => { e.preventDefault(); setDragging(false); void upload(Array.from(e.dataTransfer.files)); }}>
     <input ref={input} type="file" accept="image/jpeg,image/png" multiple className="hidden" aria-label={`Foto’s toevoegen bij ${title}`} onChange={e => void upload(e.target.files)} />
     <Button type="button" variant="outline" size="sm" disabled={busy || disabled} onClick={() => input.current?.click()}><ImagePlus className="mr-2 h-4 w-4" />{busy ? "Foto’s laden…" : "Foto’s toevoegen"}</Button>
+    <span className="ml-2 text-sm text-muted-foreground">{dragging ? "Foto’s hier neerzetten" : "of foto’s hierheen slepen"}</span>
     {value.map((path, i) => <div key={path} className="flex items-center gap-2"><ProductPhotoGallery paths={[path]} title={title} /><Button type="button" variant="outline" size="icon" disabled={busy || disabled} aria-label={`Foto ${i + 1} verwijderen bij ${title}`} title="Foto verwijderen" onClick={() => void onChange(value.filter(p => p !== path))}><X className="h-4 w-4" /></Button></div>)}
   </div>;
 }
