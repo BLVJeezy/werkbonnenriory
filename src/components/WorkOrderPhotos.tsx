@@ -1,3 +1,4 @@
+import { compressImage } from "@/lib/compress-image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
