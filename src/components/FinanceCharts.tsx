@@ -55,8 +55,12 @@ export function MonthlyProfit({ rows }: { rows: ChartRow[] }) {
   const max = Math.max(0, ...values);
   const span = Math.max(1, max - min);
   const y = (value: number) => 180 - ((value - min) / span) * 155;
+  const zeroY = y(0);
   return <svg viewBox="0 0 720 230" className="h-64 w-full" role="img" aria-label="Lijndiagram resultaat per maand">
-    {[0, 0.5, 1].map((fraction) => <g key={fraction}><line x1="45" x2="710" y1={180 - fraction * 155} y2={180 - fraction * 155} stroke="var(--border)" /><text x="38" y={184 - fraction * 155} textAnchor="end" fill="var(--muted-foreground)" fontSize="11">{compactEur(min + fraction * span)}</text></g>)}
+    {[0, 0.5, 1].map((fraction) => { const v = min + fraction * span; return Math.abs(v) < 0.005 ? null : <g key={fraction}><line x1="45" x2="710" y1={180 - fraction * 155} y2={180 - fraction * 155} stroke="var(--border)" /><text x="38" y={184 - fraction * 155} textAnchor="end" fill="var(--muted-foreground)" fontSize="11">{compactEur(v)}</text></g>; })}
+    {/* Nul-lijn duidelijk markeren, zodat een verliesmaand meteen opvalt. */}
+    <line x1="45" x2="710" y1={zeroY} y2={zeroY} stroke="var(--muted-foreground)" strokeWidth="1.5" />
+    <text x="38" y={zeroY + 4} textAnchor="end" fill="var(--muted-foreground)" fontSize="11" fontWeight="700">0</text>
     {rows.slice(1).map((r, i) => r.profit != null && rows[i]?.profit != null && <line key={r.label} x1={76 + i * 54} y1={y(rows[i].profit as number)} x2={76 + (i + 1) * 54} y2={y(r.profit)} stroke="var(--primary)" strokeWidth="2" />)}
     {rows.map((r, i) => <g key={r.label}>
       {r.profit != null && <circle cx={76 + i * 54} cy={y(r.profit)} r="4" fill="var(--primary)"><title>{r.label}: resultaat {eur(r.profit)}</title></circle>}
