@@ -170,11 +170,12 @@ export async function createWerkbonPdf(data: WerkbonData, photos: readonly Uint8
 
 /** Outlook file attachment: no public storage URL and no work-order details in the body. */
 export function werkbonPdfMessage(data: WerkbonData, recipient: string, pdfBase64: string, docUrl?: string, signing?: { url: string; code: string }) {
-  let text = `Beste klant,\n\nIn de bijlage vindt u uw werkbon ${werkbonNr(data.number)} als pdf.`;
+  let text = `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u uw werkbon ${werkbonNr(data.number)} als pdf.`;
   if (signing) {
-    text += `\n\nWilt u de werkbon digitaal ondertekenen? Open dan deze link:\n${signing.url}\nen vul daar de code ${signing.code} in.`;
+    text += `\n\nU kunt de werkbon digitaal ondertekenen in minder dan een minuut:\n${signing.url}\n! Uw persoonlijke code: ${signing.code} — vink de werkbon aan en vul deze code in.`;
   }
-  text += `\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`;
+  text += `\n\n✓ Ondertekenen kan op gsm, tablet of computer\n✓ U ontvangt meteen een bevestiging\n✓ Vragen? Antwoord gewoon op deze mail`;
+  text += `\n\nMet vriendelijke groeten,\nRiory`;
   return {
     subject: `Werkbon ${werkbonNr(data.number)} — ${data.customer}`,
     body: brandedBody(docUrl ? linkText(text, docUrl) : text),
