@@ -309,7 +309,7 @@ function Lijst() {
                 </div>
               </div>
               <Button type="submit" disabled={saving}>
-                {saving ? "Opslaan…" : "Taak aanmaken"}
+                {saving ? "Opslaan…" : direct ? "Werkbon aanmaken en invullen" : "Taak aanmaken"}
               </Button>
             </form>
           </DialogContent>
