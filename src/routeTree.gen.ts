@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as IndexRouteImport } from './routes/index_'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
 import { Route as AuthenticatedAfgewerkteWerkbonnenRouteImport } from './routes/_authenticated/afgewerkte-werkbonnen'
@@ -60,6 +61,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/index_',
+  path: '/index',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -258,6 +264,7 @@ const ApiPublicReviewsInvoicesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/index': typeof IndexRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/index': typeof IndexRoute
   '/reset-password': typeof ResetPasswordRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
@@ -338,6 +346,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/index_': typeof IndexRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/_authenticated/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
@@ -379,6 +388,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/index'
     | '/reset-password'
     | '/aankoopfacturen'
     | '/afgewerkte-werkbonnen'
@@ -418,6 +428,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/index'
     | '/reset-password'
     | '/aankoopfacturen'
     | '/afgewerkte-werkbonnen'
@@ -458,6 +469,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/index_'
     | '/reset-password'
     | '/_authenticated/aankoopfacturen'
     | '/_authenticated/afgewerkte-werkbonnen'
@@ -499,6 +511,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  IndexRoute: typeof IndexRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   DocumentTokenRoute: typeof DocumentTokenRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
@@ -538,6 +551,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/index_': {
+      id: '/index_'
+      path: '/index'
+      fullPath: '/index'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -840,6 +860,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  IndexRoute: IndexRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   DocumentTokenRoute: DocumentTokenRoute,
   OfferteTokenRoute: OfferteTokenRoute,

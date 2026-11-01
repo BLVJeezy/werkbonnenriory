@@ -1,5 +1,5 @@
 import { FinanceTasks } from "@/components/FinanceTasks";
-import { syncWerkbonnenSales } from "@/lib/finance-sales.functions";
+import { useFinanceSales } from "@/lib/use-finance-sales";
 import { syncFinancePurchases } from "@/lib/finance-purchases.functions";
 import { pontoStatus } from "@/lib/ponto.functions";
 import { unapproveInvoice } from "@/lib/undo";
@@ -51,7 +51,6 @@ function Finance() {
   const nav = useNavigate();
   const search = Route.useSearch();
   const qc = useQueryClient();
-  const syncSales = useServerFn(syncWerkbonnenSales);
   const [companyId, setCompanyId] = useState<string>("");
   const [month, setMonth] = useState(search.maand ?? addMonths(monthKey(new Date()), -1));
   const [year, setYear] = useState(Number((search.maand ?? monthKey(new Date())).slice(0, 4)));
@@ -60,7 +59,7 @@ function Finance() {
   const companies = useQuery({ queryKey: ["fin-companies"], enabled: !!user, queryFn: async () => ((await supabase.from("companies").select("*").order("name")).data ?? []).filter((x) => !isPrivateCompany(x.name)) });
   useEffect(() => { if (!companyId && companies.data?.length) setCompanyId(companies.data[0]?.id ?? ""); }, [companies.data, companyId]);
   const company = companies.data?.find((c) => c.id === companyId);
-  useEffect(() => { if (company?.simpla_bound) syncSales().then(() => qc.invalidateQueries({ queryKey: ["fin"] })).catch(() => toast.error("Verkoopfacturen overnemen mislukt")); }, [company?.id, company?.simpla_bound]);
+  useFinanceSales(!!user && company?.name.trim().toLowerCase() === "riory bv");
 
   useEffect(() => {
     if (!company) return;
