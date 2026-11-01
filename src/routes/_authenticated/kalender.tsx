@@ -22,6 +22,7 @@ import { CustomerInvite } from "@/components/CustomerInvite";
 import { dayPartLabel } from "@/lib/invite-slots";
 import { appointmentStatuses } from "@/lib/appointments";
 import { X } from "lucide-react";
+import { FirstCustomerLabel } from "@/components/FirstCustomerLabel";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -144,6 +145,7 @@ function Kalender() {
   ) : (
     <div key={w.id} draggable onPointerDown={(e) => { e.currentTarget.draggable = !(e.target as HTMLElement).closest("input,select,button,a,textarea"); }} onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`min-w-0 cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
       <div className="min-w-0">
+      {w.first_customer && <div className="mb-1"><FirstCustomerLabel /></div>}
       {w.quote_approved && <span className="mb-1 inline-block rounded bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">Offerte goedgekeurd</span>}
       {horizontal && w.scheduled_date && !isFullyPlanned(w) && <p className="mb-1 text-xs font-bold"><span className="rounded bg-background px-1 text-destructive">{w.contract_id ? "Nog niet volledig ingepland — vul dag en ploeg in" : "Nog niet volledig ingepland — vul dag, ploeg én activiteit in"}</span></p>}
       {(isUrgentOpen(w) || w.contract_id || dayPartLabel(w.scheduled_from) || waitingLabel(w.id)) && <div className="mb-1 flex flex-wrap gap-1 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-background px-1 text-destructive ring-1 ring-destructive">DRINGEND</span>}{w.contract_id && <span className="rounded bg-secondary px-1 text-secondary-foreground">Contract</span>}{dayPartLabel(w.scheduled_from) && <span className="rounded bg-primary px-1 text-primary-foreground">{dayPartLabel(w.scheduled_from)}</span>}{waitingLabel(w.id) && <span className="rounded border bg-background px-1 text-foreground">{waitingLabel(w.id)}</span>}</div>}
@@ -182,7 +184,7 @@ function Kalender() {
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
-      <div className="col-span-full flex flex-wrap items-center gap-2"><CustomerInvite task={w} />{w.scheduled_date && <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => plan(w.id, null)}>Terug naar nog in te plannen</Button>}</div>
+      <div className="col-span-full flex flex-wrap items-center gap-2"><label className="flex cursor-pointer items-center gap-1.5 text-xs font-bold"><input type="checkbox" className="accent-primary" checked={w.first_customer} onChange={(e) => set(w.id, { first_customer: e.target.checked })} />Eerste klant</label><CustomerInvite task={w} />{w.scheduled_date && <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => plan(w.id, null)}>Terug naar nog in te plannen</Button>}</div>
       </div>
     </div>
   );

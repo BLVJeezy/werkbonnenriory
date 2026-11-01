@@ -568,6 +568,13 @@
       "when": 1793521032146,
       "tag": "0080_crew_password_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1793522057396,
+      "tag": "0081_first_customer_label",
+      "breakpoints": true
     }
   ]
 }

@@ -32,6 +32,7 @@ import { CustomerInvite } from '@/components/CustomerInvite';
 import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { startCcvPayment } from '@/lib/ccv.functions';
+import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -198,6 +199,7 @@ function Detail() {
       <div className="flex flex-wrap items-baseline gap-3">
         <h1 className="text-3xl font-black uppercase">{kind} {werkbonNr(wo.number)}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
+        {wo.first_customer && <FirstCustomerLabel />}
         <div className="no-print ml-auto flex flex-wrap gap-2">
           {(role === 'admin' || role === 'technician') && wo.status === 'afgetekend' && <WorkOrderPreview workOrderId={id} />}
           <Button variant="outline" onClick={() => window.print()}>Afdrukken</Button>
