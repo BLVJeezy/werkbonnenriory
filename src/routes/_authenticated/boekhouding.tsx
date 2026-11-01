@@ -508,6 +508,18 @@ function Bank({ c }: { c: string }) {
   useEffect(() => { if (accounts.length) setBankAcc(ctl.bank); }, [accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const refresh = async () => { await Promise.all(["fin", "facturen", "ponto_transactions", "dashboard-omzet", "bank-link-invoices"].map(key => qc.invalidateQueries({ queryKey: [key] }))); };
   const total = (i: any) => r2(i.fin_invoice_lines.reduce((a: number, l: any) => a + Number(l.ex_vat) + Number(l.vat), 0) * (i.doc_type === "creditnota" ? -1 : 1));
+  const onCodaFile = async (f: File, acc = bankAcc) => {
+    const txns = parseCoda(await f.text());
+    if (!txns.length) return void toast.error("Geen verrichtingen gevonden in dit CODA-bestand");
+    const payload = txns.map((r, i) => ({ company_id: c, bank_account: acc, tx_date: r.tx_date, amount: r.amount, counterparty: r.counterparty, description: r.description, dedupe_key: dedupeKey([acc, r.tx_date, r.amount, r.counterparty, r.description, r.reference ?? i]) }));
+    const { error } = await db.from("fin_bank_tx").upsert(payload, { onConflict: "company_id,dedupe_key", ignoreDuplicates: true });
+    error ? toast.error("Import mislukt") : toast.success(`${payload.length} verrichtingen uit CODA ingelezen (dubbels genegeerd)`); refresh();
+  };
+  const onSavingsFile = async (f: File) => {
+    const isCoda = /\.(cod|coda|txt)$/i.test(f.name);
+    await (isCoda ? onCodaFile(f, SAVINGS_ACCOUNT) : onFile(f, SAVINGS_ACCOUNT));
+    markSavingsQuarterDone();
+  };
   const onFile = async (f: File, acc = bankAcc) => {
     const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0] ?? ""] ?? {}, { defval: "" });
