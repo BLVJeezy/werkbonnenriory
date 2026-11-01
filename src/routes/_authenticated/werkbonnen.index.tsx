@@ -68,10 +68,17 @@ function Lijst() {
   useEffect(() => { setCrewView(localStorage.getItem("admin_crew_view") ?? ""); }, []);
   const { dag } = Route.useSearch();
   const [open, setOpenState] = useState(!!dag);
+  const [direct, setDirect] = useState(false);
   const [form, setForm] = useState({ ...emptyForm, scheduled_date: dag ?? "" });
   const setOpen = (v: boolean) => {
     setOpenState(v);
+    if (!v) setDirect(false);
     if (!v && dag) navigate({ to: "/werkbonnen", search: {}, replace: true });
+  };
+  const openDirect = () => {
+    setDirect(true);
+    setForm({ ...emptyForm, scheduled_date: new Date().toLocaleDateString("sv-SE") });
+    setOpenState(true);
   };
   const [saving, setSaving] = useState(false);
   const { data = [] } = useQuery({
@@ -166,9 +173,15 @@ function Lijst() {
       return;
     }
     qc.invalidateQueries({ queryKey: ["customers"] });
+    const wasDirect = direct;
     setForm(emptyForm);
     setOpen(false);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
+    if (wasDirect) {
+      toast.success("Werkbon aangemaakt — vul ze verder in");
+      navigate({ to: "/werkbonnen/$id", params: { id: created.id } });
+      return;
+    }
     toast.success("Taak aangemaakt");
     if (dag) navigate({ to: "/kalender" });
   }
@@ -204,9 +217,10 @@ function Lijst() {
           <DialogTrigger asChild>
             <Button variant="outline">+ Taak toevoegen</Button>
           </DialogTrigger>
+          <Button variant="outline" onClick={openDirect}>+ Werkbon maken</Button>
           <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Nieuwe taak inplannen</DialogTitle>
+              <DialogTitle>{direct ? "Nieuwe werkbon (zonder planning)" : "Nieuwe taak inplannen"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={addToe} className="grid gap-3">
               <div className="grid gap-1">
@@ -295,7 +309,7 @@ function Lijst() {
                 </div>
               </div>
               <Button type="submit" disabled={saving}>
-                {saving ? "Opslaan…" : "Taak aanmaken"}
+                {saving ? "Opslaan…" : direct ? "Werkbon aanmaken en invullen" : "Taak aanmaken"}
               </Button>
             </form>
           </DialogContent>
