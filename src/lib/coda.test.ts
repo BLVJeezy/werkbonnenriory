@@ -40,7 +40,7 @@ describe("parseCoda", () => {
       rec31("FACTUUR 20260801"),
     ].join("\n");
     expect(parseCoda(coda)).toEqual([
-      { tx_date: "2026-10-15", amount: 219.14, counterparty: "DECKMYN HENDRIK", description: "FACTUUR 20260801", reference: "BNK/001" },
+      { tx_date: "2026-10-15", amount: 219.14, counterparty: "DECKMYN HENDRIK", counterparty_account: "BE12 3456 7890 1234", description: "FACTUUR 20260801", reference: "BNK/001" },
     ]);
   });
 
