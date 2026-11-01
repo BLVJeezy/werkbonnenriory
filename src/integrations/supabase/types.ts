@@ -2768,6 +2768,10 @@ export type Database = {
         Args: { c: string; h: string; n: string; p: string; s: string }
         Returns: string
       }
+      delete_unsent_invoice: {
+        Args: { _invoice_id: string }
+        Returns: undefined
+      }
       ensure_approved_quote_task: { Args: { p_id: string }; Returns: string }
       fin_capitalize_invoice_line: {
         Args: {

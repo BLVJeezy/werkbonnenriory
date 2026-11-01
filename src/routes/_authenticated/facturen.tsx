@@ -277,6 +277,13 @@ function Facturen() {
                         <div className="inline-flex gap-1">
                           <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
                           {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
+                          {i.status !== "verzonden" && !i.pdf_sent_at && !i.okioki_sent_at && !i.post_sent_at && (
+                            <Button variant="destructive" size="sm" disabled={busy} aria-label={`Factuur ${i.number} verwijderen`} onClick={async () => {
+                              if (!window.confirm(`${i.kind === "creditnota" ? "Creditnota" : "Factuur"} ${i.number} definitief verwijderen? Dit nummer wordt niet hergebruikt.`)) return;
+                              const { error } = await supabase.rpc("delete_unsent_invoice", { _invoice_id: i.id });
+                              if (error) toast.error(error.message); else { toast.success("Verwijderd"); setSelInv((s) => s.filter((x) => x !== i.id)); qc.invalidateQueries(); }
+                            }}><Trash2 className="h-4 w-4" /></Button>
+                          )}
                           <Button variant="ghost" size="sm" aria-expanded={expanded} onClick={() => setOpenInv(expanded ? null : i.id)}>{expanded ? "Minder" : "Meer"}</Button>
                         </div>
                       </td>
