@@ -14,7 +14,7 @@ type Att = { name: string; contentType: string; contentBytes: string };
 const file = (a: Att) => ({ "@odata.type": "#microsoft.graph.fileAttachment", ...a });
 
 export function invoiceMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur", docUrl?: string) {
-  const text = `Beste klant,\n\nIn de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\nBedankt voor uw vertrouwen.\n\nMet vriendelijke groeten,\nRiory`;
+  const text = `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Betalen kan eenvoudig met de betaalcode op de factuur\n✓ U ontvangt een bevestiging zodra uw betaling verwerkt is\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`;
   return { message: {
     subject: `${label} ${number} — Riory`,
     body: format === "pdf"
