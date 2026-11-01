@@ -135,3 +135,8 @@ export function groupInvoiceLines(lines: InvoiceLine[]) {
 export function isInvoiceEditable(inv: { kind: string; status: string; sent_at: string | null; pdf_sent_at: string | null; okioki_sent_at: string | null; post_sent_at?: string | null }) {
   return inv.kind !== "creditnota" && inv.status !== "verzonden" && !inv.sent_at && !inv.pdf_sent_at && !inv.okioki_sent_at && !inv.post_sent_at;
 }
+
+/** Pure: a stand-alone credit note (no original invoice) from manual lines; all amounts negative. */
+export function buildManualCreditNote(lines: Parameters<typeof buildManualInvoice>[0]) {
+  return buildCreditNote(buildManualInvoice(lines));
+}

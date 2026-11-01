@@ -59,14 +59,15 @@ export const createManualInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: {
     customerId?: string | null; customer?: { name: string; street?: string | null; houseNumber?: string | null; postalCode?: string | null; city?: string | null; vatNumber?: string | null; email?: string | null } | null;
-    reference?: string | null; note?: string | null; lines: ManualLine[];
+    reference?: string | null; note?: string | null; lines: ManualLine[]; creditNote?: boolean;
   }) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabase } = context;
     const rows = data.lines.filter((l) => l.description.trim()).slice(0, 50);
     if (!rows.length) throw new Error("Vul minstens één lijn met omschrijving in");
-    const calc = buildManualInvoice(rows);
+    // Losse creditnota: zelfde lijnen, bedragen negatief via buildCreditNote; zelfde nummering.
+    const calc = data.creditNote ? buildManualCreditNote(rows) : buildManualInvoice(rows);
     let customer: InvoiceCustomer;
     if (data.customerId) {
       const { data: c, error } = await supabase.from("customers").select("*").eq("id", data.customerId).single();
@@ -82,7 +83,7 @@ export const createManualInvoice = createServerFn({ method: "POST" })
     const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
       p_work_order_id: null as unknown as string, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
       p_customer: customer, p_lines: calc.lines, p_vat_rate: calc.vatRate, p_net: calc.net, p_vat: calc.vat, p_total: calc.total, p_paid_amount: 0,
-      p_kind: "factuur", p_contract_reference: data.reference?.trim() || "",
+      p_kind: data.creditNote ? "creditnota" : "factuur", p_contract_reference: data.reference?.trim() || "",
     });
     if (error) throw new Error(error.message);
     const note = data.note?.trim().slice(0, 4000);

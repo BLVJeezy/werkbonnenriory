@@ -39,7 +39,8 @@ function itemsFromLines(lines: InvoiceLine[], fallbackVat: number): Item[] {
   return out;
 }
 
-export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invoice?: EditInvoice }) {
+export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreated: () => void; invoice?: EditInvoice; creditNote?: boolean }) {
+  const docLabel = creditNote ? "Creditnota" : "Factuur";
   const create = useServerFn(createManualInvoice);
   const update = useServerFn(updateInvoice);
   const editing = !!invoice;
@@ -158,8 +159,8 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
         toast.success(`Factuur ${invoice.number} aangepast`);
       } else {
         if (!customerId) { toast.error("Kies eerst een klant"); return; }
-        await create({ data: { customerId, reference: reference.trim() || null, note: note.trim() || null, lines: parsed } });
-        toast.success("Factuur aangemaakt");
+        await create({ data: { customerId, reference: reference.trim() || null, note: note.trim() || null, lines: parsed, creditNote } });
+        toast.success(`${docLabel} aangemaakt`);
       }
       reset();
       onCreated();
@@ -168,14 +169,14 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
 
   if (!open) return editing
     ? <Button variant="outline" size="sm" onClick={start}>Aanpassen</Button>
-    : <Button size="sm" onClick={start}>+ Nieuwe factuur</Button>;
+    : <Button size="sm" variant={creditNote ? "outline" : "default"} onClick={start}>{creditNote ? "+ Nieuwe creditnota" : "+ Nieuwe factuur"}</Button>;
 
   const productOptions = products.map((p) => ({ value: p.id, label: `${p.name} — ${euro(Number(p.price))}`, search: `${p.alias ?? ""} ${p.description ?? ""}` }));
   const activityOptions = activities.map((a) => ({ value: a.id, label: a.hourly_rate == null ? `${a.name} — geen tarief` : `${a.name} — ${euro(Number(a.hourly_rate))}/uur`, search: a.name }));
 
   return (
     <div className="w-full space-y-4 rounded-md border bg-card p-4">
-      <h3 className="text-lg font-black uppercase">{invoice ? `Factuur ${invoice.number} aanpassen` : "Nieuwe factuur"}</h3>
+      <h3 className="text-lg font-black uppercase">{invoice ? `Factuur ${invoice.number} aanpassen` : creditNote ? "Nieuwe creditnota" : "Nieuwe factuur"}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Klant{invoice ? ` (huidig: ${(invoice.customer as { name?: string })?.name ?? "—"})` : ""}</Label>
@@ -245,7 +246,7 @@ export function NewInvoice({ onCreated, invoice }: { onCreated: () => void; invo
         <span className="font-mono text-sm">{euro(calc.net)} excl. btw · btw {euro(calc.vat)} · totaal <strong>{euro(calc.total)}</strong></span>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" onClick={reset}>Annuleren</Button>
-          <Button disabled={(!editing && !customerId) || !calc.lines.length} onClick={save}>{editing ? "Opslaan" : "Factuur aanmaken"}</Button>
+          <Button disabled={(!editing && !customerId) || !calc.lines.length} onClick={save}>{editing ? "Opslaan" : `${docLabel} aanmaken`}</Button>
         </div>
       </div>
     </div>
