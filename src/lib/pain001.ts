@@ -43,7 +43,7 @@ export function buildPain001(debtor: Debtor, payments: Payment[], messageId: str
       const rmt = ref && isValidOgm(ref)
         ? `<RmtInf><Strd><CdtrRefInf><Tp><CdOrPrtry><Cd>SCOR</Cd></CdOrPrtry></Tp><Ref>${esc(ref)}</Ref></CdtrRefInf></Strd></RmtInf>`
         : ref ? `<RmtInf><Ustrd>${esc(ref.slice(0, 140))}</Ustrd></RmtInf>` : "";
-      return `    <CdtTrfTxInf><PmtId><EndToEndId>${esc(p.endToEndId.slice(0, 35))}</EndToEndId></PmtId><Amt><InstdAmt Ccy="EUR">${p.amount.toFixed(2)}</InstdAmt></Amt><Cdtr><Nm>${esc(p.creditorName.slice(0, 70))}</Nm></Cdtr>${p.creditorBic ? `<CdtrAgt><FinInstnId><BIC>${esc(p.creditorBic.replace(/\s/g, "").toUpperCase())}</BIC></FinInstnId></CdtrAgt>` : ""}<CdtrAcct><Id><IBAN>${esc(iban(p.creditorIban))}</IBAN></Id></CdtrAcct>${rmt}</CdtTrfTxInf>`;
+      return `    <CdtTrfTxInf><PmtId><EndToEndId>${esc(p.endToEndId.slice(0, 35))}</EndToEndId></PmtId><Amt><InstdAmt Ccy="EUR">${p.amount.toFixed(2)}</InstdAmt></Amt>${p.creditorBic ? `<CdtrAgt><FinInstnId><BIC>${esc(p.creditorBic.replace(/\s/g, "").toUpperCase())}</BIC></FinInstnId></CdtrAgt>` : ""}<Cdtr><Nm>${esc(p.creditorName.slice(0, 70))}</Nm></Cdtr><CdtrAcct><Id><IBAN>${esc(iban(p.creditorIban))}</IBAN></Id></CdtrAcct>${rmt}</CdtTrfTxInf>`;
     }).join("\n");
     return `  <PmtInf><PmtInfId>${esc(messageId)}-${i + 1}</PmtInfId><PmtMtd>TRF</PmtMtd><NbOfTxs>${ps.length}</NbOfTxs><CtrlSum>${sum.toFixed(2)}</CtrlSum><PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf><ReqdExctnDt>${date}</ReqdExctnDt><Dbtr><Nm>${esc(debtor.name)}</Nm></Dbtr><DbtrAcct><Id><IBAN>${esc(iban(debtor.iban))}</IBAN></Id></DbtrAcct>${debtor.bic ? `<DbtrAgt><FinInstnId><BIC>${esc(debtor.bic)}</BIC></FinInstnId></DbtrAgt>` : ""}<ChrgBr>SLEV</ChrgBr>\n${txs}\n  </PmtInf>`;
   }).join("\n");
