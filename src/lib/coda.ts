@@ -35,11 +35,11 @@ export function parseCoda(text: string): CodaTransaction[] {
 
     if (type === "21") {
       // Bewegingsrecord, artikel 1.
-      const amountRaw = line.slice(31, 47);
+      const amountRaw = line.slice(31, 46); // posities 32-46: teken + 14 cijfers
       const cents = Number(amountRaw.slice(1));
       if (!/^[01]\d{14}$/.test(amountRaw) || Number.isNaN(cents)) { current = null; continue; }
       const sign = amountRaw[0] === "0" ? 1 : -1; // 0 = bijschrijving, 1 = afboeking
-      const booking = toIsoDate(line.slice(115, 121)) ?? toIsoDate(line.slice(47, 53)); // boekingsdatum, anders valutadatum
+      const booking = toIsoDate(line.slice(115, 121)) ?? toIsoDate(line.slice(46, 52)); // boekingsdatum, anders valutadatum
       if (!booking) { current = null; continue; }
       current = {
         tx_date: booking,
