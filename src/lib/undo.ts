@@ -6,6 +6,9 @@ const db = supabase as any;
  *  gekoppelde factuur terug onbetaald, boeking (met lijnen) weg, en een auditregel. */
 export async function undoEntry(company: string, entryId: string): Promise<void> {
   const { data: txs } = await db.from("fin_bank_tx").select("id, matched_invoice_id").eq("company_id", company).eq("entry_id", entryId);
+  if ((txs ?? []).some((t: { matched_invoice_id: string | null }) => t.matched_invoice_id)) {
+    throw new Error("Een gekoppelde factuurbetaling kan niet als losse boeking worden verwijderd; laat de betaling eerst controleren.");
+  }
   for (const t of txs ?? []) {
     if (t.matched_invoice_id) {
       await db.from("fin_invoices").update({ status: "open", paid_at: null, bank_ref: null }).eq("id", t.matched_invoice_id).eq("bank_ref", t.id);

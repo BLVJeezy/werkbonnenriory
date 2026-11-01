@@ -45,7 +45,7 @@ describe("verkoopfacturen naar eigen boekhouding", () => {
   it("koppelt een geïmporteerd factuurnummer aan de lokale betaling zonder dubbele boeking", async () => {
     const f = fakeDb(true, true);
     expect(await syncFinanceSales(f.db, "user")).toMatchObject({ nieuw: 0, bijgewerkt: 1 });
-    expect(f.updates['fin_invoices']?.[0]).toMatchObject({ status: "betaald", paid_at: "2026-10-31", bank_ref: "werkbonnen:source" });
+    expect(f.updates['fin_invoices']?.[0]).toMatchObject({ paid_amount: 121, status: "betaald", paid_at: "2026-10-31", bank_ref: "werkbonnen:source" });
     expect(f.posts()).toBe(0);
     expect(f.inserts['fin_invoices']).toBeUndefined();
   });

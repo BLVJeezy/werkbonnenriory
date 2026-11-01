@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PontoConnection } from "@/components/PontoConnection";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
@@ -801,6 +802,7 @@ function PontoCard({ c, bankAcc, onDone }: { c: string; bankAcc: string; onDone:
   };
   return (
     <Card title="Ponto – live bankrekeningen">
+      <PontoConnection />
       {error ? <p className="text-sm text-destructive">Ponto niet bereikbaar: {(error as Error).message}</p> : !accs ? <p className="text-sm text-muted-foreground">Laden…</p> : (
         <div className="mb-2 grid gap-2 sm:grid-cols-2">
           {accs.map((a: any) => (
