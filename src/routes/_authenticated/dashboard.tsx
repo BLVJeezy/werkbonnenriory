@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRole } from "@/lib/use-role";
 import { euro } from "@/lib/billing";
+import { FinanceYear } from "@/components/FinanceYear";
 import { groupOmzet, type InvoiceOmzetRow } from "@/lib/dashboard";
 import {
   ResponsiveContainer,
@@ -76,6 +77,10 @@ function Dashboard() {
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-3 sm:p-4">
       <h1 className="text-2xl font-black uppercase">Dashboard</h1>
+
+      <FinanceYear />
+
+      <h2 className="text-lg font-black uppercase">Facturen per periode</h2>
 
       <div className="grid max-w-md grid-cols-2 gap-3">
         <div className="space-y-1">
