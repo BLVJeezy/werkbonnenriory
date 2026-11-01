@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
+import { ProductPhotoEditor, ProductPhotoGallery } from "@/components/ProductPhotos";
 
 export const Route = createFileRoute("/_authenticated/producten")({
   head: () => ({ meta: [{ title: "Producten — Riory Werkbonnen" }, { name: "description", content: "Beheer de producten en materialen voor Riory-werkbonnen." }, { property: "og:title", content: "Producten — Riory Werkbonnen" }, { property: "og:description", content: "Beheer de producten en materialen voor Riory-werkbonnen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -22,6 +23,7 @@ function Producten() {
   const [description, setDescription] = useState("");
   const [alias, setAlias] = useState("");
   const [adminOnly, setAdminOnly] = useState(false);
+  const [photoPaths, setPhotoPaths] = useState<string[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editAlias, setEditAlias] = useState("");
@@ -36,7 +38,7 @@ function Producten() {
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = await supabase.from("products").insert({ name, unit: unit || "st", price: Number(price) || 0, description, alias: alias.trim() || null, admin_only: adminOnly });
+    const { error } = await supabase.from("products").insert({ name, unit: unit || "st", price: Number(price) || 0, description, alias: alias.trim() || null, admin_only: adminOnly, photo_paths: photoPaths });
     if (error) {
       toast.error(error.message);
       return;
@@ -47,6 +49,7 @@ function Producten() {
     setDescription("");
     setAlias("");
     setAdminOnly(false);
+    setPhotoPaths([]);
     qc.invalidateQueries({ queryKey: ["products"] });
   }
 
@@ -59,6 +62,7 @@ function Producten() {
         <Input placeholder="Eenheid" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-24" />
         <Input placeholder="Prijs € excl. btw" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-36" />
         <Textarea placeholder="Lange omschrijving (optioneel)" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-20 w-full" />
+        <ProductPhotoEditor value={photoPaths} onChange={setPhotoPaths} title="nieuw product" />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="h-5 w-5 accent-primary" checked={adminOnly} onChange={(e) => setAdminOnly(e.target.checked)} />
           Enkel voor beheerder
@@ -81,7 +85,7 @@ function Producten() {
             {sort.sorted.map((p) => (
               <Fragment key={p.id}>
                 <tr>
-                  <td className="font-bold">{p.name}{p.alias && <div className="text-xs font-normal text-muted-foreground md:hidden">Alias: {p.alias}</div>}</td>
+                  <td className="font-bold">{p.name}{p.alias && <div className="text-xs font-normal text-muted-foreground md:hidden">Alias: {p.alias}</div>}<ProductPhotoGallery paths={p.photo_paths} title={p.name} /></td>
                   <td className="hidden text-muted-foreground md:table-cell">{p.alias ?? "—"}</td>
                   <td className="hidden font-mono text-xs sm:table-cell">{p.unit}</td>
                   <td className="whitespace-nowrap text-right font-mono">{euro(Number(p.price))}</td>
@@ -108,6 +112,11 @@ function Producten() {
                     <div className="space-y-2">
                       <Input value={editAlias} onChange={(e) => setEditAlias(e.target.value)} placeholder="Alias voor ploegen" />
                       <Textarea value={editText} onChange={(e) => setEditText(e.target.value)} className="min-h-28" placeholder="Lange omschrijving" />
+                      <ProductPhotoEditor value={p.photo_paths} title={p.name} onChange={async paths => {
+                        const { error } = await supabase.from("products").update({ photo_paths: paths }).eq("id", p.id);
+                        if (error) throw new Error(error.message);
+                        await qc.invalidateQueries({ queryKey: ["products"] });
+                      }} />
                       <Button size="sm" onClick={async () => {
                         const { error } = await supabase.from("products").update({ description: editText, alias: editAlias.trim() || null }).eq("id", p.id);
                         if (error) toast.error(error.message);

@@ -11,6 +11,7 @@ export type QuotePdfData = {
   signedName?: string | null; signedAt?: string | null; intro?: string | null;
   /** 'verzekering' = bestek voor de brandverzekering, met oorzaak, vaststellingen en foto's. */
   kind?: string; damageCause?: string | null; damageFindings?: string | null;
+  productPhotos?: Record<string, Uint8Array>;
 };
 
 /** Embeds JPG/PNG bytes; other formats cannot go in the PDF. */
@@ -100,6 +101,12 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   }
 
   const cols = { desc: M + 8, qty: W - M - 250, price: W - M - 100, amt: W - M - 8 };
+  const productImages = new Map();
+  for (const [path, bytes] of Object.entries(d.productPhotos ?? {})) {
+    const kind = photoKind(bytes);
+    if (!kind) throw new Error("Een productfoto heeft een ongeldig formaat. Gebruik JPG of PNG.");
+    productImages.set(path, kind === "png" ? await doc.embedPng(bytes) : await doc.embedJpg(bytes));
+  }
   const mainLines = d.lines.filter((l) => !l.optional);
   const optionLines = d.lines.filter((l) => l.optional);
   const drawLines = (rows: InvoiceLine[]) => {
@@ -121,6 +128,15 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       right(money(l.unitPrice), cols.price, y, 10);
       right(money(l.amount), cols.amt, y, 10);
       y -= h;
+      for (const path of l.photoPaths ?? []) {
+        const image = productImages.get(path);
+        if (!image) throw new Error("Een productfoto ontbreekt in het offertevoorbeeld.");
+        const scale = Math.min(180 / image.width, 130 / image.height, 1);
+        const width = image.width * scale, height = image.height * scale;
+        ensure(height + 18);
+        page.drawImage(image, { x: cols.desc, y: y - height, width, height });
+        y -= height + 18;
+      }
     });
   };
   page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: ink });
@@ -177,7 +193,8 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
 
   // Photo annex (two per page) precedes the terms.
   for (let i = 0; i < photos.length; i++) {
-    const bytes = photos[i]!;
+    const bytes = photos[i];
+    if (!bytes) continue;
     const k = photoKind(bytes);
     if (!k) throw new Error("Een foto heeft een niet-ondersteund formaat. Gebruik JPG of PNG.");
     const image = k === "png" ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
