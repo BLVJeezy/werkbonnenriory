@@ -540,6 +540,20 @@
       "when": 1793481968463,
       "tag": "0076_finance_capitalize_invoice_line",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793516709685,
+      "tag": "0077_finance_archive_restore",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1793516784619,
+      "tag": "0078_finance_restore_timeout",
+      "breakpoints": true
     }
   ]
 }

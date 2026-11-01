@@ -1,0 +1,1 @@
+ALTER FUNCTION public.fin_restore_archive(jsonb) SET statement_timeout = '120s';
