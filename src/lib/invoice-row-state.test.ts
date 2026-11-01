@@ -25,8 +25,11 @@ describe("invoiceRowState", () => {
   it("merkt een deels betaalde factuur met verstreken vervaldag als vervallen", () => {
     expect(invoiceRowState(inv({ paid_amount: 200, due_date: "2026-10-14" }), "2026-10-31")).toBe("overdue");
   });
-  it("kleurt een creditnota niet als betaald of vervallen", () => {
-    expect(invoiceRowState(inv({ kind: "creditnota", total: -500, due_date: "2026-10-14" }), "2026-10-31")).toBe("open");
+  it("houdt een niet-verrekende creditnota open, nooit vervallen", () => {
+    expect(invoiceRowState(inv({ kind: "creditnota", total: -500, paid_amount: 0, due_date: "2026-10-14" }), "2026-10-31")).toBe("open");
+  });
+  it("kleurt een volledig verrekende creditnota als betaald", () => {
+    expect(invoiceRowState(inv({ kind: "creditnota", total: -500, paid_amount: -500, due_date: "2026-10-14" }), "2026-10-31")).toBe("paid");
   });
 });
 

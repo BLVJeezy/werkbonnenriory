@@ -2905,6 +2905,15 @@ export type Database = {
         }
         Returns: string
       }
+      settle_credit_note: {
+        Args: {
+          p_amount: number
+          p_credit: string
+          p_date: string
+          p_invoice: string
+        }
+        Returns: number
+      }
       tech_reopen_work_order: { Args: { _id: string }; Returns: undefined }
       unsubscribe_newsletter: { Args: { p_hash: string }; Returns: boolean }
     }
