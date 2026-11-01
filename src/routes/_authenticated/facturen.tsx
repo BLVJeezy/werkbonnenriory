@@ -233,6 +233,7 @@ function Facturen() {
           <h2 className="text-lg font-black uppercase">Facturen</h2>
           <div className="ml-auto flex flex-wrap gap-2">
             <NewInvoice onCreated={refresh} />
+            <NewInvoice onCreated={refresh} creditNote />
             <Button variant="outline" size="sm" onClick={() => setSelInv(selInv.length ? [] : openIds)}>{selInv.length ? "Niets selecteren" : "Alle openstaande"}</Button>
             <Button size="sm" disabled={!selInv.length || busy} onClick={() => sendSel(selInv)}>Verzenden ({selInv.length})</Button>
             <Button variant="outline" size="sm" disabled={busy || !data.invoices.length} onClick={sendToAccountant}>Alles naar boekhouder (UBL)</Button>
@@ -297,7 +298,7 @@ function Facturen() {
                             {i.kind !== "creditnota" && <Button variant="outline" size="sm" disabled={busy} onClick={() => makeCreditNote(i.id)}>Creditnota</Button>}
                             {i.kind !== "creditnota" && open && <PaymentReminders invoiceId={i.id} />}
                             {i.kind !== "creditnota" && open && <InvoicePaymentDetails invoice={i} company={{ name: s?.company_name ?? "Riory bv", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null }} />}
-                            {isInvoiceEditable(i) && <NewInvoice invoice={i} onCreated={refresh} />}
+                            {isInvoiceEditable(i) && <NewInvoice invoice={i} creditNote={i.kind === "creditnota"} onCreated={refresh} />}
                             {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
                           </div>
                         </div>

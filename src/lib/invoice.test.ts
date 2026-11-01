@@ -104,3 +104,14 @@ describe("activiteit op een handmatige factuur", () => {
     expect(activityLineValues({ name: "Ledigen septische put", hourly_rate: null }).unitPrice).toBe("");
   });
 });
+
+import { buildManualCreditNote } from "./invoice";
+describe("buildManualCreditNote", () => {
+  it("maakt alle bedragen van een losse creditnota negatief", () => {
+    const c = buildManualCreditNote([{ description: "Terugbetaling", quantity: 2, unit: "st", unitPrice: 50, vatRate: 21 }]);
+    expect(c.net).toBe(-100);
+    expect(c.vat).toBe(-21);
+    expect(c.total).toBe(-121);
+    expect(c.lines[0].amount).toBe(-100);
+  });
+});

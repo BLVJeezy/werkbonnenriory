@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { addDays, buildCreditNote, buildInvoice, buildManualInvoice, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
+import { addDays, buildCreditNote, buildInvoice, buildManualCreditNote, buildManualInvoice, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
 import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from "@/lib/mail-senders";
@@ -107,7 +107,7 @@ export const updateInvoice = createServerFn({ method: "POST" })
     if (inv.delivery_lock_until && new Date(inv.delivery_lock_until) > new Date()) throw new Error("De factuur wordt net verzonden; probeer zo opnieuw.");
     const rows = data.lines.filter((l) => l.description.trim()).slice(0, 80);
     if (!rows.length) throw new Error("Vul minstens één lijn met omschrijving in");
-    const calc = buildManualInvoice(rows);
+    const calc = (inv as { kind?: string } | null)?.kind === "creditnota" ? buildManualCreditNote(rows) : buildManualInvoice(rows);
     let customer = inv.customer as InvoiceCustomer;
     if (data.customerId) {
       const { data: c } = await supabase.from("customers").select("*").eq("id", data.customerId).single();
