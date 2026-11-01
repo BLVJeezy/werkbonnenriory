@@ -37,4 +37,4 @@
 - [x] Klantnummers opnieuw overal zichtbaar: nieuwe klanten krijgen automatisch het volgende 6-cijferige nummer; ontbrekende nummers aangevuld.
 - [x] Facturenlijst: kolom Betaald toont altijd een bedrag; rij groen bij betaald, wit bij open, rood bij vervallen.
 - [x] Facturen en offertes: productnaam vetgedrukt met de lange omschrijving eronder als bijvoegsel, ook op de klantondertekenpagina; regeleinden blijven behouden.
-- [ ] Zichtrekeningen 550200 én 550400: rekeningnummer tonen bij elke verrichting en keuze bij inlezen; boekingen gebruiken de rekening van de verrichting.
+- [x] Zichtrekeningen 550200 én 550400: rekeningnummer tonen bij elke verrichting en keuze bij inlezen; boekingen gebruiken de rekening van de verrichting.
