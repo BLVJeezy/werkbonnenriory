@@ -15,7 +15,7 @@ export const createTechnicianLogin = createServerFn({ method: "POST" })
       .object({
         name: z.string().trim().min(1).max(100),
         phone: z.string().trim().max(40).optional(),
-        password: z.string().min(6).max(72),
+        password: z.string().min(6).max(72).optional(),
       })
       .parse(d),
   )
@@ -25,7 +25,7 @@ export const createTechnicianLogin = createServerFn({ method: "POST" })
     const email = loginEmail(data.name);
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: data.password,
+      password: data.password ?? `${crypto.randomUUID()}${crypto.randomUUID()}`,
       email_confirm: true,
     });
     if (error || !created.user)
@@ -34,12 +34,15 @@ export const createTechnicianLogin = createServerFn({ method: "POST" })
     const { error: e1 } = await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: "technician" });
     const { error: e2 } = await supabaseAdmin
       .from("technicians")
-      .insert({ name: data.name, phone: data.phone || null, email: null, user_id: uid });
+      .insert({ name: data.name, phone: data.phone || null, email: null, user_id: uid }).select("id").single();
     if (e1 || e2) {
       await supabaseAdmin.auth.admin.deleteUser(uid);
-      throw new Error((e1 ?? e2)!.message);
+      throw new Error(e1?.message ?? e2?.message ?? "Ploeg aanmaken mislukt");
     }
-    return { ok: true };
+    const { data: crew, error: crewError } = await supabaseAdmin.from("technicians").select("id").eq("user_id", uid).single();
+    if (crewError || !crew) throw new Error("Ploeg aangemaakt; open de uitnodiging opnieuw vanuit de lijst.");
+    const { issueCrewInvitation } = await import("./crew-invitation.server");
+    return { ok: true, ...await issueCrewInvitation(supabaseAdmin, crew.id) };
   });
 
 export const deleteTechnician = createServerFn({ method: "POST" })

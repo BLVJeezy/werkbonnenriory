@@ -27,7 +27,7 @@
 - Work-order payment removal uses an admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
 - Newsletters: email-bound audited consent, hashed-token unsubscribe POSTs; draft-only until delivery linked. Admin server AI creates unsaved suggestions; provider denials persist in settings.
 - PDF/UBL share invoice-vat-notices for all line rates; preserve tax treatment and sent snapshots.
-- `login.ts` maps crew names to internal emails; `technicians` visibility flags retain signed-order RLS. WhatsApp invites use manual click-to-chat with the published login URL, never passwords/tokens, to prevent credential leaks.
+- Crew names map via `login.ts`; visibility retains RLS. WhatsApp uses manual sharing with no passwords; hashed 72h single-use setup tokens are claimed atomically before Auth updates, preventing replay.
 - Mail import reads the inbox through a per-admin Outlook App User Connector connection (`src/lib/outlook.functions.ts`), so the mailbox signs in itself without Exchange delegation.
 - Crew accessibility uses use-role/html and text-size device overrides; mobile nav collapses. Embedded pages use a dvh flex shell with min-h-0 and no outer scroll.
 - Invoices snapshot customer/lines, send PDF+UBL with OkiOki in BCC, and lock accepted legs for retries; only paid invoices auto-send. Mail acceptance is not Peppol confirmation. Reminders use explicit debtor type, tested balance/fee/waiting rules and one-time claims; uncertain Outlook outcomes require review.

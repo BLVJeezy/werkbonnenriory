@@ -11,22 +11,24 @@ import { MarketingUsers } from "@/components/MarketingUsers";
 import { MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { crewWhatsAppLink } from "@/lib/crew-whatsapp";
+import { inviteCrewPassword } from "@/lib/crew-invitation.functions";
 
-const empty = { name: "", phone: "", password: "" };
+const empty = { name: "", phone: "" };
 
 export function PloegenBeheer() {
   const qc = useQueryClient();
   const create = useServerFn(createTechnicianLogin);
+  const invite = useServerFn(inviteCrewPassword);
   const createExternal = useServerFn(createExternalCrew);
   const [external, setExternal] = useState({ name: "", email: "" });
   const remove = useServerFn(deleteTechnician);
   const [f, setF] = useState(empty);
   const [busy, setBusy] = useState(false);
-  const [invitation, setInvitation] = useState<{ name: string; phone: string } | null>(null);
+  const [invitation, setInvitation] = useState<{ name: string; phone: string; setupUrl: string } | null>(null);
   let invitationLink = "";
   let invitationError = "";
   if (invitation) {
-    try { invitationLink = crewWhatsAppLink(invitation.name, invitation.phone); }
+    try { invitationLink = crewWhatsAppLink(invitation.name, invitation.phone, invitation.setupUrl); }
     catch (error) { invitationError = error instanceof Error ? error.message : "Ongeldig telefoonnummer"; }
   }
   const { data = [] } = useQuery({
@@ -38,9 +40,9 @@ export function PloegenBeheer() {
     e.preventDefault();
     setBusy(true);
     try {
-      await create({ data: f });
+      const result = await create({ data: f });
       toast.success(`Login aangemaakt voor ploeg ${f.name}`);
-      setInvitation({ name: f.name.trim(), phone: f.phone });
+      setInvitation({ name: f.name.trim(), phone: f.phone, setupUrl: result.setupUrl });
       setF(empty);
       qc.invalidateQueries({ queryKey: ["technicians"] });
     } catch (err) {
@@ -60,7 +62,6 @@ export function PloegenBeheer() {
       <form onSubmit={add} className="grid gap-2 rounded-md border bg-card p-4 sm:grid-cols-2">
         <Input placeholder="Naam ploeg (= loginnaam)" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <Input placeholder="Telefoon" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-        <Input placeholder="Wachtwoord (min. 6 tekens)" type="password" required minLength={6} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
         <Button disabled={busy} className="sm:col-span-2">
           {busy ? "Aanmaken…" : "Ploeg + login aanmaken"}
         </Button>
@@ -106,7 +107,13 @@ export function PloegenBeheer() {
                 {!t.external_planning && <Input name="ccv" aria-label="CCV Terminal ID" placeholder="CCV Terminal ID" className="h-8 w-40" defaultValue={t.ccv_terminal_id ?? ""} />}
                 {t.external_planning && <Input name="email" type="email" required aria-label="E-mailadres ploeg" className="h-8 w-56" defaultValue={t.email ?? ""} />}
                 <Button size="sm" variant="outline" type="submit">Opslaan</Button>
-                {!t.external_planning && t.user_id && <Button size="sm" variant="outline" type="button" onClick={() => setInvitation({ name: t.name, phone: t.phone ?? "" })}><MessageCircle className="size-4" />Uitnodigen via WhatsApp</Button>}
+                {!t.external_planning && t.user_id && <Button size="sm" variant="outline" type="button" disabled={busy} onClick={async () => {
+                  if (!confirm(`Een persoonlijke wachtwoordlink maken voor ${t.name}? Een eerdere uitnodigingslink vervalt. Het huidige wachtwoord blijft geldig tot de ploeg een nieuw kiest.`)) return;
+                  setBusy(true);
+                  try { const result = await invite({ data: { id: t.id } }); setInvitation({ name: t.name, phone: t.phone ?? "", setupUrl: result.setupUrl }); }
+                  catch (e) { toast.error(e instanceof Error ? e.message : "Uitnodigen mislukt"); }
+                  finally { setBusy(false); }
+                }}><MessageCircle className="size-4" />Uitnodigen via WhatsApp</Button>}
               </form>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                 {(
@@ -157,7 +164,7 @@ export function PloegenBeheer() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{invitation?.name} uitnodigen</DialogTitle>
-            <DialogDescription>De uitnodiging bevat de inloglink en ploegnaam. Bezorg het wachtwoord afzonderlijk. Je verstuurt het bericht zelf in WhatsApp.</DialogDescription>
+            <DialogDescription>De ploeg krijgt haar loginnaam, uitleg voor de werkbon en een persoonlijke link om zelf een wachtwoord te kiezen. De link is 72 uur geldig. Je verstuurt het bericht zelf in WhatsApp.</DialogDescription>
           </DialogHeader>
           <Input aria-label="WhatsApp-telefoonnummer" type="tel" placeholder="Bijvoorbeeld +32 470 12 34 56" value={invitation?.phone ?? ""} onChange={(e) => setInvitation((current) => current ? { ...current, phone: e.target.value } : null)} />
           {invitationError && <p className="text-sm text-destructive" role="alert">{invitationError}</p>}
