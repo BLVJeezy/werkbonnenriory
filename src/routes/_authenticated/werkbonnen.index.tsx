@@ -68,10 +68,17 @@ function Lijst() {
   useEffect(() => { setCrewView(localStorage.getItem("admin_crew_view") ?? ""); }, []);
   const { dag } = Route.useSearch();
   const [open, setOpenState] = useState(!!dag);
+  const [direct, setDirect] = useState(false);
   const [form, setForm] = useState({ ...emptyForm, scheduled_date: dag ?? "" });
   const setOpen = (v: boolean) => {
     setOpenState(v);
+    if (!v) setDirect(false);
     if (!v && dag) navigate({ to: "/werkbonnen", search: {}, replace: true });
+  };
+  const openDirect = () => {
+    setDirect(true);
+    setForm({ ...emptyForm, scheduled_date: new Date().toLocaleDateString("sv-SE") });
+    setOpenState(true);
   };
   const [saving, setSaving] = useState(false);
   const { data = [] } = useQuery({
