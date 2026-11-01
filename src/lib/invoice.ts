@@ -1,7 +1,7 @@
 import { billableHours, computeTotals } from "./billing";
 import { formatSiteAddress, type SiteAddressParts } from "./address";
 
-export type InvoiceLine = { description: string; quantity: number; unit: string; unitPrice: number; amount: number; vatRate?: number; discount?: number; originalUnitPrice?: number; group?: string; hidePrice?: boolean };
+export type InvoiceLine = { description: string; quantity: number; unit: string; unitPrice: number; amount: number; vatRate?: number; discount?: number; originalUnitPrice?: number; group?: string; hidePrice?: boolean; optional?: boolean };
 export type InvoiceCustomer = {
   name: string; address: string | null; siteAddress: string | null; vatNumber: string | null; email: string | null;
   street: string | null; houseNumber: string | null; postalCode: string | null; city: string | null;
