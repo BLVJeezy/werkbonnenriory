@@ -492,6 +492,29 @@ function Btw({ c }: { c: string }) {
   );
 }
 
+// ---------- Spaarrekening: sleepvenster voor CODA/CSV/Excel ----------
+function SavingsDropZone({ onFile }: { onFile: (f: File) => Promise<void> }) {
+  const [drag, setDrag] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const handle = (f?: File | null) => {
+    if (!f || busy) return;
+    setBusy(true);
+    void onFile(f).catch(() => toast.error("Bestand kon niet ingelezen worden")).finally(() => setBusy(false));
+  };
+  return (
+    <label
+      className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-8 text-center text-sm transition-colors ${drag ? "border-primary bg-primary/10" : "border-border hover:border-primary/60"}`}
+      onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={(e) => { e.preventDefault(); setDrag(false); handle(e.dataTransfer.files?.[0]); }}
+    >
+      <input type="file" accept=".cod,.coda,.txt,.csv,.xlsx,.xls" className="hidden" onChange={(e) => { handle(e.target.files?.[0]); e.target.value = ""; }} />
+      <span className="font-medium">{busy ? "Bezig met inlezen…" : "Sleep hier een CODA-, CSV- of Excel-bestand"}</span>
+      <span className="text-xs text-muted-foreground">of klik om een bestand te kiezen</span>
+    </label>
+  );
+}
+
 // ---------- Bank ----------
 function Bank({ c }: { c: string }) {
   const qc = useQueryClient();
