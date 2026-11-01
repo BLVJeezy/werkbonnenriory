@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Productfoto’s uploaden/beheren en automatisch opnemen in offertebewerker, PDF en klantondertekenpagina; volledige opslagflow controleren.
+- [x] Productfoto’s uploaden/beheren en automatisch opnemen in offertebewerker, PDF en klantondertekenpagina; upload/opslag/klantbeeld en ingebedde originele PDF-foto gecontroleerd, zes tests geslaagd. Tijdelijk product verwijderd, offerte hersteld; geen mail verstuurd.
 
 - [x] Eerste klant aanvinken in Kalender/Taken; gedeeld label in ploegoverzicht en detail. Opslaan na herladen en uitschakelen gecontroleerd; testmarkering verwijderd.
 
