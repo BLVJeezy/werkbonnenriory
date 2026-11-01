@@ -9,6 +9,7 @@ const eur = (n: number | null | undefined) => (n == null ? "onbekend" : new Intl
 export function useFinData(c: string) {
   return useQuery({
     queryKey: ["fin", "data", c],
+    enabled: !!c,
     queryFn: async () => {
       const [entries, lines, months, budgets, inv, loans] = await Promise.all([
         fetchAll((a, b) => db.from("fin_entries").select("*").eq("company_id", c).range(a, b)),
