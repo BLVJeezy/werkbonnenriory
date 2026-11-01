@@ -35,7 +35,7 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
     if (data.supplierId) {
       const { data: sup } = await context.supabase.from('suppliers').select('name,vat_number,iban,payment_method').eq('id', data.supplierId).single();
       if (!sup) throw new Error('Leverancier niet gevonden');
-      data = { ...data, supplierName: sup.name, supplierVat: sup.vat_number, supplierIban: sup.iban ?? data.supplierIban, paymentMethod: data.paymentMethod ?? sup.payment_method };
+      data = { ...data, supplierName: sup.name, supplierVat: sup.vat_number, supplierIban: sup.iban ?? data.supplierIban ?? null, paymentMethod: data.paymentMethod ?? sup.payment_method } as typeof data;
     }
     if (data.kind && !['factuur', 'creditnota'].includes(data.kind)) throw new Error('Ongeldig documenttype');
     if (data.paymentMethod && !['overschrijving','domiciliering','kaart','cash'].includes(data.paymentMethod)) throw new Error('Ongeldige betaalwijze');

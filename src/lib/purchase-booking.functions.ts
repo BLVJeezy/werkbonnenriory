@@ -83,8 +83,9 @@ export const bookPurchaseInvoice = createServerFn({ method: 'POST' }).middleware
       const k = lineKey(l.description); if (!k || seen.has(k)) continue; seen.add(k);
       const q = context.supabase.from('purchase_booking_rules').select('id,uses').eq('match_key', k);
       const { data: ex } = await (row.supplier_id ? q.eq('supplier_id', row.supplier_id) : q.is('supplier_id', null)).maybeSingle();
-      if (ex) await context.supabase.from('purchase_booking_rules').update({ account: l.account, uses: ex.uses + 1, updated_at: new Date().toISOString() }).eq('id', ex.id);
-      else await context.supabase.from('purchase_booking_rules').insert({ supplier_id: row.supplier_id, match_key: k, account: l.account });
+      const account = l.account ?? '';
+      if (ex) await context.supabase.from('purchase_booking_rules').update({ account, uses: ex.uses + 1, updated_at: new Date().toISOString() }).eq('id', ex.id);
+      else await context.supabase.from('purchase_booking_rules').insert({ supplier_id: row.supplier_id, match_key: k, account });
     }
     return { ok: true as const };
   });

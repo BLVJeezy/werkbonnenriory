@@ -28,7 +28,7 @@ type Row = {
   invoice_number: string | null; invoice_date: string | null; due_date: string | null;
   lines: PurchaseLine[]; net: number; vat: number; total: number; payment_ref: string | null;
   status: string; pdf_path: string | null; created_at: string; kind: 'factuur' | 'creditnota'; paid_at: string | null; bank_payment_ref: string | null;
-  payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number;
+  payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number; supplier_id?: string | null; booked_at?: string | null;
 };
 
 const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Afgeletterd", betaling_klaargezet: 'Betaling klaargezet' };
@@ -61,7 +61,7 @@ function Aankoopfacturen() {
   }
   async function stelVoor(row: Row) {
     try {
-      const r = await suggest({ data: { supplierId: (row as Row & { supplier_id?: string | null }).supplier_id ?? null, supplierName: row.supplier_name, lines: row.lines } });
+      const r = await suggest({ data: { supplierId: row.supplier_id ?? null, supplierName: row.supplier_name, lines: row.lines } });
       setEdit(e => e && e.id === row.id ? { ...e, lines: e.lines.map((l, i) => l.account ? l : { ...l, account: r[i]?.account ?? null }) } : e);
       setSources(Object.fromEntries(r.map((x, i) => [i, x.source ?? ''])));
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Rekeningvoorstel mislukt'); }
@@ -188,7 +188,7 @@ function Aankoopfacturen() {
     try {
       await update({
         data: {
-          id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: (edit as Row & { supplier_id?: string | null }).supplier_id ?? null, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+          id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id ?? null, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
           invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
           lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
         },
@@ -209,7 +209,7 @@ function Aankoopfacturen() {
     lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
   }) : [];
 
-  const editSupplier = edit ? suppliers.find((x) => x.id === (edit as Row & { supplier_id?: string | null }).supplier_id) : null;
+  const editSupplier = edit ? suppliers.find((x) => x.id === edit.supplier_id) : null;
   const bankWarnings = edit ? supplierBankWarnings(editSupplier ?? (edit.supplier_iban ? { iban: edit.supplier_iban, bic: null } : null)) : [];
   const visible = rows.filter((r) => tab === 'alle' ? true : tab === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === tab);
   const count = (t: string) => rows.filter((r) => t === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === t).length;
@@ -262,7 +262,7 @@ function Aankoopfacturen() {
           const paid = r.status === 'betaald';
           const due = dueLabel(daysUntilDue(r.due_date, today));
           const lock = paymentMethodLock(r.payment_method, r.status);
-          const sup = suppliers.find((x) => x.id === (r as Row & { supplier_id?: string | null }).supplier_id);
+          const sup = suppliers.find((x) => x.id === r.supplier_id);
           const bankMissing = !paid && supplierBankWarnings(sup ?? null).length > 0;
           return (
           <li key={r.id} className={`flex flex-wrap items-center gap-3 p-3 ${paid ? 'bg-accent/40' : due.overdue ? 'bg-destructive/10' : ''}`}>
@@ -274,7 +274,7 @@ function Aankoopfacturen() {
             {!paid && <span className={`rounded px-2 py-0.5 text-xs font-bold ${due.overdue ? 'bg-destructive text-destructive-foreground' : due.soon ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>{due.text}</span>}
             {lock && <span className="rounded border border-destructive px-2 py-0.5 text-xs font-bold text-destructive">{lock}</span>}
             {bankMissing && <span className="text-xs font-bold text-destructive">⚠ IBAN/BIC leverancier</span>}
-            {(r as Row & { booked_at?: string | null }).booked_at && <span className="text-xs text-muted-foreground">Geboekt</span>}
+            {r.booked_at && <span className="text-xs text-muted-foreground">Geboekt</span>}
             <span className="ml-auto font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</span>
             <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
               {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
@@ -314,7 +314,7 @@ function Aankoopfacturen() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1 sm:col-span-2"><Label htmlFor="purchase-supplier">Leverancier</Label>
-                  <select id="purchase-supplier" className="h-10 w-full rounded-md border bg-background px-3" value={(edit as Row & { supplier_id?: string | null }).supplier_id ?? ''} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: s2.iban ?? edit.supplier_iban, payment_method: s2.payment_method } as Row); }}>
+                  <select id="purchase-supplier" className="h-10 w-full rounded-md border bg-background px-3" value={edit.supplier_id ?? ''} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: s2.iban ?? edit.supplier_iban, payment_method: s2.payment_method } as Row); }}>
                     <option value="">— Uitgelezen: {edit.supplier_name} —</option>
                     {suppliers.map((x) => <option key={x.id} value={x.id}>{x.name}{x.vat_number ? ` (${x.vat_number})` : ''}</option>)}
                   </select>
