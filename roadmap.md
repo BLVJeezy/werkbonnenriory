@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Nieuwe interne ploegen via WhatsApp uitnodigen na aanmaken of vanuit de ploegenlijst; wachtwoord afzonderlijk houden en uitnodiging controleren.
+
 - [x] Bankafpunting en Ponto-bediening naar Boekhouding; oude Bank-link verwijst door. Atomair afpunten werkt betalingen en boekingen samen bij; deelbetalingen blijven open en overbetalingen worden geweigerd. Navigatie, bestaande betaalstatus en foutpad gecontroleerd; geen echte betaling handmatig geregistreerd tijdens controle.
 
 - [x] /index stuurt door naar Taken; met beheerderlogin gecontroleerd, geen paginafouten.
