@@ -632,8 +632,25 @@ function Bank({ c }: { c: string }) {
   // Automatisch afletteren: alleen als verrichting precies één passende factuur heeft én die factuur maar bij één verrichting past.
   const autoBusy = useRef(false); const autoTried = useRef(new Set<string>());
   useEffect(() => {
-    if (autoBusy.current || !accounts.length || !tx.length || (!open.length && !paidNoTx.length)) return;
-    const todo = tx.filter((t) => !t.entry_id);
+    if (autoBusy.current || !accounts.length || !tx.length) return;
+    // Overboekingen tussen eigen rekeningen (bv. 550200 → 550700) altijd meteen intern verrekenen.
+    const transfers = tx.filter((t) => !t.entry_id && !autoTried.current.has(t.id) && ownTransfer(t));
+    if (transfers.length) {
+      transfers.forEach((t) => autoTried.current.add(t.id));
+      autoBusy.current = true;
+      (async () => {
+        let n = 0;
+        for (const t of transfers) {
+          try { const id = await post(c, "bank", t.tx_date, `Overboeking eigen rekening · ${t.description || t.counterparty || ""}`.trim(), null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, ownTransfer(t)!)); await linkEntry(t.id, id); n++; }
+          catch { /* blijft open voor handmatige boeking */ }
+        }
+        if (n) toast.success(`${n} overboeking(en) tussen eigen rekeningen verrekend`);
+        autoBusy.current = false; refresh();
+      })();
+      return;
+    }
+    if (!open.length && !paidNoTx.length) return;
+    const todo = tx.filter((t) => !t.entry_id && !ownTransfer(t));
     const fresh = (t: any) => !autoTried.current.has(t.id);
     const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025); };
     const pairs = todo.map((t) => [t, candOf(t)] as const).filter(([, cs]) => cs.length === 1);
