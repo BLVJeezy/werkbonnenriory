@@ -1027,6 +1027,7 @@ export type Database = {
           invoice_date: string | null
           number: string | null
           original_invoice_id: string | null
+          paid_amount: number
           paid_at: string | null
           review_status: string
           source: string
@@ -1046,6 +1047,7 @@ export type Database = {
           invoice_date?: string | null
           number?: string | null
           original_invoice_id?: string | null
+          paid_amount?: number
           paid_at?: string | null
           review_status?: string
           source?: string
@@ -1065,6 +1067,7 @@ export type Database = {
           invoice_date?: string | null
           number?: string | null
           original_invoice_id?: string | null
+          paid_amount?: number
           paid_at?: string | null
           review_status?: string
           source?: string
@@ -2744,6 +2747,15 @@ export type Database = {
           _source_ref: string
         }
         Returns: string
+      }
+      fin_reconcile_bank: {
+        Args: {
+          _bank_account: string
+          _counter_account: string
+          _invoice: string
+          _transaction: string
+        }
+        Returns: Json
       }
       fin_restore_archive: { Args: { _data: Json }; Returns: Json }
       forward_external_appointment: {
