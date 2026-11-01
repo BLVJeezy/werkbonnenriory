@@ -2,7 +2,9 @@
 export const earlyModuleRecoveryScript = `(() => {
   const key = 'riory-chunk-reload';
   const recover = (message) => {
-    if (!/Importing a module script failed|Failed to fetch dynamically imported module|error loading dynamically imported module/i.test(String(message))) return;
+    const m = String(message);
+    const stale = /Cannot read properties of undefined \\(reading 'component'\\)|undefined is not an object \\(evaluating '.*component/i.test(m) || (/Cannot read properties of undefined|undefined is not an object/i.test(m) && /lazyRouteComponent/.test(m));
+    if (!stale && !/Importing a module script failed|Failed to fetch dynamically imported module|error loading dynamically imported module/i.test(m)) return;
     try {
       const last = Number(sessionStorage.getItem(key) || 0);
       if (Date.now() - last >= 60000) {
@@ -31,7 +33,7 @@ export const earlyModuleRecoveryScript = `(() => {
     };
     if (document.body) show(); else document.addEventListener('DOMContentLoaded', show, { once: true });
   };
-  window.addEventListener('unhandledrejection', event => recover(event.reason?.message ?? event.reason));
+  window.addEventListener('unhandledrejection', event => recover((event.reason?.message ?? event.reason) + '\\n' + (event.reason?.stack ?? '')));
   window.addEventListener('error', event => {
     const target = event.target;
     if (target instanceof HTMLScriptElement && target.type === 'module') recover('Importing a module script failed');
