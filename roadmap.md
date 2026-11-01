@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Productfoto’s via slepen toevoegen en ontbreken van fotogegevens veilig afhandelen.
+- [x] Productfoto’s via slepen toevoegen en ontbreken van fotogegevens veilig afhandelen; sleepload, productopslag, offerte/PDF/klantbeeld gecontroleerd, zeven tests geslaagd.
 
 - [x] Productfoto’s uploaden/beheren en automatisch opnemen in offertebewerker, PDF en klantondertekenpagina; upload/opslag/klantbeeld en ingebedde originele PDF-foto gecontroleerd, zes tests geslaagd. Tijdelijk product verwijderd, offerte hersteld; geen mail verstuurd.
 
