@@ -567,6 +567,20 @@ function Bank({ c }: { c: string }) {
     const { error } = await db.rpc("fin_settle_paid_invoice" as any, { _transaction: t.id, _invoice: inv.id, _bank_account: t.bank_account ?? bankAcc, _counter_account: inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten, _gross: grossOf(t) ?? undefined });
     if (error) throw new Error(error.message);
   };
+  // Eigen rekeningen (55x) herkennen aan hun IBAN, zodat overboekingen daartussen als interne verrekening geboekt worden.
+  const normIban = (s: string) => s.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  const ownByIban = new Map<string, string>();
+  for (const a of accounts) {
+    if (!String(a.number).startsWith("55")) continue;
+    const m = String(a.name ?? "").match(/[A-Z]{2}\d{2}[\dA-Z ]{8,30}/i);
+    if (m) ownByIban.set(normIban(m[0]), String(a.number));
+  }
+  // Geeft het eigen grootboeknummer van de tegenrekening bij een overboeking tussen eigen rekeningen.
+  const ownTransfer = (t: any) => {
+    if (!t.counterparty_account) return undefined;
+    const nr = ownByIban.get(normIban(String(t.counterparty_account)));
+    return nr && nr !== (t.bank_account ?? bankAcc) ? nr : undefined;
+  };
   // Kaartuitbetalingen (Europabank): koppelen op het bruto bedrag uit de mededeling; commissie gaat naar 653000.
   const grossOf = (t: any) => cardGross(t.description, Number(t.amount));
   const effAmt = (t: any) => grossOf(t) ?? Math.abs(Number(t.amount));
