@@ -1,4 +1,5 @@
 import { SAVINGS_ACCOUNT, markSavingsQuarterDone } from "@/lib/savings-quarter";
+import { parseCoda } from "@/lib/coda";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -491,6 +492,29 @@ function Btw({ c }: { c: string }) {
   );
 }
 
+// ---------- Spaarrekening: sleepvenster voor CODA/CSV/Excel ----------
+function SavingsDropZone({ onFile }: { onFile: (f: File) => Promise<void> }) {
+  const [drag, setDrag] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const handle = (f?: File | null) => {
+    if (!f || busy) return;
+    setBusy(true);
+    void onFile(f).catch(() => toast.error("Bestand kon niet ingelezen worden")).finally(() => setBusy(false));
+  };
+  return (
+    <label
+      className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-8 text-center text-sm transition-colors ${drag ? "border-primary bg-primary/10" : "border-border hover:border-primary/60"}`}
+      onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={(e) => { e.preventDefault(); setDrag(false); handle(e.dataTransfer.files?.[0]); }}
+    >
+      <input type="file" accept=".cod,.coda,.txt,.csv,.xlsx,.xls" className="hidden" onChange={(e) => { handle(e.target.files?.[0]); e.target.value = ""; }} />
+      <span className="font-medium">{busy ? "Bezig met inlezen…" : "Sleep hier een CODA-, CSV- of Excel-bestand"}</span>
+      <span className="text-xs text-muted-foreground">of klik om een bestand te kiezen</span>
+    </label>
+  );
+}
+
 // ---------- Bank ----------
 function Bank({ c }: { c: string }) {
   const qc = useQueryClient();
@@ -507,6 +531,18 @@ function Bank({ c }: { c: string }) {
   useEffect(() => { if (accounts.length) setBankAcc(ctl.bank); }, [accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const refresh = async () => { await Promise.all(["fin", "facturen", "ponto_transactions", "dashboard-omzet", "bank-link-invoices"].map(key => qc.invalidateQueries({ queryKey: [key] }))); };
   const total = (i: any) => r2(i.fin_invoice_lines.reduce((a: number, l: any) => a + Number(l.ex_vat) + Number(l.vat), 0) * (i.doc_type === "creditnota" ? -1 : 1));
+  const onCodaFile = async (f: File, acc = bankAcc) => {
+    const txns = parseCoda(await f.text());
+    if (!txns.length) return void toast.error("Geen verrichtingen gevonden in dit CODA-bestand");
+    const payload = txns.map((r, i) => ({ company_id: c, bank_account: acc, tx_date: r.tx_date, amount: r.amount, counterparty: r.counterparty, description: r.description, dedupe_key: dedupeKey([acc, r.tx_date, r.amount, r.counterparty, r.description, r.reference ?? i]) }));
+    const { error } = await db.from("fin_bank_tx").upsert(payload, { onConflict: "company_id,dedupe_key", ignoreDuplicates: true });
+    error ? toast.error("Import mislukt") : toast.success(`${payload.length} verrichtingen uit CODA ingelezen (dubbels genegeerd)`); refresh();
+  };
+  const onSavingsFile = async (f: File) => {
+    const isCoda = /\.(cod|coda|txt)$/i.test(f.name);
+    await (isCoda ? onCodaFile(f, SAVINGS_ACCOUNT) : onFile(f, SAVINGS_ACCOUNT));
+    markSavingsQuarterDone();
+  };
   const onFile = async (f: File, acc = bankAcc) => {
     const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0] ?? ""] ?? {}, { defval: "" });
@@ -642,7 +678,7 @@ function Bank({ c }: { c: string }) {
       <Link to="/facturen"><Button size="sm" variant="outline">Naar facturen</Button></Link>
       <PontoCard c={c} bankAcc={bankAcc} onDone={refresh} />
       <Card title={`Spaarrekening inladen (${SAVINGS_ACCOUNT})`}>
-        <label className="inline-block cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm">CSV/Excel spaarrekening kiezen<input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f, SAVINGS_ACCOUNT).then(() => markSavingsQuarterDone()); e.target.value = ""; }} /></label>
+        <SavingsDropZone onFile={onSavingsFile} />
         <p className="mt-1 text-xs text-muted-foreground">Uittreksel van de spaarrekening; alle verrichtingen worden op rekening {SAVINGS_ACCOUNT} ingelezen. Dubbels worden genegeerd.</p>
       </Card>
       <Card title="Bankuittreksels importeren">
