@@ -785,7 +785,7 @@ function Bank({ c }: { c: string }) {
         <div className="max-h-[60dvh] space-y-2 overflow-y-auto">
           {vis.map((t) => {
             const amt = Number(t.amount);
-            const cands = open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025);
+            const cands = ownTransfer(t) ? [] : open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025);
             return (
               <div key={t.id} className="rounded border border-border p-2 text-sm">
                 <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
