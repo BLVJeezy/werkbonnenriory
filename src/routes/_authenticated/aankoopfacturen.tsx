@@ -11,10 +11,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ReceiptScanner } from '@/components/ReceiptScanner';
 import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from '@/lib/supplier-rules';
 import { Link } from '@tanstack/react-router';
-import { pontoStatus, syncPontoNow } from '@/lib/ponto.functions';
 import { canExportPurchase } from '@/lib/purchase-payment';
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
+import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
+import { daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { attachPurchasePdf, importReceipt, importPurchaseInvoices, importPurchasesFromSimpla, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
@@ -39,16 +40,40 @@ function Aankoopfacturen() {
   const doSimpla = useServerFn(importPurchasesFromSimpla);
   const uploadPdf = useServerFn(attachPurchasePdf);
   const uploadTicket = useServerFn(importReceipt);
-  const syncPayments = useServerFn(syncPontoNow);
-  const getPonto = useServerFn(pontoStatus);
-  const { data: ponto } = useQuery({ queryKey: ['ponto'], queryFn: () => getPonto() });
+  const getPeppyrus = useServerFn(peppyrusStatus);
+  const doPeppyrus = useServerFn(importFromPeppyrus);
+  const getAccounts = useServerFn(listExpenseAccounts);
+  const suggest = useServerFn(suggestPurchaseAccounts);
+  const book = useServerFn(bookPurchaseInvoice);
+  const { data: peppyrus } = useQuery({ queryKey: ['peppyrus'], queryFn: () => getPeppyrus() });
+  const { data: accounts = [] } = useQuery({ queryKey: ['expense-accounts'], queryFn: () => getAccounts() });
+  const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: async () => (await supabase.from('suppliers').select('*').order('name')).data ?? [] });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  async function controleerBetalingen() {
+  const [tab, setTab] = useState<'te_controleren' | 'goedgekeurd' | 'betaald' | 'alle'>('te_controleren');
+  const [drag, setDrag] = useState(false);
+  const [sources, setSources] = useState<Record<number, string>>({});
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
+  async function vanPeppyrus() {
     setBusy(true);
-    try { const r = await syncPayments(); toast.success(`${r.purchaseMatched.length} aankoopfacturen afgeletterd`); await refresh(); qc.invalidateQueries({ queryKey: ['invoices'] }); qc.invalidateQueries({ queryKey: ['ponto'] }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'Betalingen controleren mislukt'); }
-    setBusy(false);
+    try { const r = await doPeppyrus(); toast.success(`${r.imported} Peppol-factuur/facturen ontvangen${r.skipped ? `, ${r.skipped} al aanwezig` : ''}`); r.errors.forEach(e => toast.error(e)); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Peppyrus ophalen mislukt'); }
+    setBusy(false); refresh();
   }
+  async function stelVoor(row: Row) {
+    try {
+      const r = await suggest({ data: { supplierId: (row as Row & { supplier_id?: string | null }).supplier_id ?? null, supplierName: row.supplier_name, lines: row.lines } });
+      setEdit(e => e && e.id === row.id ? { ...e, lines: e.lines.map((l, i) => l.account ? l : { ...l, account: r[i]?.account ?? null }) } : e);
+      setSources(Object.fromEntries(r.map((x, i) => [i, x.source ?? ''])));
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Rekeningvoorstel mislukt'); }
+  }
+  async function boek() {
+    if (!edit) return;
+    setBusy(true);
+    try { await slaOp(false, true); await book({ data: { id: edit.id, lines: edit.lines } }); toast.success('Lijnen geboekt — keuzes onthouden voor volgende facturen'); setEdit(null); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Boeken mislukt'); }
+    setBusy(false); refresh();
+  }
+  async function leesBestanden(files: FileList | File[]) { for (const f of Array.from(files)) await leesTicket(f); }
   async function vanSimpla() {
     setBusy(true);
     try { const r = await doSimpla(); toast.success(`${r.imported} openstaande factuur/facturen uit Simpla ingelezen${r.skipped ? `, ${r.skipped} al aanwezig` : ""}`); }
@@ -109,7 +134,9 @@ function Aankoopfacturen() {
 
   async function betaal() {
     const chosen = rows.filter((r) => sel.includes(r.id) && canExportPurchase({ ...r, total: Number(r.total) }));
-    if (!chosen.length) { toast.error("Selecteer goedgekeurde facturen"); return; }
+    const locked = rows.filter((r) => sel.includes(r.id) && paymentMethodLock(r.payment_method, r.status));
+    if (locked.length) toast.warning(`${locked.length} factuur/facturen overgeslagen: domiciliëring, kaart of cash wordt nooit manueel betaald`);
+    if (!chosen.length) { toast.error("Selecteer goedgekeurde facturen met betaalwijze overschrijving"); return; }
     if (!confirm(`Betaalbestand maken voor ${chosen.length} facturen (${euro(chosen.reduce((s, r) => s + Number(r.total), 0))})? Elke factuur wordt op zijn vervaldag betaald. Laad het bestand daarna in je banktoepassing.`)) return;
     setBusy(true);
     try {
@@ -134,7 +161,8 @@ function Aankoopfacturen() {
   }
 
   async function openControle(row: Row) {
-    setEdit({ ...row, lines: (row.lines ?? []) as PurchaseLine[] }); setPdfUrl(null);
+    setEdit({ ...row, lines: (row.lines ?? []) as PurchaseLine[] }); setPdfUrl(null); setSources({});
+    if (row.status !== 'betaald' && (row.lines ?? []).some((l) => !(l as PurchaseLine).account)) void stelVoor({ ...row, lines: (row.lines ?? []) as PurchaseLine[] });
     if (row.pdf_path) {
       const { data, error } = await supabase.storage.from('aankoopfacturen').createSignedUrl(row.pdf_path, 3600);
       if (error) toast.error('PDF laden mislukt');
@@ -154,22 +182,23 @@ function Aankoopfacturen() {
     setBusy(false);
   }
 
-  async function slaOp(approve = false) {
+  async function slaOp(approve = false, silent = false) {
     if (!edit) return;
-    setBusy(true);
+    if (!silent) setBusy(true);
     try {
       await update({
         data: {
-          id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+          id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: (edit as Row & { supplier_id?: string | null }).supplier_id ?? null, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
           invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
           lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
         },
       });
       if (approve) await setStatus({ data: { ids: [edit.id], status: 'goedgekeurd' } });
-      toast.success("Opgeslagen");
       qc.invalidateQueries({ queryKey: ['suppliers'] });
+      if (silent) return;
+      toast.success("Opgeslagen");
       setEdit(null);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
+    } catch (e) { if (silent) throw e; toast.error(e instanceof Error ? e.message : "Opslaan mislukt"); }
     setBusy(false);
     refresh();
   }
