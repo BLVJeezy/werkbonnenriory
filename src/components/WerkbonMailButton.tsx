@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 
 /** Mailt een afgetekende werkbon rechtstreeks naar de klant vanuit een lijst. */
-export function WerkbonMailButton({ workOrderId, email }: { workOrderId: string; email?: string | null }) {
+export function WerkbonMailButton({ workOrderId, email }: { workOrderId: string; email?: string | null | undefined }) {
   const send = useServerFn(sendWerkbonEmail);
   const [busy, setBusy] = useState(false);
 
