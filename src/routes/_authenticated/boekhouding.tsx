@@ -496,6 +496,11 @@ function Bank({ c }: { c: string }) {
   const { data: accounts = [] } = useAccounts(c);
   const { data: tx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).range(a, b))) as any[], refetchInterval: 30_000 });
   const { data: open = [] } = useQuery({ queryKey: ["fin", "open-inv", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).neq("status", "betaald")).data ?? [] });
+  const { data: paidNoTx = [] } = useQuery({ queryKey: ["fin", "paid-unlinked", c], queryFn: async () => {
+    const paid = (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("status", "betaald").eq("doc_type", "factuur").range(a, b))) as any[];
+    const linked = new Set(((await fetchAll((a, b) => db.from("fin_bank_tx").select("matched_invoice_id").eq("company_id", c).not("matched_invoice_id", "is", null).range(a, b))) as any[]).map((r) => r.matched_invoice_id));
+    return paid.filter((i) => !linked.has(i.id));
+  } });
   const [bankAcc, setBankAcc] = useState("550000");
   const ctl = controlAccounts(accounts.map((a) => a.number));
   useEffect(() => { if (accounts.length) setBankAcc(ctl.bank); }, [accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -519,6 +524,12 @@ function Bank({ c }: { c: string }) {
     if (error) throw new Error(error.message);
     return data;
   };
+  const settle = async (t: any, inv: any) => {
+    const { error } = await db.rpc("fin_settle_paid_invoice" as any, { _transaction: t.id, _invoice: inv.id, _bank_account: t.bank_account ?? bankAcc, _counter_account: inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten });
+    if (error) throw new Error(error.message);
+  };
+  const paidCands = (t: any) => { const amt = Number(t.amount); return paidNoTx.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(total(i) - Math.abs(amt)) < 0.025); };
+  const settleClick = async (t: any, inv: any) => { try { await settle(t, inv); toast.success("Afgeletterd met betaalde factuur"); refresh(); } catch (e: any) { toast.error(e.message); } };
   const remaining = (i: any) => r2(Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
   const match = async (t: any, inv: any) => {
     const counter = inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten;
@@ -560,7 +571,7 @@ function Bank({ c }: { c: string }) {
   // Automatisch afletteren: alleen als verrichting precies één passende factuur heeft én die factuur maar bij één verrichting past.
   const autoBusy = useRef(false); const autoTried = useRef(new Set<string>());
   useEffect(() => {
-    if (autoBusy.current || !accounts.length || !tx.length || !open.length) return;
+    if (autoBusy.current || !accounts.length || !tx.length || (!open.length && !paidNoTx.length)) return;
     const todo = tx.filter((t) => !t.entry_id);
     const fresh = (t: any) => !autoTried.current.has(t.id);
     const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - Math.abs(amt)) < 0.025); };
@@ -576,8 +587,14 @@ function Bank({ c }: { c: string }) {
       return norm(i.counterparty ?? "").split(/\s+/).some((w) => w.length >= 4 && hay.includes(w));
     };
     const sure = pairs.filter(([t, cs]) => fresh(t) && usage.get(cs[0].id) === 1 && sameParty(t, cs[0]));
+    // Handmatig betaald gemarkeerde facturen: enkel bij één eenduidige verrichting met dezelfde naam of hetzelfde nummer.
+    const pUse = new Map<string, number>();
+    const pc = new Map<string, any[]>();
+    for (const t of todo) { if (candOf(t).length) continue; const cs = paidCands(t).filter((i: any) => sameParty(t, i)); pc.set(t.id, cs); for (const i of cs) pUse.set(i.id, (pUse.get(i.id) ?? 0) + 1); }
+    const surePaid = todo.filter((t) => fresh(t) && pc.get(t.id)?.length === 1 && pUse.get(pc.get(t.id)![0].id) === 1).map((t) => [t, pc.get(t.id)!] as const);
     sure.forEach(([t]) => autoTried.current.add(t.id));
-    if (!sure.length) return;
+    surePaid.forEach(([t]) => autoTried.current.add(t.id));
+    if (!sure.length && !surePaid.length) return;
     autoBusy.current = true;
     (async () => {
       let n = 0;
@@ -588,11 +605,12 @@ function Bank({ c }: { c: string }) {
           n++;
         } catch { /* blijft manueel te verwerken */ }
       }
+      for (const [t, cs] of surePaid) { try { await settle(t, cs[0]); n++; } catch { /* manueel */ } }
       if (n) toast.success(`${n} betalingen automatisch afgeletterd`);
       await refresh();
       autoBusy.current = false;
     })();
-  }, [tx, open, accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tx, open, paidNoTx, accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   // Factuurinfo bij afgeletterde verrichtingen + wachtrekening (499000) voor verrichtingen zonder factuur.
   const WACHT = "499000";
   const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("id, number, counterparty, invoice_date").eq("company_id", c).range(a, b))) as any[] });
@@ -689,6 +707,7 @@ function Bank({ c }: { c: string }) {
                 <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {cands.map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => match(t, i)}>Afletteren: {i.counterparty} {i.number}</Button>)}
+                  {!cands.length && paidCands(t).slice(0, 3).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren (al betaald): {i.counterparty} {i.number}</Button>)}
                   <AccountPicker accounts={accounts} onPick={(nr) => book(t, nr)} />
                   {!cands.length && <Button size="sm" variant="ghost" onClick={() => book(t, WACHT)}>Naar wachtrekening</Button>}
                 </div>
@@ -711,6 +730,12 @@ function Bank({ c }: { c: string }) {
           </div>
         )}
       </Card>
+      {paidNoTx.length > 0 && <Card title={`Betaald gemarkeerd, nog niet afgeletterd (${paidNoTx.length})`}>
+        <div className="max-h-[40dvh] space-y-1 overflow-y-auto text-sm">
+          {paidNoTx.map((i: any) => <div key={i.id} className="flex items-center justify-between gap-2 rounded border border-border p-2"><span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span></span><span>{eur(total(i))}</span></div>)}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">Zodra de bijhorende bankverrichting binnen is, lettert de app ze automatisch af bij gelijk bedrag en naam of nummer; anders via de knop "Afletteren (al betaald)" bij de verrichting.</p>
+      </Card>}
       <Card title={`Facturen zonder gekoppelde betaling (${open.length})`}>
         <Input className="mb-2 max-w-sm" placeholder="Zoek factuur (naam of nummer)…" value={zoekOpen} onChange={(e) => setZoekOpen(e.target.value)} />
         <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
