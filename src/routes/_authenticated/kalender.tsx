@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { dayPartLabel } from "@/lib/invite-slots";
 import { appointmentStatuses } from "@/lib/appointments";
 import { X } from "lucide-react";
 import { FirstCustomerLabel } from "@/components/FirstCustomerLabel";
+import { calendarWindow } from "@/lib/calendar-window";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -30,18 +31,20 @@ export const Route = createFileRoute("/_authenticated/kalender")({
 });
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-function monday(d: Date) {
-  const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
-  return m;
-}
 
 type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[]; materials: { quantity: number; unit_price: number }[] };
 
 function Kalender() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [start, setStart] = useState(() => monday(new Date()));
+  const [offset, setOffset] = useState(0);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const refresh = () => setNow(new Date());
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener("focus", refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, []);
   const [drag, setDrag] = useState<string | null>(null);
   const { data = [] } = useQuery({
     queryKey: ["work_orders", "calendar"],
@@ -79,12 +82,8 @@ function Kalender() {
     qc.invalidateQueries({ queryKey: ["work_orders"] });
   }
   const sel = "mt-1 h-7 w-full min-w-0 rounded border bg-background px-1 text-xs text-foreground";
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-  const today = iso(new Date());
+  const days = calendarWindow(now, offset);
+  const today = iso(now);
 
   // Alleen volledig ingeplande taken (dag + ploeg + activiteit) verschijnen op de dag; afgetekende blijven op hun dag staan.
   const dayList = (k: string) => data.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w)));
@@ -129,7 +128,7 @@ function Kalender() {
     if (error) toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
   }
-  const shift = (n: number) => setStart((s) => { const d = new Date(s); d.setDate(d.getDate() + n); return d; });
+  const shift = (n: number) => setOffset((s) => s + n);
   const drop = (date: string | null) => ({
     onDragOver: (e: React.DragEvent) => e.preventDefault(),
     onDrop: () => { if (drag) plan(drag, date); setDrag(null); },
@@ -195,11 +194,11 @@ function Kalender() {
       <div className="grid grid-cols-3 items-center gap-2 sm:flex sm:flex-wrap">
         <h1 className="col-span-full min-w-0 text-3xl font-black uppercase sm:mr-auto">Kalender</h1>
         <Button variant="outline" size="sm" onClick={() => shift(-7)}>← Vorige week</Button>
-        <Button variant="outline" size="sm" onClick={() => setStart(monday(new Date()))}>Deze week</Button>
+        <Button variant="outline" size="sm" onClick={() => { setNow(new Date()); setOffset(0); }}>Vandaag</Button>
         <Button variant="outline" size="sm" onClick={() => shift(7)}>Volgende week →</Button>
       </div>
       <AppointmentMailSync />
-      <div className="grid gap-3 xl:grid-cols-7 xl:gap-2">
+      <div className="grid gap-3 xl:grid-cols-[repeat(9,minmax(260px,1fr))] xl:overflow-x-auto xl:gap-2">
         {days.map((d) => {
           const k = iso(d);
           return (

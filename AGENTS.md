@@ -18,7 +18,7 @@
 - Purchase suppliers link via DB trigger; documents snapshot supplier defaults without rewriting source amounts. Receipt AI is server-side, originals private, hash dedup; mobile scanning stops camera tracks on capture/close/unmount.
 - Customers use normalized name/full-address identity, preserve source codes/aliases and link via a work-order trigger; projects belong to customer IDs. allCustomers paginates newest-first; CustomerPicker/SearchSelect share ID-based, order-preserving search.
 - Roles live in `user_roles` (admin|technician|marketing); technicians only see assigned work orders via `my_technician_id()`, marketing only customers/newsletters/photos via `is_admin_or_marketing()` and the price-free `photo_overview()` RPC. Logins are created by admin-checked server fns; public sign-up is removed.
-- Running indicators use open time entries, not task status; lists and calendars refetch every ten seconds while visible.
+- Running uses open time entries; lists refetch every 10s. Calendar uses tested calendar-window and date-relative offsets for rollover.
 - Work orders keep customer and optional worksite addresses in split fields; resolve the destination through the shared address helper; a DB trigger invalidates cached driving distance on address changes.
 - Work-order mail/previews share the allowlist, Worker PDF and RLS-scoped private photo loader; photo annex precedes terms, errors block omission. Previews enforce crew visibility via PDF.js dialogs. Mail uses private attachments, never inline details/rates.
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, even on failure, so a mail error cannot strand them on a completed task.
