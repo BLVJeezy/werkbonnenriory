@@ -228,7 +228,7 @@ function Rekeningen({ c }: { c: string }) {
     const { error } = await db.from("fin_accounts").insert(rows);
     error ? toast.error("Laden mislukt") : toast.success(`${rows.length} rekeningen toegevoegd`); refresh();
   };
-  const onFile = async (f: File, acc = bankAcc) => {
+  const onFile = async (f: File) => {
     const wb = XLSX.read(await f.arrayBuffer());
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0] ?? ""] ?? {}, { defval: "" });
     const cols = Object.keys(rows[0] ?? {});
@@ -507,7 +507,7 @@ function Bank({ c }: { c: string }) {
   useEffect(() => { if (accounts.length) setBankAcc(ctl.bank); }, [accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const refresh = async () => { await Promise.all(["fin", "facturen", "ponto_transactions", "dashboard-omzet", "bank-link-invoices"].map(key => qc.invalidateQueries({ queryKey: [key] }))); };
   const total = (i: any) => r2(i.fin_invoice_lines.reduce((a: number, l: any) => a + Number(l.ex_vat) + Number(l.vat), 0) * (i.doc_type === "creditnota" ? -1 : 1));
-  const onFile = async (f: File) => {
+  const onFile = async (f: File, acc = bankAcc) => {
     const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0] ?? ""] ?? {}, { defval: "" });
     const cols = Object.keys(rows[0] ?? {}); const find = (re: RegExp) => cols.find((k) => re.test(k.toLowerCase()));
