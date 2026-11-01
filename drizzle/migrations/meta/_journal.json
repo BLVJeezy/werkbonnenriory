@@ -589,6 +589,13 @@
       "when": 1793536669057,
       "tag": "0083_fin_settle_paid_invoice",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1793537875855,
+      "tag": "0084_fin_card_gross_amount",
+      "breakpoints": true
     }
   ]
 }

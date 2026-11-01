@@ -2794,6 +2794,7 @@ export type Database = {
         Args: {
           _bank_account: string
           _counter_account: string
+          _gross?: number
           _invoice: string
           _transaction: string
         }
@@ -2804,6 +2805,7 @@ export type Database = {
         Args: {
           _bank_account: string
           _counter_account: string
+          _gross?: number
           _invoice: string
           _transaction: string
         }
