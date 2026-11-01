@@ -1,3 +1,4 @@
+import { compressImage } from "@/lib/compress-image";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -35,8 +36,9 @@ export function InsurancePhotoPicker({ customerId, value, onChange }: { customer
     if (!files?.length) return;
     setUploading(true);
     const added: string[] = [];
-    for (const f of Array.from(files)) {
-      if (!/^image\/(jpeg|png)$/.test(f.type)) { toast.error(`${f.name}: gebruik JPG of PNG`); continue; }
+    for (const original of Array.from(files)) {
+      if (!/^image\/(jpeg|png)$/.test(original.type)) { toast.error(`${original.name}: gebruik JPG of PNG`); continue; }
+      const f = await compressImage(original);
       const path = `bestek/${crypto.randomUUID()}.${f.type === "image/png" ? "png" : "jpg"}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, f, { contentType: f.type });
       if (error) toast.error(`${f.name} uploaden mislukt`); else added.push(path);
