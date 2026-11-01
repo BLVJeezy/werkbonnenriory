@@ -652,6 +652,13 @@
       "when": 1793543464968,
       "tag": "0092_delete_unsent_invoice_no_requeue",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1793543630156,
+      "tag": "0093_reuse_last_invoice_number_on_delete",
+      "breakpoints": true
     }
   ]
 }
