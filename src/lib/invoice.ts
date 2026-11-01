@@ -22,11 +22,15 @@ export function buildInvoice(o: {
 }) {
   const { wo } = o;
   const rate = Number(o.activity?.hourly_rate ?? 0);
-  const hours = Math.max(0, billableHours(o.seconds) - (wo.warranty ? 1 : 0));
-  const km = wo.warranty ? 0 : Number(wo.distance_km ?? 0);
+  // Garantie: volledige arbeid en verplaatsing tonen, daarna zichtbare reductielijnen zodat de klant ziet wat verrekend is.
+  const allHours = billableHours(o.seconds);
+  const freeHours = wo.warranty ? Math.min(1, allHours) : 0;
+  const km = Number(wo.distance_km ?? 0);
   const lines: InvoiceLine[] = [];
-  if (hours > 0) lines.push({ description: `Arbeid${o.activity ? ` – ${o.activity.name}` : ""} (werkbon #${wo.number})${wo.warranty ? ", eerste uur onder garantie" : ""}`, quantity: hours, unit: "u", unitPrice: rate, amount: r2(hours * rate) });
+  if (allHours > 0) lines.push({ description: `Arbeid${o.activity ? ` – ${o.activity.name}` : ""} (werkbon #${wo.number})`, quantity: allHours, unit: "u", unitPrice: rate, amount: r2(allHours * rate) });
   if (km > 0) lines.push({ description: "Verplaatsing (km heen en terug)", quantity: km, unit: "km", unitPrice: o.kmRate, amount: r2(km * o.kmRate) });
+  if (freeHours > 0 && rate > 0) lines.push({ description: "Reductie garantie – eerste uur arbeid", quantity: freeHours, unit: "u", unitPrice: -rate, amount: -r2(freeHours * rate) });
+  if (wo.warranty && km > 0 && o.kmRate > 0) lines.push({ description: "Reductie garantie – verplaatsing", quantity: km, unit: "km", unitPrice: -o.kmRate, amount: -r2(km * o.kmRate) });
   for (const m of o.materials) lines.push({ description: m.name, quantity: Number(m.quantity), unit: m.unit, unitPrice: Number(m.unit_price), amount: r2(Number(m.quantity) * Number(m.unit_price)) });
   const t = computeTotals({ seconds: o.seconds, hourlyRate: rate, distanceKm: wo.distance_km, kmRate: o.kmRate, materials: o.materials, vatRate: Number(wo.vat_rate), warranty: wo.warranty });
   const customer: InvoiceCustomer = {
