@@ -40,6 +40,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { AppointmentMailSync } from '@/components/AppointmentMailSync';
 import { CustomerPicker } from '@/components/CustomerPicker';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
+import { WerkbonMailButton } from '@/components/WerkbonMailButton';
 import { sortRows, type SortDir, type SortValue } from '@/lib/sort-rows';
 import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
 
@@ -474,6 +475,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
       {below}
       <div className="flex flex-wrap items-center gap-2">
         {signed && <WorkOrderPreview workOrderId={w.id} />}
+        {signed && <WerkbonMailButton workOrderId={w.id} email={w.email} />}
         {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} noAnswerAt={w.no_answer_at} />}
       </div>
     </div>
