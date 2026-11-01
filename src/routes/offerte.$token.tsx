@@ -21,6 +21,7 @@ function OfferteTekenen() {
   const sign = useServerFn(signQuote);
   const [signature, setSignature] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [chosen, setChosen] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: q, error: loadError } = useQuery({ queryKey: ["quote", token], queryFn: () => get({ data: { token } }) });
@@ -31,15 +32,19 @@ function OfferteTekenen() {
   const c = q.customer as InvoiceCustomer;
   const allLines = q.lines as InvoiceLine[];
   const lines = allLines.filter((l) => !l.optional);
-  const optionLines = allLines.filter((l) => l.optional);
+  const optionLines = allLines.map((l, i) => ({ line: l, index: i })).filter((x) => x.line.optional);
   const signed = q.status === "akkoord";
+  const vatRate = Number(q.vat_rate);
+  const chosenNet = optionLines.filter((x) => chosen.has(x.index)).reduce((s, x) => s + x.line.amount, 0);
+  const chosenTotal = Math.round(chosenNet * (1 + vatRate / 100) * 100) / 100;
+  const grandTotal = Math.round((Number(q.total) + chosenTotal) * 100) / 100;
 
   async function onderteken() {
     if (!signature || !name.trim()) return;
     setBusy(true);
     setError(null);
     try {
-      await sign({ data: { token, signature: signature!, name } });
+      await sign({ data: { token, signature: signature!, name, options: [...chosen] } });
       window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ondertekenen mislukt");
@@ -73,23 +78,40 @@ function OfferteTekenen() {
       </dl>
       {optionLines.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-black uppercase text-primary">Opties — niet inbegrepen in het totaal</h2>
-          <p className="text-sm text-muted-foreground">Je kan deze opties meenemen; ze worden pas aangerekend als je ze kiest. Vermeld bij het ondertekenen welke opties je wil, of we nemen contact op.</p>
+          <h2 className="text-sm font-black uppercase text-primary">Opties — klik aan wat je wil meenemen</h2>
+          <p className="text-sm text-muted-foreground">Deze opties zijn niet inbegrepen in het totaal hierboven. Vink aan welke je wil; ze worden dan mee ondertekend en aangerekend.</p>
           <ul className="divide-y rounded-md border bg-card">
-            {optionLines.map((l, i) => {
+            {optionLines.map(({ line: l, index }) => {
               const { title, detail } = splitLineText(l.description);
+              const on = chosen.has(index);
               return (
-                <li key={i} className="flex items-start gap-3 p-3">
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-bold">{title}</span>
-                    {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
-                  </span>
-                  <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
-                  <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>
+                <li key={index}>
+                  <label className={`flex cursor-pointer items-start gap-3 p-3 ${on ? "bg-accent" : ""} ${signed ? "cursor-default" : ""}`}>
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-5 w-5"
+                      checked={on}
+                      disabled={signed}
+                      onChange={() => setChosen((s) => { const n = new Set(s); if (n.has(index)) n.delete(index); else n.add(index); return n; })}
+                      aria-label={`Optie ${title}`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold">{title}</span>
+                      {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
+                    </span>
+                    <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
+                    <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>
+                  </label>
                 </li>
               );
             })}
           </ul>
+          {chosen.size > 0 && (
+            <dl className="ml-auto grid w-64 grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
+              <dt>Gekozen opties incl. btw</dt><dd className="text-right">{euro(chosenTotal)}</dd>
+              <dt className="text-lg font-black">Nieuw totaal incl. btw</dt><dd className="text-right text-lg font-black">{euro(grandTotal)}</dd>
+            </dl>
+          )}
         </section>
       )}
       {signed ? (

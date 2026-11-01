@@ -268,17 +268,26 @@ export const getQuoteByToken = createServerFn({ method: "GET" })
   });
 
 export const signQuote = createServerFn({ method: "POST" })
-  .inputValidator((i: { token: string; signature: string; name: string }) => {
+  .inputValidator((i: { token: string; signature: string; name: string; options?: number[] }) => {
     if (!i.signature.startsWith("data:image/png")) throw new Error("Handtekening ontbreekt");
     if (!i.name.trim()) throw new Error("Vul je naam in");
-    return { token: i.token, signature: i.signature, name: i.name.trim() };
+    const options = (i.options ?? []).filter((n) => Number.isInteger(n) && n >= 0 && n < 500);
+    return { token: i.token, signature: i.signature, name: i.name.trim(), options };
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: q } = await supabaseAdmin.from("quotes").select("id, status").eq("token", data.token).maybeSingle();
+    const { data: q } = await supabaseAdmin.from("quotes").select("id, status, lines, vat_rate").eq("token", data.token).maybeSingle();
     if (!q) throw new Error("Offerte niet gevonden");
     if (q.status === "akkoord") return { ok: true as const };
-    const { error } = await supabaseAdmin.from("quotes").update({ status: "akkoord", signature: data.signature, signed_name: data.name, signed_at: new Date().toISOString() }).eq("id", q.id);
+    // The customer picks optional lines by clicking; chosen options become part of the offer and its total.
+    const lines = (q.lines as InvoiceLine[]).map((l, i) =>
+      l.optional && data.options.includes(i) ? { ...l, optional: false } : l,
+    );
+    const t = quoteTotals(lines, Number(q.vat_rate));
+    const { error } = await supabaseAdmin.from("quotes").update({
+      status: "akkoord", signature: data.signature, signed_name: data.name, signed_at: new Date().toISOString(),
+      lines, net: t.net, vat: t.vat, total: t.total,
+    }).eq("id", q.id);
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
