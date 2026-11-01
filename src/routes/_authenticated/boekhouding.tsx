@@ -539,8 +539,13 @@ function Bank({ c }: { c: string }) {
       toast.success("Afgeletterd en geboekt"); refresh();
     } catch (e: any) { toast.error(e.message); }
   };
+  // Boeking en koppeling zijn twee stappen: mislukt de koppeling, dan wordt de boeking teruggedraaid zodat geen losse boeking achterblijft.
+  const linkEntry = async (txId: string, entryId: string) => {
+    const { error } = await db.from("fin_bank_tx").update({ entry_id: entryId }).eq("id", txId).is("entry_id", null);
+    if (error) { await undoEntry(c, entryId).catch(() => {}); throw new Error(error.message); }
+  };
   const book = async (t: any, account: string) => {
-    try { const id = await post(c, "bank", t.tx_date, t.description || t.counterparty || "Bankverrichting", null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, account)); await db.from("fin_bank_tx").update({ entry_id: id }).eq("id", t.id); refresh(); }
+    try { const id = await post(c, "bank", t.tx_date, t.description || t.counterparty || "Bankverrichting", null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, account)); await linkEntry(t.id, id); refresh(); }
     catch (e: any) { toast.error(e.message); }
   };
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -550,7 +555,7 @@ function Bank({ c }: { c: string }) {
     let ok = 0, fout = 0;
     for (const t of lijst) {
       const oms = t.description || t.counterparty || "Bankverrichting";
-      try { const id = await post(c, "bank", t.tx_date, label ? `${label} · ${oms}` : oms, label ?? null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, account)); await db.from("fin_bank_tx").update({ entry_id: id }).eq("id", t.id); ok++; }
+      try { const id = await post(c, "bank", t.tx_date, label ? `${label} · ${oms}` : oms, label ?? null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, account)); await linkEntry(t.id, id); ok++; }
       catch { fout++; }
     }
     fout ? toast.error(`${ok} geboekt, ${fout} mislukt`) : toast.success(label ? `${ok} verrichtingen verrekend via ${account}` : `${ok} verrichting(en) geboekt op ${account}`);
