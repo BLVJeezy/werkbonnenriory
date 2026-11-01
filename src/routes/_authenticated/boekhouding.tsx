@@ -528,7 +528,7 @@ function Bank({ c }: { c: string }) {
     const linked = new Set(((await fetchAll((a, b) => db.from("fin_bank_tx").select("matched_invoice_id").eq("company_id", c).not("matched_invoice_id", "is", null).range(a, b))) as any[]).map((r) => r.matched_invoice_id));
     return paid.filter((i) => !linked.has(i.id));
   } });
-  const [bankAcc, setBankAcc] = useState("550000");
+  const [bankAcc, setBankAcc] = useState("550200");
   const ctl = controlAccounts(accounts.map((a) => a.number));
   useEffect(() => { if (accounts.length) setBankAcc(ctl.bank); }, [accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const refresh = async () => { await Promise.all(["fin", "facturen", "ponto_transactions", "dashboard-omzet", "bank-link-invoices"].map(key => qc.invalidateQueries({ queryKey: [key] }))); };
