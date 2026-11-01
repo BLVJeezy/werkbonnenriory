@@ -22,6 +22,8 @@ import { CustomerPicker } from '@/components/CustomerPicker';
 import { SearchSelect } from '@/components/SearchSelect';
 import { InsurancePhotoPicker } from '@/components/InsurancePhotoPicker';
 import { suggestInsuranceQuote } from '@/lib/insurance-quote-ai.functions';
+import { ProductPhotoGallery } from '@/components/ProductPhotos';
+import { quoteProductValues } from '@/lib/product-photos';
 
 export const Route = createFileRoute("/_authenticated/offertes")({
   validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
@@ -29,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean };
+type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean; photoPaths?: string[] };
 const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", optional: false };
 /** The stored line text keeps its old shape: product name on the first line, long description below it. */
 const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
@@ -92,7 +94,7 @@ function Offertes() {
   const parsedLines: InvoiceLine[] = [
     ...lines
       .filter((l) => lineText(l))
-      .map((l) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0), optional: l.optional })),
+      .map((l) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0), optional: l.optional, photoPaths: l.photoPaths ?? [] })),
     ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
   ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
@@ -126,7 +128,7 @@ function Offertes() {
   function pickProduct(i: number, productId: string) {
     const p = products.find((x) => x.id === productId);
     if (p) {
-      setLine(i, { title: p.name, detail: (p.description ?? "").trim(), unit: p.unit, unitPrice: String(p.price) });
+      setLine(i, quoteProductValues(p));
     }
   }
 
@@ -146,7 +148,7 @@ function Offertes() {
     setKm(kmLine ? kmLine.quantity : null);
     const ls = all.filter((l) => l.unit !== "km").map((l) => {
       const t = splitLineText(l.description);
-      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), optional: !!l.optional };
+      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), optional: !!l.optional, photoPaths: l.photoPaths ?? [] };
     });
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
@@ -332,6 +334,7 @@ function Offertes() {
                   <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
                 </div>
                 <Textarea placeholder="Lange omschrijving (optioneel, als bijvoegsel onder de productnaam)" rows={Math.min(8, Math.max(2, l.detail.split("\n").length))} className="min-h-10 text-sm" value={l.detail} onChange={(e) => setLine(i, { detail: e.target.value })} aria-label="Lange omschrijving" />
+                <ProductPhotoGallery paths={l.photoPaths ?? []} title={l.title} />
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={l.optional} onChange={(e) => setLine(i, { optional: e.target.checked })} />
                   Optie — de klant kan deze lijn meenemen, maar hij telt niet mee in het totaal

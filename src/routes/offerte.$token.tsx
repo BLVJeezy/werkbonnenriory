@@ -9,6 +9,7 @@ import { euro } from "@/lib/billing";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { splitLineText } from "@/lib/line-text";
 import { getQuoteByToken, signQuote } from "@/lib/quotes.functions";
+import { ProductPhotoGallery } from "@/components/ProductPhotos";
 
 export const Route = createFileRoute("/offerte/$token")({
   head: () => ({ meta: [{ title: "Offerte ondertekenen — Riory" }, { name: "description", content: "Bekijk en onderteken je Riory-offerte digitaal." }, { property: "og:title", content: "Offerte ondertekenen — Riory" }, { property: "og:description", content: "Bekijk en onderteken je Riory-offerte digitaal." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -44,7 +45,7 @@ function OfferteTekenen() {
     setBusy(true);
     setError(null);
     try {
-      await sign({ data: { token, signature: signature!, name, options: [...chosen] } });
+      await sign({ data: { token, signature, name, options: [...chosen] } });
       window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ondertekenen mislukt");
@@ -64,6 +65,7 @@ function OfferteTekenen() {
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{title}</span>
                 {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
+                <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
               </span>
               <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
               <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>
@@ -98,6 +100,7 @@ function OfferteTekenen() {
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold">{title}</span>
                       {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
+                      <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
                     </span>
                     <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
                     <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>

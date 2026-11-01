@@ -8,6 +8,7 @@ import type { QuotePdfData } from "@/lib/quote-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { WERKBON_MAILBOX_KEY } from "@/lib/werkbon-mailbox.functions";
 import { getConnectionKeyForUser } from "@/lib/appUserConnections.server";
+import { PRODUCT_PHOTO_BUCKET, productPhotoPaths } from "./product-photos";
 
 type Ctx = { supabase: any; userId: string };
 
@@ -41,7 +42,14 @@ async function sendMail(to: string, subject: string, body: string, attachment: {
 
 async function quotePdfData(supabase: any, q: any): Promise<QuotePdfData> {
   const { data: s } = await supabase.from("settings").select("*").eq("id", 1).single();
+  const productPhotos: Record<string, Uint8Array> = {};
+  for (const path of productPhotoPaths((q.lines as InvoiceLine[]).flatMap(l => l.photoPaths ?? []))) {
+    const { data: file, error } = await supabase.storage.from(PRODUCT_PHOTO_BUCKET).download(path);
+    if (error || !file) throw new Error("Een productfoto kon niet geladen worden. De offerte is niet verzonden.");
+    productPhotos[path] = new Uint8Array(await file.arrayBuffer());
+  }
   return {
+    productPhotos,
     number: q.number, issueDate: q.created_at.slice(0, 10), validUntil: addDays(q.created_at.slice(0, 10), 30),
     customer: q.customer as InvoiceCustomer, lines: q.lines as InvoiceLine[], vatRate: Number(q.vat_rate),
     net: Number(q.net), vat: Number(q.vat), total: Number(q.total),
@@ -80,7 +88,7 @@ const extraFields = (i: QuoteExtra) => {
 export const createQuote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string } & QuoteExtra) => ({
-    customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null, extra: extraFields(i),
+    customer: i.customer, lines: i.lines.slice(0, 200).map(l => ({ ...l, photoPaths: productPhotoPaths(l.photoPaths) })), vatRate: i.vatRate, intro: i.intro?.trim() || null, extra: extraFields(i),
   }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -98,7 +106,7 @@ export const createQuote = createServerFn({ method: "POST" })
 export const updateQuote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { quoteId: string; customer: InvoiceCustomer; lines: InvoiceLine[]; vatRate: number; intro?: string } & QuoteExtra) => ({
-    quoteId: i.quoteId, customer: i.customer, lines: i.lines.slice(0, 200), vatRate: i.vatRate, intro: i.intro?.trim() || null, extra: extraFields(i),
+    quoteId: i.quoteId, customer: i.customer, lines: i.lines.slice(0, 200).map(l => ({ ...l, photoPaths: productPhotoPaths(l.photoPaths) })), vatRate: i.vatRate, intro: i.intro?.trim() || null, extra: extraFields(i),
   }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -264,7 +272,14 @@ export const getQuoteByToken = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: q } = await supabaseAdmin.from("quotes").select("number, customer, lines, vat_rate, net, vat, total, status, signed_name, signed_at, created_at").eq("token", data.token).maybeSingle();
     if (!q) throw new Error("Offerte niet gevonden");
-    return q;
+    const paths = productPhotoPaths((q.lines as InvoiceLine[]).flatMap(l => l.photoPaths ?? []));
+    const photoUrls: Record<string, string> = {};
+    if (paths.length) {
+      const { data: signed, error } = await supabaseAdmin.storage.from(PRODUCT_PHOTO_BUCKET).createSignedUrls(paths, 3600);
+      if (error) throw new Error("Productfoto’s konden niet geladen worden");
+      for (const photo of signed ?? []) if (photo.path && photo.signedUrl) photoUrls[photo.path] = photo.signedUrl;
+    }
+    return { ...q, photoUrls };
   });
 
 export const signQuote = createServerFn({ method: "POST" })
