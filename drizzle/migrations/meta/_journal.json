@@ -575,6 +575,13 @@
       "when": 1793522057396,
       "tag": "0081_first_customer_label",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1793524460182,
+      "tag": "0082_product_photos",
+      "breakpoints": true
     }
   ]
 }

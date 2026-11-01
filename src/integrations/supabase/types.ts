@@ -1997,6 +1997,7 @@ export type Database = {
           description: string
           id: string
           name: string
+          photo_paths: string[]
           price: number
           unit: string
         }
@@ -2007,6 +2008,7 @@ export type Database = {
           description?: string
           id?: string
           name: string
+          photo_paths?: string[]
           price?: number
           unit?: string
         }
@@ -2017,6 +2019,7 @@ export type Database = {
           description?: string
           id?: string
           name?: string
+          photo_paths?: string[]
           price?: number
           unit?: string
         }
