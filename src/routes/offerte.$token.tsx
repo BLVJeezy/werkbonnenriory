@@ -71,6 +71,27 @@ function OfferteTekenen() {
         <dt>Btw {Number(q.vat_rate)}%</dt><dd className="text-right">{euro(Number(q.vat))}</dd>
         <dt className="text-lg font-black">Totaal incl. btw</dt><dd className="text-right text-lg font-black">{euro(Number(q.total))}</dd>
       </dl>
+      {optionLines.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-black uppercase text-primary">Opties — niet inbegrepen in het totaal</h2>
+          <p className="text-sm text-muted-foreground">Je kan deze opties meenemen; ze worden pas aangerekend als je ze kiest. Vermeld bij het ondertekenen welke opties je wil, of we nemen contact op.</p>
+          <ul className="divide-y rounded-md border bg-card">
+            {optionLines.map((l, i) => {
+              const { title, detail } = splitLineText(l.description);
+              return (
+                <li key={i} className="flex items-start gap-3 p-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold">{title}</span>
+                    {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
+                  </span>
+                  <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
+                  <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       {signed ? (
         <div className="rounded-md border-2 border-primary bg-card p-4">
           <p className="text-lg font-bold">Deze offerte is akkoord.</p>
