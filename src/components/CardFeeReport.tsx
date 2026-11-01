@@ -24,7 +24,7 @@ export function CardFeeReport({ companyId }: { companyId: string }) {
   const exportCsv = () => {
     const rows = [["Datum", "Factuur", "Omschrijving", "Bruto (klant)", "Netto (bank)", "Commissie (653000)"],
       ...data.map((r: any) => [r.date, r.invoice, r.text, r.gross.toFixed(2).replace(".", ","), r.net.toFixed(2).replace(".", ","), r.fee.toFixed(2).replace(".", ",")])];
-    const csv = rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
+    const csv = rows.map((r) => r.map((v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
     a.download = `kaartcommissies-653000-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
