@@ -4,9 +4,10 @@ import { ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PRODUCT_PHOTO_BUCKET } from "@/lib/product-photos";
+import { PRODUCT_PHOTO_BUCKET, productPhotoPaths } from "@/lib/product-photos";
 
-export function ProductPhotoGallery({ paths, title, urls }: { paths: string[]; title: string; urls?: Record<string, string> }) {
+export function ProductPhotoGallery({ paths: storedPaths, title, urls }: { paths?: string[] | null; title: string; urls?: Record<string, string> }) {
+  const paths = productPhotoPaths(storedPaths);
   const { data = {} } = useQuery({
     queryKey: ["product-photo-urls", paths], enabled: !urls && paths.length > 0,
     queryFn: async () => {
@@ -20,7 +21,8 @@ export function ProductPhotoGallery({ paths, title, urls }: { paths: string[]; t
   return <div className="mt-2 flex flex-wrap gap-2">{paths.map((path, i) => images[path] && <a key={path} href={images[path]} target="_blank" rel="noreferrer" aria-label={`Foto ${i + 1} van ${title}`}><img src={images[path]} alt={`${title} — foto ${i + 1}`} className="h-28 w-36 rounded border bg-background object-contain" /></a>)}</div>;
 }
 
-export function ProductPhotoEditor({ value, onChange, title = "Product", disabled = false }: { value: string[]; onChange: (paths: string[]) => void | Promise<void>; title?: string; disabled?: boolean }) {
+export function ProductPhotoEditor({ value: storedPaths, onChange, title = "Product", disabled = false }: { value?: string[] | null; onChange: (paths: string[]) => void | Promise<void>; title?: string; disabled?: boolean }) {
+  const value = productPhotoPaths(storedPaths);
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   async function upload(files: FileList | null) {
