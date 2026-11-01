@@ -112,6 +112,6 @@ describe("buildManualCreditNote", () => {
     expect(c.net).toBe(-100);
     expect(c.vat).toBe(-21);
     expect(c.total).toBe(-121);
-    expect(c.lines[0].amount).toBe(-100);
+    expect(c.lines[0]?.amount).toBe(-100);
   });
 });
