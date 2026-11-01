@@ -10,8 +10,9 @@ const SOFT = '#fef4e6';
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const URL_RE = /^https?:\/\/\S+$/;
 
-function button(url: string, label: string) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 14px"><tr><td style="background:${ORANGE};border-radius:6px"><a href="${esc(url)}" style="display:inline-block;padding:12px 22px;color:#ffffff;font-weight:700;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:15px">${esc(label)}</a></td></tr></table>`;
+function button(url: string, label: string, secondary = false) {
+  if (secondary) return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 14px"><tr><td style="border:1px solid ${INK};border-radius:6px"><a href="${esc(url)}" style="display:inline-block;padding:9px 18px;color:${INK};font-weight:700;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:13px">${esc(label)}</a></td></tr></table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 18px"><tr><td align="center" style="background:${ORANGE};border-radius:8px"><a href="${esc(url)}" style="display:block;padding:16px 22px;color:#ffffff;font-weight:700;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:17px;text-align:center">${esc(label)} &rarr;</a></td></tr></table>`;
 }
 
 /** Zet een platte tekstmail om naar HTML in Riory-huisstijl. Regels die enkel een link zijn worden een knop. */
@@ -24,7 +25,15 @@ export function brandedMailHtml(text: string, contactEmail = 'info@riory.be', im
       const prev = parts.at(-1) ?? '';
       const label = /Document openen/i.test(prev) ? 'Document openen' : /afspraak/i.test(line) ? 'Afspraak kiezen' : /offerte/i.test(line) ? 'Offerte ondertekenen' : 'Openen';
       if (/Document openen:?<\/p>$/.test(prev)) parts.pop();
-      parts.push(button(line, label));
+      parts.push(button(line, label, label === 'Document openen'));
+      continue;
+    }
+    if (line.startsWith('! ')) {
+      parts.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0"><tr><td style="background:${SOFT};border-left:4px solid ${ORANGE};border-radius:4px;padding:12px 14px;font-size:14px;line-height:1.5;color:${INK}"><strong>Let op:</strong> ${esc(line.slice(2))}</td></tr></table>`);
+      continue;
+    }
+    if (line.startsWith('✓ ')) {
+      parts.push(`<p style="margin:0 0 4px;line-height:1.5;font-size:14px;color:${INK}"><span style="color:${ORANGE};font-weight:700">&#10003;</span>&nbsp; ${esc(line.slice(2))}</p>`);
       continue;
     }
     if (!line) { parts.push('<div style="height:10px"></div>'); continue; }
