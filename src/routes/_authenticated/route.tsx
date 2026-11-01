@@ -54,7 +54,7 @@ function Layout() {
     <div className={fullScreen ? 'flex h-dvh min-h-0 flex-col overflow-hidden bg-background' : 'min-h-screen bg-background'}>
       <header className="no-print shrink-0 border-b-4 border-primary bg-secondary text-secondary-foreground">
         <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 sm:flex sm:flex-wrap sm:gap-4 sm:px-4">
-          <Link to="/werkbonnen" className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
+          <Link to={role === "admin" ? "/dashboard" : "/werkbonnen"} className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
             Riory <span className="text-primary">Werkbonnen</span>
           </Link>
           <Button variant="secondary" size="icon" className="shrink-0 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
@@ -66,9 +66,12 @@ function Layout() {
                 <Link to="/fotos" className={navCls} activeProps={active}>Foto's</Link>
               </>
             ) : (
+              <>
+              {role === "admin" && <Link to="/dashboard" className={navCls} activeProps={active}>Dashboard</Link>}
               <Link to="/werkbonnen" className={navCls} activeProps={active}>
                 {role === "admin" ? "Taken" : "Mijn taken"}
               </Link>
+              </>
             )}
             {role === "admin" && (
               <>
@@ -84,9 +87,6 @@ function Layout() {
                 </Link>
                 <Link to="/boekhouding" search={{ tab: "rekeningen" }} className={navCls} activeProps={active}>Boekhouding</Link>
                 <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }} className={navCls} activeProps={active}>Finance</Link>
-                <Link to="/dashboard" className={navCls} activeProps={active}>
-                  Dashboard
-                </Link>
                 <Link to="/klanten" className={navCls} activeProps={active}>
                   Klanten
                 </Link>

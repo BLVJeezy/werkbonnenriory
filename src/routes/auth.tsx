@@ -54,7 +54,7 @@ function AuthPage() {
         toast.error("Inloggen mislukt: " + error.message);
         return;
       }
-      navigate({ to: "/werkbonnen" });
+      navigate({ to: "/dashboard" });
     } else {
       const { error } = await supabase.auth.updateUser({ password });
       setBusy(false);
@@ -64,7 +64,7 @@ function AuthPage() {
       }
       setPassword("");
       toast.success("Je nieuwe wachtwoord is opgeslagen.");
-      navigate({ to: "/werkbonnen" });
+      navigate({ to: "/dashboard" });
     }
   }
 
