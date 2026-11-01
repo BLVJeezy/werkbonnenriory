@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
+import { WerkbonMailButton } from '@/components/WerkbonMailButton';
 import { SortTh, Th, useSort, tableCls, tableWrap } from '@/components/SortTable';
 
 export const Route = createFileRoute('/_authenticated/afgewerkte-werkbonnen')({
@@ -26,7 +27,7 @@ export const Route = createFileRoute('/_authenticated/afgewerkte-werkbonnen')({
 });
 
 const completedQuery = () => supabase.from('work_orders')
-  .select('id, number, customer_name, address, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, status, signed_at, paid_at, paid_method, scheduled_date, created_at, technician_id, technicians(name)')
+  .select('id, number, customer_name, email, address, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, status, signed_at, paid_at, paid_method, scheduled_date, created_at, technician_id, technicians(name)')
   .eq('status', 'afgetekend').order('signed_at', { ascending: false, nullsFirst: false }).order('id');
 type CompletedRow = NonNullable<Awaited<ReturnType<typeof completedQuery>>['data']>[number];
 const completionDate = (row: CompletedRow) => row.signed_at ?? row.paid_at ?? row.scheduled_date ?? row.created_at;
@@ -88,7 +89,7 @@ function CompletedWorkOrders() {
           <td>{row.technicians?.name ?? 'Niet toegewezen'}</td>
           <td className="whitespace-nowrap">{new Date(completionDate(row)).toLocaleString('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'short', ...(row.signed_at || row.paid_at ? { timeStyle: 'short' as const } : {}) })}</td>
           <td><Badge variant="secondary">{row.paid_method ? 'Afgerekend' : 'Afgewerkt'}</Badge></td>
-          <td><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" asChild><Link to="/werkbonnen/$id" params={{ id: row.id }}>Openen</Link></Button><WorkOrderPreview workOrderId={row.id} /></div></td>
+          <td><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" asChild><Link to="/werkbonnen/$id" params={{ id: row.id }}>Openen</Link></Button><WorkOrderPreview workOrderId={row.id} /><WerkbonMailButton workOrderId={row.id} email={row.email} /></div></td>
         </tr>)}{sort.sorted.length === 0 && <tr><td colSpan={6} className="text-center text-muted-foreground">Geen afgewerkte werkbonnen gevonden.</td></tr>}</tbody>
       </table>
     </div>}
