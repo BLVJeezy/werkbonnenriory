@@ -217,9 +217,10 @@ function Lijst() {
           <DialogTrigger asChild>
             <Button variant="outline">+ Taak toevoegen</Button>
           </DialogTrigger>
+          <Button variant="outline" onClick={openDirect}>+ Werkbon maken</Button>
           <DialogContent className="max-h-[90dvh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Nieuwe taak inplannen</DialogTitle>
+              <DialogTitle>{direct ? "Nieuwe werkbon (zonder planning)" : "Nieuwe taak inplannen"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={addToe} className="grid gap-3">
               <div className="grid gap-1">
