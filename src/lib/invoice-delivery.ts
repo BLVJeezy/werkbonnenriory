@@ -28,8 +28,8 @@ export function invoiceMail(to: string, number: string, contentBytes: string, fo
 }
 
 /** Customer mail with PDF + UBL, OkiOki in BCC so the customer cannot see it. */
-export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur", docUrl?: string) {
-  const m = invoiceMail(to, number, pdfBytes, "pdf", label, docUrl);
+export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur", docUrl?: string, paid = false) {
+  const m = invoiceMail(to, number, pdfBytes, "pdf", label, docUrl, paid);
   return { message: { ...m.message,
     bccRecipients: [{ emailAddress: { address: OKIOKI_INVOICE_EMAIL } }],
     attachments: [...m.message.attachments, file({ name: `${label}-${number}.xml`, contentType: "application/xml", contentBytes: ublBytes })],

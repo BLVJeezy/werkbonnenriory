@@ -83,7 +83,8 @@ export async function sendOne(supabase: any, inv: any) {
         }
         const { prepareDocument } = await import('./document-tracking.server');
         const tracking = await prepareDocument(inv.kind === 'creditnota' ? 'creditnota' : 'factuur', inv.id, `${label} ${d.number}`, to, pdf);
-        const payload = invoiceMailWithCc(to, d.number, pdf, ubl, label, tracking.url);
+        const { isFullyPaid } = await import("@/lib/billing");
+        const payload = invoiceMailWithCc(to, d.number, pdf, ubl, label, tracking.url, isFullyPaid(d.total, d.paidAmount));
         await tracking.send(() => sendMail(to, d.number, pdf, "pdf", label, payload));
       },
       sendUbl: (to) => sendMail(to, d.number, ubl, "ubl", label),
