@@ -29,4 +29,7 @@ describe("invoice delivery", () => {
     expect(Object.keys(m.message)).not.toContain("ccRecipients");
     expect(m.message.attachments.map((a) => a.name)).toEqual(["Factuur-2026-1.pdf", "Factuur-2026-1.xml"]);
   });
+  it("asks Outlook for a read receipt on the customer invoice mail", () => {
+    expect(invoiceMailWithCc("klant@example.be", "2026-1", "JVBERg==", "PHhtbD4=").message.isReadReceiptRequested).toBe(true);
+  });
 });
