@@ -2490,6 +2490,7 @@ export type Database = {
           description: string | null
           distance_km: number | null
           email: string | null
+          first_customer: boolean
           house_number: string | null
           id: string
           no_answer_at: string | null
@@ -2543,6 +2544,7 @@ export type Database = {
           description?: string | null
           distance_km?: number | null
           email?: string | null
+          first_customer?: boolean
           house_number?: string | null
           id?: string
           no_answer_at?: string | null
@@ -2596,6 +2598,7 @@ export type Database = {
           description?: string | null
           distance_km?: number | null
           email?: string | null
+          first_customer?: boolean
           house_number?: string | null
           id?: string
           no_answer_at?: string | null

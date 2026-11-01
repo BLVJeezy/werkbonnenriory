@@ -1,0 +1,2 @@
+ALTER TABLE public.work_orders ADD COLUMN first_customer boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.work_orders.first_customer IS 'Label Eerste klant voor deze interventie; bestaande taaktoegang blijft behouden.';
