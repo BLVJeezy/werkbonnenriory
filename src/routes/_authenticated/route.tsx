@@ -1,3 +1,4 @@
+import { SavingsQuarterAlert } from "@/components/SavingsQuarterAlert";
 import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -145,6 +146,7 @@ function Layout() {
         <Outlet />
       </main>}
       {role === "admin" && <OverdueAfterNoticeAlert />}
+      {role === "admin" && <SavingsQuarterAlert />}
     </div>
   );
 }

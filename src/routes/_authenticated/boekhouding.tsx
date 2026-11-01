@@ -1,3 +1,4 @@
+import { SAVINGS_ACCOUNT, markSavingsQuarterDone } from "@/lib/savings-quarter";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -227,7 +228,7 @@ function Rekeningen({ c }: { c: string }) {
     const { error } = await db.from("fin_accounts").insert(rows);
     error ? toast.error("Laden mislukt") : toast.success(`${rows.length} rekeningen toegevoegd`); refresh();
   };
-  const onFile = async (f: File) => {
+  const onFile = async (f: File, acc = bankAcc) => {
     const wb = XLSX.read(await f.arrayBuffer());
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0] ?? ""] ?? {}, { defval: "" });
     const cols = Object.keys(rows[0] ?? {});
@@ -515,7 +516,7 @@ function Bank({ c }: { c: string }) {
     const toIso = (v: unknown) => v instanceof Date ? v.toISOString().slice(0, 10) : (() => { const s = String(v); const m = s.match(/^(\d{2})[/.-](\d{2})[/.-](\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : s.slice(0, 10); })();
     const payload = rows.map((r) => ({ tx_date: toIso(r[cd]), amount: parseAmount(r[ca]), counterparty: cc ? String(r[cc]) : null, description: cm ? String(r[cm]) : null }))
       .filter((r) => r.amount != null && /^\d{4}-\d{2}-\d{2}$/.test(r.tx_date))
-      .map((r, i) => ({ company_id: c, bank_account: bankAcc, ...r, dedupe_key: dedupeKey([bankAcc, r.tx_date, r.amount, r.counterparty, r.description, i]) }));
+      .map((r, i) => ({ company_id: c, bank_account: acc, ...r, dedupe_key: dedupeKey([acc, r.tx_date, r.amount, r.counterparty, r.description, i]) }));
     const { error } = await db.from("fin_bank_tx").upsert(payload, { onConflict: "company_id,dedupe_key", ignoreDuplicates: true });
     error ? toast.error("Import mislukt") : toast.success(`${payload.length} bankverrichtingen ingelezen (dubbels genegeerd)`); refresh();
   };
@@ -635,6 +636,10 @@ function Bank({ c }: { c: string }) {
       <AccountList accounts={accounts} />
       <Link to="/facturen"><Button size="sm" variant="outline">Naar facturen</Button></Link>
       <PontoCard c={c} bankAcc={bankAcc} onDone={refresh} />
+      <Card title={`Spaarrekening inladen (${SAVINGS_ACCOUNT})`}>
+        <label className="inline-block cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm">CSV/Excel spaarrekening kiezen<input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f, SAVINGS_ACCOUNT).then(() => markSavingsQuarterDone()); e.target.value = ""; }} /></label>
+        <p className="mt-1 text-xs text-muted-foreground">Uittreksel van de spaarrekening; alle verrichtingen worden op rekening {SAVINGS_ACCOUNT} ingelezen. Dubbels worden genegeerd.</p>
+      </Card>
       <Card title="Bankuittreksels importeren">
         <div className="flex flex-wrap items-center gap-2">
           <Input list="fin-accounts" className="w-32" value={bankAcc} onChange={(e) => setBankAcc(e.target.value)} />
