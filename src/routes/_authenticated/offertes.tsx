@@ -332,6 +332,10 @@ function Offertes() {
                   <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
                 </div>
                 <Textarea placeholder="Lange omschrijving (optioneel, als bijvoegsel onder de productnaam)" rows={Math.min(8, Math.max(2, l.detail.split("\n").length))} className="min-h-10 text-sm" value={l.detail} onChange={(e) => setLine(i, { detail: e.target.value })} aria-label="Lange omschrijving" />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={l.optional} onChange={(e) => setLine(i, { optional: e.target.checked })} />
+                  Optie — de klant kan deze lijn meenemen, maar hij telt niet mee in het totaal
+                </label>
               </div>
             ))}
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
@@ -347,6 +351,7 @@ function Offertes() {
             {kmOn && km != null && <span className="font-mono font-normal">{km} km × {euro(kmRate)} = {euro(km * kmRate)}</span>}
           </label>
           <p className="font-mono text-sm">Totaal: {euro(totals.net)} excl. btw · {euro(totals.total)} incl. btw</p>
+          {optionsTotals.net > 0 && <p className="font-mono text-sm text-muted-foreground">Opties (niet inbegrepen): {euro(optionsTotals.net)} excl. btw · {euro(optionsTotals.total)} incl. btw</p>}
           <Button disabled={busy}>{busy ? "Opslaan…" : editId ? "Opslaan en voorbeeld tonen" : bestek ? "Bestek aanmaken en voorbeeld tonen" : "Aanmaken en voorbeeld tonen"}</Button>
         </form>
       )}
