@@ -25,14 +25,23 @@ export async function financePontoAccounts(db: any) {
 export async function financePontoSync(db: any, userId: string, input: { companyId: string; bankAccount: string; since: string }) {
   const key = await token(db);
   const accounts = (await get(key, "/accounts?page[limit]=100")).data ?? [];
+  // Koppel elke bankrekening via haar IBAN aan de juiste grootboekrekening (bv. 550200, 550400).
+  const { data: ledger } = await db.from("fin_accounts").select("number, name").eq("company_id", input.companyId).like("number", "55%");
+  const normIban = (s: string) => s.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  const ledgerByIban = new Map<string, string>();
+  for (const a of ledger ?? []) {
+    const m = String(a.name ?? "").match(/[A-Z]{2}\d{2}[\dA-Z ]{8,30}/i);
+    if (m) ledgerByIban.set(normIban(m[0]), String(a.number));
+  }
   let fetched = 0, inserted = 0;
   for (const account of accounts) {
+    const bankAccount = ledgerByIban.get(normIban(String(account.attributes?.reference ?? ""))) ?? input.bankAccount;
     let path: string | null = `/accounts/${encodeURIComponent(account.id)}/transactions?page[limit]=100`;
     const seen = new Set<string>();
     while (path && !seen.has(path)) {
       seen.add(path);
       const result = await get(key, path);
-      const rows = (result.data ?? []).filter((t: any) => String(t.attributes?.executionDate ?? t.attributes?.valueDate ?? "").slice(0, 10) >= input.since).map((t: any) => ({ user_id: userId, company_id: input.companyId, bank_account: input.bankAccount, tx_date: String(t.attributes?.executionDate ?? t.attributes?.valueDate).slice(0, 10), amount: Number(t.attributes?.amount), counterparty: t.attributes?.counterpartName ?? null, counterparty_account: t.attributes?.counterpartReference ?? null, description: [t.attributes?.remittanceInformation, t.attributes?.description, account.attributes?.reference].filter(Boolean).join(" · ").slice(0, 1000), dedupe_key: `ponto:${account.id}:${t.id}` }));
+      const rows = (result.data ?? []).filter((t: any) => String(t.attributes?.executionDate ?? t.attributes?.valueDate ?? "").slice(0, 10) >= input.since).map((t: any) => ({ user_id: userId, company_id: input.companyId, bank_account: bankAccount, tx_date: String(t.attributes?.executionDate ?? t.attributes?.valueDate).slice(0, 10), amount: Number(t.attributes?.amount), counterparty: t.attributes?.counterpartName ?? null, counterparty_account: t.attributes?.counterpartReference ?? null, description: [t.attributes?.remittanceInformation, t.attributes?.description, account.attributes?.reference].filter(Boolean).join(" · ").slice(0, 1000), dedupe_key: `ponto:${account.id}:${t.id}` }));
       fetched += rows.length;
       if (rows.length) {
         const { data, error } = await db.from("fin_bank_tx").upsert(rows, { onConflict: "company_id,dedupe_key", ignoreDuplicates: true }).select("id");

@@ -528,7 +528,7 @@ function Bank({ c }: { c: string }) {
     const linked = new Set(((await fetchAll((a, b) => db.from("fin_bank_tx").select("matched_invoice_id").eq("company_id", c).not("matched_invoice_id", "is", null).range(a, b))) as any[]).map((r) => r.matched_invoice_id));
     return paid.filter((i) => !linked.has(i.id));
   } });
-  const [bankAcc, setBankAcc] = useState("550000");
+  const [bankAcc, setBankAcc] = useState("550200");
   const ctl = controlAccounts(accounts.map((a) => a.number));
   useEffect(() => { if (accounts.length) setBankAcc(ctl.bank); }, [accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const refresh = async () => { await Promise.all(["fin", "facturen", "ponto_transactions", "dashboard-omzet", "bank-link-invoices"].map(key => qc.invalidateQueries({ queryKey: [key] }))); };
@@ -757,7 +757,7 @@ function Bank({ c }: { c: string }) {
             const cands = open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025);
             return (
               <div key={t.id} className="rounded border border-border p-2 text-sm">
-                <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
+                <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {cands.map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => match(t, i)}>Afletteren: {i.counterparty} {i.number}</Button>)}
                   {!cands.length && paidCands(t).slice(0, 3).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren (al betaald): {i.counterparty} {i.number}</Button>)}
@@ -775,7 +775,7 @@ function Bank({ c }: { c: string }) {
             <p className="text-xs text-muted-foreground">Deze bedragen mogen blijven staan tot de factuur er is, of je boekt ze door naar de juiste rekening.</p>
             {wachtTx.map((t) => (
               <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
-                <span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span>
+                <span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span>
                 <span className="flex items-center gap-2"><span className={Number(t.amount) < 0 ? "text-destructive" : ""}>{eur(Number(t.amount))}</span>
                   <span className="text-xs">Doorboeken naar:</span><AccountPicker accounts={accounts} onPick={(nr) => herboek(t, nr)} /></span>
               </div>
@@ -807,7 +807,7 @@ function Bank({ c }: { c: string }) {
             const inv = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null;
             return (
             <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
-              <span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null}{" "}
+              <span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null}{" "}
                 {inv ? <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs">Factuur {inv.number} · {inv.counterparty} · {inv.invoice_date}</span>
                   : t.matched_invoice_id ? <span className="text-xs text-muted-foreground">afgeletterd</span>
                   : wachtIds.has(t.id) ? <span className="text-xs text-primary">op wachtrekening</span>

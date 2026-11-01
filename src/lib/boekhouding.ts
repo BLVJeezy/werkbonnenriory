@@ -136,5 +136,7 @@ export function openingEntry(accs: ImportedAccount[]): { lines: JLine[]; diff: n
 /** Kies de eigen centralisatierekening van het bedrijf (bv. 440110) als die bestaat, anders de standaard. */
 export function controlAccounts(numbers: string[]) {
   const pick = (prefix: string, std: string) => numbers.includes(std) ? std : numbers.filter((n) => n.startsWith(prefix)).sort()[0] ?? std;
-  return { klanten: pick("400", "400000"), leveranciers: pick("440", "440000"), bank: pick("55", "550000") };
+  // 550200 is de zichtrekening: die krijgt voorrang op de generieke 550000.
+  const bank = numbers.includes("550200") ? "550200" : pick("55", "550000");
+  return { klanten: pick("400", "400000"), leveranciers: pick("440", "440000"), bank };
 }
