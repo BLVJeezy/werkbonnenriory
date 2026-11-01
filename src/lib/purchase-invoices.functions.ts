@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePurchaseInvoice, type ParsedPurchaseInvoice } from "@/lib/purchase-invoice";
 import { canExportPurchase } from '@/lib/purchase-payment';
+import { paymentCommunication } from '@/lib/purchase-booking';
 
 type Ctx = { supabase: any; userId: string };
 
@@ -28,9 +29,14 @@ export const importPurchaseInvoices = createServerFn({ method: "POST" })
 /** Admin corrects the parsed values before approving. */
 export const updatePurchaseInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; kind?: 'factuur' | 'creditnota'; paymentMethod?: string } & Partial<ParsedPurchaseInvoice>) => i)
+  .inputValidator((i: { id: string; kind?: 'factuur' | 'creditnota'; paymentMethod?: string; supplierId?: string | null } & Partial<ParsedPurchaseInvoice>) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    if (data.supplierId) {
+      const { data: sup } = await context.supabase.from('suppliers').select('name,vat_number,iban,payment_method').eq('id', data.supplierId).single();
+      if (!sup) throw new Error('Leverancier niet gevonden');
+      data = { ...data, supplierName: sup.name, supplierVat: sup.vat_number, supplierIban: sup.iban ?? data.supplierIban, paymentMethod: data.paymentMethod ?? sup.payment_method };
+    }
     if (data.kind && !['factuur', 'creditnota'].includes(data.kind)) throw new Error('Ongeldig documenttype');
     if (data.paymentMethod && !['overschrijving','domiciliering','kaart','cash'].includes(data.paymentMethod)) throw new Error('Ongeldige betaalwijze');
     const n = normalizePurchaseInvoice({
@@ -69,8 +75,11 @@ export const paymentFile = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!rows?.length) throw new Error("Geen facturen geselecteerd");
     const notApproved = rows.filter((r: any) => !canExportPurchase({ ...r, total: Number(r.total) }));
-    if (notApproved.length) throw new Error("Enkel goedgekeurde facturen kunnen betaald worden");
-    const missing = rows.filter((r: any) => !r.supplier_iban || !r.due_date || !(Number(r.total) > 0));
+    if (notApproved.length) throw new Error("Enkel goedgekeurde facturen met betaalwijze overschrijving kunnen in een betaalbestand (domiciliëring, kaart en cash nooit)");
+    const { data: sups } = await context.supabase.from('suppliers').select('id,iban,bic').in('id', rows.map((r: any) => r.supplier_id).filter(Boolean));
+    const supById = new Map((sups ?? []).map((x: any) => [x.id, x]));
+    const ibanOf = (r: any) => r.supplier_iban || (supById.get(r.supplier_id) as any)?.iban;
+    const missing = rows.filter((r: any) => !ibanOf(r) || !r.due_date || !(Number(r.total) > 0));
     if (missing.length) throw new Error(`Onvolledige facturen: ${missing.map((r: any) => r.invoice_number ?? r.supplier_name).join(", ")} (IBAN, vervaldag en bedrag vereist)`);
     const { data: s } = await context.supabase.from("settings").select("company_name, company_iban, company_bic").eq("id", 1).single();
     if (!s?.company_iban) throw new Error("Vul eerst het IBAN van Riory in bij de factuurinstellingen");
@@ -79,8 +88,8 @@ export const paymentFile = createServerFn({ method: "POST" })
     const xml = buildPain001(
       { name: s.company_name ?? "Riory bv", iban: s.company_iban, bic: s.company_bic ?? null },
       rows.map((r: any, i: number) => ({
-        creditorName: r.supplier_name, creditorIban: r.supplier_iban, amount: Number(r.total),
-        remittance: r.payment_ref ?? (r.invoice_number ? `Factuur ${r.invoice_number}` : null),
+        creditorName: r.supplier_name, creditorIban: ibanOf(r), creditorBic: (supById.get(r.supplier_id) as any)?.bic ?? null, amount: Number(r.total),
+        remittance: paymentCommunication(r.payment_ref, r.invoice_number),
         executionDate: r.due_date, endToEndId: `${messageId}-${i + 1}`,
       })),
       messageId,
