@@ -21,6 +21,7 @@ export function photoKind(bytes: Uint8Array): "png" | "jpg" | null {
 }
 
 const W = 595.28, H = 841.89, M = 48;
+const r2 = (n: number) => Math.round(n * 100) / 100;
 const money = (n: number) => `EUR ${n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const date = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("nl-BE");
 

@@ -29,7 +29,9 @@ function OfferteTekenen() {
   if (!q) return <Shell><p className="text-muted-foreground">Laden…</p></Shell>;
 
   const c = q.customer as InvoiceCustomer;
-  const lines = q.lines as InvoiceLine[];
+  const allLines = q.lines as InvoiceLine[];
+  const lines = allLines.filter((l) => !l.optional);
+  const optionLines = allLines.filter((l) => l.optional);
   const signed = q.status === "akkoord";
 
   async function onderteken() {
