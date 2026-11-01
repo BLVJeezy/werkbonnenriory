@@ -1,4 +1,5 @@
 import { SAVINGS_ACCOUNT, markSavingsQuarterDone } from "@/lib/savings-quarter";
+import { parseCoda } from "@/lib/coda";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -642,7 +643,7 @@ function Bank({ c }: { c: string }) {
       <Link to="/facturen"><Button size="sm" variant="outline">Naar facturen</Button></Link>
       <PontoCard c={c} bankAcc={bankAcc} onDone={refresh} />
       <Card title={`Spaarrekening inladen (${SAVINGS_ACCOUNT})`}>
-        <label className="inline-block cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm">CSV/Excel spaarrekening kiezen<input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f, SAVINGS_ACCOUNT).then(() => markSavingsQuarterDone()); e.target.value = ""; }} /></label>
+        <SavingsDropZone onFile={onSavingsFile} />
         <p className="mt-1 text-xs text-muted-foreground">Uittreksel van de spaarrekening; alle verrichtingen worden op rekening {SAVINGS_ACCOUNT} ingelezen. Dubbels worden genegeerd.</p>
       </Card>
       <Card title="Bankuittreksels importeren">
