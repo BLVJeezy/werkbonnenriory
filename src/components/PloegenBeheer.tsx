@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { createTechnicianLogin, deleteTechnician } from "@/lib/technicians.functions";
 import { createExternalCrew } from "@/lib/appointments.functions";
 import { MarketingUsers } from "@/components/MarketingUsers";
-import { MessageCircle } from "lucide-react";
+import { Copy, MessageCircle, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { crewWhatsAppLink } from "@/lib/crew-whatsapp";
+import { crewInvitationText, crewWhatsAppLink } from "@/lib/crew-whatsapp";
 import { inviteCrewPassword } from "@/lib/crew-invitation.functions";
 
 const empty = { name: "", phone: "" };
@@ -25,6 +25,26 @@ export function PloegenBeheer() {
   const [f, setF] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [invitation, setInvitation] = useState<{ name: string; phone: string; setupUrl: string } | null>(null);
+  const messageField = useRef<HTMLTextAreaElement>(null);
+  const invitationText = invitation ? crewInvitationText(invitation.name, invitation.setupUrl) : "";
+  async function copyInvitation() {
+    try {
+      await navigator.clipboard.writeText(invitationText);
+      toast.success("Uitnodiging gekopieerd. Plak het bericht in WhatsApp bij de ploeg.");
+    } catch {
+      messageField.current?.focus();
+      messageField.current?.select();
+      toast.info("Selecteer en kopieer het bericht hieronder en plak het in WhatsApp.");
+    }
+  }
+  async function shareInvitation() {
+    if (!navigator.share) { await copyInvitation(); return; }
+    try { await navigator.share({ text: invitationText }); }
+    catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      await copyInvitation();
+    }
+  }
   let invitationLink = "";
   let invitationError = "";
   if (invitation) {
@@ -171,6 +191,15 @@ export function PloegenBeheer() {
           <Button asChild disabled={!invitationLink}>
             {invitationLink ? <a href={invitationLink} target="_blank" rel="noopener noreferrer"><MessageCircle className="size-4" />Openen in WhatsApp</a> : <span><MessageCircle className="size-4" />Openen in WhatsApp</span>}
           </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" onClick={shareInvitation}><Share2 className="size-4" />Delen</Button>
+            <Button type="button" variant="outline" onClick={copyInvitation}><Copy className="size-4" />Bericht kopiëren</Button>
+          </div>
+          <details className="text-sm">
+            <summary className="cursor-pointer font-medium">Uitnodigingsbericht</summary>
+            <textarea ref={messageField} aria-label="Uitnodigingsbericht" readOnly value={invitationText} className="mt-2 h-48 w-full resize-none rounded-md border bg-background p-3 text-foreground" />
+          </details>
+          <p className="text-sm text-muted-foreground">WhatsApp geblokkeerd? Kopieer het bericht en plak het rechtstreeks in WhatsApp. Bewaar de persoonlijke link alleen voor deze ploeg.</p>
         </DialogContent>
       </Dialog>
       <MarketingUsers />

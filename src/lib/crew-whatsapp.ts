@@ -3,9 +3,13 @@ export function crewWhatsAppLink(name: string, phone: string, setupUrl?: string)
   const compact = phone.trim().replace(/[\s().-]/g, "");
   const digits = compact.startsWith("+") ? compact.slice(1) : compact.startsWith("00") ? compact.slice(2) : compact.startsWith("0") ? `32${compact.slice(1)}` : compact;
   if (!/^[1-9]\d{7,14}$/.test(digits)) throw new Error("Vul een geldig telefoonnummer in, met landcode voor buitenlandse nummers.");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(crewInvitationText(name, setupUrl))}`;
+}
+
+export function crewInvitationText(name: string, setupUrl?: string): string {
   if (setupUrl && !/^https:\/\/werkbonnenriory\.lovable\.app\/ploeg-uitnodiging#[a-f0-9]{64}$/.test(setupUrl)) throw new Error("Ongeldige uitnodigingslink");
   const setup = setupUrl ? `Kies zelf je wachtwoord via deze persoonlijke link (72 uur geldig, eenmaal te gebruiken):\n${setupUrl}\nDeel deze link niet.` : "Je wachtwoord ontvang je afzonderlijk van de beheerder.";
   const homeScreen = `Zet Riory op je startscherm:\nOpen https://werkbonnenriory.lovable.app in de browser van je telefoon, niet in het venster van WhatsApp. Gebruik hiervoor de gewone applink, niet de persoonlijke wachtwoordlink.\n\niPhone: open de applink in Safari. Tik op Delen (vierkant met pijltje omhoog), kies Zet op beginscherm en tik op Voeg toe. Staat Open als webapp erbij? Laat dit aan.\n\nAndroid: open de applink in Chrome. Tik op de drie puntjes rechtsboven en kies Toevoegen aan startscherm of App installeren. Bevestig met Toevoegen of Installeren.\n\nDaarna open je Riory via het icoon op je startscherm en log je in met je ploegnaam en je zelfgekozen wachtwoord.`;
   const text = `Hallo ${name}, je bent uitgenodigd voor Riory Werkbonnen.\n\nPloegnaam / login: ${name}\n${setup}\n\nDaarna inloggen: https://werkbonnenriory.lovable.app/auth\n\nZo vul je als ploeg een werkbon in:\n1. Open bij Mijn taken de aan jullie toegewezen taak. Lees de omschrijving en controleer het werfadres.\n2. Druk op Start tijd wanneer je begint en op Stop tijd wanneer je stopt. Stoppen opent de taak. Handmatige uren kan je invullen als dit voor jullie ploeg is ingeschakeld.\n3. Vul Uitgevoerde werken in. Kies gebruikte materialen en aantallen en voeg werffoto’s toe.\n4. Stop eerst de timer. Laat de klant zijn naam invullen en tekenen en sla de werkbon op. Bij aftekenen zijn de prijzen verborgen.\n5. Niemand om te tekenen? Kies Niemand aanwezig. Klant niet bereikbaar? Kies Neemt niet op; de taak blijft open.\n6. Mag jullie ploeg afrekenen? Registreer een ontvangen betaling met de juiste betaalwijze. Dit sluit de taak ook af.\n\nNa afronden keer je terug naar jullie taken. Jullie zien alleen de toegewezen taken en de opties die de beheerder heeft ingeschakeld.\n\nGroeten, Riory`;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(`${text}\n\n${homeScreen}`)}`;
+  return `${text}\n\n${homeScreen}`;
 }
