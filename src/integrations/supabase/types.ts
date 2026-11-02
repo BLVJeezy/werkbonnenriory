@@ -3071,6 +3071,14 @@ export type Database = {
         }
         Returns: string
       }
+      review_completed_work_orders: {
+        Args: { _after: string; _after_id: string; _limit: number }
+        Returns: {
+          completed_at: string
+          email: string
+          id: string
+        }[]
+      }
       settle_credit_note: {
         Args: {
           p_amount: number
