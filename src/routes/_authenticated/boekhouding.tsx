@@ -526,7 +526,10 @@ function Bank({ c }: { c: string }) {
   const { data: paidNoTx = [] } = useQuery({ queryKey: ["fin", "paid-unlinked", c], queryFn: async () => {
     const paid = (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("status", "betaald").eq("doc_type", "factuur").order("id").range(a, b))) as any[];
     const linked = new Set(((await fetchAll((a, b) => db.from("fin_bank_tx").select("matched_invoice_id").eq("company_id", c).not("matched_invoice_id", "is", null).order("id").range(a, b))) as any[]).map((r) => r.matched_invoice_id));
-    return paid.filter((i) => !linked.has(i.id));
+    // Eén betaling voor meerdere facturen: de journaalreferentie bevat alle factuurnummers.
+    const refs = ((await fetchAll((a, b) => db.from("fin_journal_entries").select("reference").eq("company_id", c).eq("source", "bank").not("reference", "is", null).order("id").range(a, b))) as any[]);
+    const nums = new Set(refs.flatMap((r) => String(r.reference).split(",").map((x: string) => x.trim()).filter(Boolean)));
+    return paid.filter((i) => !linked.has(i.id) && !(i.number && nums.has(i.number)));
   } });
   const [bankAcc, setBankAcc] = useState("550200");
   const ctl = controlAccounts(accounts.map((a) => a.number));
