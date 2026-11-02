@@ -691,8 +691,29 @@ function DeprDetail({ inv, sched }: { inv: any; sched: DeprRow[] }) {
   if (!sched.length) return <p className="mt-2 text-xs text-warning">Geen schema: parameters onvolledig of grond.</p>;
   const years = depreciationByYear(sched);
   const th = "py-1.5 text-right";
+  const t = typedInv(inv);
+  const cost = Number(t.capitalizable_amount ?? t.purchase_amount ?? 0);
+  const past = sched.filter((r) => r.month <= today);
+  const acc = past.at(-1)?.accumulated ?? t.opening_accumulated;
+  const pct = cost ? Math.min(100, Math.round((acc / cost) * 100)) : 0;
+  const fmtM = (m?: string) => m ? new Date(m).toLocaleDateString("nl-BE", { month: "short", year: "numeric" }) : "–";
+  const startM = monthKey(t.start_date);
+  const endM = addMonths(startM, Number(t.useful_life_months) - 1);
+  const stat = (label: string, value: string, strong = false) => <div className="rounded border border-border p-2"><p className="text-[11px] text-muted-foreground">{label}</p><p className={strong ? "text-base font-bold" : "text-sm font-medium"}>{value}</p></div>;
   return (
     <div className="mt-3 border-t border-border pt-3">
+      <p className="mb-2 text-xs text-muted-foreground">Bron aanschafwaarde: {inv.invoice_line_id ? "gekoppelde aankoopfactuur" : "investeringslijst boekhouder (manueel)"}</p>
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {stat("Aanschafwaarde", eur(cost), true)}
+        {stat("Per maand", eur(sched[sched.length > 1 ? 1 : 0]?.depreciation ?? 0))}
+        {stat("Al afgeschreven", eur(acc))}
+        {stat("Boekwaarde nu", eur(r2(cost - acc)), true)}
+        {stat("Start", fmtM(startM))}
+        {stat("Einde", fmtM(endM))}
+        {stat("Levensduur", `${t.useful_life_months} mnd (${r2(Number(t.useful_life_months) / 12)} jaar)`)}
+        {stat("Restwaarde", eur(t.residual_value))}
+      </div>
+      <div className="mb-3"><div className="h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary" style={{ width: `${pct}%` }} /></div><p className="mt-1 text-[11px] text-muted-foreground">{pct}% afgeschreven{t.opening_accumulated > 0 ? ` · waarvan ${eur(t.opening_accumulated)} openingssaldo t/m ${fmtM(t.opening_cutoff ? monthKey(t.opening_cutoff) : undefined)}` : ""}</p></div>
       <div className="mb-2 flex flex-wrap gap-1">
         {(["jaar", "maand", "boekingen"] as const).map((v) => <Button key={v} size="sm" variant={view === v ? "default" : "outline"} onClick={() => setView(v)}>{v === "jaar" ? "Per jaar" : v === "maand" ? "Per maand" : `Boekingen (${entries.length})`}</Button>)}
       </div>
