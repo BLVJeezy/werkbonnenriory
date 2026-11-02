@@ -365,13 +365,14 @@ function Offertes() {
             )}
             <Label>{bestek ? "Posten" : "Lijnen"}</Label>
             {lines.map((l, i) => (
-              <div key={i} className="space-y-1.5 rounded-md border p-2">
-                {(sections.length > 0 || l.group) && (
-                  <select className="h-8 max-w-full rounded-md border bg-background px-2 text-xs font-bold uppercase" aria-label="Titel" value={l.group ?? ""} onChange={(e) => setLine(i, { group: e.target.value || undefined })}>
-                    <option value="">Zonder titel</option>
-                    {[...new Set([...sections.map((x) => x.name), ...lines.map((x) => x.group).filter((g): g is string => !!g)])].map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                )}
+              <div key={i} className="space-y-1.5">
+              {l.group && l.group !== lines[i - 1]?.group && (
+                <div className="mt-2 flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-primary-foreground">
+                  <span className="flex-1 text-sm font-black uppercase">{l.group}</span>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setLines((ls) => { const last = ls.map((x) => x.group).lastIndexOf(l.group); const n = [...ls]; n.splice(last + 1, 0, { ...emptyLine, group: l.group }); return n; })}>+ Lijn</Button>
+                </div>
+              )}
+              <div className={`space-y-1.5 rounded-md border p-2 ${l.group ? "ml-3" : ""}`}>
                 <div className="flex flex-wrap items-center gap-2">
                   <Input placeholder="Product of post" className="min-w-40 flex-1 basis-full font-bold sm:basis-0" value={l.title} onChange={(e) => setLine(i, { title: e.target.value })} aria-label="Productnaam" />
                   <SearchSelect className="basis-full sm:w-64 sm:basis-auto" placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={products.map(p => ({ value: p.id, label: p.name, search: `${p.alias ?? ''} ${p.description ?? ''}` }))} />
@@ -386,6 +387,7 @@ function Offertes() {
                   <input type="checkbox" checked={l.optional} onChange={(e) => setLine(i, { optional: e.target.checked })} />
                   Optie — de klant kan deze lijn meenemen, maar hij telt niet mee in het totaal
                 </label>
+              </div>
               </div>
             ))}
             <Button type="button" size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { ...emptyLine }])}>+ Lijn toevoegen</Button>
