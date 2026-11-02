@@ -9,7 +9,6 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Simpla sales sync is retired; enqueue does nothing; purchase imports stay read-only.
 - Mailtaken/review feeds require separate server tokens and stable IDs. Reviews expose sent invoice emails only, with sent_at+id cursors.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery: public /reset-password and recovery sessions; never disclose passwords.
