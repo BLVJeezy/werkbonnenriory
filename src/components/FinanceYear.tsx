@@ -174,7 +174,7 @@ function YearComparison({ rows }: { rows: ReturnType<typeof yearRows> }) {
           <thead><tr className="border-b text-left text-muted-foreground"><th className="py-1.5">Jaar</th><th className="text-right">Omzet</th><th className="text-right">Kosten</th><th className="text-right">Resultaat</th><th className="text-right">Marge</th><th className="text-right">Omzet t.o.v. vorig jaar</th></tr></thead>
           <tbody>
             {rows.map((r, i) => {
-              const d = i ? pct(r.revenue, rows[i - 1].revenue) : null;
+              const d = i ? pct(r.revenue, rows[i - 1]!.revenue) : null;
               return (
                 <tr key={r.year} className="border-b border-border/60">
                   <th className="py-1.5 text-left font-semibold">{r.label}</th>
