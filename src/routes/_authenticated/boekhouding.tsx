@@ -103,7 +103,7 @@ function usePosted(c: string) {
     queryKey: ["fin", "posted", c],
     queryFn: async () => {
       const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", c).range(a, b))) as any[];
-      return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal })) as (PostedLine & { entry_id: string; fin_journal_entries: any })[];
+      return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal, source: r.fin_journal_entries.source })) as (PostedLine & { entry_id: string; fin_journal_entries: any })[];
     },
   });
 }

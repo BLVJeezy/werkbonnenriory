@@ -2,7 +2,10 @@
 import { parseAmount } from "./finance";
 
 export type JLine = { account: string; debit: number; credit: number; vat_grid?: string | null; description?: string | null };
-export type PostedLine = JLine & { entry_date: string; journal: string };
+export type PostedLine = JLine & { entry_date: string; journal: string; source?: string | null };
+
+/** Jaarafsluiting (jaarcijfers accountant) van een vorig jaar: telt enkel mee in periodes binnen dat jaar, zodat ze nooit mengt met de openingsbalans van het volgende jaar. */
+export const CLOSING_SOURCE = "jaarafsluiting";
 
 export const r2 = (n: number) => Math.round(n * 100) / 100;
 export const accountClass = (nr: string) => Number(nr.trim()[0]);
@@ -76,6 +79,7 @@ export function trialBalance(lines: PostedLine[], from?: string, to?: string): T
   const m = new Map<string, TBRow>();
   for (const l of lines) {
     if (to && l.entry_date > to) continue;
+    if (l.source === CLOSING_SOURCE && (!to || to.slice(0, 4) !== l.entry_date.slice(0, 4))) continue;
     // Resultaatrekeningen tellen enkel binnen de periode; balansrekeningen cumulatief.
     if (from && l.entry_date < from && isResultAccount(l.account)) continue;
     const r = m.get(l.account) ?? { account: l.account, debit: 0, credit: 0, saldo: 0 };

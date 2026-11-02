@@ -45,3 +45,24 @@ describe("boekhouding", () => {
     expect(o.lines).toHaveLength(2);
   });
 });
+
+describe("jaarafsluiting vorig jaar", () => {
+  const close = [
+    { account: "550200", debit: 1000, credit: 0, entry_date: "2025-12-31", journal: "divers", source: "jaarafsluiting" },
+    { account: "700000", debit: 0, credit: 1000, entry_date: "2025-12-31", journal: "divers", source: "jaarafsluiting" },
+  ];
+  const open26 = [
+    { account: "550200", debit: 1000, credit: 0, entry_date: "2026-01-01", journal: "opening" },
+    { account: "140000", debit: 0, credit: 1000, entry_date: "2026-01-01", journal: "opening" },
+  ];
+  it("telt in 2025 mee", () => {
+    const st = statements(trialBalance([...close, ...open26], "2025-01-01", "2025-12-31"));
+    expect(st.opbrengsten).toBe(1000);
+    expect(st.activa).toBe(1000);
+  });
+  it("mengt niet met 2026", () => {
+    const st = statements(trialBalance([...close, ...open26], "2026-01-01", "2026-12-31"));
+    expect(st.opbrengsten).toBe(0);
+    expect(st.activa).toBe(1000);
+  });
+});
