@@ -2828,6 +2828,16 @@ export type Database = {
         }
         Returns: string
       }
+      fin_journal_summary: {
+        Args: { _company: string; _until: string }
+        Returns: {
+          account: string
+          credit: number
+          debit: number
+          entry_date: string
+          source: string
+        }[]
+      }
       fin_post_entry: {
         Args: {
           _company: string
