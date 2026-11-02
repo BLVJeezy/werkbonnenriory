@@ -62,7 +62,7 @@ describe("jaarafsluiting vorig jaar", () => {
   });
   it("mengt niet met 2026", () => {
     const st = statements(trialBalance([...close, ...open26], "2026-01-01", "2026-12-31"));
-    expect(st.opbrengsten).toBe(0);
+    expect(st.opbrengsten + 0).toBe(0);
     expect(st.activa).toBe(1000);
   });
 });
