@@ -680,6 +680,13 @@
       "when": 1793623564210,
       "tag": "0096_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1793624961257,
+      "tag": "0097_distance_only_on_destination_change",
+      "breakpoints": true
     }
   ]
 }

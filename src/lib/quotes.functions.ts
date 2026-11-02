@@ -170,33 +170,49 @@ export const bestekFromWorkOrder = createServerFn({ method: "POST" })
     const { data: existing, error: existingError } = await context.supabase
       .from("quotes").select("*").eq("source_work_order_id", wo.id).eq("kind", "verzekering").maybeSingle();
     if (existingError) throw new Error(existingError.message);
-    if (existing) return existing;
-    const { data: photos, error: photosError } = await context.supabase
-      .from("work_order_photos").select("path").eq("work_order_id", wo.id).order("created_at");
-    if (photosError) throw new Error(photosError.message);
-    const { quoteLine } = await import("@/lib/quote");
-    const siteAddress = wo.use_site_address
-      ? [wo.site_street && `${wo.site_street} ${wo.site_house_number ?? ""}`.trim(), [wo.site_postal_code, wo.site_city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null
-      : null;
-    const customer: InvoiceCustomer = {
-      name: wo.customer_name, address: wo.address, siteAddress,
-      vatNumber: wo.vat_number, email: wo.billing_email || wo.email,
-      street: wo.street, houseNumber: wo.house_number, postalCode: wo.postal_code, city: wo.city,
-    };
-    const lines = (wo.description ?? "").trim()
-      ? [quoteLine((wo.description as string).trim().split("\n")[0] ?? "", 1, "forfait", 0)]
-      : [];
+    // Al verstuurd of ondertekend: niet meer overschrijven.
+    if (existing && existing.status !== "concept") return existing;
+    const [photosRes, timeRes, matRes, actsRes, crewRes, settingsRes] = await Promise.all([
+      context.supabase.from("work_order_photos").select("path").eq("work_order_id", wo.id).order("created_at"),
+      context.supabase.from("time_entries").select("started_at, ended_at").eq("work_order_id", wo.id),
+      context.supabase.from("materials").select("*").eq("work_order_id", wo.id).order("created_at"),
+      context.supabase.from("activities").select("*"),
+      wo.technician_id ? context.supabase.from("technicians").select("name").eq("id", wo.technician_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      context.supabase.from("settings").select("km_rate").eq("id", 1).maybeSingle(),
+    ]);
+    for (const r of [photosRes, timeRes, matRes, actsRes]) if (r.error) throw new Error(r.error.message);
+    const photos = (photosRes.data ?? []) as { path: string }[];
+    const seconds = (timeRes.data ?? []).reduce((s: number, e: any) => s + (e.ended_at ? (new Date(e.ended_at).getTime() - new Date(e.started_at).getTime()) / 1000 : 0), 0);
+    const act = (actsRes.data ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
+    const materials = (matRes.data ?? []) as any[];
+    const { buildInvoice } = await import("@/lib/invoice");
+    const { billableHours } = await import("@/lib/billing");
+    const { insuranceReport } = await import("@/lib/insurance-report");
+    // Dezelfde lijnen als op de factuur: arbeid, verplaatsing, garantie-reducties en materialen.
+    const inv = buildInvoice({ wo: { ...wo, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) } as any, activity: act, seconds, kmRate: Number(settingsRes.data?.km_rate ?? 0), materials });
+    const report = insuranceReport(wo as any, {
+      crew: (crewRes.data as any)?.name ?? null, activity: act?.name ?? null, hours: billableHours(seconds),
+      materials: materials.map((m) => ({ name: m.name, quantity: Number(m.quantity), unit: m.unit })), photoCount: photos.length,
+    });
+    const customer: InvoiceCustomer = inv.customer;
+    const lines = inv.lines;
     const t = quoteTotals(lines, Number(wo.vat_rate));
+    const fields = {
+      customer, lines, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
+      customer_id: wo.customer_id,
+      photo_paths: photos.map((p) => p.path).slice(0, 40),
+      intro: report.intro, damage_findings: report.findings,
+      technician_id: wo.technician_id,
+    };
+    if (existing) {
+      const { data: row, error } = await context.supabase.from("quotes").update(fields).eq("id", existing.id).select("*").single();
+      if (error) throw new Error(error.message);
+      return row;
+    }
     const { data: number, error: ne } = await context.supabase.rpc("next_quote_number");
     if (ne) throw new Error(ne.message);
     const { data: row, error } = await context.supabase.from("quotes").insert({
-      number, customer, lines, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
-      kind: "verzekering",
-      customer_id: wo.customer_id,
-      photo_paths: (photos ?? []).map((p: { path: string }) => p.path).slice(0, 40),
-      source_work_order_id: wo.id,
-      intro: wo.project_name ? `Betreft: ${wo.project_name}` : null,
-      technician_id: wo.technician_id,
+      ...fields, number, kind: "verzekering", source_work_order_id: wo.id,
     }).select("*").single();
     if (error) throw new Error(error.message);
     return row;
