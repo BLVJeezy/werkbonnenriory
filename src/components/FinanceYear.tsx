@@ -25,6 +25,31 @@ export function journalMonthRows(lines: PostedLine[], year: number, until = toda
 }
 
 const eur = (n: number | null | undefined) => (n == null ? "onbekend" : new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n));
+const fmt = (n: number | null | undefined) => (n == null ? "–" : new Intl.NumberFormat("nl-BE", { notation: "compact", maximumFractionDigits: 1 }).format(n));
+
+const COST_GROUPS: [string, string[]][] = [
+  ["Aankopen (60)", ["60"]],
+  ["Diensten & diverse goederen (61)", ["61"]],
+  ["Personeel & zaakvoerder (62)", ["62"]],
+  ["Afschrijvingen (63)", ["63"]],
+  ["Andere bedrijfskosten (64)", ["64"]],
+  ["Financiële kosten (65)", ["65"]],
+  ["Uitzonderlijk & belastingen (66–67)", ["66", "67"]],
+];
+
+/** Monthly cost per account class (debit − credit), capped at today like journalMonthRows. */
+export function costGroupRows(lines: PostedLine[], year: number, until = today()) {
+  return COST_GROUPS.map(([label, prefixes]) => ({
+    label,
+    values: monthNames.map((_, i) => {
+      const from = `${year}-${String(i + 1).padStart(2, "0")}-01`;
+      if (from > until) return null;
+      const end = new Date(Date.UTC(year, i + 1, 0)).toISOString().slice(0, 10);
+      const to = end < until ? end : until;
+      return r2(lines.filter((l) => l.entry_date >= from && l.entry_date <= to && prefixes.some((p) => l.account.startsWith(p))).reduce((s, l) => s + l.debit - l.credit, 0));
+    }),
+  })).filter((g) => g.values.some((v) => v));
+}
 
 /** Boekhouding at a glance: full monthly revenue and costs for one year, same posted journal as Boekhouding → Balans & resultaat. */
 export function FinanceYear() {
@@ -87,9 +112,13 @@ export function FinanceYear() {
             <table className="w-full min-w-[640px] text-xs">
               <thead><tr className="border-b text-left text-muted-foreground"><th className="py-1.5"></th>{rows.map((r) => <th key={r.month} className="py-1.5 text-right font-semibold">{r.label}</th>)}</tr></thead>
               <tbody>
-                {([["Omzet", "revenue"], ["Kosten", "costs"], ["Resultaat", "profit"]] as const).map(([l, k]) => (
-                  <tr key={k} className="border-b border-border/60"><th className="py-1.5 text-left font-semibold">{l}</th>{rows.map((r) => <td key={r.month} className="py-1.5 text-right tabular-nums">{r[k] == null ? "–" : new Intl.NumberFormat("nl-BE", { notation: "compact", maximumFractionDigits: 1 }).format(r[k] as number)}</td>)}</tr>
+                {([["Omzet", "revenue"], ["Kosten", "costs"]] as const).map(([l, k]) => (
+                  <tr key={k} className="border-b border-border/60"><th className="py-1.5 text-left font-semibold">{l}</th>{rows.map((r) => <td key={r.month} className="py-1.5 text-right tabular-nums">{fmt(r[k])}</td>)}</tr>
                 ))}
+                {costGroupRows(data, year).map((g) => (
+                  <tr key={g.label} className="border-b border-border/40 text-muted-foreground"><th className="py-1 pl-3 text-left font-normal">{g.label}</th>{g.values.map((v, i) => <td key={i} className="py-1 text-right tabular-nums">{fmt(v)}</td>)}</tr>
+                ))}
+                <tr className="border-b border-border/60"><th className="py-1.5 text-left font-semibold">Resultaat</th>{rows.map((r) => <td key={r.month} className="py-1.5 text-right tabular-nums">{fmt(r.profit)}</td>)}</tr>
               </tbody>
             </table>
           </div>
