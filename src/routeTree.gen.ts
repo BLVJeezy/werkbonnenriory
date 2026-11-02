@@ -49,6 +49,7 @@ import { Route as ApiPublicNieuwsbriefAfbeeldingFileRouteImport } from './routes
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
 import { Route as ApiPublicRemindersProcessRouteImport } from './routes/api/public/reminders/process'
 import { Route as ApiPublicReviewsInvoicesRouteImport } from './routes/api/public/reviews/invoices'
+import { Route as ApiPublicReviewsWerkbonnenRouteImport } from './routes/api/public/reviews/werkbonnen'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -266,6 +267,12 @@ const ApiPublicReviewsInvoicesRoute =
     path: '/api/public/reviews/invoices',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicReviewsWerkbonnenRoute =
+  ApiPublicReviewsWerkbonnenRouteImport.update({
+    id: '/api/public/reviews/werkbonnen',
+    path: '/api/public/reviews/werkbonnen',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
+  '/api/public/reviews/werkbonnen': typeof ApiPublicReviewsWerkbonnenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -348,6 +356,7 @@ export interface FileRoutesByTo {
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
+  '/api/public/reviews/werkbonnen': typeof ApiPublicReviewsWerkbonnenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -391,6 +400,7 @@ export interface FileRoutesById {
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
+  '/api/public/reviews/werkbonnen': typeof ApiPublicReviewsWerkbonnenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -434,6 +444,7 @@ export interface FileRouteTypes {
     | '/api/public/ponto/sync'
     | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
+    | '/api/public/reviews/werkbonnen'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/api/public/ponto/sync'
     | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
+    | '/api/public/reviews/werkbonnen'
   id:
     | '__root__'
     | '/'
@@ -517,6 +529,7 @@ export interface FileRouteTypes {
     | '/api/public/ponto/sync'
     | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
+    | '/api/public/reviews/werkbonnen'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -541,6 +554,7 @@ export interface RootRouteChildren {
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
   ApiPublicRemindersProcessRoute: typeof ApiPublicRemindersProcessRoute
   ApiPublicReviewsInvoicesRoute: typeof ApiPublicReviewsInvoicesRoute
+  ApiPublicReviewsWerkbonnenRoute: typeof ApiPublicReviewsWerkbonnenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -825,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicReviewsInvoicesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/reviews/werkbonnen': {
+      id: '/api/public/reviews/werkbonnen'
+      path: '/api/public/reviews/werkbonnen'
+      fullPath: '/api/public/reviews/werkbonnen'
+      preLoaderRoute: typeof ApiPublicReviewsWerkbonnenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -899,6 +920,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
   ApiPublicRemindersProcessRoute: ApiPublicRemindersProcessRoute,
   ApiPublicReviewsInvoicesRoute: ApiPublicReviewsInvoicesRoute,
+  ApiPublicReviewsWerkbonnenRoute: ApiPublicReviewsWerkbonnenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
