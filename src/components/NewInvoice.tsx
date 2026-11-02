@@ -39,7 +39,8 @@ function itemsFromLines(lines: InvoiceLine[], fallbackVat: number): Item[] {
   return out;
 }
 
-export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreated: () => void; invoice?: EditInvoice; creditNote?: boolean }) {
+/** copyFrom: nieuwe factuur vooraf ingevuld met klant, lijnen en notitie van een bestaande factuur (bv. na creditnota). */
+export function NewInvoice({ onCreated, invoice, creditNote = false, copyFrom, copyLabel }: { onCreated: () => void; invoice?: EditInvoice; creditNote?: boolean; copyFrom?: EditInvoice; copyLabel?: string }) {
   const docLabel = creditNote ? "Creditnota" : "Factuur";
   const create = useServerFn(createManualInvoice);
   const update = useServerFn(updateInvoice);
@@ -101,7 +102,7 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
 
   function currentCustomer(): Record<string, unknown> | null {
     if (customerId) return (customers.find((x) => x.id === customerId) ?? null) as Record<string, unknown> | null;
-    return (invoice?.customer as Record<string, unknown>) ?? null;
+    return ((invoice ?? copyFrom)?.customer as Record<string, unknown>) ?? null;
   }
 
   async function computeKm(c: Record<string, unknown> | null) {
@@ -137,16 +138,17 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
   }
 
   function start() {
-    if (invoice) {
-      const all = (invoice.lines as InvoiceLine[]) ?? [];
+    const src = invoice ?? copyFrom;
+    if (src) {
+      const all = (src.lines as InvoiceLine[]) ?? [];
       const { kmLine, rest } = splitTravelLine(all);
       setKmOn(!!kmLine);
       setKm(kmLine ? Number(kmLine.quantity) : null);
       setKmVat(kmLine?.vatRate != null ? String(kmLine.vatRate) : null);
-      setItems(itemsFromLines(rest, Number(invoice.vat_rate)));
-      setReference(invoice.contract_reference ?? "");
-      setNote(invoice.note ?? "");
-      setDefaultVat(String(invoice.vat_rate));
+      setItems(itemsFromLines(rest, Number(src.vat_rate)));
+      setReference(src.contract_reference ?? "");
+      setNote(src.note ?? "");
+      setDefaultVat(String(src.vat_rate));
     } else setItems([newLine()]);
     setOpen(true);
   }
@@ -158,8 +160,9 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
         await update({ data: { invoiceId: invoice.id, customerId: customerId || null, reference, note, lines: parsed } });
         toast.success(`${docLabel} ${invoice.number} aangepast`);
       } else {
-        if (!customerId) { toast.error("Kies eerst een klant"); return; }
-        await create({ data: { customerId, reference: reference.trim() || null, note: note.trim() || null, lines: parsed, creditNote } });
+        const copied = copyFrom?.customer as { name?: string; street?: string | null; houseNumber?: string | null; postalCode?: string | null; city?: string | null; vatNumber?: string | null; email?: string | null } | undefined;
+        if (!customerId && !copied?.name) { toast.error("Kies eerst een klant"); return; }
+        await create({ data: { customerId: customerId || null, customer: customerId ? null : (copied as { name: string }), reference: reference.trim() || null, note: note.trim() || null, lines: parsed, creditNote } });
         toast.success(`${docLabel} aangemaakt`);
       }
       reset();
@@ -169,6 +172,7 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
 
   if (!open) return editing
     ? <Button variant="outline" size="sm" onClick={start}>Aanpassen</Button>
+    : copyFrom ? <Button variant="outline" size="sm" onClick={start}>{copyLabel ?? "Kopie als nieuwe factuur"}</Button>
     : <Button size="sm" variant={creditNote ? "outline" : "default"} onClick={start}>{creditNote ? "+ Nieuwe creditnota" : "+ Nieuwe factuur"}</Button>;
 
   const productOptions = products.map((p) => ({ value: p.id, label: `${p.name} — ${euro(Number(p.price))}`, search: `${p.alias ?? ""} ${p.description ?? ""}` }));
@@ -176,11 +180,11 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
 
   return (
     <div className="w-full space-y-4 rounded-md border bg-card p-4">
-      <h3 className="text-lg font-black uppercase">{invoice ? `${docLabel} ${invoice.number} aanpassen` : creditNote ? "Nieuwe creditnota" : "Nieuwe factuur"}</h3>
+      <h3 className="text-lg font-black uppercase">{invoice ? `${docLabel} ${invoice.number} aanpassen` : copyFrom ? `Nieuwe factuur op basis van ${copyFrom.number}` : creditNote ? "Nieuwe creditnota" : "Nieuwe factuur"}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label>Klant{invoice ? ` (huidig: ${(invoice.customer as { name?: string })?.name ?? "—"})` : ""}</Label>
-          <CustomerPicker customers={customers} value={customerId} placeholder={invoice ? "Andere klant kiezen (optioneel)…" : "Kies klant…"} onChange={chooseCustomer} />
+          <Label>Klant{(invoice ?? copyFrom) ? ` (huidig: ${((invoice ?? copyFrom)!.customer as { name?: string })?.name ?? "—"})` : ""}</Label>
+          <CustomerPicker customers={customers} value={customerId} placeholder={(invoice ?? copyFrom) ? "Andere klant kiezen (optioneel)…" : "Kies klant…"} onChange={chooseCustomer} />
         </div>
         <div className="space-y-1">
           <Label>Betreft (referentie, optioneel)</Label>
@@ -246,7 +250,7 @@ export function NewInvoice({ onCreated, invoice, creditNote = false }: { onCreat
         <span className="font-mono text-sm">{euro(calc.net)} excl. btw · btw {euro(calc.vat)} · totaal <strong>{euro(calc.total)}</strong></span>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" onClick={reset}>Annuleren</Button>
-          <Button disabled={(!editing && !customerId) || !calc.lines.length} onClick={save}>{editing ? "Opslaan" : `${docLabel} aanmaken`}</Button>
+          <Button disabled={(!editing && !customerId && !copyFrom) || !calc.lines.length} onClick={save}>{editing ? "Opslaan" : `${docLabel} aanmaken`}</Button>
         </div>
       </div>
     </div>
