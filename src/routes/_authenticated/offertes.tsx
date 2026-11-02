@@ -13,7 +13,7 @@ import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { quoteLine, quoteOptionsTotals, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { splitLineText } from "@/lib/line-text";
-import { assignQuoteCrew, convertQuoteToTask, createQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
+import { assignQuoteCrew, convertQuoteToTask, createQuote, deleteQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
 import { vatRateForCustomer } from "@/lib/vat-number";
 import { DocumentReport } from '@/components/DocumentReport';
@@ -44,6 +44,7 @@ function Offertes() {
   const create = useServerFn(createQuote);
   const update = useServerFn(updateQuote);
   const send = useServerFn(sendQuote);
+  const remove = useServerFn(deleteQuote);
   const getPdf = useServerFn(quotePdf);
   const convert = useServerFn(convertQuoteToTask);
   const assignCrew = useServerFn(assignQuoteCrew);
@@ -435,6 +436,11 @@ function Offertes() {
               {q.signed_name && <span className="text-xs text-muted-foreground">door {q.signed_name}</span>}
               <Button variant="outline" size="sm" onClick={() => preview(q.id)}>Voorbeeld</Button>
               <Button variant="outline" size="sm" onClick={() => download(q.id)}>PDF</Button>
+              {q.status !== "akkoord" && !q.work_order_id && <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={async () => {
+                if (!confirm(`${q.kind === "verzekering" ? "Bestek" : "Offerte"} ${q.number} definitief verwijderen?`)) return;
+                try { await remove({ data: { quoteId: q.id } }); toast.success("Verwijderd"); if (editId === q.id) closeForm(); refresh(); }
+                catch (e) { toast.error(e instanceof Error ? e.message : "Verwijderen mislukt"); }
+              }}>Verwijderen</Button>}
               <DocumentReport id={q.id} type="offerte" />
               {q.status !== "akkoord" && <Button variant="outline" size="sm" disabled={busy} onClick={() => openEdit(q)}>Bewerken</Button>}
               {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}

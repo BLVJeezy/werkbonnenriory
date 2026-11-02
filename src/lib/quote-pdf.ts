@@ -23,6 +23,9 @@ export function photoKind(bytes: Uint8Array): "png" | "jpg" | null {
   return null;
 }
 
+/** Vaste voorbehoudtekst op elk bestek: de toestand onder de grond is pas zichtbaar na het opengraven. */
+export const BESTEK_DISCLAIMER = "Dit bestek is opgemaakt op basis van de vaststellingen die zichtbaar en meetbaar waren op het moment van ons bezoek. De werkelijke toestand onder de grond (zoals de ligging, diepte en staat van leidingen, bijkomende breuken of verzakkingen, wortelingroei, onbekende of niet-conforme aansluitingen, funderingen, puin of verontreinigde grond) kan pas volledig beoordeeld worden na het opengraven. Alle vermelde werken, hoeveelheden en prijzen gelden daarom onder voorbehoud. Stellen wij tijdens de uitvoering bijkomende schade of afwijkende omstandigheden vast, dan melden wij dit onmiddellijk en bezorgen wij een aanvullend bestek of verrekening, gestaafd met foto's, ter goedkeuring van de klant en de verzekeraar.";
+
 const W = 595.28, H = 841.89, M = 48;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const money = (n: number) => `EUR ${n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -192,6 +195,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     tot("Opties incl. btw", money(r2(optNet + optVat)), true);
   }
 
+  if (bestek) { y -= 6; block("VOORBEHOUD ONDERGRONDSE TOESTAND", BESTEK_DISCLAIMER); }
   ensure(70);
   y -= 8;
   page.drawRectangle({ x: M, y: y - 44, width: W - 2 * M, height: 56, color: soft, borderColor: orange, borderWidth: 1.5 });

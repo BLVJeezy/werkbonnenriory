@@ -349,3 +349,17 @@ export const signQuote = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
+
+/** Deletes a quote that is not signed and not turned into a task. */
+export const deleteQuote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { quoteId: string }) => i)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: q } = await context.supabase.from("quotes").select("status, work_order_id").eq("id", data.quoteId).single();
+    if (!q) throw new Error("Offerte niet gevonden");
+    if (q.status === "akkoord" || q.work_order_id) throw new Error("Een ondertekende of omgezette offerte kan niet verwijderd worden");
+    const { error } = await context.supabase.from("quotes").delete().eq("id", data.quoteId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
