@@ -1,7 +1,7 @@
 import { formatAddress } from "./address";
 import { vatRateForCustomer } from "./vat-number";
 
-type Cust = { id?: string; name: string; street?: string | null; house_number?: string | null; postal_code?: string | null; city?: string | null; phone?: string | null; email?: string | null; billing_email?: string | null; vat_number?: string | null; vrij_beroep?: boolean | null };
+type Cust = { id?: string; name: string; street?: string | null; house_number?: string | null; postal_code?: string | null; city?: string | null; phone?: string | null; email?: string | null; billing_email?: string | null; vat_number?: string | null; vrij_beroep?: boolean | null; default_vat_rate?: number | null };
 type Wo = Omit<Cust, "name"> & { use_site_address: boolean; site_street?: string | null; site_house_number?: string | null; site_postal_code?: string | null; site_city?: string | null; customer_name: string; vat_rate: number };
 
 /** Factuurklant wijzigen: de werkplek blijft het oude adres (als werfadres), afstand/prijzen blijven ongemoeid. */
