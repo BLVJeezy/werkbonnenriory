@@ -47,5 +47,5 @@
 - `cold-entry.ts` distinguishes restored pages; module recovery runs in the head before bootstrap, with bounded reload and standalone retry UI because effects run too late.
 - Insurance estimates are `quotes` with `kind = 'verzekering'`: private `werkbon-fotos` paths (`bestek/`) appended before terms; AI suggests price-free unsaved text — one numbering/signing flow.
 - `bestekFromWorkOrder` (admin, idempotent) converts completed orders; quote triggers exclude `kind = 'verzekering'` so a bestek never archives/hides its source werkbon.
-- Finance keeps Mail Assist math and admin+owner checks; local sales link to Riory BV, imported numbers dedupe. `fin_reconcile_bank` atomically claims ledger, locks invoice and posts balanced journal (partials open, overpayments fail). `fin_restore_archive` preserves IDs.
+- Finance keeps Mail Assist math and admin+owner checks; local sales link to Riory BV, imported numbers dedupe. `fin_reconcile_bank` atomically claims ledger, locks invoice and posts balanced journal (partials open, overpayments fail). `fin_restore_archive` preserves IDs; then match Ponto keys and retire cumulative balances.
 - Prior-year accountant figures are one `jaarafsluiting`-source entry that trialBalance counts only for periods ending in that year, so it never doubles the next opening balance.
