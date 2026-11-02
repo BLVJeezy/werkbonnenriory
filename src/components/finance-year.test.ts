@@ -14,6 +14,7 @@ describe("dashboard resultaat = balans resultaat", () => {
     const sum = rows.reduce((a, r) => a + (r.profit ?? 0), 0);
     expect(sum).toBe(statements(trialBalance(L, "2026-01-01", "2026-11-02")).resultaat);
     expect(sum).toBe(650);
+  });
 });
 describe("jaargelijking op het dashboard", () => {
   it("elk jaar met geboekte regels krijgt een rij, vorige jaren voorop", () => {
