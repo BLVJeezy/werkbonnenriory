@@ -108,7 +108,11 @@ function Offertes() {
       const p = products.find((x) => x.id === it.product_id);
       return p ? [{ ...emptyLine, ...quoteProductValues(p), quantity: String(it.quantity), group: name }] : [];
     });
-    setLines((ls) => [...ls.filter((l) => lineText(l) || l.group), ...(added.length ? added : [{ ...emptyLine, group: name }])]);
+    if (added.length) toast.success(`${added.length} product${added.length === 1 ? "" : "en"} toegevoegd onder "${name}"`);
+    else toast.warning(`"${name}" heeft nog geen vaste producten. Voeg ze toe via Titels beheren.`);
+    const order = (g?: string) => { const i = sections.findIndex((x) => x.name === g); return g ? (i >= 0 ? i : 999) : -1; };
+    setLines((ls) => [...ls.filter((l) => lineText(l) || l.group), ...(added.length ? added : [{ ...emptyLine, group: name }])]
+      .map((l, i) => ({ l, i })).sort((x, y) => order(x.l.group) - order(y.l.group) || x.i - y.i).map(({ l }) => l));
   }
   const refresh = () => qc.invalidateQueries({ queryKey: ["quotes"] });
 
