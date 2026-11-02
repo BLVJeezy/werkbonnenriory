@@ -293,10 +293,12 @@ function Offertes() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap sm:gap-3">
+      <div className="space-y-3">
         <h1 className="text-3xl font-black uppercase">Offertes</h1>
-        <Button className="ml-auto" variant="ghost" onClick={() => setShowSections((v) => !v)}>{showSections ? "Titels sluiten" : "Titels beheren"}</Button>
-        <Button variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <Button variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
+          <Button variant="ghost" onClick={() => setShowSections((v) => !v)}>{showSections ? "Titels sluiten" : "Titels beheren"}</Button>
+        </div>
       </div>
 
       {showSections && <QuoteSectionsManager products={products} />}
