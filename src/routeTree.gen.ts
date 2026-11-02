@@ -33,6 +33,7 @@ import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
+import { Route as VideoTokenRouteImport } from './routes/video.$token'
 import { Route as WerkbonTekenenIdRouteImport } from './routes/werkbon-tekenen.$id'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
@@ -175,6 +176,11 @@ const OfferteTokenRoute = OfferteTokenRouteImport.update({
   path: '/offerte/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VideoTokenRoute = VideoTokenRouteImport.update({
+  id: '/video/$token',
+  path: '/video/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WerkbonTekenenIdRoute = WerkbonTekenenIdRouteImport.update({
   id: '/werkbon-tekenen/$id',
   path: '/werkbon-tekenen/$id',
@@ -285,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/producten': typeof AuthenticatedProductenRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -325,6 +332,7 @@ export interface FileRoutesByTo {
   '/producten': typeof AuthenticatedProductenRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -367,6 +375,7 @@ export interface FileRoutesById {
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -409,6 +418,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/document/$token'
     | '/offerte/$token'
+    | '/video/$token'
     | '/werkbon-tekenen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/producten'
     | '/document/$token'
     | '/offerte/$token'
+    | '/video/$token'
     | '/werkbon-tekenen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/_authenticated/producten'
     | '/document/$token'
     | '/offerte/$token'
+    | '/video/$token'
     | '/werkbon-tekenen/$id'
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -515,6 +527,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   DocumentTokenRoute: typeof DocumentTokenRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
+  VideoTokenRoute: typeof VideoTokenRoute
   WerkbonTekenenIdRoute: typeof WerkbonTekenenIdRoute
   AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
@@ -700,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OfferteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/video/$token': {
+      id: '/video/$token'
+      path: '/video/$token'
+      fullPath: '/video/$token'
+      preLoaderRoute: typeof VideoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/werkbon-tekenen/$id': {
       id: '/werkbon-tekenen/$id'
       path: '/werkbon-tekenen/$id'
@@ -864,6 +884,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   DocumentTokenRoute: DocumentTokenRoute,
   OfferteTokenRoute: OfferteTokenRoute,
+  VideoTokenRoute: VideoTokenRoute,
   WerkbonTekenenIdRoute: WerkbonTekenenIdRoute,
   AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
