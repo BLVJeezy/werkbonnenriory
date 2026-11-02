@@ -5,11 +5,28 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { isPrivateCompany, r2 } from "@/lib/finance";
-import { financeMonthRows, MonthlyBars, MonthlyProfit, useFinData } from "@/components/FinanceCharts";
+import { monthNames, MonthlyBars, MonthlyProfit } from "@/components/FinanceCharts";
+import { fetchAll } from "@/lib/fetch-all";
+import { statements, trialBalance, type PostedLine } from "@/lib/boekhouding";
+
+const db = supabase as any;
+const today = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Brussels" });
+
+/** Same posted journal lines and statements() as Boekhouding → Balans & resultaat, per month. */
+export function journalMonthRows(lines: PostedLine[], year: number, until = today()) {
+  return monthNames.map((label, i) => {
+    const from = `${year}-${String(i + 1).padStart(2, "0")}-01`;
+    const end = new Date(Date.UTC(year, i + 1, 0)).toISOString().slice(0, 10);
+    const to = end < until ? end : until;
+    if (from > until) return { label, month: from, revenue: null, costs: null, profit: null };
+    const st = statements(trialBalance(lines.filter((l) => l.entry_date >= from), from, to));
+    return { label, month: from, revenue: st.opbrengsten, costs: r2(st.kosten + st.belastingen), profit: st.resultaat };
+  });
+}
 
 const eur = (n: number | null | undefined) => (n == null ? "onbekend" : new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n));
 
-/** Boekhouding at a glance: full monthly revenue and costs for one year, same figures as Finance → Overzicht. */
+/** Boekhouding at a glance: full monthly revenue and costs for one year, same posted journal as Boekhouding → Balans & resultaat. */
 export function FinanceYear() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [companyId, setCompanyId] = useState("");
@@ -21,9 +38,16 @@ export function FinanceYear() {
     const list = companies.data ?? [];
     if (!companyId && list.length) setCompanyId((list.find((c) => c.name.trim().toLowerCase() === "riory bv") ?? list[0])?.id ?? "");
   }, [companies.data, companyId]);
-  const { data, error } = useFinData(companyId);
+  const { data, error } = useQuery({
+    queryKey: ["fin", "posted", companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", companyId).range(a, b))) as any[];
+      return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal }));
+    },
+  });
 
-  const rows = data ? financeMonthRows(data, year) : [];
+  const rows = data ? journalMonthRows(data, year) : [];
   const sum = (k: "revenue" | "costs" | "profit") => { const v = rows.map((r) => r[k]).filter((x): x is number => x != null); return v.length ? r2(v.reduce((a, b) => a + b, 0)) : null; };
   const omzet = sum("revenue"), kosten = sum("costs"), resultaat = sum("profit");
   const marge = omzet && resultaat != null ? Math.round((resultaat / omzet) * 100) : null;
@@ -33,7 +57,7 @@ export function FinanceYear() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-black uppercase">Boekhouding {year}</h2>
-          <p className="text-xs text-muted-foreground">Volledige omzet en kosten per maand, excl. btw</p>
+          <p className="text-xs text-muted-foreground">Geboekte opbrengsten en kosten per maand, excl. btw — gelijk aan Balans & resultaat</p>
         </div>
         <div className="flex items-center gap-2">
           {(companies.data?.length ?? 0) > 1 && (
