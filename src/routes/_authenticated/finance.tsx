@@ -719,7 +719,7 @@ function DeprDetail({ inv, sched }: { inv: any; sched: DeprRow[] }) {
       <div className="mb-2 flex flex-wrap gap-1">
         {(["jaar", "maand", "boekingen"] as const).map((v) => <Button key={v} size="sm" variant={view === v ? "default" : "outline"} onClick={() => setView(v)}>{v === "jaar" ? "Per jaar" : v === "maand" ? "Per maand" : `Boekingen (${entries.length})`}</Button>)}
       </div>
-      <div className="max-h-96 overflow-auto">
+      <div className="max-h-64 overflow-auto">
         {view === "jaar" && <table className="w-full text-xs"><thead><tr className="border-b border-border text-left text-muted-foreground"><th className="py-1.5">Jaar</th><th className={th}>Maanden</th><th className={th}>Boekwaarde begin</th><th className={th}>Afschrijving</th><th className={th}>Gecumuleerd</th><th className={th}>Boekwaarde einde</th></tr></thead><tbody>
           {years.map((y) => <tr key={y.year} className="border-b border-border/60"><td className="py-1.5">{y.year}</td><td className="text-right">{y.months}</td><td className="text-right">{eur(y.begin)}</td><td className="text-right font-medium">{eur(y.depreciation)}</td><td className="text-right">{eur(y.accumulated)}</td><td className="text-right">{eur(y.end)}</td></tr>)}
         </tbody></table>}
