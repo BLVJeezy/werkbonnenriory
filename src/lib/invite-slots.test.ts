@@ -20,8 +20,8 @@ describe('partsForChoice', () => {
   it('geeft beide vakken in volgorde voormiddag dan namiddag', () => {
     expect(partsForChoice('beide').map((p) => p.key)).toEqual(['voormiddag', 'namiddag']);
   });
-  it('biedt precies drie keuzes aan bovenaan het keuzescherm', () => {
-    expect(SLOT_CHOICES.map((c) => c.key)).toEqual(['beide', 'voormiddag', 'namiddag']);
+  it('biedt vier keuzes aan bovenaan het keuzescherm', () => {
+    expect(SLOT_CHOICES.map((c) => c.key)).toEqual(['beide', 'voormiddag', 'namiddag', 'eerste']);
   });
 });
 
