@@ -642,6 +642,71 @@ function Investeringen({ c, focus, onDone }: { c: string; focus?: string | undef
         {list.map((i: any) => <Button variant="ghost" key={i.id} onClick={() => setSel(i.id)} className={"mt-1 block w-full rounded border p-2 text-left text-sm " + (sel === i.id ? "border-primary" : "border-border")}>{i.name}</Button>)}
       </Card>
       {cur && <InvestmentEdit key={cur.id} inv={cur} onDone={() => { refetch(); onDone(); }} />}
+      <div className="lg:col-span-2"><InvestmentsByAccount c={c} list={list} /></div>
+    </div>
+  );
+}
+
+const typedInv = (i: any) => ({ ...i, capitalizable_amount: i.capitalizable_amount == null || i.capitalizable_amount === "" ? null : Number(i.capitalizable_amount), purchase_amount: i.purchase_amount == null || i.purchase_amount === "" ? null : Number(i.purchase_amount), useful_life_months: i.useful_life_months ? Number(i.useful_life_months) : null, residual_value: Number(i.residual_value || 0), opening_accumulated: Number(i.opening_accumulated || 0) });
+
+function InvestmentsByAccount({ c, list }: { c: string; list: any[] }) {
+  const lineIds = list.map((i) => i.invoice_line_id).filter(Boolean);
+  const { data: accByLine = {} } = useQuery({ queryKey: ["fin", "inv-line-accounts", c, lineIds.join()], queryFn: async () => {
+    if (!lineIds.length) return {} as Record<string, string>;
+    const rows = ((await db.from("fin_invoice_lines").select("id,account").in("id", lineIds)).data ?? []) as any[];
+    return Object.fromEntries(rows.map((r) => [r.id, r.account ?? ""])) as Record<string, string>;
+  } });
+  const today = monthKey(new Date());
+  const groups = new Map<string, { count: number; cost: number; acc: number; book: number; year: number }>();
+  const thisYear = today.slice(0, 4);
+  for (const i of list) {
+    const t = typedInv(i);
+    const sched = depreciationSchedule(t);
+    const past = sched.filter((r) => r.month <= today);
+    const cost = Number(t.capitalizable_amount ?? t.purchase_amount ?? 0);
+    const acc = past.at(-1)?.accumulated ?? t.opening_accumulated;
+    const key = (i.invoice_line_id && accByLine[i.invoice_line_id]) || "Zonder rekening";
+    const g = groups.get(key) ?? { count: 0, cost: 0, acc: 0, book: 0, year: 0 };
+    g.count++; g.cost = r2(g.cost + cost); g.acc = r2(g.acc + acc); g.book = r2(g.book + cost - acc);
+    g.year = r2(g.year + sched.filter((r) => r.month.startsWith(thisYear)).reduce((s, r) => s + r.depreciation, 0));
+    groups.set(key, g);
+  }
+  const rows = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const tot = rows.reduce((s, [, g]) => ({ cost: s.cost + g.cost, acc: s.acc + g.acc, book: s.book + g.book, year: s.year + g.year }), { cost: 0, acc: 0, book: 0, year: 0 });
+  return (
+    <Card title="Totaal per investeringsrekening">
+      <div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead><tr className="border-b border-border text-left text-muted-foreground"><th className="py-2">Rekening</th><th className="py-2 text-right">Aantal</th><th className="py-2 text-right">Aanschafwaarde</th><th className="py-2 text-right">Afschrijving {thisYear}</th><th className="py-2 text-right">Gecum. t/m vandaag</th><th className="py-2 text-right">Boekwaarde</th></tr></thead><tbody>
+        {rows.map(([k, g]) => <tr key={k} className="border-b border-border/60"><td className="py-1.5">{k}</td><td className="text-right">{g.count}</td><td className="text-right">{eur(g.cost)}</td><td className="text-right">{eur(g.year)}</td><td className="text-right">{eur(g.acc)}</td><td className="text-right font-medium">{eur(g.book)}</td></tr>)}
+        <tr className="font-semibold"><td className="py-1.5">Totaal</td><td /><td className="text-right">{eur(r2(tot.cost))}</td><td className="text-right">{eur(r2(tot.year))}</td><td className="text-right">{eur(r2(tot.acc))}</td><td className="text-right">{eur(r2(tot.book))}</td></tr>
+      </tbody></table></div>
+    </Card>
+  );
+}
+
+function DeprDetail({ inv, sched }: { inv: any; sched: DeprRow[] }) {
+  const [view, setView] = useState<"jaar" | "maand" | "boekingen">("jaar");
+  const { data: entries = [] } = useQuery({ queryKey: ["fin", "depr-entries", inv.id], queryFn: async () => ((await db.from("fin_journal_entries").select("id,entry_date,description,source_ref,fin_journal_lines(account,debit,credit)").eq("company_id", inv.company_id).eq("source", "afschrijving").like("source_ref", `${inv.id}:%`).order("entry_date")).data ?? []) as any[] });
+  const booked = new Set(entries.map((e) => String(e.source_ref).split(":")[1]));
+  const today = monthKey(new Date());
+  if (!sched.length) return <p className="mt-2 text-xs text-warning">Geen schema: parameters onvolledig of grond.</p>;
+  const years = depreciationByYear(sched);
+  const th = "py-1.5 text-right";
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <div className="mb-2 flex flex-wrap gap-1">
+        {(["jaar", "maand", "boekingen"] as const).map((v) => <Button key={v} size="sm" variant={view === v ? "default" : "outline"} onClick={() => setView(v)}>{v === "jaar" ? "Per jaar" : v === "maand" ? "Per maand" : `Boekingen (${entries.length})`}</Button>)}
+      </div>
+      <div className="max-h-96 overflow-auto">
+        {view === "jaar" && <table className="w-full text-xs"><thead><tr className="border-b border-border text-left text-muted-foreground"><th className="py-1.5">Jaar</th><th className={th}>Maanden</th><th className={th}>Boekwaarde begin</th><th className={th}>Afschrijving</th><th className={th}>Gecumuleerd</th><th className={th}>Boekwaarde einde</th></tr></thead><tbody>
+          {years.map((y) => <tr key={y.year} className="border-b border-border/60"><td className="py-1.5">{y.year}</td><td className="text-right">{y.months}</td><td className="text-right">{eur(y.begin)}</td><td className="text-right font-medium">{eur(y.depreciation)}</td><td className="text-right">{eur(y.accumulated)}</td><td className="text-right">{eur(y.end)}</td></tr>)}
+        </tbody></table>}
+        {view === "maand" && <table className="w-full text-xs"><thead><tr className="border-b border-border text-left text-muted-foreground"><th className="py-1.5">Maand</th><th className={th}>Afschrijving</th><th className={th}>Gecumuleerd</th><th className={th}>Boekwaarde</th><th className={th}>Status</th></tr></thead><tbody>
+          {sched.map((r) => { const b = booked.has(r.month); return <tr key={r.month} className="border-b border-border/60"><td className="py-1.5">{r.month.slice(0, 7)}</td><td className="text-right">{eur(r.depreciation)}</td><td className="text-right">{eur(r.accumulated)}</td><td className="text-right">{eur(r.bookValue)}</td><td className={"text-right " + (b ? "text-primary" : r.month <= today ? "text-warning" : "text-muted-foreground")}>{b ? "Geboekt" : r.month <= today ? "Nog te boeken" : "Gepland"}</td></tr>; })}
+        </tbody></table>}
+        {view === "boekingen" && (entries.length ? <table className="w-full text-xs"><thead><tr className="border-b border-border text-left text-muted-foreground"><th className="py-1.5">Datum</th><th className="py-1.5">Rekening</th><th className={th}>Debet</th><th className={th}>Credit</th></tr></thead><tbody>
+          {entries.flatMap((e) => (e.fin_journal_lines ?? []).map((l: any, k: number) => <tr key={e.id + k} className={k === 0 ? "border-t border-border/60" : ""}><td className="py-1">{k === 0 ? e.entry_date : ""}</td><td>{l.account}</td><td className="text-right">{Number(l.debit) ? eur(Number(l.debit)) : ""}</td><td className="text-right">{Number(l.credit) ? eur(Number(l.credit)) : ""}</td></tr>))}
+        </tbody></table> : <p className="text-xs text-muted-foreground">Nog geen afschrijvingen geboekt in het dagboek.</p>)}
+      </div>
     </div>
   );
 }
@@ -699,9 +764,7 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
         <Button size="sm" disabled={postingDepr || !sched.length} onClick={postDepreciation}>{postingDepr ? "Boeken…" : "Afschrijvingen boeken t/m vandaag"}</Button>
         <p className="text-xs text-muted-foreground">{bookedMonths.length} maand(en) al geboekt. Elke maand wordt maar één keer geboekt.</p>
       </div>}
-      <div className="mt-2 max-h-72 overflow-auto text-xs">
-        {sched.length ? sched.map((r) => <div key={r.month} className="flex justify-between"><span>{r.month.slice(0, 7)}</span><span>{eur(r.depreciation)} · gecum. {eur(r.accumulated)} · boekw. {eur(r.bookValue)}</span></div>) : <p className="text-warning">Geen schema: parameters onvolledig of grond.</p>}
-      </div>
+      <DeprDetail inv={inv} sched={sched} />
     </Card>
   );
 }
