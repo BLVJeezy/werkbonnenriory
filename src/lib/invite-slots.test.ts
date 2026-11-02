@@ -84,3 +84,9 @@ describe('inviteBlock', () => {
     expect(inviteBlock({ email: 'klant@voorbeeld.be', technician_id: 'x', status: 'afgetekend' })).toBe('Deze taak is al afgewerkt.');
   });
 });
+
+import { partsForChoice as pfc, inviteSlotLabel as isl } from './invite-slots';
+it('eerste klant stelt aankomst 08:00–09:00 voor', () => {
+  expect(pfc('eerste').map((p) => [p.from, p.until])).toEqual([['08:00', '09:00']]);
+  expect(isl({ date: '2026-11-03', from: '08:00', until: '09:00' })).toBe('di 3/11 · eerste klant, aankomst 08:00–09:00');
+});

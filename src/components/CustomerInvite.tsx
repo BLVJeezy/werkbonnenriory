@@ -43,6 +43,10 @@ export function CustomerInvite({ task, size = 'sm', className }: { task: InviteT
     if (busy || !slots.length) return;
     setBusy(true);
     try {
+      if (choice === 'eerste') {
+        const { error } = await supabase.from('work_orders').update({ first_customer: true }).eq('id', task.id);
+        if (error) throw new Error('Label Eerste klant kon niet bewaard worden.');
+      }
       const result = await invite({ data: { id: task.id, slots } });
       qc.invalidateQueries({ queryKey: ['appointment', task.id] });
       qc.invalidateQueries({ queryKey: ['work_orders'] });
