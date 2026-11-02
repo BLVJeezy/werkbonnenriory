@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { journalMonthRows } from "./FinanceYear";
+import { journalMonthRows, yearRows } from "./FinanceYear";
 import { statements, trialBalance } from "@/lib/boekhouding";
 describe("dashboard resultaat = balans resultaat", () => {
   it("som van maanden gelijk aan balans 1 jan t.e.m. vandaag", () => {
