@@ -115,21 +115,29 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   }
   const mainLines = d.lines.filter((l) => !l.optional);
   const optionLines = d.lines.filter((l) => l.optional);
+  const groupNames = (rows: InvoiceLine[]) => [...new Set(rows.map((l) => l.group).filter((g): g is string => !!g))];
   const drawLines = (rows: InvoiceLine[]) => {
     let lastGroup: string | undefined;
+    const groups = groupNames(rows);
+    let sub = 0;
     rows.forEach((l, i) => {
+      const postNr = l.group ? groups.indexOf(l.group) + 1 : 0;
+      if (l.group && l.group !== lastGroup) sub = 0;
+      if (l.group) sub += 1;
       if (l.group && l.group !== lastGroup) {
         const sub = r2(rows.filter((x) => x.group === l.group).reduce((s, x) => s + x.amount, 0));
         ensure(40);
         y -= 4;
         page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: annex });
-        page.drawText(pr(l.group.toUpperCase()), { x: cols.desc, y, size: 9.5, font: bold, color: ink });
+        page.drawText(pr(bestek ? `POST ${postNr} - ${l.group.toUpperCase()}` : l.group.toUpperCase()), { x: cols.desc, y, size: 9.5, font: bold, color: ink });
         right(money(sub), cols.amt, y, 9.5, bold);
         y -= 24;
       }
       lastGroup = l.group;
       const w = cols.qty - cols.desc - 20;
-      const { title, detail } = splitLineText(l.description);
+      const split = splitLineText(l.description);
+      const title = bestek && postNr ? `${postNr}.${sub}  ${split.title}` : split.title;
+      const detail = split.detail;
       const tl = wrap(title, 10.5, w, bold);
       const dl = detail ? wrap(detail, 9, w - 14) : [];
       const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
@@ -166,6 +174,22 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   drawLines(mainLines);
   if (!mainLines.length && !optionLines.length) { page.drawText("Geen posten.", { x: cols.desc, y, size: 10, font, color: muted }); y -= 18; }
 
+  const recap = groupNames(mainLines);
+  if (bestek && recap.length) {
+    ensure(40 + recap.length * 16);
+    y -= 10;
+    page.drawText("SAMENVATTING PER POST", { x: M, y, size: 9, font: bold, color: orange });
+    y -= 16;
+    recap.forEach((g, n) => {
+      const v = r2(mainLines.filter((x) => x.group === g).reduce((s, x) => s + x.amount, 0));
+      page.drawText(pr(`Post ${n + 1}  ${g}`), { x: cols.desc, y, size: 10, font, color: ink });
+      right(money(v), cols.amt, y, 10);
+      page.drawLine({ start: { x: M, y: y - 4 }, end: { x: W - M, y: y - 4 }, thickness: 0.4, color: annex });
+      y -= 16;
+    });
+    const rest = r2(mainLines.filter((x) => !x.group).reduce((s, x) => s + x.amount, 0));
+    if (rest) { page.drawText("Overige posten", { x: cols.desc, y, size: 10, font, color: ink }); right(money(rest), cols.amt, y, 10); y -= 16; }
+  }
   ensure(90);
   y -= 10;
   const tot = (label: string, v: string, strong = false) => {
