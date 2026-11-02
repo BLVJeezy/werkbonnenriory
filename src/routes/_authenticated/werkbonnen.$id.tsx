@@ -19,7 +19,7 @@ import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
-import { bestekFromWorkOrder, quoteFromTask } from "@/lib/quotes.functions";
+import { bestekFromWorkOrder, insuranceReportPdf, quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { werkbonNr } from "@/lib/werkbon-number";
@@ -95,6 +95,7 @@ function Detail() {
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const makeQuote = useServerFn(quoteFromTask);
   const makeBestek = useServerFn(bestekFromWorkOrder);
+  const makeReport = useServerFn(insuranceReportPdf);
   const removePayment = useServerFn(removeWorkOrderPayment);
   const [removingPayment,setRemovingPayment] = useState(false);
   const [kmTried, setKmTried] = useState<string | null>(null);
@@ -244,6 +245,22 @@ function Detail() {
               variant="outline"
               onClick={async () => {
                 try {
+                  const r = await makeReport({ data: { workOrderId: id } });
+                  const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
+                  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+                  const a = document.createElement("a"); a.href = url; a.download = r.name; a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                } catch (e) { toast.error(e instanceof Error ? e.message : "Verslag maken mislukt"); }
+              }}
+            >
+              Verslag voor verzekering (zonder prijzen)
+            </Button>
+          )}
+          {isAdmin && locked && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
                   const q = await makeBestek({ data: { workOrderId: id } });
                   qc.invalidateQueries({ queryKey: ["quotes"] });
                   toast.success(`Bestek ${q.number} aangemaakt — vul het verder aan`);
@@ -251,7 +268,7 @@ function Detail() {
                 } catch (e) { toast.error(e instanceof Error ? e.message : "Bestek maken mislukt"); }
               }}
             >
-              Verslag voor verzekering maken
+              Bestek voor verzekering maken
             </Button>
           )}
           {isAdmin && (

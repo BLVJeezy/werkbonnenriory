@@ -227,7 +227,7 @@ export const bestekFromWorkOrder = createServerFn({ method: "POST" })
       customer, lines, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
       customer_id: wo.customer_id,
       photo_paths: photos.map((p) => p.path).slice(0, 40),
-      intro: report.intro, damage_findings: report.findings,
+      intro: report.intro.replace(/^VERSLAG VOOR DE VERZEKERING\n\n/, ""), damage_findings: report.findings,
       technician_id: wo.technician_id,
     };
     if (existing) {
