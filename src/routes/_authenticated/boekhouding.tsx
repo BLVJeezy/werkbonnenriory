@@ -757,7 +757,7 @@ function Bank({ c }: { c: string }) {
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">
                   <span>Betalingen {eur(somTx)} · facturen {eur(somInv)}</span>
                   <span className={Math.abs(verschil) < 0.01 ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>{Math.abs(verschil) < 0.01 ? "Sluit exact" : `Verschil ${eur(verschil)} blijft openstaan`}</span>
-                  <Button size="sm" disabled={s.length !== 1 || gekozen.length !== 1} onClick={() => afpunten(s, gekozen)}>Afpunten</Button>
+                  <Button size="sm" disabled={s.length !== 1 || gekozen.length < 1} onClick={() => afpunten(s, gekozen)}>{gekozen.length > 1 ? `Afpunten (${gekozen.length} facturen)` : "Afpunten"}</Button>
                 </div>
               )}
             </div>
