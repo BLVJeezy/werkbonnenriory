@@ -2170,6 +2170,66 @@ export type Database = {
           },
         ]
       }
+      quote_section_items: {
+        Row: {
+          id: string
+          product_id: string
+          quantity: number
+          section_id: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          quantity?: number
+          section_id: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          quantity?: number
+          section_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_section_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_section_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_sections: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       quotes: {
         Row: {
           created_at: string

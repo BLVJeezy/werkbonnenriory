@@ -24,6 +24,7 @@ import { InsurancePhotoPicker } from '@/components/InsurancePhotoPicker';
 import { suggestInsuranceQuote } from '@/lib/insurance-quote-ai.functions';
 import { ProductPhotoGallery } from '@/components/ProductPhotos';
 import { quoteProductValues } from '@/lib/product-photos';
+import { QuoteSectionsManager, quoteSectionsQuery } from '@/components/QuoteSectionsManager';
 
 export const Route = createFileRoute("/_authenticated/offertes")({
   validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean; photoPaths?: string[] };
+type Line = { group?: string | undefined; title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean; photoPaths?: string[] };
 const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", optional: false };
 /** The stored line text keeps its old shape: product name on the first line, long description below it. */
 const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
@@ -88,13 +89,35 @@ function Offertes() {
     queryKey: ["settings"],
     queryFn: async () => (await supabase.from("settings").select("km_rate, base_address").eq("id", 1).single()).data,
   });
+  const { data: sections = [] } = useQuery(quoteSectionsQuery);
+  const [showSections, setShowSections] = useState(false);
   const kmRate = Number(settings?.km_rate ?? 0);
+  const groupOrder = (g?: string) => {
+    if (!g) return -1;
+    const i = sections.findIndex((x) => x.name === g);
+    return i >= 0 ? i : 1000 + lines.findIndex((l) => l.group === g);
+  };
+  function toggleSection(name: string, on: boolean) {
+    if (!on) {
+      if (lines.some((l) => l.group === name && lineText(l)) && !confirm(`Titel "${name}" en de lijnen eronder verwijderen?`)) return;
+      setLines((ls) => { const rest = ls.filter((l) => l.group !== name); return rest.length ? rest : [{ ...emptyLine }]; });
+      return;
+    }
+    const sec = sections.find((x) => x.name === name);
+    const added: Line[] = (sec?.items ?? []).flatMap((it) => {
+      const p = products.find((x) => x.id === it.product_id);
+      return p ? [{ ...emptyLine, ...quoteProductValues(p), quantity: String(it.quantity), group: name }] : [];
+    });
+    setLines((ls) => [...ls.filter((l) => lineText(l) || l.group), ...(added.length ? added : [{ ...emptyLine, group: name }])]);
+  }
   const refresh = () => qc.invalidateQueries({ queryKey: ["quotes"] });
 
   const parsedLines: InvoiceLine[] = [
     ...lines
       .filter((l) => lineText(l))
-      .map((l) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0), optional: l.optional, photoPaths: l.photoPaths ?? [] })),
+      .map((l, i) => ({ l, i }))
+      .sort((a, b) => groupOrder(a.l.group) - groupOrder(b.l.group) || a.i - b.i)
+      .map(({ l }) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0), optional: l.optional, photoPaths: l.photoPaths ?? [], ...(l.group ? { group: l.group } : {}) })),
     ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
   ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
@@ -148,7 +171,7 @@ function Offertes() {
     setKm(kmLine ? kmLine.quantity : null);
     const ls = all.filter((l) => l.unit !== "km").map((l) => {
       const t = splitLineText(l.description);
-      return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), optional: !!l.optional, photoPaths: l.photoPaths ?? [] };
+      return { group: l.group ?? undefined, title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), optional: !!l.optional, photoPaths: l.photoPaths ?? [] };
     });
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
@@ -267,8 +290,11 @@ function Offertes() {
     <div className="space-y-6">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap sm:gap-3">
         <h1 className="text-3xl font-black uppercase">Offertes</h1>
-        <Button className="ml-auto" variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
+        <Button className="ml-auto" variant="ghost" onClick={() => setShowSections((v) => !v)}>{showSections ? "Titels sluiten" : "Titels beheren"}</Button>
+        <Button variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
       </div>
+
+      {showSections && <QuoteSectionsManager products={products} />}
 
       {showForm && (
         <form onSubmit={maak} className="space-y-3 rounded-md border bg-card p-4">
@@ -322,9 +348,26 @@ function Offertes() {
             </div>
           )}
           <div className="space-y-2">
+            {sections.length > 0 && (
+              <div className="space-y-1 rounded-md border bg-muted/40 p-2">
+                <p className="text-sm font-bold">Titels (aanvinken om toe te voegen)</p>
+                {sections.map((sec) => (
+                  <label key={sec.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={lines.some((l) => l.group === sec.name)} onChange={(e) => toggleSection(sec.name, e.target.checked)} />
+                    {sec.name}{sec.items.length > 0 && <span className="text-muted-foreground">({sec.items.length} product{sec.items.length === 1 ? "" : "en"})</span>}
+                  </label>
+                ))}
+              </div>
+            )}
             <Label>{bestek ? "Posten" : "Lijnen"}</Label>
             {lines.map((l, i) => (
               <div key={i} className="space-y-1.5 rounded-md border p-2">
+                {(sections.length > 0 || l.group) && (
+                  <select className="h-8 max-w-full rounded-md border bg-background px-2 text-xs font-bold uppercase" aria-label="Titel" value={l.group ?? ""} onChange={(e) => setLine(i, { group: e.target.value || undefined })}>
+                    <option value="">Zonder titel</option>
+                    {[...new Set([...sections.map((x) => x.name), ...lines.map((x) => x.group).filter((g): g is string => !!g)])].map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <Input placeholder="Product of post" className="min-w-40 flex-1 basis-full font-bold sm:basis-0" value={l.title} onChange={(e) => setLine(i, { title: e.target.value })} aria-label="Productnaam" />
                   <SearchSelect className="basis-full sm:w-64 sm:basis-auto" placeholder="Product kiezen…" searchPlaceholder="Zoek product of alias…" value="" onChange={(id) => pickProduct(i, id)} options={products.map(p => ({ value: p.id, label: p.name, search: `${p.alias ?? ''} ${p.description ?? ''}` }))} />

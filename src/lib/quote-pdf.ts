@@ -12,6 +12,8 @@ export type QuotePdfData = {
   /** 'verzekering' = bestek voor de brandverzekering, met oorzaak, vaststellingen en foto's. */
   kind?: string; damageCause?: string | null; damageFindings?: string | null;
   productPhotos?: Record<string, Uint8Array>;
+  /** Verslag voor de verzekering: enkel bevindingen en foto's, zonder prijzen of voorwaarden. */
+  report?: boolean;
 };
 
 /** Embeds JPG/PNG bytes; other formats cannot go in the PDF. */
@@ -59,10 +61,11 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   const right = (t: string, x: number, yy: number, size: number, f = font, color = ink) => page.drawText(pr(t), { x: x - f.widthOfTextAtSize(pr(t), size), y: yy, size, font: f, color });
   chrome(true);
 
-  right(bestek ? "BESTEK" : "OFFERTE", W - M, H - 50, 22, bold);
+  const report = !!d.report;
+  right(report ? "VERSLAG" : bestek ? "BESTEK" : "OFFERTE", W - M, H - 50, 22, bold);
   right(d.number, W - M, H - 68, 14, bold, orange);
   right(`Datum ${date(d.issueDate)}`, W - M, H - 84, 9.5, font, muted);
-  right(`Geldig tot ${date(d.validUntil)}`, W - M, H - 97, 9.5, font, muted);
+  if (!report) right(`Geldig tot ${date(d.validUntil)}`, W - M, H - 97, 9.5, font, muted);
 
   // Customer block on a soft orange panel
   const c = d.customer;
@@ -70,7 +73,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   const panelH = cust.length * 14 + (c.siteAddress ? 14 : 0) + 26;
   page.drawRectangle({ x: M, y: y - panelH + 10, width: W - 2 * M, height: panelH, color: soft });
   page.drawRectangle({ x: M, y: y - panelH + 10, width: 4, height: panelH, color: orange });
-  page.drawText(bestek ? "BESTEK VOOR" : "OFFERTE VOOR", { x: M + 14, y: y - 4, size: 8.5, font: bold, color: muted });
+  page.drawText(report ? "VERSLAG VOOR DE VERZEKERING - KLANT" : bestek ? "BESTEK VOOR" : "OFFERTE VOOR", { x: M + 14, y: y - 4, size: 8.5, font: bold, color: muted });
   cust.forEach((l, i) => page.drawText(pr(l), { x: M + 14, y: y - 18 - i * 14, size: i === 0 ? 11.5 : 10.5, font: i === 0 ? bold : font, color: ink }));
   if (c.siteAddress) page.drawText(pr(`Werfadres: ${c.siteAddress}`), { x: M + 14, y: y - 18 - cust.length * 14, size: 9.5, font, color: muted });
   y -= panelH + 14;
@@ -78,7 +81,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   if (d.intro?.trim()) {
     const ls = wrap(d.intro, 10.5, W - 2 * M - 24);
     ensure(ls.length * 14 + 26);
-    page.drawText("BETREFT", { x: M, y, size: 8.5, font: bold, color: orange });
+    page.drawText(report ? "GEGEVENS VAN DE INTERVENTIE" : "BETREFT", { x: M, y, size: 8.5, font: bold, color: orange });
     y -= 15;
     ls.forEach((t) => { page.drawText(t, { x: M, y, size: 10.5, font, color: ink }); y -= 14; });
     y -= 12;
@@ -110,7 +113,18 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   const mainLines = d.lines.filter((l) => !l.optional);
   const optionLines = d.lines.filter((l) => l.optional);
   const drawLines = (rows: InvoiceLine[]) => {
+    let lastGroup: string | undefined;
     rows.forEach((l, i) => {
+      if (l.group && l.group !== lastGroup) {
+        const sub = r2(rows.filter((x) => x.group === l.group).reduce((s, x) => s + x.amount, 0));
+        ensure(40);
+        y -= 4;
+        page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: annex });
+        page.drawText(pr(l.group.toUpperCase()), { x: cols.desc, y, size: 9.5, font: bold, color: ink });
+        right(money(sub), cols.amt, y, 9.5, bold);
+        y -= 24;
+      }
+      lastGroup = l.group;
       const w = cols.qty - cols.desc - 20;
       const { title, detail } = splitLineText(l.description);
       const tl = wrap(title, 10.5, w, bold);
@@ -139,6 +153,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       }
     });
   };
+  if (!report) {
   page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: ink });
   page.drawText("OMSCHRIJVING", { x: cols.desc, y, size: 8.5, font: bold, color: white });
   right("AANTAL", cols.qty + 40, y, 8.5, bold, white);
@@ -190,6 +205,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     page.drawText(pr(`Deze offerte is geldig tot ${date(d.validUntil)}.`), { x: M + 12, y: y - 24, size: 9.5, font, color: ink });
   }
   y -= 64;
+  }
 
   // Photo annex (two per page) precedes the terms.
   for (let i = 0; i < photos.length; i++) {
@@ -210,6 +226,6 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     y -= 320;
   }
 
-  await appendTermsPdf(doc);
+  if (!report) await appendTermsPdf(doc);
   return doc.save();
 }

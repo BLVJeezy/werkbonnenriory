@@ -158,6 +158,53 @@ export const quoteFromTask = createServerFn({ method: "POST" })
     return row;
   });
 
+/** Price-free report data from a signed work order: facts, findings, materials (quantities only) and photo paths. */
+async function workOrderReport(supabase: any, wo: any) {
+  const [photosRes, timeRes, matRes, actsRes, crewRes] = await Promise.all([
+    supabase.from("work_order_photos").select("path").eq("work_order_id", wo.id).order("created_at"),
+    supabase.from("time_entries").select("started_at, ended_at").eq("work_order_id", wo.id),
+    supabase.from("materials").select("name, quantity, unit").eq("work_order_id", wo.id).order("created_at"),
+    supabase.from("activities").select("id, name"),
+    wo.technician_id ? supabase.from("technicians").select("name").eq("id", wo.technician_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+  ]);
+  for (const r of [photosRes, timeRes, matRes, actsRes]) if (r.error) throw new Error(r.error.message);
+  const photos = (photosRes.data ?? []) as { path: string }[];
+  const seconds = (timeRes.data ?? []).reduce((s: number, e: any) => s + (e.ended_at ? (new Date(e.ended_at).getTime() - new Date(e.started_at).getTime()) / 1000 : 0), 0);
+  const act = (actsRes.data ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
+  const { buildInvoice } = await import("@/lib/invoice");
+  const { billableHours } = await import("@/lib/billing");
+  const { insuranceReport } = await import("@/lib/insurance-report");
+  const materials = (matRes.data ?? []) as any[];
+  const customer: InvoiceCustomer = buildInvoice({ wo: { ...wo, distance_km: null, vat_rate: Number(wo.vat_rate) }, activity: null, seconds: 0, kmRate: 0, materials: [] }).customer;
+  const report = insuranceReport(wo, {
+    crew: crewRes.data?.name ?? null, activity: act?.name ?? null, hours: billableHours(seconds),
+    materials: materials.map((m) => ({ name: m.name, quantity: Number(m.quantity), unit: m.unit })), photoCount: photos.length,
+  });
+  return { report, customer, photos };
+}
+
+/** Price-free insurance report PDF (findings + photos) for a signed work order; no quote is created. */
+export const insuranceReportPdf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { workOrderId: string }) => i)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: wo } = await context.supabase.from("work_orders").select("*").eq("id", data.workOrderId).single();
+    if (!wo) throw new Error("Werkbon niet gevonden");
+    if (wo.status !== "afgetekend") throw new Error("Alleen van een afgewerkte werkbon kan een verslag gemaakt worden");
+    const { report, customer, photos } = await workOrderReport(context.supabase, wo);
+    const { data: s } = await context.supabase.from("settings").select("company_name, company_vat").eq("id", 1).single();
+    const today = new Date().toISOString().slice(0, 10);
+    const number = wo.number ? `Werkbon #${wo.number}` : "Verslag";
+    const { createQuotePdf } = await import("@/lib/quote-pdf");
+    const pdf = await createQuotePdf({
+      report: true, kind: "verzekering", number, issueDate: today, validUntil: today, customer, lines: [], vatRate: 0, net: 0, vat: 0, total: 0,
+      company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404", iban: null, bic: null }, terms: null,
+      intro: report.intro.replace(/^VERSLAG VOOR DE VERZEKERING\n\n/, ""), damageFindings: report.findings,
+    }, await quotePhotos(context.supabase, { kind: "verzekering", photo_paths: photos.map((p) => p.path).slice(0, 40) }));
+    return { name: `Verslag-verzekering-${wo.number ?? "werkbon"}.pdf`, base64: b64(pdf) };
+  });
+
 /** Creates a draft insurance estimate (bestek) from a completed work order, with its photos. */
 export const bestekFromWorkOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -172,36 +219,15 @@ export const bestekFromWorkOrder = createServerFn({ method: "POST" })
     if (existingError) throw new Error(existingError.message);
     // Al verstuurd of ondertekend: niet meer overschrijven.
     if (existing && existing.status !== "concept") return existing;
-    const [photosRes, timeRes, matRes, actsRes, crewRes, settingsRes] = await Promise.all([
-      context.supabase.from("work_order_photos").select("path").eq("work_order_id", wo.id).order("created_at"),
-      context.supabase.from("time_entries").select("started_at, ended_at").eq("work_order_id", wo.id),
-      context.supabase.from("materials").select("*").eq("work_order_id", wo.id).order("created_at"),
-      context.supabase.from("activities").select("*"),
-      wo.technician_id ? context.supabase.from("technicians").select("name").eq("id", wo.technician_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      context.supabase.from("settings").select("km_rate").eq("id", 1).maybeSingle(),
-    ]);
-    for (const r of [photosRes, timeRes, matRes, actsRes]) if (r.error) throw new Error(r.error.message);
-    const photos = (photosRes.data ?? []) as { path: string }[];
-    const seconds = (timeRes.data ?? []).reduce((s: number, e: any) => s + (e.ended_at ? (new Date(e.ended_at).getTime() - new Date(e.started_at).getTime()) / 1000 : 0), 0);
-    const act = (actsRes.data ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
-    const materials = (matRes.data ?? []) as any[];
-    const { buildInvoice } = await import("@/lib/invoice");
-    const { billableHours } = await import("@/lib/billing");
-    const { insuranceReport } = await import("@/lib/insurance-report");
-    // Dezelfde lijnen als op de factuur: arbeid, verplaatsing, garantie-reducties en materialen.
-    const inv = buildInvoice({ wo: { ...wo, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) } as any, activity: act, seconds, kmRate: Number(settingsRes.data?.km_rate ?? 0), materials });
-    const report = insuranceReport(wo as any, {
-      crew: (crewRes.data as any)?.name ?? null, activity: act?.name ?? null, hours: billableHours(seconds),
-      materials: materials.map((m) => ({ name: m.name, quantity: Number(m.quantity), unit: m.unit })), photoCount: photos.length,
-    });
-    const customer: InvoiceCustomer = inv.customer;
-    const lines = inv.lines;
+    const { report, customer, photos } = await workOrderReport(context.supabase, wo);
+    // Een bestek krijgt eigen prijzen per titel, niet de werkbonprijzen; bestaande conceptposten blijven.
+    const lines = (existing?.lines as InvoiceLine[] | undefined) ?? [];
     const t = quoteTotals(lines, Number(wo.vat_rate));
     const fields = {
       customer, lines, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
       customer_id: wo.customer_id,
       photo_paths: photos.map((p) => p.path).slice(0, 40),
-      intro: report.intro, damage_findings: report.findings,
+      intro: report.intro.replace(/^VERSLAG VOOR DE VERZEKERING\n\n/, ""), damage_findings: report.findings,
       technician_id: wo.technician_id,
     };
     if (existing) {
