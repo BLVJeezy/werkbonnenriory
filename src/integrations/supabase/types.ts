@@ -469,6 +469,51 @@ export type Database = {
           },
         ]
       }
+      customer_videos: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          path: string
+          title: string
+          token: string
+          work_order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          path: string
+          title?: string
+          token: string
+          work_order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          path?: string
+          title?: string
+          token?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_videos_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_videos_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           billing_email: string | null

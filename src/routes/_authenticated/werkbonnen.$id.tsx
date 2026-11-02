@@ -18,6 +18,7 @@ import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
 import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
+import { WorkOrderVideos } from "@/components/WorkOrderVideos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 import { bestekFromWorkOrder, insuranceReportPdf, quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -552,6 +553,7 @@ function Detail() {
       </section>
 
       <WorkOrderPhotos workOrderId={id} locked={matLocked} />
+      {isAdmin && <WorkOrderVideos workOrderId={id} customerId={wo.customer_id ?? null} hasEmail={!!wo.email} />}
       {isAdmin && !locked && <AppointmentPanel id={id} external={!!techs.find(t=>t.id===wo.technician_id)?.external_planning} scheduled={!!wo.scheduled_date} />}
       {isAdmin && !locked && <section className="no-print space-y-2 border-t pt-4">
         <h2 className="text-lg font-black uppercase">Klant uitnodigen</h2>
