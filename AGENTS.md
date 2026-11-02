@@ -9,7 +9,6 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Simpla sales sync is retired; enqueue does nothing; purchase imports stay read-only.
 - Mailtaken/review feeds require separate server tokens and stable IDs. Reviews expose sent invoice emails only, with sent_at+id cursors.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery: public /reset-password and recovery sessions; never disclose passwords.
@@ -47,5 +46,6 @@
 - `cold-entry.ts` distinguishes restored pages; module recovery runs in the head before bootstrap, with bounded reload and standalone retry UI because effects run too late.
 - Insurance estimates are `quotes` with `kind = 'verzekering'`: private `werkbon-fotos` paths (`bestek/`) appended before terms; AI suggests price-free unsaved text — one numbering/signing flow.
 - `bestekFromWorkOrder` (admin, idempotent) converts completed orders; quote triggers exclude `kind = 'verzekering'` so a bestek never archives/hides its source werkbon.
-- Finance keeps Mail Assist math and admin+owner checks; local sales link to Riory BV, imported numbers dedupe. `fin_reconcile_bank` atomically claims ledger, locks invoice and posts balanced journal (partials open, overpayments fail). `fin_restore_archive` preserves IDs; then match Ponto keys and retire cumulative balances.
+- Finance keeps Mail Assist math and admin+owner checks; local sales link to Riory BV, imported numbers dedupe. `fin_reconcile_bank` atomically claims ledger, locks invoice and posts balanced journal (partials open, overpayments fail). `fin_restore_archive` preserves IDs.
+- Range-paged reads order by id first (un-ordered paging drops rows; parallel salvo's on the joined journal query return 500). Dashboard journal figures use the `fin_journal_summary` month-aggregate RPC (invoker, so RLS holds); accounting pages keep raw lines for arbitrary periods.
 - Prior-year accountant figures are one `jaarafsluiting`-source entry that trialBalance counts only for periods ending in that year, so it never doubles the next opening balance.

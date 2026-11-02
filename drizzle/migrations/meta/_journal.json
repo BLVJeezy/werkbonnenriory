@@ -666,6 +666,13 @@
       "when": 1793545866619,
       "tag": "0094_purchase_booking_peppyrus",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1793612784778,
+      "tag": "0095_fin_journal_summary",
+      "breakpoints": true
     }
   ]
 }

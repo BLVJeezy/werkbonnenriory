@@ -1,4 +1,6 @@
 // De database geeft maximaal 1000 rijen per aanvraag terug; haal in blokken op tot alles binnen is.
+// Elke query loopt met dezelfde vaste sortering (order op id), zodat blokken elkaar nooit overlappen
+// of overslaan — anders verdwijnen regels stil uit een overzicht.
 export async function fetchAll<T>(
   page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
   size = 1000,
