@@ -1,47 +1,62 @@
-# Reviewaanvragen: verzonden facturen ophalen
+# Riory Review-API
 
-## Endpoint
+Met deze API haalt jullie extern reviewsysteem op welke klanten een reviewmail moeten krijgen. De app verstuurt zelf geen reviewmail.
 
-`POST https://werkbonnenriory.lovable.app/api/public/reviews/invoices`
+## Aanbevolen: na elke afgewerkte werkbon
+
+`POST https://werkbonnenriory.lovable.app/api/public/reviews/werkbonnen`
 
 Headers:
-- `Authorization: Bearer <de gedeelde REVIEW_INVOICES_API_TOKEN>`
+- `Authorization: Bearer <REVIEW_INVOICES_API_TOKEN>`
 - `Content-Type: application/json`
 
-Body bij eerste aanvraag: `{"limit":100}`.
+Eerste aanvraag: `{"limit":100}`
 
-Antwoord (voorbeeldgegevens):
+Antwoord (voorbeeld):
 
 ```json
 {
   "version": 1,
-  "invoices": [
-    {
-      "id": "00000000-0000-4000-8000-000000000001",
-      "email": "klant@example.com",
-      "sent_at": "2026-10-29T12:00:00Z"
-    }
+  "work_orders": [
+    { "id": "00000000-0000-4000-8000-000000000001", "email": "klant@example.com", "completed_at": "2026-11-02T12:00:00Z" }
   ],
-  "next_cursor": {
-    "sent_at": "2026-10-29T12:00:00Z",
-    "id": "00000000-0000-4000-8000-000000000001"
-  },
+  "next_cursor": { "completed_at": "2026-11-02T12:00:00Z", "id": "00000000-0000-4000-8000-000000000001" },
   "has_more": false
 }
 ```
 
-Geef de laatste niet-lege `next_cursor` bij de volgende aanvraag mee als `cursor`, naast `limit`. Bewaar die ook wanneer `has_more` false is; dan worden volgende keren nieuwe verzendingen opgehaald. Bij een lege pagina is `next_cursor` null: behoud je vorige cursor. Bij `has_more: true` direct de volgende pagina ophalen. Ongeldige e-mailadressen worden overgeslagen; een lege `invoices`-lijst kan daarom toch voortgang hebben.
+Volgende aanvragen: `{"limit":100,"cursor":{"completed_at":"…","id":"…"}}` met de laatst ontvangen niet-lege `next_cursor`.
 
-Alleen `kind=factuur`, `status=verzonden` en een ingevulde `sent_at` komen in aanmerking; creditnota’s, concepten en mislukte/onzekere verzendingen zijn uitgesloten. Het e-mailadres komt uit de opgeslagen factuurklant (dus het facturatieadres wanneer dat gekozen is). Geen bedragen, factuurregels, adressen of namen worden gedeeld.
+- Afgewerkt = werkbon afgetekend (handtekening) of afgerekend. `completed_at` is het moment van aftekenen, anders van afrekenen.
+- E-mail = het facturatie-e-mailadres van de werkbon, anders het klantmailadres. Werkbonnen zonder geldig adres worden overgeslagen (cursor schuift wel op).
+- Geen namen, adressen, prijzen of foto's worden gedeeld.
+- Een heropende en opnieuw afgetekende werkbon kan opnieuw verschijnen met dezelfde `id`: stuur maximaal één reviewmail per `id`.
 
-Verzonden betekent: Outlook heeft de verzending aanvaard en de app heeft deze geregistreerd; dit bewijst niet dat de klant de mail ontvangen of gelezen heeft.
+## Alternatief: na verzonden factuur
 
-## Dubbelen voorkomen
+`POST https://werkbonnenriory.lovable.app/api/public/reviews/invoices` — zelfde sleutel en werking, maar met `invoices[]` en cursor `{ "sent_at", "id" }`. Enkel verzonden facturen (geen creditnota's of concepten).
 
-Het reviewsysteem moet `id` als unieke gebeurtenissleutel bewaren en maximaal één reviewaanvraag per factuur starten. Bewaar verwerking en cursor betrouwbaar; herhaalde aanvragen kunnen dezelfde factuur teruggeven. De API verstuurt zelf geen reviewmail. De eerste aanvraag zonder cursor bevat ook eerder verzonden facturen. Start met een cursor op de gewenste ingangsdatum en ID `00000000-0000-0000-0000-000000000000` om historische verzendingen over te slaan.
+## Werkwijze voor het reviewsysteem
 
-## Beveiliging en ingebruikname
+1. Roep de API periodiek aan (bv. elk kwartier).
+2. Bij `has_more: true` meteen de volgende pagina ophalen.
+3. Bewaar de cursor betrouwbaar; bij een lege pagina (`next_cursor: null`) de vorige cursor behouden.
+4. Bewaar elke `id` als unieke sleutel om dubbele reviewmails te voorkomen.
+5. Historiek overslaan: start met cursor `{"completed_at":"<startdatum>","id":"00000000-0000-0000-0000-000000000000"}`.
+6. Verstuur de reviewmail zelf, eventueel met wat vertraging (bv. 1 dag na het werk).
 
-Gebruik een aparte gedeelde sleutel `REVIEW_INVOICES_API_TOKEN`, alleen op de server van het reviewsysteem, nooit in browsercode of queryparameters. Stel deze in via het beveiligde sleutelformulier en kopieer dezelfde sleutel naar het reviewsysteem. Deze API deelt klantmailadressen uitsluitend na sleutelcontrole; geef de sleutel enkel aan vertrouwde beheerders. Gebruik HTTPS. Publiceer deze appwijziging voordat het andere systeem de productie-URL gebruikt.
+## Beveiliging
 
-Foutcodes: 401 ongeldige sleutel, 400 ongeldige aanvraag, 413 te grote aanvraag, 503 sleutel nog niet ingesteld, 500 ophalen mislukt. Paginalimiet: 1–100.
+De gedeelde sleutel `REVIEW_INVOICES_API_TOKEN` hoort alleen op de server van het reviewsysteem, nooit in browsercode of in de URL. Gebruik altijd HTTPS.
+
+## Foutcodes
+
+| Code | Betekenis |
+|---|---|
+| 400 | Ongeldige aanvraag |
+| 401 | Ongeldige of ontbrekende sleutel |
+| 413 | Aanvraag te groot |
+| 500 | Ophalen mislukt |
+| 503 | Sleutel nog niet ingesteld |
+
+Paginalimiet: 1–100.
