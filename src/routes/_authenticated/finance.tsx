@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import {
   addMonths, dedupeKey, depreciationSchedule, isPrivateCompany, keywordFrom, loanSchedule, monthKey, normSupplier,
-  parseAmount, r2, signedAmount, suggest, summarizeMonth, type Entry, type InvLine, type Rule,
+  parseAmount, r2, depreciationByYear, type DeprRow, signedAmount, suggest, summarizeMonth, type Entry, type InvLine, type Rule,
 } from "@/lib/finance";
 import { syncFinanceTasks } from "@/lib/finance-tasks";
 import { validateInvestment, validateLoan } from "@/lib/finance";
