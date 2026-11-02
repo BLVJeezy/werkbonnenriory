@@ -416,10 +416,17 @@ function Offertes() {
         {quotes.map((q) => {
           const c = q.customer as InvoiceCustomer;
           return (
-            <li key={q.id} className="grid min-w-0 grid-cols-2 items-center gap-2 p-3 sm:flex sm:flex-wrap sm:gap-3">
-              <span className="font-mono font-bold">{q.number}{q.kind === "verzekering" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">Bestek</span>}</span>
-              <span className="col-span-full row-start-1 min-w-0 break-words font-semibold sm:flex-1">{c.name}</span>
-              <select aria-label={`Ploeg offerte ${q.number}`} className="col-span-full h-10 w-full min-w-0 rounded-md border bg-background px-2 text-foreground sm:h-9 sm:w-auto" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
+            <li key={q.id} className="space-y-2 p-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="font-mono font-bold">{q.number}{q.kind === "verzekering" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">Bestek</span>}</span>
+                <span className="min-w-0 flex-1 break-words font-semibold">{c.name}</span>
+                <span className={`rounded px-2 py-0.5 text-xs font-bold ${q.status === "akkoord" ? "bg-accent text-accent-foreground" : "bg-muted"}`}>
+                  {QUOTE_STATUS[q.status] ?? q.status}
+                </span>
+                <span className="font-mono">{euro(Number(q.total))}</span>
+              </div>
+              {q.signed_name && <p className="text-xs text-muted-foreground">Getekend door {q.signed_name}</p>}
+              <select aria-label={`Ploeg offerte ${q.number}`} className="h-10 w-full min-w-0 rounded-md border bg-background px-2 text-foreground sm:h-9 sm:w-56" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
                 setBusy(true);
                 try {
                   await assignCrew({ data: { quoteId: q.id, technicianId: e.target.value || null } });
@@ -431,23 +438,22 @@ function Offertes() {
                 <option value="">— Ploeg —</option>
                 {crews.map((crew) => <option key={crew.id} value={crew.id}>{crew.name}</option>)}
               </select>
-              <span className="font-mono">{euro(Number(q.total))}</span>
-              <span className={`rounded px-2 py-0.5 text-xs font-bold ${q.status === "akkoord" ? "bg-accent text-accent-foreground" : "bg-muted"}`}>
-                {QUOTE_STATUS[q.status] ?? q.status}
-              </span>
-              {q.signed_name && <span className="text-xs text-muted-foreground">door {q.signed_name}</span>}
-              <Button variant="outline" size="sm" onClick={() => preview(q.id)}>Voorbeeld</Button>
-              <Button variant="outline" size="sm" onClick={() => download(q.id)}>PDF</Button>
-              {q.status !== "akkoord" && !q.work_order_id && <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={async () => {
-                if (!confirm(`${q.kind === "verzekering" ? "Bestek" : "Offerte"} ${q.number} definitief verwijderen?`)) return;
-                try { await remove({ data: { quoteId: q.id } }); toast.success("Verwijderd"); if (editId === q.id) closeForm(); refresh(); }
-                catch (e) { toast.error(e instanceof Error ? e.message : "Verwijderen mislukt"); }
-              }}>Verwijderen</Button>}
-              <DocumentReport id={q.id} type="offerte" />
-              {q.status !== "akkoord" && <Button variant="outline" size="sm" disabled={busy} onClick={() => openEdit(q)}>Bewerken</Button>}
-              {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}
-              {q.status === "akkoord" && !q.work_order_id && <Button size="sm" disabled={busy} onClick={() => naarTaak(q.id)}>Omzetten in taak</Button>}
-              {q.work_order_id && <Button asChild variant="outline" size="sm"><a href={`/werkbonnen/${q.work_order_id}`}>Taak openen</a></Button>}
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}
+                {q.status === "akkoord" && !q.work_order_id && <Button size="sm" disabled={busy} onClick={() => naarTaak(q.id)}>Omzetten in taak</Button>}
+                {q.work_order_id && <Button asChild variant="outline" size="sm"><a href={`/werkbonnen/${q.work_order_id}`}>Taak openen</a></Button>}
+                {q.status !== "akkoord" && <Button variant="outline" size="sm" disabled={busy} onClick={() => openEdit(q)}>Bewerken</Button>}
+              </div>
+              <div className="grid grid-cols-2 gap-2 border-t pt-2 sm:flex sm:flex-wrap sm:items-center">
+                <Button variant="outline" size="sm" onClick={() => preview(q.id)}>Voorbeeld</Button>
+                <Button variant="outline" size="sm" onClick={() => download(q.id)}>PDF</Button>
+                <DocumentReport id={q.id} type="offerte" />
+                {q.status !== "akkoord" && !q.work_order_id && <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={async () => {
+                  if (!confirm(`${q.kind === "verzekering" ? "Bestek" : "Offerte"} ${q.number} definitief verwijderen?`)) return;
+                  try { await remove({ data: { quoteId: q.id } }); toast.success("Verwijderd"); if (editId === q.id) closeForm(); refresh(); }
+                  catch (e) { toast.error(e instanceof Error ? e.message : "Verwijderen mislukt"); }
+                }}>Verwijderen</Button>}
+              </div>
             </li>
           );
         })}
