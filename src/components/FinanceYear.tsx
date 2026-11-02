@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { isPrivateCompany, r2 } from "@/lib/finance";
 import { monthNames, MonthlyBars, MonthlyProfit } from "@/components/FinanceCharts";
-import { fetchAll } from "@/lib/fetch-all";
+import { fetchAllParallel } from "@/lib/fetch-all";
 import { statements, trialBalance, type PostedLine } from "@/lib/boekhouding";
 import { Bar, BarChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -79,7 +79,7 @@ export function FinanceYear() {
     queryKey: ["fin", "posted", companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("account, debit, credit, fin_journal_entries!inner(entry_date, journal, description, source)").eq("company_id", companyId).order("id").range(a, b))) as any[];
+      const rows = (await fetchAllParallel((a, b) => db.from("fin_journal_lines").select("account, debit, credit, fin_journal_entries!inner(entry_date, journal, description, source)").eq("company_id", companyId).order("id").range(a, b))) as any[];
       return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal, source: r.fin_journal_entries.source }));
     },
   });

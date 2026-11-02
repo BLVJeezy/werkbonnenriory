@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { PontoConnection } from "@/components/PontoConnection";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAll } from "@/lib/fetch-all";
+import { fetchAll, fetchAllParallel } from "@/lib/fetch-all";
 import { dedupeKey, isPrivateCompany, parseAmount } from "@/lib/finance";
 import { MAR } from "@/lib/mar";
 import { undoEntry } from "@/lib/undo";
@@ -102,7 +102,7 @@ function usePosted(c: string) {
   return useQuery({
     queryKey: ["fin", "posted", c],
     queryFn: async () => {
-      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", c).order("id").range(a, b))) as any[];
+      const rows = (await fetchAllParallel((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", c).order("id").range(a, b))) as any[];
       return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal, source: r.fin_journal_entries.source })) as (PostedLine & { entry_id: string; fin_journal_entries: any })[];
     },
   });
