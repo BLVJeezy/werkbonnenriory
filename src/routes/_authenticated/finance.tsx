@@ -67,6 +67,20 @@ function Finance() {
     syncFinanceTasks(company.id).then((r) => { if (r.created || r.resolved) toast.info(`Finance: ${r.created} nieuwe taak/taken, ${r.resolved} automatisch afgesloten`); qc.invalidateQueries({ queryKey: ["fin", "tasks"] }); }).catch(() => toast.error("Financetaken konden niet geëvalueerd worden (leesfout) — er is niets gewijzigd."));
   }, [company]);
 
+  const syncPurchasesAuto = useServerFn(syncFinancePurchases);
+  useEffect(() => {
+    if (!company?.simpla_bound) return;
+    let stop = false;
+    (async () => {
+      const { data: st } = await db.from("fin_sync_status").select("last_success_at").eq("company_id", company.id).eq("source", "simpla").maybeSingle();
+      const last = st?.last_success_at ? new Date(st.last_success_at).getTime() : 0;
+      if (Date.now() - last < 30 * 60_000 || stop) return;
+      const r = await runSimplaImport(company.id, syncPurchasesAuto).catch(() => null);
+      if (r?.ok && r.n) { toast.success(`${r.n} nieuwe Simpla-aankoopfacturen automatisch opgehaald`); qc.invalidateQueries({ queryKey: ["fin"] }); }
+    })();
+    return () => { stop = true; };
+  }, [company?.id, company?.simpla_bound]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const refresh = () => { qc.invalidateQueries({ queryKey: ["fin"] }); if (company) syncFinanceTasks(company.id).catch(() => toast.error("Financetaken niet bijgewerkt (leesfout)")); };
   const setTab = (tab: string) => nav({ to: "/finance", search: { tab, id: undefined, maand: undefined } });
 
@@ -889,6 +903,28 @@ function Concurrenten() {
   );
 }
 
+/** Haalt nieuwe Simpla-aankoopfacturen op en zet ze in Finance (idempotent op Simpla-ID). */
+async function runSimplaImport(c: string, syncPurchases: () => Promise<any>): Promise<{ ok: false; error: string } | { ok: true; n: number; ap: any }> {
+    const purchaseResult = await syncPurchases();
+    if (!purchaseResult.ok) return { ok: false, error: purchaseResult.error };
+    const si = await fetchAll((a, b) => supabase.from("fin_supplier_imports").select("*").order("id").range(a, b));
+    const rules = ((await db.from("fin_rules").select("*").eq("company_id", c)).data ?? []) as Rule[];
+    const { data: have } = await db.from("fin_invoices").select("source_ref").eq("company_id", c).eq("source", "simpla");
+    const known = new Set((have ?? []).map((h: any) => h.source_ref));
+    let n = 0;
+    for (const s of si as any[]) {
+      if (known.has(s.simpla_id)) continue;
+      const credit = Number(s.total_ex_vat) < 0;
+      const { data: i, error } = await db.from("fin_invoices").insert({ company_id: c, direction: "aankoop", doc_type: credit ? "creditnota" : "factuur", counterparty: s.supplier_name, number: s.bill_number, invoice_date: s.bill_date, source: "simpla", source_ref: s.simpla_id }).select().single();
+      if (error) continue; // unieke (company, source, source_ref): idempotent
+      const sg = suggest(rules, s.supplier_name, null);
+      await db.from("fin_invoice_lines").insert({ invoice_id: i.id, description: `Simpla ${s.bill_number ?? ""}`, ex_vat: Math.abs(Number(s.total_ex_vat)), vat: Math.abs(r2(Number(s.total_inc_vat) - Number(s.total_ex_vat))), account: sg?.account ?? null, category: sg?.category ?? null, confidence: sg?.confidence ?? null, suggestion_rule_id: sg?.ruleId ?? null });
+      n++;
+    }
+    const ap = await applyLearnedRules(c).catch(() => null);
+  return { ok: true, n, ap };
+}
+
 function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: () => void }) {
   const syncPurchases = useServerFn(syncFinancePurchases);
   const loadPonto = useServerFn(pontoStatus);
@@ -908,23 +944,9 @@ function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: 
     if (!bound) return void toast.error("Koppel Simpla eerst aan dit bedrijf");
     setBusy(true);
     try {
-    const purchaseResult = await syncPurchases();
-    if (!purchaseResult.ok) { setBusy(false); return void toast.error(purchaseResult.error); }
-    const si = await fetchAll((a, b) => supabase.from("fin_supplier_imports").select("*").order("id").range(a, b));
-    const rules = ((await db.from("fin_rules").select("*").eq("company_id", c)).data ?? []) as Rule[];
-    const { data: have } = await db.from("fin_invoices").select("source_ref").eq("company_id", c).eq("source", "simpla");
-    const known = new Set((have ?? []).map((h: any) => h.source_ref));
-    let n = 0;
-    for (const s of si as any[]) {
-      if (known.has(s.simpla_id)) continue;
-      const credit = Number(s.total_ex_vat) < 0;
-      const { data: i, error } = await db.from("fin_invoices").insert({ company_id: c, direction: "aankoop", doc_type: credit ? "creditnota" : "factuur", counterparty: s.supplier_name, number: s.bill_number, invoice_date: s.bill_date, source: "simpla", source_ref: s.simpla_id }).select().single();
-      if (error) continue; // unieke (company, source, source_ref): idempotent
-      const sg = suggest(rules, s.supplier_name, null);
-      await db.from("fin_invoice_lines").insert({ invoice_id: i.id, description: `Simpla ${s.bill_number ?? ""}`, ex_vat: Math.abs(Number(s.total_ex_vat)), vat: Math.abs(r2(Number(s.total_inc_vat) - Number(s.total_ex_vat))), account: sg?.account ?? null, category: sg?.category ?? null, confidence: sg?.confidence ?? null, suggestion_rule_id: sg?.ruleId ?? null });
-      n++;
-    }
-    const ap = await applyLearnedRules(c).catch(() => null);
+    const res = await runSimplaImport(c, syncPurchases);
+    if (!res.ok) { setBusy(false); return void toast.error(res.error); }
+    const { n, ap } = res;
     setBusy(false); toast.success(`${n} nieuwe Simpla-facturen overgenomen${ap ? `, ${ap.approved} automatisch ingedeeld en goedgekeurd` : ""}`); onDone();
     } catch { toast.error("Simpla-aankoopinlezing mislukt"); } finally { setBusy(false); }
   };
