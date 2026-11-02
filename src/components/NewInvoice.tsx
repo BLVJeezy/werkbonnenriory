@@ -180,11 +180,11 @@ export function NewInvoice({ onCreated, invoice, creditNote = false, copyFrom, c
 
   return (
     <div className="w-full space-y-4 rounded-md border bg-card p-4">
-      <h3 className="text-lg font-black uppercase">{invoice ? `${docLabel} ${invoice.number} aanpassen` : creditNote ? "Nieuwe creditnota" : "Nieuwe factuur"}</h3>
+      <h3 className="text-lg font-black uppercase">{invoice ? `${docLabel} ${invoice.number} aanpassen` : copyFrom ? `Nieuwe factuur op basis van ${copyFrom.number}` : creditNote ? "Nieuwe creditnota" : "Nieuwe factuur"}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label>Klant{invoice ? ` (huidig: ${(invoice.customer as { name?: string })?.name ?? "—"})` : ""}</Label>
-          <CustomerPicker customers={customers} value={customerId} placeholder={invoice ? "Andere klant kiezen (optioneel)…" : "Kies klant…"} onChange={chooseCustomer} />
+          <Label>Klant{(invoice ?? copyFrom) ? ` (huidig: ${((invoice ?? copyFrom)!.customer as { name?: string })?.name ?? "—"})` : ""}</Label>
+          <CustomerPicker customers={customers} value={customerId} placeholder={(invoice ?? copyFrom) ? "Andere klant kiezen (optioneel)…" : "Kies klant…"} onChange={chooseCustomer} />
         </div>
         <div className="space-y-1">
           <Label>Betreft (referentie, optioneel)</Label>

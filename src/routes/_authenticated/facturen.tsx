@@ -137,7 +137,7 @@ function Facturen() {
     setBusy(true);
     try {
       await creditNote({ data: { invoiceId: id } });
-      toast.success("Creditnota aangemaakt");
+      toast.success("Creditnota aangemaakt. Maak de gecorrigeerde factuur via “Nieuwe factuur i.p.v. …” bij de creditnota.");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Creditnota mislukt"); }
     setBusy(false);
     refresh();
@@ -307,6 +307,8 @@ function Facturen() {
                             {i.kind === "creditnota" && <CreditNoteSettle credit={i} invoices={data.invoices} onDone={refresh} />}
                             {i.kind !== "creditnota" && open && <PaymentReminders invoiceId={i.id} />}
                             {i.kind !== "creditnota" && open && <InvoicePaymentDetails invoice={i} company={{ name: s?.company_name ?? "Riory bv", iban: s?.company_iban ?? null, bic: s?.company_bic ?? null }} />}
+                            {i.kind !== "creditnota" && <NewInvoice copyFrom={i} copyLabel={data.invoices.some((c) => c.credit_for === i.id) ? "Nieuwe factuur (gecorrigeerd)" : "Kopie als nieuwe factuur"} onCreated={refresh} />}
+                            {i.kind === "creditnota" && i.credit_for && (() => { const o = data.invoices.find((x) => x.id === i.credit_for); return o ? <NewInvoice copyFrom={o} copyLabel={`Nieuwe factuur i.p.v. ${o.number}`} onCreated={refresh} /> : null; })()}
                             {isInvoiceEditable(i) && <NewInvoice invoice={i} creditNote={i.kind === "creditnota"} onCreated={refresh} />}
                             {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
                           </div>
