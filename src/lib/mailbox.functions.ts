@@ -195,6 +195,19 @@ export const importFromMailbox = createServerFn({ method: "POST" })
         }).select("customer_id").single();
         if (error) throw new Error(error.message);
         // Een mail die "vrij beroep" zegt, maakt de klant duurzaam vrij beroep; de beheerder kan het later nog corrigeren.
+        // Klantgegevens meenemen: 6% (oude particuliere woning) bewaren bij de klant, of het bewaarde tarief toepassen.
+        if (created?.customer_id && !vrij) {
+          const fromMail = x.customer_type === "private" && x.home_older_than_ten_years === true;
+          if (fromMail) {
+            await context.supabase.from("customers").update({ default_vat_rate: 6 }).eq("id", created.customer_id);
+          } else {
+            const { data: k } = await context.supabase.from("customers").select("vat_number, postal_code, vrij_beroep, default_vat_rate").eq("id", created.customer_id).maybeSingle();
+            if (k) {
+              const rate = vatRateForCustomer(x.vat_number || k.vat_number, 21, undefined, { postalCode: x.postal_code || k.postal_code, vrijBeroep: !!k.vrij_beroep, defaultRate: k.default_vat_rate });
+              if (rate !== 21) await context.supabase.from("work_orders").update({ vat_rate: rate }).eq("source_message_id", m.id);
+            }
+          }
+        }
         if (vrij && created?.customer_id) {
           const { error: flagError } = await context.supabase.from("customers").update({ vrij_beroep: true }).eq("id", created.customer_id);
           if (flagError) console.error("Vrij beroep niet bewaard bij de klant:", flagError.message);

@@ -77,3 +77,14 @@ it("recognises a liberal profession only when the mail itself says vrij beroep",
   expect(mentionsVrijBeroep("vrij will ik beroep doen op een specialist")).toBe(false);
   expect(mentionsVrijBeroep(null)).toBe(false);
 });
+describe("bewaard klanttarief", () => {
+  it("particulier met oude woning (bewaard 6%) krijgt 6%", () => {
+    expect(vatRateForCustomer("", 21, undefined, { postalCode: "3740", defaultRate: 6 })).toBe(6);
+  });
+  it("btw-nummer gaat voor op bewaard 6%", () => {
+    expect(vatRateForCustomer("BE0123456789", 21, undefined, { defaultRate: 6 })).toBe(0);
+  });
+  it("vrij beroep gaat voor op bewaard 6%", () => {
+    expect(vatRateForCustomer("", 21, undefined, { vrijBeroep: true, defaultRate: 6 })).toBe(21);
+  });
+});
