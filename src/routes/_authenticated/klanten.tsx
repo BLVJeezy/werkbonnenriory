@@ -46,11 +46,11 @@ function Klanten() {
 
   function openEdit(c: (typeof data)[number]) {
     setEditing(editing === c.id ? null : c.id);
-    setForm({ ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])), vrij_beroep: c.vrij_beroep ? "1" : "" });
+    setForm({ ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])), vrij_beroep: c.vrij_beroep ? "1" : "", oud6: Number(c.default_vat_rate) === 6 ? "1" : "" });
   }
 
   async function save(c: (typeof data)[number]) {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), vrij_beroep: form["vrij_beroep"] === "1" };
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -121,7 +121,7 @@ function Klanten() {
                 <Fragment key={c.id}>
                   <tr>
                     <td className="max-w-24 truncate font-mono text-xs text-muted-foreground" title={c.customer_number ?? ""}>{c.customer_number}</td>
-                    <td className="font-bold">{c.name}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="font-bold">{c.name}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
                     <td className="hidden max-w-56 truncate 2xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
@@ -151,6 +151,10 @@ function Klanten() {
                         <label className="flex items-center gap-2 text-sm">
                           <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
                           Vrij beroep — altijd 21% btw, ook met een btw-nummer
+                        </label>
+                        <label className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["oud6"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, oud6: e.target.checked ? "1" : "" }))} />
+                          Particulier, woning ouder dan 10 jaar — 6% btw
                         </label>
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
