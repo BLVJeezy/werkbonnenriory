@@ -210,8 +210,8 @@ function Detail() {
           )}
           {isAdmin && locked && <ReassignCustomer wo={{ ...wo, vat_rate: Number(wo.vat_rate) }} onDone={() => { refresh(); qc.invalidateQueries({ queryKey: ["work_orders"] }); }} />}
           {isAdmin && locked && (
-            <Button variant="outline" onClick={() => confirm("Handtekening wissen en opnieuw openen als taak?") && update({ status: wo.technician_id ? "toegewezen" : "nieuw", signature: null, signed_name: null, signed_at: null })}>
-              Heropenen
+            <Button variant="outline" onClick={() => confirm("Je kunt deze werkbon als admin gewoon aanpassen zonder heropenen.\n\nToch heropenen? Dan wordt de handtekening definitief gewist en moet de klant opnieuw aftekenen.") && update({ status: wo.technician_id ? "toegewezen" : "nieuw", signature: null, signed_name: null, signed_at: null })}>
+              Heropenen (wist handtekening)
             </Button>
           )}
           {role === "technician" && locked && !wo.paid_at && (
