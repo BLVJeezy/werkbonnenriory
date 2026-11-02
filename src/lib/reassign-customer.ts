@@ -22,7 +22,7 @@ export function reassignCustomerPatch(wo: Wo, c: Cust) {
     email: c.email ?? null,
     billing_email: c.billing_email ?? null,
     vat_number: c.vat_number ?? null,
-    vat_rate: vatRateForCustomer(c.vat_number ?? "", Number(wo.vat_rate), undefined, { postalCode: c.postal_code, vrijBeroep: !!c.vrij_beroep }),
+    vat_rate: vatRateForCustomer(c.vat_number ?? "", Number(wo.vat_rate), undefined, { postalCode: c.postal_code, vrijBeroep: !!c.vrij_beroep, defaultRate: c.default_vat_rate }),
     project_id: null,
     project_name: null,
   };

@@ -130,7 +130,7 @@ export function NewInvoice({ onCreated, invoice, creditNote = false, copyFrom, c
     const c = customers.find((x) => x.id === id);
     if (!c) return;
     // BE/NL-btw-nummer verlegt de heffing (0%); Nederlandse particulieren 21%; vrij beroep altijd 21%.
-    const def = String(vatRateForCustomer(c.vat_number, 21, undefined, { postalCode: c.postal_code, vrijBeroep: !!c.vrij_beroep }));
+    const def = String(vatRateForCustomer(c.vat_number, 21, undefined, { postalCode: c.postal_code, vrijBeroep: !!c.vrij_beroep, defaultRate: c.default_vat_rate }));
     setDefaultVat(def);
     if (!editing && def !== "21") setItems((ls) => ls.map((l) => (l.kind === "line" ? { ...l, vatRate: def } : l)));
     // Kies je een andere klant terwijl kilometers aanstaan, dan hoort de afstand bij die klant.
