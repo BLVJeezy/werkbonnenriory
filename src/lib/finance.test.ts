@@ -187,3 +187,18 @@ describe("winst en kassaldo", () => {
     expect(s.cash).toBe(1700);
   });
 });
+
+import { depreciationByYear } from "./finance";
+describe("depreciationByYear", () => {
+  it("groepeert maanden per jaar met begin- en eindboekwaarde", () => {
+    const rows = [
+      { month: "2025-11-01", depreciation: 100, accumulated: 100, bookValue: 1100 },
+      { month: "2025-12-01", depreciation: 100, accumulated: 200, bookValue: 1000 },
+      { month: "2026-01-01", depreciation: 100, accumulated: 300, bookValue: 900 },
+    ];
+    expect(depreciationByYear(rows)).toEqual([
+      { year: 2025, months: 2, begin: 1200, depreciation: 200, accumulated: 200, end: 1000 },
+      { year: 2026, months: 1, begin: 1000, depreciation: 100, accumulated: 300, end: 900 },
+    ]);
+  });
+});
