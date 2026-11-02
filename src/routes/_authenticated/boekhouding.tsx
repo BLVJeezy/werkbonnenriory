@@ -558,8 +558,10 @@ function Bank({ c }: { c: string }) {
     const { error } = await db.from("fin_bank_tx").upsert(payload, { onConflict: "company_id,dedupe_key", ignoreDuplicates: true });
     error ? toast.error("Import mislukt") : toast.success(`${payload.length} bankverrichtingen ingelezen (dubbels genegeerd)`); refresh();
   };
-  const reconcile = async (t: any, inv: any) => {
-    const { data, error } = await db.rpc("fin_reconcile_bank", { _transaction: t.id, _invoice: inv.id, _bank_account: t.bank_account ?? bankAcc, _counter_account: inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten, _gross: grossOf(t) ?? undefined } as any);
+  // Eén betaling kan meerdere facturen afletteren; afrondingsverschil tot 2 cent gaat naar 653000.
+  const reconcile = async (t: any, inv: any | any[]) => {
+    const list = Array.isArray(inv) ? inv : [inv];
+    const { data, error } = await db.rpc("fin_reconcile_bank_multi" as any, { _transaction: t.id, _invoices: list.map((i) => i.id), _bank_account: t.bank_account ?? bankAcc, _counter_account: list[0].direction === "aankoop" ? ctl.leveranciers : ctl.klanten, _gross: grossOf(t) ?? undefined } as any);
     if (error) throw new Error(error.message);
     return data;
   };
@@ -625,8 +627,9 @@ function Bank({ c }: { c: string }) {
   const vis = tx.filter((t) => !t.entry_id && (!zq || `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount}`.toLowerCase().includes(zq))).slice(0, zq ? 1000 : 200);
   const invHits = zq.length >= 2 ? open.filter((i: any) => `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zq)) : [];
   const afpunten = async (lijst: any[], facturen: any[]) => {
-    if (lijst.length !== 1 || facturen.length !== 1) return void toast.error("Koppel één betaling aan één factuur; gedeeltelijke betalingen blijven open.");
-    await match(lijst[0], facturen[0]);
+    if (lijst.length !== 1 || !facturen.length) return void toast.error("Kies één betaling en één of meer facturen.");
+    try { await reconcile(lijst[0], facturen); toast.success(facturen.length > 1 ? `${facturen.length} facturen afgeletterd met één betaling` : "Afgeletterd en geboekt"); refresh(); }
+    catch (e: any) { toast.error(e.message); }
     setSel(new Set()); setSelInv(new Set());
   };
   // Automatisch afletteren: alleen als verrichting precies één passende factuur heeft én die factuur maar bij één verrichting past.
@@ -754,7 +757,7 @@ function Bank({ c }: { c: string }) {
                 <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">
                   <span>Betalingen {eur(somTx)} · facturen {eur(somInv)}</span>
                   <span className={Math.abs(verschil) < 0.01 ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>{Math.abs(verschil) < 0.01 ? "Sluit exact" : `Verschil ${eur(verschil)} blijft openstaan`}</span>
-                  <Button size="sm" disabled={s.length !== 1 || gekozen.length !== 1} onClick={() => afpunten(s, gekozen)}>Afpunten</Button>
+                  <Button size="sm" disabled={s.length !== 1 || gekozen.length < 1} onClick={() => afpunten(s, gekozen)}>{gekozen.length > 1 ? `Afpunten (${gekozen.length} facturen)` : "Afpunten"}</Button>
                 </div>
               )}
             </div>
