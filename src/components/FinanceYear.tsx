@@ -8,6 +8,7 @@ import { isPrivateCompany, r2 } from "@/lib/finance";
 import { monthNames, MonthlyBars, MonthlyProfit } from "@/components/FinanceCharts";
 import { fetchAll } from "@/lib/fetch-all";
 import { statements, trialBalance, type PostedLine } from "@/lib/boekhouding";
+import { Bar, BarChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const db = supabase as any;
 const today = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Brussels" });
@@ -21,6 +22,17 @@ export function journalMonthRows(lines: PostedLine[], year: number, until = toda
     if (from > until) return { label, month: from, revenue: null, costs: null, profit: null };
     const st = statements(trialBalance(lines.filter((l) => l.entry_date >= from), from, to));
     return { label, month: from, revenue: st.opbrengsten, costs: r2(st.kosten + st.belastingen), profit: st.resultaat };
+  });
+}
+
+/** Whole-year totals per calendar year that has posted lines; the current year runs until today. */
+export function yearRows(lines: PostedLine[], until = today()) {
+  const years = [...new Set(lines.map((l) => Number(l.entry_date.slice(0, 4))))].filter((y) => `${y}-01-01` <= until).sort();
+  return years.map((y) => {
+    const from = `${y}-01-01`, end = `${y}-12-31`, to = end < until ? end : until;
+    const st = statements(trialBalance(lines.filter((l) => l.entry_date >= from), from, to));
+    const revenue = st.opbrengsten, costs = r2(st.kosten + st.belastingen), profit = st.resultaat;
+    return { label: to < end ? `${y} (t/m ${to.slice(8, 10)}/${to.slice(5, 7)})` : String(y), year: y, revenue, costs, profit, marge: revenue ? Math.round((profit / revenue) * 100) : null };
   });
 }
 
@@ -122,6 +134,7 @@ export function FinanceYear() {
               </tbody>
             </table>
           </div>
+          <YearComparison rows={yearRows(data)} />
           <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }} className="text-sm font-semibold text-primary underline-offset-2 hover:underline">Volledig overzicht in Finance →</Link>
         </>}
     </section>
@@ -130,4 +143,52 @@ export function FinanceYear() {
 
 function Kpi({ label, value, tone = "" }: { label: string; value: string; tone?: string }) {
   return <div className="rounded-md border bg-background p-3"><p className="text-xs font-bold uppercase opacity-70">{label}</p><p className={`text-xl font-black ${tone}`}>{value}</p></div>;
+}
+
+function YearComparison({ rows }: { rows: ReturnType<typeof yearRows> }) {
+  if (rows.length < 2) return null;
+  const pct = (a: number, b: number) => (b ? Math.round(((a - b) / Math.abs(b)) * 100) : null);
+  return (
+    <div className="space-y-3 border-t pt-4">
+      <div>
+        <h3 className="text-sm font-semibold">Vergelijking met vorige jaren</h3>
+        <p className="text-xs text-muted-foreground">Volledige jaartotalen uit de boekhouding; het lopende jaar telt tot vandaag.</p>
+      </div>
+      <div className="h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="year" />
+            <YAxis tickFormatter={(v) => fmt(v)} width={48} />
+            <Tooltip formatter={(v: number) => eur(v)} />
+            <Legend />
+            <ReferenceLine y={0} stroke="var(--foreground)" />
+            <Bar dataKey="revenue" name="Omzet" fill="var(--success)" />
+            <Bar dataKey="costs" name="Kosten" fill="var(--destructive)" />
+            <Bar dataKey="profit" name="Resultaat" fill="var(--primary)" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px] text-xs">
+          <thead><tr className="border-b text-left text-muted-foreground"><th className="py-1.5">Jaar</th><th className="text-right">Omzet</th><th className="text-right">Kosten</th><th className="text-right">Resultaat</th><th className="text-right">Marge</th><th className="text-right">Omzet t.o.v. vorig jaar</th></tr></thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const d = i ? pct(r.revenue, rows[i - 1]!.revenue) : null;
+              return (
+                <tr key={r.year} className="border-b border-border/60">
+                  <th className="py-1.5 text-left font-semibold">{r.label}</th>
+                  <td className="text-right tabular-nums">{eur(r.revenue)}</td>
+                  <td className="text-right tabular-nums">{eur(r.costs)}</td>
+                  <td className={`text-right tabular-nums ${r.profit < 0 ? "text-destructive" : ""}`}>{eur(r.profit)}</td>
+                  <td className="text-right tabular-nums">{r.marge == null ? "–" : `${r.marge}%`}</td>
+                  <td className={`text-right tabular-nums ${d == null ? "" : d < 0 ? "text-destructive" : "text-success"}`}>{d == null ? "–" : `${d > 0 ? "+" : ""}${d}%`}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
