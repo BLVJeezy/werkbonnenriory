@@ -26,7 +26,7 @@ describe("jaargelijking op het dashboard", () => {
     ] as any;
     const rows = yearRows(L, "2026-11-02");
     expect(rows.map((r) => r.year)).toEqual([2023, 2024, 2026]);
-    expect(rows.map((r) => r.omzet)).toEqual([1000, 2000, 3000]);
+    expect(rows.map((r) => r.revenue)).toEqual([1000, 2000, 3000]);
     expect(rows.length).toBeGreaterThanOrEqual(2);
   });
 });
