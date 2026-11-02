@@ -2555,6 +2555,7 @@ export type Database = {
           quote_approved: boolean
           quote_pending: boolean
           received_at: string | null
+          reopened_at: string | null
           scheduled_date: string | null
           scheduled_from: string | null
           scheduled_until: string | null
@@ -2609,6 +2610,7 @@ export type Database = {
           quote_approved?: boolean
           quote_pending?: boolean
           received_at?: string | null
+          reopened_at?: string | null
           scheduled_date?: string | null
           scheduled_from?: string | null
           scheduled_until?: string | null
@@ -2663,6 +2665,7 @@ export type Database = {
           quote_approved?: boolean
           quote_pending?: boolean
           received_at?: string | null
+          reopened_at?: string | null
           scheduled_date?: string | null
           scheduled_from?: string | null
           scheduled_until?: string | null

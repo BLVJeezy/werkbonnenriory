@@ -361,6 +361,9 @@ function Lijst() {
               <Badge variant={w.status === "afgetekend" ? "secondary" : "default"} className="capitalize">
                 {w.status}
               </Badge>
+              {w.status !== "afgetekend" && (w as { reopened_at?: string | null }).reopened_at && (
+                <Badge variant="destructive">Heropend — opnieuw laten aftekenen</Badge>
+              )}
               {role === "admin" && w.status !== "afgetekend" && (
                 <Button
                   size="sm"

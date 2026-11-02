@@ -200,6 +200,7 @@ function Detail() {
         <h1 className="text-3xl font-black uppercase">{kind} {werkbonNr(wo.number)}</h1>
         <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
         {wo.first_customer && <FirstCustomerLabel />}
+        {!locked && wo.reopened_at && <span className="rounded bg-destructive px-2 py-0.5 text-sm font-bold text-destructive-foreground">Heropend — opnieuw laten aftekenen</span>}
         <div className="no-print ml-auto flex flex-wrap gap-2">
           {(role === 'admin' || role === 'technician') && wo.status === 'afgetekend' && <WorkOrderPreview workOrderId={id} />}
           <Button variant="outline" onClick={() => window.print()}>Afdrukken</Button>
@@ -250,7 +251,7 @@ function Detail() {
                 } catch (e) { toast.error(e instanceof Error ? e.message : "Bestek maken mislukt"); }
               }}
             >
-              Omzetten naar bestek
+              Verslag voor verzekering maken
             </Button>
           )}
           {isAdmin && (

@@ -673,6 +673,13 @@
       "when": 1793612784778,
       "tag": "0095_fin_journal_summary",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1793623564210,
+      "tag": "0096_migration",
+      "breakpoints": true
     }
   ]
 }
