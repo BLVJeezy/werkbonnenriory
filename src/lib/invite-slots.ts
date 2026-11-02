@@ -8,17 +8,22 @@ export const SLOT_PARTS: SlotPart[] = [
   { key: 'namiddag', label: 'Namiddag', from: '13:00', until: '17:00' },
 ];
 
+/** Eerste klant van de dag: aankomst tussen 08:00 en 09:00. */
+export const FIRST_PART: SlotPart = { key: 'eerste', label: 'Eerste klant, aankomst', from: '08:00', until: '09:00' };
+
 /** Wat de beheerder bovenaan kiest: één deel van de dag, of beide. */
-export type SlotChoice = 'voormiddag' | 'namiddag' | 'beide';
+export type SlotChoice = 'voormiddag' | 'namiddag' | 'beide' | 'eerste';
 
 export const SLOT_CHOICES: { key: SlotChoice; label: string }[] = [
   { key: 'beide', label: 'Voormiddag én namiddag' },
   { key: 'voormiddag', label: 'Enkel voormiddag' },
   { key: 'namiddag', label: 'Enkel namiddag' },
+  { key: 'eerste', label: 'Eerste klant (08:00–09:00)' },
 ];
 
 /** De vakken die bij een keuze horen, in volgorde voormiddag dan namiddag. */
 export function partsForChoice(choice: SlotChoice): SlotPart[] {
+  if (choice === 'eerste') return [FIRST_PART];
   return choice === 'beide' ? SLOT_PARTS : SLOT_PARTS.filter((p) => p.key === choice);
 }
 
@@ -51,7 +56,7 @@ export function inviteDayLabel(date: string): string {
 
 /** "di 29/10 · voormiddag 08:00–12:00" */
 export function inviteSlotLabel(s: AppointmentSlot): string {
-  const part = SLOT_PARTS.find((p) => p.from === s.from && p.until === s.until);
+  const part = [...SLOT_PARTS, FIRST_PART].find((p) => p.from === s.from && p.until === s.until);
   return part ? `${inviteDayLabel(s.date)} · ${part.label.toLowerCase()} ${part.from}–${part.until}` : `${inviteDayLabel(s.date)} · ${s.from}–${s.until}`;
 }
 
