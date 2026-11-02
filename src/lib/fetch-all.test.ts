@@ -1,20 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { fetchAll, fetchAllParallel } from "./fetch-all";
+import { fetchAll } from "./fetch-all";
 
 const rows = Array.from({ length: 2500 }, (_, i) => ({ id: i }));
-const page = (from: number, to: number) => Promise.resolve({ data: rows.slice(from, to + 1), error: null });
 
 describe("bloksgewijs ophalen", () => {
-  it("fetchAllParallel haalt alle blokken op in de juiste volgorde", async () => {
-    const out = await fetchAllParallel(page, 1000, 4);
-    expect(out.length).toBe(2500);
-    expect(out.map((r) => r.id)).toEqual(rows.map((r) => r.id));
+  it("haalt alle blokken op in de juiste volgorde", async () => {
+    const out = await fetchAll((from, to) => Promise.resolve({ data: rows.slice(from, to + 1), error: null }));
+    expect(out).toEqual(rows);
   });
-  it("fetchAllParallel stopt bij een kort blok", async () => {
-    const out = await fetchAllParallel(page, 5000, 4);
+  it("vraagt niet verder nadat een kort blok kwam", async () => {
+    let aanvragen = 0;
+    const out = await fetchAll((from, to) => {
+      aanvragen++;
+      return Promise.resolve({ data: rows.slice(from, to + 1), error: null });
+    }, 5000);
     expect(out.length).toBe(2500);
+    expect(aanvragen).toBe(1);
   });
-  it("fetchAll geeft dezelfde regels als fetchAllParallel", async () => {
-    expect(await fetchAll(page)).toEqual(await fetchAllParallel(page, 1000, 8));
+  it("geeft een databasefout door in plaats van een half overzicht", async () => {
+    await expect(fetchAll(() => Promise.resolve({ data: null, error: new Error("uitgever is weg") }))).rejects.toThrow("uitgever is weg");
   });
 });
