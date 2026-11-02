@@ -102,7 +102,7 @@ function usePosted(c: string) {
   return useQuery({
     queryKey: ["fin", "posted", c],
     queryFn: async () => {
-      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", c).range(a, b))) as any[];
+      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", c).order("id").range(a, b))) as any[];
       return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal, source: r.fin_journal_entries.source })) as (PostedLine & { entry_id: string; fin_journal_entries: any })[];
     },
   });
@@ -524,8 +524,8 @@ function Bank({ c }: { c: string }) {
   const { data: tx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).range(a, b))) as any[], refetchInterval: 30_000 });
   const { data: open = [] } = useQuery({ queryKey: ["fin", "open-inv", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).neq("status", "betaald")).data ?? [] });
   const { data: paidNoTx = [] } = useQuery({ queryKey: ["fin", "paid-unlinked", c], queryFn: async () => {
-    const paid = (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("status", "betaald").eq("doc_type", "factuur").range(a, b))) as any[];
-    const linked = new Set(((await fetchAll((a, b) => db.from("fin_bank_tx").select("matched_invoice_id").eq("company_id", c).not("matched_invoice_id", "is", null).range(a, b))) as any[]).map((r) => r.matched_invoice_id));
+    const paid = (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("status", "betaald").eq("doc_type", "factuur").order("id").range(a, b))) as any[];
+    const linked = new Set(((await fetchAll((a, b) => db.from("fin_bank_tx").select("matched_invoice_id").eq("company_id", c).not("matched_invoice_id", "is", null).order("id").range(a, b))) as any[]).map((r) => r.matched_invoice_id));
     return paid.filter((i) => !linked.has(i.id));
   } });
   const [bankAcc, setBankAcc] = useState("550200");
@@ -692,10 +692,10 @@ function Bank({ c }: { c: string }) {
   }, [tx, open, paidNoTx, accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   // Factuurinfo bij afgeletterde verrichtingen + wachtrekening (499000) voor verrichtingen zonder factuur.
   const WACHT = "499000";
-  const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("id, number, counterparty, invoice_date").eq("company_id", c).range(a, b))) as any[] });
-  const invById = useMemo(() => new Map(allInv.map((i: any) => [i.id, i])), [allInv]);
-  const { data: wachtLines = [] } = useQuery({ queryKey: ["fin", "wacht", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_lines").select("entry_id").eq("company_id", c).eq("account", WACHT).range(a, b))) as any[] });
-  const { data: herEntries = [] } = useQuery({ queryKey: ["fin", "wacht-her", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_entries").select("source_ref").eq("company_id", c).eq("source", "wacht").range(a, b))) as any[] });
+  const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("id, number, counterparty, invoice_date").eq("company_id", c).order("id").range(a, b))) as any[] });
+  const WACHT = "389000";
+  const { data: wachtLines = [] } = useQuery({ queryKey: ["fin", "wacht", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_lines").select("entry_id").eq("company_id", c).eq("account", WACHT).order("id").range(a, b))) as any[] });
+  const { data: herEntries = [] } = useQuery({ queryKey: ["fin", "wacht-her", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_entries").select("source_ref").eq("company_id", c).eq("source", "wacht").order("id").range(a, b))) as any[] });
   const wachtEntry = useMemo(() => new Set(wachtLines.map((l: any) => l.entry_id)), [wachtLines]);
   const herDone = useMemo(() => new Set(herEntries.map((e: any) => e.source_ref)), [herEntries]);
   const wachtIds = useMemo(() => new Set(tx.filter((t) => t.entry_id && !t.matched_invoice_id && wachtEntry.has(t.entry_id) && !herDone.has(t.id)).map((t) => t.id)), [tx, wachtEntry, herDone]);

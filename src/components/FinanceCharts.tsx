@@ -12,8 +12,8 @@ export function useFinData(c: string) {
     enabled: !!c,
     queryFn: async () => {
       const [entries, lines, months, budgets, inv, loans] = await Promise.all([
-        fetchAll((a, b) => db.from("fin_entries").select("*").eq("company_id", c).range(a, b)),
-        fetchAll((a, b) => db.from("fin_invoice_lines").select("*, fin_invoices!inner(company_id, invoice_date, direction, doc_type, review_status)").eq("fin_invoices.company_id", c).range(a, b)),
+        fetchAll((a, b) => db.from("fin_entries").select("*").eq("company_id", c).order("id").range(a, b)),
+        fetchAll((a, b) => db.from("fin_invoice_lines").select("*, fin_invoices!inner(company_id, invoice_date, direction, doc_type, review_status)").eq("fin_invoices.company_id", c).order("id").range(a, b)),
         db.from("fin_months").select("*").eq("company_id", c),
         db.from("fin_budgets").select("*").eq("company_id", c),
         db.from("fin_investments").select("*").eq("company_id", c),

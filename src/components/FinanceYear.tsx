@@ -79,7 +79,7 @@ export function FinanceYear() {
     queryKey: ["fin", "posted", companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", companyId).range(a, b))) as any[];
+      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", companyId).order("id").range(a, b))) as any[];
       return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal, source: r.fin_journal_entries.source }));
     },
   });
