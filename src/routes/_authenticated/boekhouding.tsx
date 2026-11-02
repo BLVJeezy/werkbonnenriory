@@ -693,7 +693,7 @@ function Bank({ c }: { c: string }) {
   // Factuurinfo bij afgeletterde verrichtingen + wachtrekening (499000) voor verrichtingen zonder factuur.
   const WACHT = "499000";
   const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("id, number, counterparty, invoice_date").eq("company_id", c).order("id").range(a, b))) as any[] });
-  const WACHT = "389000";
+  const invById = useMemo(() => new Map<string, any>(allInv.map((i: any) => [i.id, i])), [allInv]);
   const { data: wachtLines = [] } = useQuery({ queryKey: ["fin", "wacht", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_lines").select("entry_id").eq("company_id", c).eq("account", WACHT).order("id").range(a, b))) as any[] });
   const { data: herEntries = [] } = useQuery({ queryKey: ["fin", "wacht-her", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_entries").select("source_ref").eq("company_id", c).eq("source", "wacht").order("id").range(a, b))) as any[] });
   const wachtEntry = useMemo(() => new Set(wachtLines.map((l: any) => l.entry_id)), [wachtLines]);
