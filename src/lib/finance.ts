@@ -89,6 +89,22 @@ export function depreciationSchedule(i: Investment): DeprRow[] {
   return rows;
 }
 
+// Jaaroverzicht van een afschrijvingsschema: boekwaarde begin, afschrijving, boekwaarde einde per jaar.
+export type DeprYear = { year: number; months: number; begin: number; depreciation: number; accumulated: number; end: number };
+export function depreciationByYear(rows: DeprRow[]): DeprYear[] {
+  const out: DeprYear[] = [];
+  for (const r of rows) {
+    const year = Number(r.month.slice(0, 4));
+    let y = out.at(-1);
+    if (!y || y.year !== year) { y = { year, months: 0, begin: r2(r.bookValue + r.depreciation), depreciation: 0, accumulated: 0, end: 0 }; out.push(y); }
+    y.months++;
+    y.depreciation = r2(y.depreciation + r.depreciation);
+    y.accumulated = r.accumulated;
+    y.end = r.bookValue;
+  }
+  return out;
+}
+
 // ---------- Leningen (annuïteit) ----------
 // Aflossing kapitaal is een kasstroom, geen kost; enkel interest is een kost. Niet combineren met afschrijving.
 export type LoanRow = { month: string; payment: number; interest: number; principal: number; balance: number };
