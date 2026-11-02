@@ -67,9 +67,13 @@ export const mailCustomerVideo = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { data: video } = await context.supabase.from("customer_videos").select("*").eq("id", data.videoId).single();
     if (!video) throw new Error("Filmpje niet gevonden");
-    const { data: wo } = await context.supabase.from("work_orders").select("number, email, customer").eq("id", video.work_order_id).single();
+    if (!video.work_order_id) return { sent: false, reason: "no_email" };
+    const { data: wo } = await context.supabase.from("work_orders").select("number, email, customer_id").eq("id", video.work_order_id).single();
     const email = wo?.email ?? null;
     if (!email) return { sent: false, reason: "no_email" };
+    const { data: cust } = wo?.customer_id
+      ? await context.supabase.from("customers").select("name").eq("id", wo.customer_id).maybeSingle()
+      : { data: null };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
@@ -82,7 +86,7 @@ export const mailCustomerVideo = createServerFn({ method: "POST" })
 
     const link = customerVideoLink(video.token);
     const { brandedBody } = await import("@/lib/mail-html");
-    const naam = (wo?.customer as { name?: string } | null)?.name ?? "";
+    const naam = (cust as { name?: string } | null)?.name ?? "";
     const message = {
       subject: `Filmpje van onze werken${wo?.number ? ` (werkbon #${wo.number})` : ""}`,
       body: brandedBody(
