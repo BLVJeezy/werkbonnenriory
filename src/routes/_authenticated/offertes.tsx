@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { group?: string; title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean; photoPaths?: string[] };
+type Line = { group?: string | undefined; title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean; photoPaths?: string[] };
 const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", optional: false };
 /** The stored line text keeps its old shape: product name on the first line, long description below it. */
 const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");

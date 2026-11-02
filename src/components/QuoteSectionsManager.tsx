@@ -34,7 +34,7 @@ export function QuoteSectionsManager({ products }: { products: { id: string; nam
             <Input className="min-w-48 flex-1 font-bold" defaultValue={s.name} aria-label="Titel"
               onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== s.name) void run(supabase.from("quote_sections").update({ name: v }).eq("id", s.id)); }} />
             <Button type="button" size="sm" variant="ghost" disabled={idx === 0} aria-label="Omhoog" onClick={async () => {
-              const prev = sections[idx - 1];
+              const prev = sections[idx - 1]; if (!prev) return;
               await supabase.from("quote_sections").update({ sort_order: prev.sort_order }).eq("id", s.id);
               await run(supabase.from("quote_sections").update({ sort_order: s.sort_order === prev.sort_order ? s.sort_order + 1 : s.sort_order }).eq("id", prev.id));
             }}>↑</Button>
