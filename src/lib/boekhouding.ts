@@ -91,13 +91,17 @@ export function trialBalance(lines: PostedLine[], from?: string, to?: string): T
 
 export function statements(tb: TBRow[]) {
   const sum = (f: (r: TBRow) => boolean) => r2(tb.filter(f).reduce((a, r) => a + r.saldo, 0));
+  // 69/79 = resultaatverwerking (winstverdeling); geen kost of opbrengst.
+  const verwerking = (a: string) => a.startsWith("69") || a.startsWith("79");
   const belastingen = sum((r) => r.account.startsWith("67"));
-  const kosten = r2(sum((r) => accountClass(r.account) === 6) - belastingen);
-  const opbrengsten = r2(-sum((r) => accountClass(r.account) === 7));
+  const kosten = r2(sum((r) => accountClass(r.account) === 6 && !verwerking(r.account)) - belastingen);
+  const opbrengsten = r2(-sum((r) => accountClass(r.account) === 7 && !verwerking(r.account)));
   const resultaat = r2(opbrengsten - kosten - belastingen);
+  const resultaatverwerking = sum((r) => verwerking(r.account));
+  const nogTeVerwerken = r2(resultaat - resultaatverwerking);
   const activa = sum((r) => [2, 3].includes(accountClass(r.account)) || (accountClass(r.account) >= 4 && accountClass(r.account) <= 5 && r.saldo > 0));
   const passivaZonderResultaat = r2(-sum((r) => accountClass(r.account) === 1 || (accountClass(r.account) >= 4 && accountClass(r.account) <= 5 && r.saldo < 0)));
-  return { kosten, belastingen, opbrengsten, resultaat, activa, passiva: r2(passivaZonderResultaat + resultaat), sluit: r2(activa - passivaZonderResultaat - resultaat) === 0 };
+  return { kosten, belastingen, opbrengsten, resultaat, resultaatverwerking, activa, passiva: r2(passivaZonderResultaat + nogTeVerwerken), sluit: r2(activa - passivaZonderResultaat - nogTeVerwerken) === 0 };
 }
 
 /** Btw-overzicht per rooster. Bedragen op basis van boekingslijnen met rooster-code. */
