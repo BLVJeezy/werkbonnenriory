@@ -636,12 +636,14 @@ function Investeringen({ c, focus, onDone }: { c: string; focus?: string | undef
   const list = data?.investments ?? [];
   const cur = list.find((i: any) => i.id === sel);
   return (
-    <div className="grid gap-3 lg:grid-cols-[1fr_1.5fr]">
-      <Card title="Investeringen">
+    <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,1fr)_2fr]">
+      <Card title={`Investeringen (${list.length})`}>
         <Button size="sm" onClick={async () => { const n = prompt("Naam investering"); if (!n) return; const { data: r } = await db.from("fin_investments").insert({ company_id: c, name: n }).select().single(); setSel(r?.id); refetch(); onDone(); }}>+ investering</Button>
-        {list.map((i: any) => <Button variant="ghost" key={i.id} onClick={() => setSel(i.id)} className={"mt-1 block w-full rounded border p-2 text-left text-sm " + (sel === i.id ? "border-primary" : "border-border")}>{i.name}</Button>)}
+        <div className="mt-1 max-h-[60vh] overflow-y-auto pr-1">
+          {list.map((i: any) => <Button variant="ghost" key={i.id} onClick={() => setSel(i.id)} className={"mt-1 block h-auto w-full rounded border px-2 py-1 text-left text-xs " + (sel === i.id ? "border-primary bg-primary/10" : "border-border")}>{i.name}</Button>)}
+        </div>
       </Card>
-      {cur && <InvestmentEdit key={cur.id} inv={cur} onDone={() => { refetch(); onDone(); }} />}
+      {cur ? <div className="md:sticky md:top-2"><InvestmentEdit key={cur.id} inv={cur} onDone={() => { refetch(); onDone(); }} /></div> : <Card title="Kies een investering"><p className="text-sm text-muted-foreground">Klik links op een investering om de details te zien.</p></Card>}
       <div className="lg:col-span-2"><InvestmentsByAccount c={c} list={list} /></div>
     </div>
   );
@@ -762,7 +764,10 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
   const fld = (k: string, label: string, type = "text") => <label className="text-xs">{label}<Input type={type} value={f[k] ?? ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></label>;
   return (
     <Card title={inv.name}>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <DeprDetail inv={inv} sched={sched} />
+      <details className="mt-3 rounded border border-border p-2">
+      <summary className="cursor-pointer text-sm font-semibold">Gegevens aanpassen</summary>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
         {fld("name", "Naam investering")}
         {inv.invoice_line_id ? <p className="text-xs sm:col-span-2">Gekoppelde factuur · aanschafwaarde {eur(Number(inv.purchase_amount))} · te activeren {eur(Number(inv.capitalizable_amount))}</p> : <>{fld("purchase_amount", "Aankoopbedrag")}{fld("capitalizable_amount", "Te activeren bedrag")}</>}
         {fld("start_date", "Startdatum", "date")}{fld("useful_life_months", "Levensduur (maanden)")}
@@ -776,6 +781,7 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
         <Button size="sm" variant="outline" onClick={async () => { if (!confirm(inv.invoice_line_id ? "Deze investering is gekoppeld aan een factuurlijn en er kunnen al afschrijvingen geboekt zijn. Verwijderen maakt die boekingen niet ongedaan. Toch verwijderen?" : "Verwijderen?")) return; await db.from("fin_investments").delete().eq("id", inv.id); onDone(); }}>Verwijderen</Button>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">Prorata: de startmaand telt als volledige maand. Laatste maand krijgt het afrondingsverschil; boekwaarde zakt nooit onder restwaarde.</p>
+      </details>
       {inv.invoice_line_id && <div className="mt-3 space-y-2 border-t border-border pt-3">
         <p className="text-sm font-semibold">Afschrijvingen in dagboek</p>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -785,7 +791,6 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
         <Button size="sm" disabled={postingDepr || !sched.length} onClick={postDepreciation}>{postingDepr ? "Boeken…" : "Afschrijvingen boeken t/m vandaag"}</Button>
         <p className="text-xs text-muted-foreground">{bookedMonths.length} maand(en) al geboekt. Elke maand wordt maar één keer geboekt.</p>
       </div>}
-      <DeprDetail inv={inv} sched={sched} />
     </Card>
   );
 }
