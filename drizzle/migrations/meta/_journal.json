@@ -694,6 +694,13 @@
       "when": 1793626785540,
       "tag": "0098_quote_sections",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1793637707997,
+      "tag": "0099_customer_videos",
+      "breakpoints": true
     }
   ]
 }
