@@ -20,7 +20,7 @@ export function vatRateForCustomer(value: string | null | undefined, currentRate
   postalCode?: string | null | undefined;
   vrijBeroep?: boolean;
   /** Het bij de klant bewaarde btw-tarief (bv. 6% voor een particuliere woning ouder dan 10 jaar). */
-  defaultRate?: number | string | null;
+  defaultRate?: number | string | null | undefined;
 }): number {
   const vat = customerVatNumber(value);
   // Vrij beroep: altijd 21%, ook met een Belgisch of Nederlands btw-nummer (dan geen verlegging).
