@@ -2969,6 +2969,16 @@ export type Database = {
         }
         Returns: Json
       }
+      fin_reconcile_bank_multi: {
+        Args: {
+          _bank_account: string
+          _counter_account: string
+          _gross?: number
+          _invoices: string[]
+          _transaction: string
+        }
+        Returns: Json
+      }
       fin_restore_archive: { Args: { _data: Json }; Returns: Json }
       fin_settle_paid_invoice: {
         Args: {
