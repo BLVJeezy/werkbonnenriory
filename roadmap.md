@@ -1,4 +1,4 @@
 # Roadmap
 
-- [ ] Bestekken: foto's van de klant kunnen kiezen (testen of bestaande kiezer werkt, anders fixen)
-- [ ] Filmpjes uploaden en met klant delen via een link (niet downloadbaar)
+- [x] Bestekken: foto's van de klant kiezen — bestond al en werkt (getest met 15 foto's)
+- [x] Filmpjes uploaden en met klant delen via een kijklink (niet downloadbaar)
