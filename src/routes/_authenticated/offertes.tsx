@@ -470,6 +470,12 @@ function Offertes() {
           );
         })}
       </ul>
+      <Dialog open={!!previewPdf} onOpenChange={(open) => { if (!open) setPreviewPdf(null); }}>
+        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
+          <DialogHeader><DialogTitle>Voorbeeld</DialogTitle></DialogHeader>
+          {previewPdf && <PdfPreview base64={previewPdf} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
