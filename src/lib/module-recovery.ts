@@ -34,6 +34,12 @@ export const earlyModuleRecoveryScript = `(() => {
     if (document.body) show(); else document.addEventListener('DOMContentLoaded', show, { once: true });
   };
   window.addEventListener('unhandledrejection', event => recover((event.reason?.message ?? event.reason) + '\\n' + (event.reason?.stack ?? '')));
+  // The router catches a failed route load during startup and only logs it, leaving a blank page.
+  const originalError = console.error;
+  console.error = function (...args) {
+    try { recover(args.map(a => a instanceof Error ? a.message + '\\n' + (a.stack ?? '') : String(a)).join('\\n')); } catch {}
+    return originalError.apply(this, args);
+  };
   window.addEventListener('error', event => {
     const target = event.target;
     if (target instanceof HTMLScriptElement && target.type === 'module') recover('Importing a module script failed');
