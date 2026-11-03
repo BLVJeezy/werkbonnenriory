@@ -232,7 +232,6 @@ function Offertes() {
     if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
     if (!customer) { toast.error("Kies een klant"); return; }
     setBusy(true);
-    const win = window.open("", "_blank");
     const extra = { kind, customerId: editId ? editCustomerId : customerId, damageCause, damageFindings, photoPaths };
     try {
       const saved = editId
@@ -242,9 +241,8 @@ function Offertes() {
       const id = saved.id as string;
       closeForm();
       refresh();
-      await preview(id, win);
+      await preview(id);
     } catch (e) {
-      win?.close();
       toast.error(e instanceof Error ? e.message : "Opslaan mislukt");
     }
     setBusy(false);
