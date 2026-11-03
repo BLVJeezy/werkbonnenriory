@@ -116,6 +116,13 @@ function Offertes() {
     setLines((ls) => [...ls.filter((l) => lineText(l) || l.group), ...(added.length ? added : [{ ...emptyLine, group: name }])]
       .map((l, i) => ({ l, i })).sort((x, y) => order(x.l.group) - order(y.l.group) || x.i - y.i).map(({ l }) => l));
   }
+  function addCustomTitle() {
+    const name = customTitle.trim();
+    if (!name) return;
+    if (lines.some((l) => l.group === name)) { toast.warning(`Titel "${name}" staat al op de offerte`); return; }
+    setLines((ls) => [...ls.filter((l) => lineText(l) || l.group), { ...emptyLine, group: name }]);
+    setCustomTitle("");
+  }
   const refresh = () => qc.invalidateQueries({ queryKey: ["quotes"] });
 
   const parsedLines: InvoiceLine[] = [
