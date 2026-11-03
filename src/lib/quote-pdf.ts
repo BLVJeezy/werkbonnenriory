@@ -1,4 +1,5 @@
 import { appendTermsPdf } from "./terms-pdf";
+import { fitText } from "./pdf-text";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
@@ -50,6 +51,9 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     }
     return out;
   };
+  /** Regelt een titel binnen een breedte; een te lang woord wordt opgebroken. */
+  const fit = (text: string, size: number, width: number, f = font) =>
+    fitText((line) => f.widthOfTextAtSize(line, size), text, width);
   let page = doc.addPage([W, H]);
   let y = 0;
   const chrome = (first: boolean) => {
@@ -126,12 +130,17 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       if (l.group) sub += 1;
       if (l.group && l.group !== lastGroup) {
         const sub = r2(rows.filter((x) => x.group === l.group).reduce((s, x) => s + x.amount, 0));
-        ensure(40);
+        const label = pr(bestek ? `POST ${postNr} - ${l.group.toUpperCase()}` : l.group.toUpperCase());
+        const price = money(sub);
+        const priceW = bold.widthOfTextAtSize(pr(price), 9.5);
+        const gl = fit(label, 9.5, cols.amt - priceW - 18 - cols.desc, bold);
+        const extra = (gl.length - 1) * 13;
+        ensure(40 + extra);
         y -= 4;
-        page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: annex });
-        page.drawText(pr(bestek ? `POST ${postNr} - ${l.group.toUpperCase()}` : l.group.toUpperCase()), { x: cols.desc, y, size: 9.5, font: bold, color: ink });
-        right(money(sub), cols.amt, y, 9.5, bold);
-        y -= 24;
+        page.drawRectangle({ x: M, y: y - 6 - extra, width: W - 2 * M, height: 20 + extra, color: annex });
+        gl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 13, size: 9.5, font: bold, color: ink }));
+        right(price, cols.amt, y, 9.5, bold);
+        y -= 24 + extra;
       }
       lastGroup = l.group;
       const w = cols.qty - cols.desc - 20;
@@ -176,16 +185,22 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
 
   const recap = groupNames(mainLines);
   if (bestek && recap.length) {
-    ensure(40 + recap.length * 16);
+    const recapRows = recap.map((g, n) => {
+      const v = r2(mainLines.filter((x) => x.group === g).reduce((s, x) => s + x.amount, 0));
+      const price = money(v);
+      const lines = fit(pr(`Post ${n + 1}  ${g}`), 10, cols.amt - font.widthOfTextAtSize(pr(price), 10) - 18 - cols.desc);
+      return { price, lines };
+    });
+    ensure(40 + recapRows.reduce((s, r) => s + 16 + (r.lines.length - 1) * 13, 0));
     y -= 10;
     page.drawText("SAMENVATTING PER POST", { x: M, y, size: 9, font: bold, color: orange });
     y -= 16;
-    recap.forEach((g, n) => {
-      const v = r2(mainLines.filter((x) => x.group === g).reduce((s, x) => s + x.amount, 0));
-      page.drawText(pr(`Post ${n + 1}  ${g}`), { x: cols.desc, y, size: 10, font, color: ink });
-      right(money(v), cols.amt, y, 10);
-      page.drawLine({ start: { x: M, y: y - 4 }, end: { x: W - M, y: y - 4 }, thickness: 0.4, color: annex });
-      y -= 16;
+    recapRows.forEach(({ lines, price }) => {
+      lines.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 13, size: 10, font, color: ink }));
+      right(price, cols.amt, y, 10);
+      const bottom = y - (lines.length - 1) * 13;
+      page.drawLine({ start: { x: M, y: bottom - 4 }, end: { x: W - M, y: bottom - 4 }, thickness: 0.4, color: annex });
+      y = bottom - 16;
     });
     const rest = r2(mainLines.filter((x) => !x.group).reduce((s, x) => s + x.amount, 0));
     if (rest) { page.drawText("Overige posten", { x: cols.desc, y, size: 10, font, color: ink }); right(money(rest), cols.amt, y, 10); y -= 16; }
