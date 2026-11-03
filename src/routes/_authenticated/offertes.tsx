@@ -25,6 +25,8 @@ import { suggestInsuranceQuote } from '@/lib/insurance-quote-ai.functions';
 import { ProductPhotoGallery } from '@/components/ProductPhotos';
 import { quoteProductValues } from '@/lib/product-photos';
 import { QuoteSectionsManager, quoteSectionsQuery } from '@/components/QuoteSectionsManager';
+import { PdfPreview } from '@/components/PdfPreview';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export const Route = createFileRoute("/_authenticated/offertes")({
   validateSearch: (s: Record<string, unknown>): { bewerk?: string } => (typeof s["bewerk"] === "string" ? { bewerk: s["bewerk"] } : {}),
@@ -210,13 +212,10 @@ function Offertes() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bewerk, quotes]);
 
-  async function preview(id: string, win?: Window | null) {
-    const w = win ?? window.open("", "_blank");
+  const [previewPdf, setPreviewPdf] = useState<string | null>(null);
+  async function preview(id: string) {
     const r = await getPdf({ data: { quoteId: id } });
-    const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-    if (w) w.location.href = url;
-    else toast.error("Pop-up geblokkeerd — sta pop-ups toe voor deze site");
+    setPreviewPdf(r.base64);
   }
 
   async function maak(e: React.FormEvent) {
