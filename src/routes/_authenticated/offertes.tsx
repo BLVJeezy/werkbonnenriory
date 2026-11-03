@@ -92,6 +92,7 @@ function Offertes() {
   });
   const { data: sections = [] } = useQuery(quoteSectionsQuery);
   const [showSections, setShowSections] = useState(false);
+  const [customTitle, setCustomTitle] = useState("");
   const kmRate = Number(settings?.km_rate ?? 0);
   const groupOrder = (g?: string) => {
     if (!g) return -1;
@@ -114,6 +115,13 @@ function Offertes() {
     const order = (g?: string) => { const i = sections.findIndex((x) => x.name === g); return g ? (i >= 0 ? i : 999) : -1; };
     setLines((ls) => [...ls.filter((l) => lineText(l) || l.group), ...(added.length ? added : [{ ...emptyLine, group: name }])]
       .map((l, i) => ({ l, i })).sort((x, y) => order(x.l.group) - order(y.l.group) || x.i - y.i).map(({ l }) => l));
+  }
+  function addCustomTitle() {
+    const name = customTitle.trim();
+    if (!name) return;
+    if (lines.some((l) => l.group === name)) { toast.warning(`Titel "${name}" staat al op de offerte`); return; }
+    setLines((ls) => [...ls.filter((l) => lineText(l) || l.group), { ...emptyLine, group: name }]);
+    setCustomTitle("");
   }
   const refresh = () => qc.invalidateQueries({ queryKey: ["quotes"] });
 
@@ -355,17 +363,20 @@ function Offertes() {
             </div>
           )}
           <div className="space-y-2">
-            {sections.length > 0 && (
-              <div className="space-y-1 rounded-md border bg-muted/40 p-2">
-                <p className="text-sm font-bold">Titels (aanvinken om toe te voegen)</p>
-                {sections.map((sec) => (
-                  <label key={sec.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={lines.some((l) => l.group === sec.name)} onChange={(e) => toggleSection(sec.name, e.target.checked)} />
-                    {sec.name}{sec.items.length > 0 && <span className="text-muted-foreground">({sec.items.length} product{sec.items.length === 1 ? "" : "en"})</span>}
-                  </label>
-                ))}
+            <div className="space-y-1 rounded-md border bg-muted/40 p-2">
+              <p className="text-sm font-bold">Titels (aanvinken om toe te voegen)</p>
+              {sections.map((sec) => (
+                <label key={sec.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={lines.some((l) => l.group === sec.name)} onChange={(e) => toggleSection(sec.name, e.target.checked)} />
+                  {sec.name}{sec.items.length > 0 && <span className="text-muted-foreground">({sec.items.length} product{sec.items.length === 1 ? "" : "en"})</span>}
+                </label>
+              ))}
+              <div className="flex items-center gap-2 pt-1">
+                <Input placeholder="Eigen titel, bv. Werkzaamheden zolder…" className="h-8 flex-1 text-sm" value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTitle(); } }} aria-label="Eigen titel" />
+                <Button type="button" size="sm" variant="outline" onClick={addCustomTitle}>+ Titel</Button>
               </div>
-            )}
+              <p className="text-xs text-muted-foreground">Een eigen titel wordt niet bewaard en staat alleen op deze offerte.</p>
+            </div>
             <Label>{bestek ? "Posten" : "Lijnen"}</Label>
             {lines.map((l, i) => (
               <div key={i} className="space-y-1.5">
