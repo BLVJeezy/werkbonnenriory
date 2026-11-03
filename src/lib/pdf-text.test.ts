@@ -6,7 +6,8 @@ const mono = (line: string) => line.length;
 
 it("zet een lange titel op meerdere regels zodat hij niet in de prijs loopt", () => {
   expect(fitText(mono, "TERUGPLAATSEN TEGELS EN VERHARDING", 10)).toEqual([
-    "TERUGPLAATSEN",
+    "TERUGPLAAT",
+    "SEN",
     "TEGELS EN",
     "VERHARDING",
   ]);
