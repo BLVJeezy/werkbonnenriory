@@ -40,9 +40,9 @@ export function VestigingenBeheer() {
     toast.success("Vestiging toegevoegd");
   }
 
-  async function patch(id: string, p: Record<string, unknown>, relocate = false) {
+  async function patch(id: string, p: { active?: boolean; dutch_billing?: boolean }, relocate = false) {
     const { error } = await supabase.from("branches").update(p).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     if (relocate) await locate(id); else refresh();
   }
 
