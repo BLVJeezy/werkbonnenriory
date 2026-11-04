@@ -1,3 +1,4 @@
+import { OpenEye } from "@/components/OpenEye";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -103,7 +104,7 @@ function Facturen() {
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
         supabase.from("activities").select("id, hourly_rate"),
-        supabase.from("document_deliveries").select("document_id, document_open_events(opened_at)").in("document_type", ["factuur", "creditnota"]).not("sent_at", "is", null).order("created_at", { ascending: false }).limit(1000),
+        supabase.from("document_deliveries").select("document_id, document_open_events(opened_at)").in("document_type", ["factuur", "creditnota", "herinnering"]).not("sent_at", "is", null).order("created_at", { ascending: false }).limit(1000),
       ]);
       const opens: Record<string, { first: string; last: string; count: number }> = {};
       for (const d of (o.data ?? []) as { document_id: string; document_open_events: { opened_at: string }[] }[]) {
@@ -319,7 +320,7 @@ function Facturen() {
                   <Fragment key={i.id}>
                      <tr className={rowTint[state]}>
                       <td><input type="checkbox" aria-label={`Selecteer factuur ${i.number}`} disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} /></td>
-                      <td className="whitespace-nowrap font-mono font-bold">{i.number}{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
+                      <td className="whitespace-nowrap font-mono font-bold"><span className="inline-flex items-center gap-1.5">{i.number}{i.pdf_sent_at && <OpenEye info={data.opens?.[i.id]} />}</span>{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
                       <td>{(i.customer as { name?: string }).name}{i.contract_reference && <div className="max-w-xs truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
                       <td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">{new Date(i.created_at).toLocaleDateString("nl-BE")}</td>
                       <td className={`whitespace-nowrap text-right font-mono ${i.kind === "creditnota" ? "font-bold text-destructive" : ""}`}>{euro(i.kind === "creditnota" ? -Math.abs(Number(i.total)) : Number(i.total))}</td>
