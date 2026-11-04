@@ -306,7 +306,7 @@ function Syndici() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        {groups.length} syndicus{groups.length === 1 ? "" : "i"} met samen {withSyndicus} residentie
+        {groups.length} {groups.length === 1 ? "syndicus" : "syndici"} met samen {withSyndicus} residentie
         {withSyndicus === 1 ? "" : "s"}.
         {zonderVme > 0 && <> {zonderVme} {zonderVme === 1 ? "fiche heeft" : "fiches hebben"} nog geen residentie.</>}
         {data.length - withSyndicus > 0 && (
