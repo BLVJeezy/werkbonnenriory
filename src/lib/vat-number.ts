@@ -21,6 +21,8 @@ export function vatRateForCustomer(value: string | null | undefined, currentRate
   vrijBeroep?: boolean;
   /** Het bij de klant bewaarde btw-tarief (bv. 6% voor een particuliere woning ouder dan 10 jaar). */
   defaultRate?: number | string | null | undefined;
+  /** Klant hoort bij een vestiging met Nederlandse facturatieregels (bv. Maastricht). */
+  dutchBranch?: boolean;
 }): number {
   const vat = customerVatNumber(value);
   // Vrij beroep: altijd 21%, ook met een Belgisch of Nederlands btw-nummer (dan geen verlegging).
@@ -28,6 +30,8 @@ export function vatRateForCustomer(value: string | null | undefined, currentRate
   // Belgisch en Nederlands bedrijf: 0% met verlegging van heffing.
   if (/^BE/i.test(vat ?? "")) return 0;
   if (/^NL/i.test(vat ?? "")) return 0;
+  // Nederlandse vestiging: geen Belgische 6%-woningregel, particulieren altijd 21%.
+  if (context?.dutchBranch) return 21;
   // Nederlandse particulier (Nederlands postcodeformaat, geen btw-nummer): altijd 21%.
   if (isDutchPostalCode(context?.postalCode)) return 21;
   // Belgische particulier, woning ouder dan 10 jaar: 6%.

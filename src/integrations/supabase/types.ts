@@ -193,6 +193,51 @@ export type Database = {
           },
         ]
       }
+      branches: {
+        Row: {
+          active: boolean
+          city: string | null
+          country: string
+          created_at: string
+          dutch_billing: boolean
+          house_number: string | null
+          id: string
+          lat: number | null
+          lon: number | null
+          name: string
+          postal_code: string | null
+          street: string | null
+        }
+        Insert: {
+          active?: boolean
+          city?: string | null
+          country?: string
+          created_at?: string
+          dutch_billing?: boolean
+          house_number?: string | null
+          id?: string
+          lat?: number | null
+          lon?: number | null
+          name: string
+          postal_code?: string | null
+          street?: string | null
+        }
+        Update: {
+          active?: boolean
+          city?: string | null
+          country?: string
+          created_at?: string
+          dutch_billing?: boolean
+          house_number?: string | null
+          id?: string
+          lat?: number | null
+          lon?: number | null
+          name?: string
+          postal_code?: string | null
+          street?: string | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           created_at: string
@@ -517,6 +562,8 @@ export type Database = {
       customers: {
         Row: {
           billing_email: string | null
+          branch_id: string | null
+          branch_manual: boolean
           city: string | null
           created_at: string
           customer_number: string | null
@@ -537,6 +584,8 @@ export type Database = {
         }
         Insert: {
           billing_email?: string | null
+          branch_id?: string | null
+          branch_manual?: boolean
           city?: string | null
           created_at?: string
           customer_number?: string | null
@@ -557,6 +606,8 @@ export type Database = {
         }
         Update: {
           billing_email?: string | null
+          branch_id?: string | null
+          branch_manual?: boolean
           city?: string | null
           created_at?: string
           customer_number?: string | null
@@ -575,7 +626,15 @@ export type Database = {
           vat_number?: string | null
           vrij_beroep?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_deliveries: {
         Row: {
@@ -2637,6 +2696,7 @@ export type Database = {
           activity_id: string | null
           address: string | null
           billing_email: string | null
+          branch_id: string | null
           city: string | null
           contract_id: string | null
           created_at: string
@@ -2692,6 +2752,7 @@ export type Database = {
           activity_id?: string | null
           address?: string | null
           billing_email?: string | null
+          branch_id?: string | null
           city?: string | null
           contract_id?: string | null
           created_at?: string
@@ -2747,6 +2808,7 @@ export type Database = {
           activity_id?: string | null
           address?: string | null
           billing_email?: string | null
+          branch_id?: string | null
           city?: string | null
           contract_id?: string | null
           created_at?: string
@@ -2804,6 +2866,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
