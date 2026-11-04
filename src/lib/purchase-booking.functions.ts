@@ -113,20 +113,20 @@ export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware(
   .handler(async ({ context }) => {
     await assertAdmin(context);
 
-    const list = await (await call('/message/list?folder=INBOX&confirmed=false&perPage=50')).json() as any;
+    const list = await (await peppyrusCall('/message/list?folder=INBOX&confirmed=false&perPage=50')).json() as any;
     const items: any[] = Array.isArray(list) ? list : (list.items ?? list.data ?? []);
     const { parsePurchaseUbl } = await import('./purchase-booking');
     let imported = 0, skipped = 0; const errors: string[] = [];
     for (const it of items) {
       const id = String(it.id);
       const { data: exists } = await context.supabase.from('purchase_invoices').select('id').eq('peppyrus_message_id', id).maybeSingle();
-      if (exists) { skipped++; await call(`/message/${id}/confirm`, { method: 'PATCH' }).catch(() => null); continue; }
+      if (exists) { skipped++; await peppyrusCall(`/message/${id}/confirm`, { method: 'PATCH' }).catch(() => null); continue; }
       try {
-        const msg = await (await call(`/message/${id}`)).json() as any;
+        const msg = await (await peppyrusCall(`/message/${id}`)).json() as any;
         const xml = new TextDecoder().decode(Uint8Array.from(atob(msg.fileContent ?? ''), c => c.charCodeAt(0)));
         const p = parsePurchaseUbl(xml) as ReturnType<typeof parsePurchaseUbl> & { supplierBic?: string };
         let pdf = p.pdfBase64;
-        if (!pdf) { const r = await (await call(`/message/${id}/render?format=pdf`)).json().catch(() => null) as any; pdf = r?.fileContent ?? r?.content ?? null; }
+        if (!pdf) { const r = await (await peppyrusCall(`/message/${id}/render?format=pdf`)).json().catch(() => null) as any; pdf = r?.fileContent ?? r?.content ?? null; }
         let path: string | null = null;
         if (pdf) {
           path = `peppol/${crypto.randomUUID()}.pdf`;
@@ -141,7 +141,7 @@ export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware(
         }).select('supplier_id').single();
         if (error) throw new Error(error.message);
         if (p.supplierBic && row?.supplier_id) await context.supabase.from('suppliers').update({ bic: p.supplierBic }).eq('id', row.supplier_id).is('bic', null);
-        await call(`/message/${id}/confirm`, { method: 'PATCH' });
+        await peppyrusCall(`/message/${id}/confirm`, { method: 'PATCH' });
         imported++;
       } catch (e) { errors.push(e instanceof Error ? e.message : String(e)); }
     }
