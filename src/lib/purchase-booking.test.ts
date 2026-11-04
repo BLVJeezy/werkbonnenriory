@@ -14,7 +14,9 @@ describe('purchase booking', () => {
   });
   it('uses the payment reference, else the invoice number', () => {
     expect(paymentCommunication('+++123/4567/89002+++', 'F1')).toBe('+++123/4567/89002+++');
-    expect(paymentCommunication(null, 'F1')).toBe('Factuur F1');
+    expect(paymentCommunication(null, '202612878')).toBe('202612878');
+    expect(paymentCommunication('   ', '202612878')).toBe('202612878');
+    expect(paymentCommunication(null, null)).toBeNull();
   });
   it('warns when IBAN or BIC is missing', () => {
     expect(supplierBankWarnings({ iban: 'BE1', bic: null })).toEqual(['BIC ontbreekt bij deze leverancier']);

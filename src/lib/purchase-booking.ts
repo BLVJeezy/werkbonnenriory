@@ -30,9 +30,9 @@ export function dueLabel(days: number | null): { text: string; overdue: boolean;
   return { text: `Nog ${days} dag${days === 1 ? '' : 'en'}`, overdue: false, soon: days <= 7 };
 }
 
-/** Pure: payment communication — structured reference if present, otherwise the invoice number. */
+/** Pure: the reference the bank will see — what the document carried, otherwise the invoice number itself. */
 export function paymentCommunication(paymentRef: string | null, invoiceNumber: string | null): string | null {
-  return paymentRef?.trim() || (invoiceNumber?.trim() ? `Factuur ${invoiceNumber.trim()}` : null);
+  return paymentRef?.trim() || invoiceNumber?.trim() || null;
 }
 
 /** Pure: every supplier needs IBAN and BIC for SEPA payments. */
