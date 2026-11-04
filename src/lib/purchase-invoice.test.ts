@@ -17,7 +17,7 @@ describe("normalizePurchaseInvoice", () => {
   it("leest per lijn tarief, ex btw, btw en incl btw", () => {
     const inv = normalizePurchaseInvoice({ supplierName: "X", lines: [{ description: "Koffie", quantity: 2, unit: "st", unitPrice: 30, net: 60, vatRate: 21, vat: 12.6, total: 72.6 }] });
     expect(inv.lines[0]).toMatchObject({ amount: 60, vatRate: 21, vat: 12.6, total: 72.6 });
-    expect(lineTotals(inv.lines[0])).toEqual({ net: 60, vat: 12.6, total: 72.6 });
+    expect(lineTotals(inv.lines[0]!)).toEqual({ net: 60, vat: 12.6, total: 72.6 });
   });
 
   it("rekent btw en incl uit een tarief", () => {
@@ -32,7 +32,7 @@ describe("normalizePurchaseInvoice", () => {
 
   it("snapt het btw-tarief uit netto en btw", () => {
     const inv = normalizePurchaseInvoice({ supplierName: "X", lines: [{ description: "Sloop", quantity: 1, net: 100, vat: 6 }] });
-    expect(inv.lines[0].vatRate).toBe(6);
+    expect(inv.lines[0]!.vatRate).toBe(6);
   });
 
   it("verzint geen btw als het document die niet toont", () => {
