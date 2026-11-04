@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { formatAddress } from "@/lib/address";
 import { allCustomers, customerKey, customerPatch, rowsToCustomers, type CustomerRow } from "@/lib/customers";
 import { filterChoices } from "@/lib/choice-search";
-import { syndicusDetailsPatch, syndicusLabel, syndicusSuggestions, type SyndicusDetailField } from "@/lib/syndicus";
+import { syndicusDetailsPatch, syndicusLabel, syndicusSuggestions, type SyndicusDetailField, type SyndicusDetails } from "@/lib/syndicus";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   head: () => ({ meta: [{ title: "Klanten — Riory Werkbonnen" }, { name: "description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:title", content: "Klanten — Riory Werkbonnen" }, { property: "og:description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -49,6 +49,12 @@ function Klanten() {
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignTemplate, setAssignTemplate] = useState("");
+  const [assignCompany, setAssignCompany] = useState("");
+  const [assignContact, setAssignContact] = useState("");
+  const [assigning, setAssigning] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["customers"],
     queryFn: () => allCustomers(supabase),
@@ -60,13 +66,71 @@ function Klanten() {
   const rows = data.filter(c => matchingIds.has(c.id));
   const sort = useSort(rows, { nr: c => c.customer_number, naam: c => c.name, plaats: c => c.city, tel: c => c.phone, mail: c => c.email, btw: c => c.vat_number, syndicus: c => c.syndicus ?? "" });
   const syndici = syndicusSuggestions(data.map((c) => ({ syndicus: c.syndicus_company as string | null })));
+  // Eén rij per bekende syndicus: die wordt als sjabloon gebruikt bij bulk toewijzen.
+  const templates = useMemo(() => {
+    const byName = new Map<string, (typeof data)[number]>();
+    for (const c of data) {
+      const name = (c.syndicus_company as string | null)?.trim();
+      if (name && !byName.has(name)) byName.set(name, c);
+    }
+    return [...byName.entries()].sort((a, b) => a[0].localeCompare(b[0], "nl"));
+  }, [data]);
+  const allShownSelected = rows.length > 0 && rows.every((r) => sel.has(r.id));
+
+  function toggleSel(id: string, on: boolean) {
+    setSel((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function pickTemplate(name: string) {
+    setAssignTemplate(name);
+    const t = templates.find(([n]) => n === name)?.[1];
+    if (t) {
+      setAssignCompany((t.syndicus_company as string | null) ?? "");
+      setAssignContact((t.syndicus_contact as string | null) ?? "");
+    }
+  }
+
+  async function assignSyndicus() {
+    const ids = [...sel];
+    if (!ids.length) return;
+    const company = assignCompany.trim();
+    if (!company) {
+      toast.error("Vul eerst een bedrijfsnaam in.");
+      return;
+    }
+    // Alleen de gegevens van een bekende syndicus meekopiëren als de naam nog overeenkomt.
+    const t = assignTemplate && company === assignTemplate.trim() ? templates.find(([n]) => n === assignTemplate)?.[1] : undefined;
+    const details: SyndicusDetails = t
+      ? Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, (t[f.key] as string | null) ?? ""]))
+      : {};
+    const patch = syndicusDetailsPatch({ ...details, syndicus_company: company, syndicus_contact: assignContact });
+    setAssigning(true);
+    const { error } = await supabase.from("customers").update(patch).in("id", ids);
+    setAssigning(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${ids.length} klant(en) naar ${patch.syndicus} verplaatst`);
+    setSel(new Set());
+    setAssignOpen(false);
+    setAssignTemplate("");
+    setAssignCompany("");
+    setAssignContact("");
+    qc.invalidateQueries({ queryKey: ["customers"] });
+  }
 
   function openEdit(c: (typeof data)[number]) {
     setEditing(editing === c.id ? null : c.id);
     setForm({
       ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
       ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
-      // Older rows only have the syndicus name as one line of text: put it in the bedrijfsnaam field.
+      // Oudere rijen hebben de syndicus maar als één regel tekst: die in het vak bedrijfsnaam zetten.
       syndicus_company: (c.syndicus_company as string | null) ?? c.syndicus ?? "",
       vrij_beroep: c.vrij_beroep ? "1" : "",
       oud6: Number(c.default_vat_rate) === 6 ? "1" : "",
@@ -126,10 +190,43 @@ function Klanten() {
           <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
         </label>
       </div>
-      <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam of adres…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} />
+      {sel.size > 0 && (
+        <div className="rounded-md border bg-card p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-bold">{sel.size} klant{sel.size > 1 ? "en" : ""} geselecteerd</span>
+            <Button size="sm" variant={assignOpen ? "secondary" : "default"} onClick={() => setAssignOpen((o) => !o)}>Syndicus toewijzen</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setSel(new Set()); setAssignOpen(false); }}>Selectie wissen</Button>
+          </div>
+          {assignOpen && (
+            <div className="mt-3 space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3">
+              <div className="text-xs text-muted-foreground">Kies een syndicus die je al kent — dan gaan adres, btw-nummer, telefoon en e-mailadressen mee — of typ een nieuwe naam.</div>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="min-w-52 flex-1 space-y-1">
+                  <span className="block text-xs font-bold uppercase text-muted-foreground">Bekende syndicus</span>
+                  <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={assignTemplate} onChange={(e) => pickTemplate(e.target.value)}>
+                    <option value="">— nieuwe syndicus —</option>
+                    {templates.map(([name]) => <option key={name} value={name}>{name}</option>)}
+                  </select>
+                </label>
+                <label className="min-w-48 flex-[2] space-y-1">
+                  <span className="block text-xs font-bold uppercase text-muted-foreground">Bedrijfsnaam</span>
+                  <Input list="syndicus-suggesties" value={assignCompany} onChange={(e) => setAssignCompany(e.target.value)} placeholder="Bijv. Immo Schrijnemakers BV" />
+                </label>
+                <label className="min-w-40 flex-1 space-y-1">
+                  <span className="block text-xs font-bold uppercase text-muted-foreground">Contactpersoon</span>
+                  <Input value={assignContact} onChange={(e) => setAssignContact(e.target.value)} placeholder="Bijv. Olivier Schrijnemakers" />
+                </label>
+                <Button size="sm" disabled={!assignCompany.trim() || assigning} onClick={assignSyndicus}>{assigning ? "Bezig…" : `Toewijzen aan ${sel.size}`}</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <div className={tableWrap}>
         <table className={tableCls}>
           <thead><tr>
+            <Th className="w-px"><input type="checkbox" className="h-4 w-4 accent-primary" aria-label="Alle getoonde klanten selecteren" checked={allShownSelected} onChange={(e) => setSel(e.target.checked ? new Set([...sel, ...rows.map((r) => r.id)]) : new Set())} /></Th>
             <SortTh k="nr" sort={sort} className="w-px">Nr.</SortTh>
             <SortTh k="naam" sort={sort}>Naam</SortTh>
             <SortTh k="plaats" sort={sort} className="hidden md:table-cell">Adres</SortTh>
@@ -140,12 +237,13 @@ function Klanten() {
             <Th />
           </tr></thead>
           <tbody>
-            {sort.sorted.length === 0 && <tr><td colSpan={8} className="text-muted-foreground">Geen klanten.</td></tr>}
+            {sort.sorted.length === 0 && <tr><td colSpan={9} className="text-muted-foreground">Geen klanten.</td></tr>}
             {sort.sorted.map((c) => {
               const own = projects.filter(p => p.customer_id === c.id);
               return (
                 <Fragment key={c.id}>
                   <tr>
+                    <td className="w-px"><input type="checkbox" className="h-4 w-4 accent-primary" aria-label={`${c.name} selecteren`} checked={sel.has(c.id)} onChange={(e) => toggleSel(c.id, e.target.checked)} /></td>
                     <td className="max-w-24 truncate font-mono text-xs text-muted-foreground" title={c.customer_number ?? ""}>{c.customer_number}</td>
                     <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}{c.syndicus && <div className="text-xs font-normal text-muted-foreground lg:hidden">Syndicus: {c.syndicus}</div>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
@@ -158,12 +256,13 @@ function Klanten() {
                       <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {
                         if (!confirm(`${c.name} verwijderen uit klanten?`)) return;
                         await supabase.from("customers").delete().eq("id", c.id);
+                        setSel((prev) => { const next = new Set(prev); next.delete(c.id); return next; });
                         qc.invalidateQueries({ queryKey: ["customers"] });
                       }}>Verwijderen</Button>
                     </td>
                   </tr>
                   {editing === c.id && (
-                    <tr className="bg-muted/30"><td colSpan={8}>
+                    <tr className="bg-muted/30"><td colSpan={9}>
                       <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
