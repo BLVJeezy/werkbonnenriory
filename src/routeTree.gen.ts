@@ -36,6 +36,7 @@ import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as VideoTokenRouteImport } from './routes/video.$token'
 import { Route as WerkbonTekenenIdRouteImport } from './routes/werkbon-tekenen.$id'
+import { Route as AuthenticatedAankoopfacturenIdRouteImport } from './routes/_authenticated/aankoopfacturen_.$id'
 import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_authenticated/werkbonnen.index'
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
 import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.$token'
@@ -195,6 +196,12 @@ const WerkbonTekenenIdRoute = WerkbonTekenenIdRouteImport.update({
   path: '/werkbon-tekenen/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAankoopfacturenIdRoute =
+  AuthenticatedAankoopfacturenIdRouteImport.update({
+    id: '/aankoopfacturen_/$id',
+    path: '/aankoopfacturen/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWerkbonnenIndexRoute =
   AuthenticatedWerkbonnenIndexRouteImport.update({
     id: '/werkbonnen/',
@@ -320,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
+  '/aankoopfacturen/$id': typeof AuthenticatedAankoopfacturenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
@@ -365,6 +373,7 @@ export interface FileRoutesByTo {
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
+  '/aankoopfacturen/$id': typeof AuthenticatedAankoopfacturenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
@@ -412,6 +421,7 @@ export interface FileRoutesById {
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
+  '/_authenticated/aankoopfacturen_/$id': typeof AuthenticatedAankoopfacturenIdRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
@@ -459,6 +469,7 @@ export interface FileRouteTypes {
     | '/offerte/$token'
     | '/video/$token'
     | '/werkbon-tekenen/$id'
+    | '/aankoopfacturen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/offerte/$token'
     | '/video/$token'
     | '/werkbon-tekenen/$id'
+    | '/aankoopfacturen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
@@ -550,6 +562,7 @@ export interface FileRouteTypes {
     | '/offerte/$token'
     | '/video/$token'
     | '/werkbon-tekenen/$id'
+    | '/_authenticated/aankoopfacturen_/$id'
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
@@ -787,6 +800,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WerkbonTekenenIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/aankoopfacturen_/$id': {
+      id: '/_authenticated/aankoopfacturen_/$id'
+      path: '/aankoopfacturen/$id'
+      fullPath: '/aankoopfacturen/$id'
+      preLoaderRoute: typeof AuthenticatedAankoopfacturenIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/werkbonnen/': {
       id: '/_authenticated/werkbonnen/'
       path: '/werkbonnen'
@@ -928,6 +948,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedSyndiciRoute: typeof AuthenticatedSyndiciRoute
+  AuthenticatedAankoopfacturenIdRoute: typeof AuthenticatedAankoopfacturenIdRoute
   AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
 }
@@ -952,6 +973,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedSyndiciRoute: AuthenticatedSyndiciRoute,
+  AuthenticatedAankoopfacturenIdRoute: AuthenticatedAankoopfacturenIdRoute,
   AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,
 }
