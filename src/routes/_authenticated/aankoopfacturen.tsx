@@ -14,7 +14,7 @@ import { Link } from '@tanstack/react-router';
 import { canExportPurchase } from '@/lib/purchase-payment';
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
-import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
+import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, sendPeppyrusTestInvoice, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { attachPurchasePdf, importReceipt, importPurchaseInvoices, importPurchasesFromSimpla, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
@@ -42,6 +42,7 @@ function Aankoopfacturen() {
   const uploadTicket = useServerFn(importReceipt);
   const getPeppyrus = useServerFn(peppyrusStatus);
   const doPeppyrus = useServerFn(importFromPeppyrus);
+  const sendTest = useServerFn(sendPeppyrusTestInvoice);
   const getAccounts = useServerFn(listExpenseAccounts);
   const suggest = useServerFn(suggestPurchaseAccounts);
   const book = useServerFn(bookPurchaseInvoice);
@@ -57,6 +58,20 @@ function Aankoopfacturen() {
     setBusy(true);
     try { const r = await doPeppyrus(); toast.success(`${r.imported} Peppol-factuur/facturen ontvangen${r.skipped ? `, ${r.skipped} al aanwezig` : ''}`); r.errors.forEach(e => toast.error(e)); }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Peppyrus ophalen mislukt'); }
+    setBusy(false); refresh();
+  }
+  /** Sends our own test invoice through Peppol and then reads the inbox back, so one click proves the whole route. */
+  async function stuurTest() {
+    setBusy(true);
+    try {
+      const r = await sendTest();
+      toast.success(`Testfactuur ${r.number} verstuurd naar ${r.participantId}`);
+      await new Promise(res => setTimeout(res, 4000));
+      const g = await doPeppyrus();
+      if (g.imported) toast.success(`${g.imported} Peppol-factuur/facturen ontvangen`);
+      else toast.info('Nog niet aangekomen — haal over een minuut opnieuw op via Peppol');
+      g.errors.forEach(e => toast.error(e));
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Testfactuur versturen mislukt'); }
     setBusy(false); refresh();
   }
   async function stelVoor(row: Row) {
@@ -225,10 +240,15 @@ function Aankoopfacturen() {
         <div className="ml-auto flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="/leveranciers">Leveranciers</Link></Button>
           <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>
+          {peppyrus?.configured && !peppyrus.live ? <Button variant="outline" disabled={busy} title="Stuurt een proeffactuur naar je eigen Peppol-adres in de testomgeving" onClick={stuurTest}>Testfactuur ontvangen</Button> : null}
           <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Inlezen vanuit mail"}</Button>
           <Button variant="outline" disabled={busy} onClick={vanSimpla}>Inlezen uit Simpla</Button>
         </div>
       </div>
+
+      {peppyrus?.configured ? (peppyrus.participantId
+        ? <p className="text-sm text-muted-foreground">Peppol-adres van deze account: <span className="font-mono">{peppyrus.participantId}</span>{peppyrus.live ? '' : ' — testomgeving'}</p>
+        : <p className="text-sm text-destructive">Peppol nog niet gereed: {peppyrus.error ?? 'geen Peppol-adres gekend'}</p>) : null}
 
       <div
         role="button" tabIndex={0} aria-label="Facturen of kastickets hierheen slepen"
