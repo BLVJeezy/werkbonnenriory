@@ -98,15 +98,24 @@ function Facturen() {
     queryKey: ["facturen"],
     refetchInterval: 10_000,
     queryFn: async () => {
-      const [w, i, s, a] = await Promise.all([
+      const [w, i, s, a, o] = await Promise.all([
         supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, no_invoice, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
         supabase.from("activities").select("id, hourly_rate"),
+        supabase.from("document_deliveries").select("document_id, document_open_events(opened_at)").in("document_type", ["factuur", "creditnota"]).not("sent_at", "is", null).order("created_at", { ascending: false }).limit(1000),
       ]);
+      const opens: Record<string, { first: string; last: string; count: number }> = {};
+      for (const d of (o.data ?? []) as { document_id: string; document_open_events: { opened_at: string }[] }[]) {
+        for (const e of d.document_open_events ?? []) {
+          const cur = opens[d.document_id] ?? { first: e.opened_at, last: e.opened_at, count: 0 };
+          cur.count++; if (e.opened_at < cur.first) cur.first = e.opened_at; if (e.opened_at > cur.last) cur.last = e.opened_at;
+          opens[d.document_id] = cur;
+        }
+      }
       const invoiced = new Set((i.data ?? []).map((x) => x.work_order_id));
       const uninvoiced = (w.data ?? []).filter((x) => !invoiced.has(x.id)) as unknown as TodoRow[];
-      return { todo: uninvoiced.filter((x) => !x.no_invoice), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], settings: s.data, activities: a.data ?? [] };
+      return { todo: uninvoiced.filter((x) => !x.no_invoice), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], settings: s.data, activities: a.data ?? [], opens };
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["facturen"] });
@@ -345,6 +354,9 @@ function Facturen() {
                             {i.sent_via && <span>Via {i.sent_via === "okioki" ? "PDF + OkiOki" : i.sent_via === "peppol" ? "Peppol" : "e-mail"}</span>}
                             {i.pdf_sent_at && <span>PDF gemaild</span>}
                             {i.okioki_sent_at && <span>UBL naar OkiOki gemaild</span>}
+                            {i.pdf_sent_at && (data.opens?.[i.id]
+                              ? <span className="rounded bg-primary/15 px-1.5 font-semibold text-foreground">Geopend {new Date(data.opens[i.id]!.last).toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" })}{data.opens[i.id]!.count > 1 ? ` · ${data.opens[i.id]!.count}×` : ""}</span>
+                              : <span className="rounded bg-muted px-1.5">Nog niet geopend</span>)}
                             {paid && i.paid_at && <span>Betaald op {new Date(i.paid_at).toLocaleDateString("nl-BE")}</span>}
                             {i.post_sent_at && <span>Per post verstuurd {new Date(i.post_sent_at).toLocaleDateString("nl-BE")}</span>}
                           </div>
