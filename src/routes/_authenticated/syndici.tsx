@@ -131,7 +131,7 @@ type Residentie = {
   city?: string | null;
 };
 
-/** Eén lijst met alle residenties, cadaar met de syndicus die erbij hoort. */
+/** Eén lijst met alle residenties, elk met de syndicus die erbij hoort. */
 function ResidentiesOverzicht({ rijen }: { rijen: ResidentyRij<Residentie>[] }) {
   const [q, setQ] = useState("");
   const gevonden = useMemo(() => {
@@ -241,9 +241,20 @@ function Syndici() {
     },
   });
   const groups = useMemo(() => syndicusGroups(data, directory), [data, directory]);
+  const rijen = useMemo(() => residentiesOverzicht(groups), [groups]);
   const [open, setOpen] = useState<string | null>(null);
   const [confirmKey, setConfirmKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // De residentielijst van een syndicus is ingeklapt tenzij hier aan staat.
+  const [openVme, setOpenVme] = useState<Record<string, boolean>>({});
+
+  function toggleResidenties(key: string) {
+    setOpenVme((p) => ({ ...p, [key]: !p[key] }));
+  }
+
+  function allesResidenties(open: boolean) {
+    setOpenVme(Object.fromEntries(groups.map((g) => [g.key, open])));
+  }
 
   function ververst() {
     qc.invalidateQueries({ queryKey: ["syndici"] });
