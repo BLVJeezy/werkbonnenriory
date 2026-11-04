@@ -3,6 +3,7 @@ import {
   customerDetailsFromDir,
   dirFromCustomer,
   mergeSyndicusDir,
+  residentiesOverzicht,
   syndicusDirPatch,
   syndicusGroups,
   syndicusKey,
