@@ -220,7 +220,7 @@ function Klanten() {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("customers").insert(patch);
+    const { error } = await supabase.from("customers").insert({ ...patch, name: patch.name });
     setSaving(false);
     if (error) {
       toast.error(error.code === "23505" ? "Er bestaat al een klant met deze naam en adres." : error.message);
