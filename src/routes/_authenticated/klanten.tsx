@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { filterChoices } from "@/lib/choice-search";
 import { syndicusDetailsPatch, syndicusLabel, syndicusSuggestions, type SyndicusDetailField, type SyndicusDetails } from "@/lib/syndicus";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
+  validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search.q === "string" && search.q ? { q: search.q } : {}),
   head: () => ({ meta: [{ title: "Klanten — Riory Werkbonnen" }, { name: "description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:title", content: "Klanten — Riory Werkbonnen" }, { property: "og:description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Klanten,
 });
@@ -44,7 +45,9 @@ const SYNDICUS_FIELDS: { key: SyndicusDetailField; label: string; className: str
 
 function Klanten() {
   const qc = useQueryClient();
-  const [q, setQ] = useState("");
+  const search = Route.useSearch();
+  const [q, setQ] = useState(search.q ?? "");
+  useEffect(() => setQ(search.q ?? ""), [search.q]);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
