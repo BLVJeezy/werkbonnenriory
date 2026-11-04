@@ -9,7 +9,7 @@ import { euro } from "@/lib/billing";
 import { FinanceYear } from "@/components/FinanceYear";
 import { computeTotals } from "@/lib/billing";
 import { totalSeconds } from "@/lib/time";
-import { groupOmzet, type InvoiceOmzetRow } from "@/lib/dashboard";
+import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
 import {
   ResponsiveContainer,
   BarChart,
@@ -59,7 +59,7 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select("id, issue_date, net, vat, total, paid_amount, kind")
+        .select("id, issue_date, net, vat, total, paid_amount, kind, work_order_id")
         .gte("issue_date", from)
         .lte("issue_date", to);
       if (error) throw error;
@@ -95,10 +95,12 @@ function Dashboard() {
   if (role !== "admin") return null;
 
   const sign = (r: InvoiceOmzetRow) => (r.kind === "creditnota" ? -1 : 1);
-  const omzet = woRows.reduce((s, r) => s + Number(r.net), 0);
+  // Zelf gemaakte facturen (zonder werkbon) tellen mee op hun factuurdatum.
+  const omzetRows = [...woRows, ...manualInvoiceRows(rows)];
+  const omzet = omzetRows.reduce((s, r) => s + Number(r.net), 0);
   const btw = rows.reduce((s, r) => s + sign(r) * Number(r.vat), 0);
   const openstaand = rows.reduce((s, r) => s + sign(r) * Math.max(0, Number(r.total) - Number(r.paid_amount)), 0);
-  const punten = groupOmzet(woRows, from, to);
+  const punten = groupOmzet(omzetRows, from, to);
   const perMaand = punten.length > 62;
 
   return (
@@ -122,7 +124,7 @@ function Dashboard() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-md border bg-card p-3">
-          <p className="text-xs font-bold uppercase opacity-70">Omzet werkbonnen (excl. btw)</p>
+          <p className="text-xs font-bold uppercase opacity-70">Omzet (excl. btw)</p>
           <p className="text-xl font-black">{euro(omzet)}</p>
         </div>
         <div className="rounded-md border bg-card p-3">
@@ -141,7 +143,7 @@ function Dashboard() {
 
       <div className="rounded-md border bg-card p-3 sm:p-4">
         <p className="mb-3 text-sm font-bold uppercase opacity-70">
-          Omzet per {perMaand ? "maand" : "dag"} volgens werkdag van de werkbonnen (excl. btw)
+          Omzet per {perMaand ? "maand" : "dag"} volgens werkdag van de werkbonnen; zelf gemaakte facturen op hun factuurdatum (excl. btw)
         </p>
         <div className="h-72 w-full sm:h-96">
           <ResponsiveContainer width="100%" height="100%">
