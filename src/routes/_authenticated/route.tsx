@@ -88,6 +88,9 @@ function Layout() {
                 <Link to="/facturen" className={navCls} activeProps={active}>
                   Facturen
                 </Link>
+                <Link to="/aankoopfacturen" className={navCls} activeProps={active}>
+                  Aankoopfacturen
+                </Link>
                 <Link to="/boekhouding" search={{ tab: "rekeningen" }} className={navCls} activeProps={active}>Boekhouding</Link>
                 <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }} className={navCls} activeProps={active}>Finance</Link>
                 <Link to="/klanten" className={navCls} activeProps={active}>
