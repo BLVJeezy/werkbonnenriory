@@ -736,6 +736,13 @@
       "when": 1793785171321,
       "tag": "0104_invoice_line_vat_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1793793174005,
+      "tag": "0105_syndicus_link",
+      "breakpoints": true
     }
   ]
 }

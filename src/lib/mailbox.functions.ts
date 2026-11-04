@@ -1,3 +1,4 @@
+import { applySyndicus } from "./syndicus";
 import { isUrgentMail } from "./urgent-mail";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -38,6 +39,8 @@ type Extracted = {
   customer_type: "private" | "business" | "unknown";
   home_older_than_ten_years: boolean | null;
   project_name: string | null;
+  syndicus: string | null;
+  vme_name: string | null;
   description: string | null;
   urgent: boolean;
 };
@@ -45,7 +48,7 @@ type Extracted = {
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "site_contact_name", "site_contact_phone", "phone", "email", "billing_email", "vat_number", "customer_type", "home_older_than_ten_years", "project_name", "description", "urgent"],
+  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "site_contact_name", "site_contact_phone", "phone", "email", "billing_email", "vat_number", "customer_type", "home_older_than_ten_years", "project_name", "syndicus", "vme_name", "description", "urgent"],
   properties: {
     customer_name: { type: "string" },
     street: { type: ["string", "null"] },
@@ -65,6 +68,8 @@ const schema = {
     customer_type: { type: "string", enum: ["private", "business", "unknown"] },
     home_older_than_ten_years: { type: ["boolean", "null"] },
     project_name: { type: ["string", "null"] },
+    syndicus: { type: ["string", "null"] },
+    vme_name: { type: ["string", "null"] },
     description: { type: ["string", "null"] },
     urgent: { type: "boolean" },
   },
@@ -86,7 +91,7 @@ async function extractWithAI(apiKey: string, msg: GraphMessage): Promise<Extract
       reasoning: { effort: "low" },
       instructions:
         "Je leest een afspraakaanvraag-mail van een klant. Haal de klantgegevens eruit: naam (persoon of bedrijf), klantadres opgesplitst in straat, huisnummer (incl. bus), postcode en plaats, en een eventueel apart werfadres in site_street, site_house_number, site_postal_code en site_city, telefoonnummer, e-mailadres en een korte omschrijving van het gevraagde werk in het Nederlands. Houd klantadres en werfadres strikt gescheiden als beide genoemd zijn. Als enkel een werfadres vermeld staat, zet het uitsluitend in de site-velden; als enkel een algemeen adres vermeld staat, gebruik de klantadresvelden. Haal ook de contactpersoon ter plaatse uit (site_contact_name en site_contact_phone), bv. huurder, bewoner, werfleider of conciërge; gebruik null als er geen aparte contactpersoon is. Vul de adres-site-velden alleen bij een expliciet werfadres, interventieadres of werkplek. Gebruik null als iets ontbreekt. Zet een apart e-mailadres voor facturatie (factuuradres, boekhouding) in billing_email, anders null. Gebruik het afzenderadres als e-mail als er geen ander staat.",
-      input: text + "\n\nExtra extractieregel: lees het btw-nummer van de klant uit in vat_number (bijvoorbeeld BE 0123.456.789), indien expliciet aanwezig in de mail. Behoud de landcode en nummernotatie. Gebruik null als het ontbreekt. Gebruik nooit het btw-nummer van Riory uit een geciteerde afzenderhandtekening als klantnummer en verwar dit niet met het btw-percentage. Bepaal customer_type: private bij een duidelijk particuliere aanvraag voor de eigen woning, business bij een bedrijf of zakelijke aanvraag, anders unknown. Een ontbrekend btw-nummer op zichzelf bewijst niet dat iemand particulier is. Lees home_older_than_ten_years: true alleen als expliciet staat dat de woning ouder dan 10 jaar is (ook meer dan tien jaar of een expliciete leeftijd boven 10); false bij een expliciete leeftijd van 10 jaar of jonger; null als dit ontbreekt of onduidelijk is. Leid de leeftijd niet af uit het adres. Behoud de vermelde woningouderdom en het particuliere karakter ook in de omschrijving zodat de beheerder de btw-keuze kan controleren. Lees project_name: de naam van het project, de bouw of de site waarvoor de aanvraag is (bijvoorbeeld een projectnaam van een aannemer of architect), indien expliciet vermeld; anders null. Zet urgent altijd op false (wordt apart bepaald).",
+      input: text + "\n\nExtra extractieregel: lees het btw-nummer van de klant uit in vat_number (bijvoorbeeld BE 0123.456.789), indien expliciet aanwezig in de mail. Behoud de landcode en nummernotatie. Gebruik null als het ontbreekt. Gebruik nooit het btw-nummer van Riory uit een geciteerde afzenderhandtekening als klantnummer en verwar dit niet met het btw-percentage. Bepaal customer_type: private bij een duidelijk particuliere aanvraag voor de eigen woning, business bij een bedrijf of zakelijke aanvraag, anders unknown. Een ontbrekend btw-nummer op zichzelf bewijst niet dat iemand particulier is. Lees home_older_than_ten_years: true alleen als expliciet staat dat de woning ouder dan 10 jaar is (ook meer dan tien jaar of een expliciete leeftijd boven 10); false bij een expliciete leeftijd van 10 jaar of jonger; null als dit ontbreekt of onduidelijk is. Leid de leeftijd niet af uit het adres. Behoud de vermelde woningouderdom en het particuliere karakter ook in de omschrijving zodat de beheerder de btw-keuze kan controleren. Lees project_name: de naam van het project, de bouw of de site waarvoor de aanvraag is (bijvoorbeeld een projectnaam van een aannemer of architect), indien expliciet vermeld; anders null. Zet urgent altijd op false (wordt apart bepaald). Syndicus: als de aanvraag komt van of namens een syndicus/beheerder van een mede-eigendom, zet in syndicus de naam van het syndicuskantoor plus contactpersoon (bv. \"Immo Schrijnemakers BV – Olivier Schrijnemakers\") en in vme_name de naam van de vereniging van mede-eigenaars of het gebouw (bv. \"VME Parkzicht\", ook ACP/residentie). Zet het adres van het gebouw/de interventie in de site-velden en het adres van de syndicus in de klantadresvelden. Neem de e-mailadressen van de syndicus over in email en billing_email. Vermeld de syndicusgegevens (naam, telefoon) ook kort in de omschrijving. Anders syndicus en vme_name null.",
       text: { format: { type: "json_schema", name: "klant", strict: true, schema } },
     }),
   });
@@ -163,7 +168,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
     const errors: string[] = [];
     for (const m of fresh) {
       try {
-        const x = await extractWithAI(lovableKey, m);
+        const x = applySyndicus(await extractWithAI(lovableKey, m));
         // Vrij beroep wordt letterlijk in de mail zelf gezocht; dat bepaalt de btw van deze taak.
         const vrij = mentionsVrijBeroep(`${m.subject ?? ""}\n${m.body?.content ?? ""}`);
         const { data: created, error } = await context.supabase.from("work_orders").insert({
@@ -173,7 +178,8 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           postal_code: x.postal_code,
           city: x.city,
           address: formatAddress(x),
-          use_site_address: !!formatSiteAddress(x),
+          use_site_address: x.use_site_address && !!formatSiteAddress(x),
+          syndicus: x.syndicus,
           site_street: x.site_street,
           site_house_number: x.site_house_number,
           site_postal_code: x.site_postal_code,
