@@ -162,11 +162,18 @@ function Controle() {
             </div>
 
             <details className="rounded-md border p-2">
-              <summary className="cursor-pointer text-sm font-bold">Leveranciersgegevens{sup ? `: ${sup.vat_number ?? "geen btw-nr."} · ${sup.iban ?? edit.supplier_iban ?? "geen IBAN"}` : ""}</summary>
+              <summary className="cursor-pointer text-sm font-bold">Leveranciersgegevens{sup ? `: ${edit.supplier_vat ?? sup.vat_number ?? "geen btw-nr."} · ${bank.iban ?? "geen IBAN"} · ${bank.bic ?? "geen BIC"}` : ""}</summary>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <div className="space-y-1"><Label>Btw-nummer</Label><Input value={edit.supplier_vat ?? ""} onChange={(e) => setEdit({ ...edit, supplier_vat: e.target.value || null })} /></div>
-                <div className="space-y-1"><Label>IBAN</Label><Input value={edit.supplier_iban ?? ""} onChange={(e) => setEdit({ ...edit, supplier_iban: e.target.value || null })} /></div>
-                <div className="space-y-1 sm:col-span-2"><Label htmlFor="purchase-payment">Betaalwijze</Label><select id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={(e) => setEdit({ ...edit, payment_method: e.target.value })}>{Object.entries(PAYMENT_METHODS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <div className="space-y-1"><Label>Btw-nummer</Label><Input value={edit.supplier_vat ?? sup?.vat_number ?? ""} onChange={(e) => setEdit({ ...edit, supplier_vat: e.target.value || null })} /></div>
+                <div className="space-y-1"><Label>IBAN</Label><Input value={edit.supplier_iban ?? sup?.iban ?? ""} onChange={(e) => setEdit({ ...edit, supplier_iban: e.target.value || null })} /></div>
+                <div className="space-y-1"><Label>BIC</Label><Input placeholder="Bijv. GKCCBEBB" value={edit.supplier_bic ?? sup?.bic ?? ""} onChange={(e) => setEdit({ ...edit, supplier_bic: e.target.value.toUpperCase().replace(/\s/g, "") || null })} /></div>
+                <div className="space-y-1"><Label htmlFor="purchase-payment">Betaalwijze</Label><select id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={(e) => setEdit({ ...edit, payment_method: e.target.value })}>{Object.entries(PAYMENT_METHODS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                {sup && (
+                  <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                    <Checkbox id="purchase-sync" checked={syncSupplier} onCheckedChange={(c) => setSyncSupplier(c === true)} />
+                    <span>Deze gegevens ook in de leverancierslijst bewaren</span>
+                  </label>
+                )}
               </div>
             </details>
 
