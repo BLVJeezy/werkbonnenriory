@@ -147,3 +147,33 @@ export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware(
     }
     return { imported, skipped, errors };
   });
+
+/** Sends a labelled test invoice to Riory's own Peppol address, so the receive flow can be checked without a real supplier. */
+export const sendPeppyrusTestInvoice = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data: s } = await context.supabase.from('settings').select('company_name,company_vat,company_iban,company_bic').eq('id', 1).single();
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
+    const { peppolTestInvoiceData, peppolTestInvoiceUbl, PEPPOL_INVOICE_PROCESS, PEPPOL_INVOICE_DOCUMENT } = await import('./peppol-test-invoice');
+    const data = peppolTestInvoiceData({
+      name: s?.company_name ?? 'Riory BV', vat: s?.company_vat ?? 'BE0840931404',
+      iban: s?.company_iban ?? null, bic: s?.company_bic ?? null,
+    }, today);
+    const org = await (await peppyrusCall('/organization/peppol')).json() as any;
+    const participants: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
+    const participantId = String((participants.find(p => p?.canReceive) ?? participants[0])?.participantId ?? '');
+    if (!participantId) throw new Error('Peppyrus vond geen Peppol-adres voor je organisatie in deze omgeving.');
+    const { createInvoicePdf } = await import('@/lib/invoice-pdf');
+    const xml = peppolTestInvoiceUbl(data, participantId, b64(await createInvoicePdf(data)));
+    const msg = await (await peppyrusCall('/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: participantId, recipient: participantId,
+        processType: PEPPOL_INVOICE_PROCESS, documentType: PEPPOL_INVOICE_DOCUMENT,
+        fileContent: b64(new TextEncoder().encode(xml)),
+      }),
+    })).json() as any;
+    return { number: data.number, participantId, messageId: msg?.id ?? null };
+  });
+
