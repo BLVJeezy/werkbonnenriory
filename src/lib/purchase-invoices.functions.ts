@@ -43,7 +43,7 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
     if (data.kind && !['factuur', 'creditnota'].includes(data.kind)) throw new Error('Ongeldig documenttype');
     if (data.paymentMethod && !['overschrijving','domiciliering','kaart','cash'].includes(data.paymentMethod)) throw new Error('Ongeldige betaalwijze');
     const n = normalizePurchaseInvoice({
-      supplierName: data.supplierName, supplierVat: data.supplierVat, supplierIban: data.supplierIban,
+      supplierName: data.supplierName, supplierVat: data.supplierVat, supplierIban: data.supplierIban, supplierBic: data.supplierBic,
       invoiceNumber: data.invoiceNumber, invoiceDate: data.invoiceDate, dueDate: data.dueDate,
       lines: data.lines, net: data.net, vat: data.vat, total: data.total, paymentRef: data.paymentRef,
     });
