@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { PAYMENT_METHODS, VAT_RULES } from './supplier-rules';
+import { nextBic } from './iban-bic';
 
 export const saveSupplier = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((i: { id: string; name: string; vat_number: string | null; iban: string | null; bic?: string | null; payment_method: string; vat_rule: string; vat_deductible_percent: number }) => {

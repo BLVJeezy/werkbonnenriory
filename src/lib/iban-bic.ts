@@ -299,3 +299,14 @@ export function bankOfIban(iban: string | null | undefined): IbanBank {
 export function bicFromIban(iban: string | null | undefined): string | null {
   return bankOfIban(iban).bic;
 }
+
+/** Pure: the BIC to keep when an IBAN changes — a BIC someone typed by hand is never overwritten. */
+export function nextBic(
+  previousIban: string | null | undefined,
+  previousBic: string | null | undefined,
+  iban: string | null | undefined,
+): string | null {
+  const d = bankOfIban(iban);
+  const wasAuto = !previousBic || previousBic === bankOfIban(previousIban).bic;
+  return d.bic && wasAuto ? d.bic : (previousBic ?? null);
+}
