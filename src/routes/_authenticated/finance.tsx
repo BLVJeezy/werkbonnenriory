@@ -1,3 +1,4 @@
+import { VAT_RATES, detectVatRate, vatFor, vatSide, type VatRate } from "@/lib/vat-rate";
 import { FinanceTasks } from "@/components/FinanceTasks";
 import { useFinanceSales } from "@/lib/use-finance-sales";
 import { syncFinancePurchases } from "@/lib/finance-purchases.functions";
