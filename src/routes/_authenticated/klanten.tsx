@@ -129,13 +129,11 @@ function Klanten() {
       return;
     }
     // Alleen de gegevens van een bekende syndicus meekopiëren als de naam nog overeenkomt.
-    const t = assignTemplate && company === assignTemplate.trim() ? templates.find(([n]) => n === assignTemplate)?.[1] : undefined;
-    const details: SyndicusDetails = t
-      ? Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, (t[f.key] as string | null) ?? ""]))
-      : {};
-    const patch = syndicusDetailsPatch({ ...details, syndicus_company: company, syndicus_contact: assignContact });
+    const t = assignTemplate && company === assignTemplate.trim() ? templates.find((x) => x.name === assignTemplate) : undefined;
+    const patch = syndicusDetailsPatch({ ...(t?.details ?? {}), syndicus_company: company, syndicus_contact: assignContact });
     setAssigning(true);
     const { error } = await supabase.from("customers").update(patch).in("id", ids);
+    if (!error) await ficheBijwerken(patch);
     setAssigning(false);
     if (error) {
       toast.error(error.message);
@@ -148,6 +146,17 @@ function Klanten() {
     setAssignCompany("");
     setAssignContact("");
     qc.invalidateQueries({ queryKey: ["customers"] });
+    qc.invalidateQueries({ queryKey: ["syndici"] });
+  }
+
+  // De contactfiche van de syndicus op de hoogte houden. Lukt dat niet, dan staat
+  // de klant zelf goed en is de fiche later bij te werken op de pagina Syndici.
+  async function ficheBijwerken(patch: Record<string, unknown>) {
+    try {
+      await syncSyndicusFromCustomer({ data: dirFromCustomer(patch) });
+    } catch {
+      /* de klantgegevens zijn bewaard; de fiche volgt bij de volgende bewerking */
+    }
   }
 
   function openEdit(c: (typeof data)[number]) {
@@ -176,8 +185,10 @@ function Klanten() {
       return;
     }
     toast.success(`${patch.name} bijgewerkt`);
+    await ficheBijwerken(patch as Record<string, unknown>);
     setEditing(null);
     qc.invalidateQueries({ queryKey: ["customers"] });
+    qc.invalidateQueries({ queryKey: ["syndici"] });
   }
 
   async function importExcel(file: File) {
@@ -225,13 +236,13 @@ function Klanten() {
           </div>
           {assignOpen && (
             <div className="mt-3 space-y-2 rounded-md border border-primary/40 bg-primary/5 p-3">
-              <div className="text-xs text-muted-foreground">Kies een syndicus die je al kent — dan gaan adres, btw-nummer, telefoon en e-mailadressen mee — of typ een nieuwe naam.</div>
+              <div className="text-xs text-muted-foreground">Kies een syndicus van de contactfiches — dan gaan adres, btw-nummer, telefoon en e-mailadressen mee — of typ een nieuwe naam.</div>
               <div className="flex flex-wrap items-end gap-2">
                 <label className="min-w-52 flex-1 space-y-1">
                   <span className="block text-xs font-bold uppercase text-muted-foreground">Bekende syndicus</span>
                   <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={assignTemplate} onChange={(e) => pickTemplate(e.target.value)}>
                     <option value="">— nieuwe syndicus —</option>
-                    {templates.map(([name]) => <option key={name} value={name}>{name}</option>)}
+                    {templates.map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}
                   </select>
                 </label>
                 <label className="min-w-48 flex-[2] space-y-1">
