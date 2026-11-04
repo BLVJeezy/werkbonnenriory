@@ -1,0 +1,2 @@
+ALTER TABLE public.work_orders ADD COLUMN no_invoice boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.work_orders.no_invoice IS 'Niet factureren: bijv. garantie-terugkeer; createInvoices slaat deze over.';

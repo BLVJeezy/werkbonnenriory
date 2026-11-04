@@ -46,6 +46,7 @@ type TodoRow = {
   distance_km: number | null;
   vat_rate: number;
   warranty: boolean;
+  no_invoice: boolean;
   time_entries: TimeEntry[];
   materials: { quantity: number; unit_price: number }[];
   technicians: { name: string } | null;
@@ -98,13 +99,14 @@ function Facturen() {
     refetchInterval: 10_000,
     queryFn: async () => {
       const [w, i, s, a] = await Promise.all([
-        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
+        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, no_invoice, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
         supabase.from("activities").select("id, hourly_rate"),
       ]);
       const invoiced = new Set((i.data ?? []).map((x) => x.work_order_id));
-      return { todo: (w.data ?? []).filter((x) => !invoiced.has(x.id)) as unknown as TodoRow[], invoices: i.data ?? [], settings: s.data, activities: a.data ?? [] };
+      const uninvoiced = (w.data ?? []).filter((x) => !invoiced.has(x.id)) as unknown as TodoRow[];
+      return { todo: uninvoiced.filter((x) => !x.no_invoice), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], settings: s.data, activities: a.data ?? [] };
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["facturen"] });
@@ -127,6 +129,17 @@ function Facturen() {
       if (await deleteSelectedWorkOrders(qc, ids)) setSelWo([]);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Verwijderen mislukt"); }
     finally { setBusy(false); }
+  }
+  async function labelNoInvoice(ids: string[], value: boolean) {
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("work_orders").update({ no_invoice: value }).in("id", ids);
+      if (error) throw error;
+      toast.success(value ? `${ids.length} werkbon(nen) gelabeld als niet factureren` : `${ids.length} werkbon(nen) weer factureerbaar`);
+      setSelWo([]);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Labelen mislukt"); }
+    finally { setBusy(false); }
+    refresh();
   }
   async function sendSel(ids: string[]) {
     if (!confirm(`${ids.length} factuur/facturen nu verzenden? De klant krijgt de PDF; bij een ingevuld btw-nummer gaat een aparte UBL-mail naar BE0840931404701144@okioki.app.`)) return;
@@ -185,6 +198,7 @@ function Facturen() {
   const todoSort = useSort(data?.todo ?? [], { nr: (w) => w.number, klant: (w) => w.customer_name, ploeg: (w) => w.technicians?.name, datum: (w) => w.scheduled_date ?? w.signed_at, betaald: (w) => todoAmount(w) });
   const invSort = useSort(data?.invoices ?? [], { nr: (i) => i.number, klant: (i) => (i.customer as { name?: string }).name, datum: (i) => i.created_at, bedrag: (i) => Number(i.total), status: (i) => i.status });
   const [openInv, setOpenInv] = useState<string | null>(null);
+  const [showNoInvoice, setShowNoInvoice] = useState(false);
   if (!data) return <p className="text-muted-foreground">Laden…</p>;
   const s = data.settings;
   const openIds = data.invoices.filter((i) => i.status !== "verzonden").map((i) => i.id);
@@ -207,6 +221,7 @@ function Facturen() {
               {selWo.length === data.todo.length && selWo.length ? "Niets selecteren" : "Alles selecteren"}
             </Button>
             <Button variant="destructive" size="sm" disabled={!selWo.length || busy} onClick={removeSelected}><Trash2 className="h-4 w-4" />Geselecteerde verwijderen ({selWo.length})</Button>
+            <Button variant="outline" size="sm" disabled={!selWo.length || busy} onClick={() => labelNoInvoice(selWo, true)}>Niet factureren ({selWo.length})</Button>
             <Button size="sm" disabled={!selWo.length || busy} onClick={convert}>Omzetten naar factuur ({selWo.length})</Button>
           </div>
         </div>
@@ -237,6 +252,31 @@ function Facturen() {
           </table>
         </div>
       </section>
+
+      {(data.noInvoice?.length ?? 0) > 0 && (
+        <section className="space-y-3 rounded-md border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-black uppercase">Niet te factureren</h2>
+            <span className="text-sm text-muted-foreground">({data.noInvoice.length} werkbonnen, bijv. garantie)</span>
+            <Button variant="outline" size="sm" className="ml-auto" onClick={() => setShowNoInvoice(!showNoInvoice)}>{showNoInvoice ? "Inklappen" : "Uitklappen"}</Button>
+          </div>
+          {showNoInvoice && <div className="overflow-x-auto">
+            <table className={tableCls}>
+              <thead><tr><Th>Nr.</Th><Th>Klant</Th><Th className="hidden sm:table-cell">Datum</Th><Th /></tr></thead>
+              <tbody>
+                {data.noInvoice.map((w) => (
+                  <tr key={w.id}>
+                    <td><Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">{werkbonNr(w.number)}</Link></td>
+                    <td>{w.customer_name}</td>
+                    <td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">{woWhen(w)}</td>
+                    <td className="text-right"><Button variant="outline" size="sm" disabled={busy} onClick={() => labelNoInvoice([w.id], false)}>Toch factureren</Button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>}
+        </section>
+      )}
 
       <section className="space-y-3 rounded-md border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">

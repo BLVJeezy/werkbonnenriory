@@ -106,6 +106,11 @@ export function lineTotals(l: { quantity: number; unitPrice: number; discount?: 
 }
 
 /** Fully paid invoices may go out automatically; open ones always wait for a manual send. */
+/** Een werkbon is factureerbaar als ze afgetekend is en niet expliciet uitgesloten (contract of het label "niet factureren", bijv. garantie-terugkeer). */
+export function canInvoiceWorkOrder(wo: { status: string; contract_id?: string | null; no_invoice?: boolean | null }) {
+  return wo.status === "afgetekend" && !wo.contract_id && !wo.no_invoice;
+}
+
 export function isFullyPaid(total: number, paidAmount: number) {
   return paidAmount > 0 && paidAmount + 0.005 >= total;
 }

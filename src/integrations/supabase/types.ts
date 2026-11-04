@@ -2802,6 +2802,7 @@ export type Database = {
           house_number: string | null
           id: string
           no_answer_at: string | null
+          no_invoice: boolean
           number: number | null
           paid_amount: number | null
           paid_at: string | null
@@ -2859,6 +2860,7 @@ export type Database = {
           house_number?: string | null
           id?: string
           no_answer_at?: string | null
+          no_invoice?: boolean
           number?: number | null
           paid_amount?: number | null
           paid_at?: string | null
@@ -2916,6 +2918,7 @@ export type Database = {
           house_number?: string | null
           id?: string
           no_answer_at?: string | null
+          no_invoice?: boolean
           number?: number | null
           paid_amount?: number | null
           paid_at?: string | null

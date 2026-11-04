@@ -338,7 +338,7 @@ function Lijst() {
         {rows.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Geen taken.</div>}
         {rows.map((w) => (
           <RowLink key={w.id} w={w} label={w.status === "afgetekend" ? "Werkbon" : "Taak"} below={role === "admin" && w.status !== "afgetekend" ? (
-            <div className="grid gap-2 border-t pt-3 sm:grid-cols-[auto_1fr_1fr_auto]">
+            <div className="grid gap-2 border-t pt-3 sm:grid-cols-[auto_1fr_1fr_auto_auto]">
               <Input type="date" aria-label="Dag" className="h-9 bg-background text-foreground" value={w.scheduled_date ?? ""} onChange={(e) => patch(w.id, { scheduled_date: e.target.value || null })} />
               <select aria-label="Ploeg" className="h-9 rounded-md border bg-background px-2 text-foreground" value={w.technician_id ?? ""} onChange={(e) => patch(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
                 <option value="">— Ploeg —</option>
@@ -349,7 +349,8 @@ function Lijst() {
                 {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
               <Button size="sm" variant={w.urgent ? "destructive" : "outline"} className="h-9" onClick={() => patch(w.id, { urgent: !w.urgent })}>{w.urgent ? "Dringend ✓" : "Markeer dringend"}</Button>
-              <div className="flex flex-wrap items-center gap-2 sm:col-span-4">
+              <Button size="sm" variant={w.no_invoice ? "secondary" : "outline"} className="h-9" onClick={() => patch(w.id, { no_invoice: !w.no_invoice })}>{w.no_invoice ? "Niet factureren ✓" : "Niet factureren"}</Button>
+              <div className="flex flex-wrap items-center gap-2 sm:col-span-5">
                 <label className="flex cursor-pointer items-center gap-1.5 text-sm font-bold"><input type="checkbox" className="accent-primary" checked={w.first_customer} onChange={(e) => patch(w.id, { first_customer: e.target.checked })} />Eerste klant</label>
                 <CustomerInvite task={w} className="justify-self-start" />
                 {w.scheduled_date && <Button size="sm" variant="outline" className="h-9" onClick={() => patch(w.id, { scheduled_date: null })}>Terug naar nog in te plannen</Button>}
@@ -424,6 +425,7 @@ type Row = SiteAddressParts & {
   status: string;
   urgent?: boolean;
   first_customer?: boolean;
+  no_invoice?: boolean;
   no_answer_at?: string | null;
   contract_id?: string | null;
   quote_approved?: boolean;
@@ -460,7 +462,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
       {w.quote_approved && <Badge variant="secondary">Offerte goedgekeurd</Badge>}
       {w.first_customer && <FirstCustomerLabel />}
       {!signed && isNoAnswer(w.no_answer_at) && <Badge variant="destructive">Neemt niet op · {new Date(w.no_answer_at!).toLocaleString("nl-BE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</Badge>}
-      {(isUrgentOpen(w) || w.contract_id) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}</div>}
+      {(isUrgentOpen(w) || w.contract_id || w.no_invoice) && <div className="flex gap-2 text-xs font-bold">{isUrgentOpen(w) && <span className="animate-pulse rounded bg-destructive px-2 py-0.5 text-destructive-foreground">DRINGEND — vandaag helpen</span>}{w.contract_id && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Contract — niet factureren</span>}{!w.contract_id && w.no_invoice && <span className="rounded bg-secondary px-2 py-0.5 text-secondary-foreground">Niet factureren</span>}</div>}
       {running && <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />}
       <Link to="/werkbonnen/$id" params={{ id: w.id }} className="grid min-w-0 grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:gap-4">
         <span className="font-mono text-sm opacity-80">{label} {werkbonNr(w.number)}</span>

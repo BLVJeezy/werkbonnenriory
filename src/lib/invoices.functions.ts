@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { addDays, buildCreditNote, buildInvoice, buildManualCreditNote, buildManualInvoice, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
+import { addDays, buildCreditNote, buildInvoice, buildManualCreditNote, buildManualInvoice, canInvoiceWorkOrder, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
 import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from "@/lib/mail-senders";
@@ -28,8 +28,8 @@ export const createInvoices = createServerFn({ method: "POST" })
     let sent = 0, failed = 0;
     for (const id of data.workOrderIds) {
       const { data: wo } = await supabase.from("work_orders").select("*").eq("id", id).single();
-      // Contract work orders are informational only and never invoiced.
-      if (!wo || wo.status !== "afgetekend" || wo.contract_id) continue;
+      // Contract- en "niet factureren"-werkbonnen (bijv. garantie) worden nooit gefactureerd.
+      if (!wo || !canInvoiceWorkOrder(wo)) continue;
       const { data: existing } = await supabase.from("invoices").select("id").eq("work_order_id", id).maybeSingle();
       if (existing) { skipped.push(wo.number); continue; }
       const [t, m] = await Promise.all([
