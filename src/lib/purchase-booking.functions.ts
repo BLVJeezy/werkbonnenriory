@@ -172,10 +172,8 @@ export const sendPeppyrusTestInvoice = createServerFn({ method: 'POST' }).middle
       name: s?.company_name ?? 'Riory BV', vat: s?.company_vat ?? 'BE0840931404',
       iban: s?.company_iban ?? null, bic: s?.company_bic ?? null,
     }, today);
-    const org = await (await peppyrusCall('/organization/peppol')).json() as any;
-    const participants: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
-    const participantId = String((participants.find(p => p?.canReceive) ?? participants[0])?.participantId ?? '');
-    if (!participantId) throw new Error('Peppyrus vond geen Peppol-adres voor je organisatie in deze omgeving.');
+    const { participantId, error } = await peppyrusParticipant();
+    if (!participantId) throw new Error(error ?? 'Peppyrus vond geen Peppol-adres voor je organisatie in deze omgeving.');
     const { createInvoicePdf } = await import('@/lib/invoice-pdf');
     const xml = peppolTestInvoiceUbl(data, participantId, b64(await createInvoicePdf(data)));
     const msg = await (await peppyrusCall('/message', {
