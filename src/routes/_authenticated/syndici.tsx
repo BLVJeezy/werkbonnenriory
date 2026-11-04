@@ -196,7 +196,7 @@ function ResidentiesOverzicht({ rijen }: { rijen: ResidentyRij<Residentie>[] }) 
                         Klantnr.
                       </SortTh>
                       <Th className="hidden sm:table-cell">Adres</Th>
-                      <SortTh k="syndicus" sort={sort}>
+                      <SortTh k="syndicus" sort={sort} className="hidden sm:table-cell">
                         Syndicus
                       </SortTh>
                     </tr>
@@ -209,10 +209,16 @@ function ResidentiesOverzicht({ rijen }: { rijen: ResidentyRij<Residentie>[] }) 
                           <span className="block text-xs font-normal text-muted-foreground sm:hidden">
                             {formatAddress(r.klant) || "geen adres"}
                           </span>
+                          <a
+                            href={`#syndicus-${encodeURIComponent(r.key)}`}
+                            className="block text-xs font-semibold underline sm:hidden [overflow-wrap:anywhere]"
+                          >
+                            {r.syndicus}
+                          </a>
                         </td>
                         <td className="font-mono text-xs text-muted-foreground">{r.klant.customer_number ?? "—"}</td>
                         <td className="hidden text-muted-foreground sm:table-cell">{formatAddress(r.klant) || "geen adres"}</td>
-                        <td>
+                        <td className="hidden sm:table-cell">
                           <a
                             href={`#syndicus-${encodeURIComponent(r.key)}`}
                             className="font-semibold underline [overflow-wrap:anywhere]"
@@ -448,8 +454,8 @@ function Syndici() {
 
             <dl className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
               {details.map(([label, value]) => (
-                <div key={label} className="flex gap-2">
-                  <dt className="min-w-36 text-xs font-bold uppercase text-muted-foreground">{label}</dt>
+                <div key={label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+                  <dt className="text-xs font-bold uppercase text-muted-foreground sm:min-w-36">{label}</dt>
                   <dd className={`[overflow-wrap:anywhere] ${value ? "font-semibold" : "text-muted-foreground"}`}>
                     {value || "nog niet ingevuld"}
                   </dd>
