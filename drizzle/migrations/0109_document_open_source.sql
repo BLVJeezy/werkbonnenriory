@@ -1,0 +1,1 @@
+ALTER TABLE public.document_open_events ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'link' CHECK (source IN ('link','mail'));
