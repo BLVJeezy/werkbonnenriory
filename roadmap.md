@@ -11,3 +11,7 @@
 - [ ] Fase 2: Peppol-ontvangst (wacht op keuze toegangspunt)
 - [ ] Fase 3: Ponto-betalingen (wacht op Ponto-toegang)
 - [x] Eén betaling over meerdere facturen afletteren
+
+- [x] Aankoopfacturen: controle op eigen pagina met PDF ernaast, opslaan en volgende, leverancier uit lijst, btw op 411000
+- [x] Bulkbetaling: kiezen tussen op vervaldag of zo snel mogelijk
+- [x] Aankoopfacturen verwijderen + dubbele detecteren
