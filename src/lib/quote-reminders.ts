@@ -8,7 +8,7 @@ export function dueQuoteReminder(q: { status: string; sent_at: string | null; re
   const stage = q.reminder_stage ?? 0;
   if (stage >= QUOTE_REMINDER_DAYS.length) return null;
   // Na een gemiste dag nooit twee herinneringen tegelijk: steeds de eerstvolgende stap.
-  return days >= QUOTE_REMINDER_DAYS[stage] ? ((stage + 1) as 1 | 2) : null;
+  return days >= (QUOTE_REMINDER_DAYS[stage] ?? Infinity) ? ((stage + 1) as 1 | 2) : null;
 }
 
 /** Pure: mailtekst van de herinnering in de huisstijl-opmaak ("! " = kader, "✓ " = vinkjes). */
