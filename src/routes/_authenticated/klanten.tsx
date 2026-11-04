@@ -12,7 +12,7 @@ import { filterChoices } from "@/lib/choice-search";
 import { syndicusDetailsPatch, syndicusLabel, syndicusSuggestions, type SyndicusDetailField, type SyndicusDetails } from "@/lib/syndicus";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
-  validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search.q === "string" && search.q ? { q: search.q } : {}),
+  validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search["q"] === "string" && search["q"] ? { q: search["q"] } : {}),
   head: () => ({ meta: [{ title: "Klanten — Riory Werkbonnen" }, { name: "description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:title", content: "Klanten — Riory Werkbonnen" }, { property: "og:description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Klanten,
 });
