@@ -1,0 +1,11 @@
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_company text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_contact text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_vat_number text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_street text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_house_number text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_postal_code text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_city text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_phone text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_email text;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS syndicus_billing_email text;
+COMMENT ON COLUMN public.customers.syndicus IS 'Weergavenaam van het syndicuskantoor (bedrijfsnaam en contactpersoon); details staan in de syndicus_* kolommen';

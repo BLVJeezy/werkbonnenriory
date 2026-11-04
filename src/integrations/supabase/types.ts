@@ -580,6 +580,16 @@ export type Database = {
           project_name: string | null
           street: string | null
           syndicus: string | null
+          syndicus_billing_email: string | null
+          syndicus_city: string | null
+          syndicus_company: string | null
+          syndicus_contact: string | null
+          syndicus_email: string | null
+          syndicus_house_number: string | null
+          syndicus_phone: string | null
+          syndicus_postal_code: string | null
+          syndicus_street: string | null
+          syndicus_vat_number: string | null
           vat_number: string | null
           vrij_beroep: boolean
         }
@@ -603,6 +613,16 @@ export type Database = {
           project_name?: string | null
           street?: string | null
           syndicus?: string | null
+          syndicus_billing_email?: string | null
+          syndicus_city?: string | null
+          syndicus_company?: string | null
+          syndicus_contact?: string | null
+          syndicus_email?: string | null
+          syndicus_house_number?: string | null
+          syndicus_phone?: string | null
+          syndicus_postal_code?: string | null
+          syndicus_street?: string | null
+          syndicus_vat_number?: string | null
           vat_number?: string | null
           vrij_beroep?: boolean
         }
@@ -626,6 +646,16 @@ export type Database = {
           project_name?: string | null
           street?: string | null
           syndicus?: string | null
+          syndicus_billing_email?: string | null
+          syndicus_city?: string | null
+          syndicus_company?: string | null
+          syndicus_contact?: string | null
+          syndicus_email?: string | null
+          syndicus_house_number?: string | null
+          syndicus_phone?: string | null
+          syndicus_postal_code?: string | null
+          syndicus_street?: string | null
+          syndicus_vat_number?: string | null
           vat_number?: string | null
           vrij_beroep?: boolean
         }
