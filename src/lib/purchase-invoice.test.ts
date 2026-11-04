@@ -71,6 +71,13 @@ describe("purchaseInvoiceWarnings", () => {
   it("waarschuwt als lijnen niet kloppen met netto", () => {
     expect(purchaseInvoiceWarnings({ ...ok, net: 90 }).some((w) => w.includes("wijkt af"))).toBe(true);
   });
+  it("waarschuwt als de btw van de lijnen niet klopt met de btw op het document", () => {
+    const withVat = normalizePurchaseInvoice({
+      supplierName: "Desco", supplierIban: "BE71 0961 2345 6769", invoiceNumber: "1", dueDate: "2026-11-03",
+      lines: [{ description: "Kabel", quantity: 1, net: 100, vat: 21 }], net: 100, vat: 12, total: 112,
+    });
+    expect(purchaseInvoiceWarnings(withVat).some((w) => w.includes("Btw van de lijnen"))).toBe(true);
+  });
   it("waarschuwt bij ontbrekend IBAN en vervaldag", () => {
     const w = purchaseInvoiceWarnings({ ...ok, supplierIban: null, dueDate: null });
     expect(w.some((x) => x.includes("IBAN"))).toBe(true);
