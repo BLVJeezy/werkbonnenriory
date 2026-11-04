@@ -134,3 +134,13 @@ describe("garantie op factuur", () => {
     expect(r.net).toBe(80);
   });
 });
+
+describe("factuurontvanger", () => {
+  const base = { number: 1, customer_name: "K", address: null, street: null, house_number: null, postal_code: null, city: null, vat_number: null, email: "algemeen@x.be", billing_email: null, distance_km: null, warranty: false, vat_rate: 21, paid_amount: null, paid_at: null } as any;
+  it("gebruikt het facturatieadres van de klant vóór het algemene adres", () => {
+    expect(buildInvoice({ wo: { ...base, customer_billing_email: "factuur@x.be" }, activity: null, seconds: 0, materials: [], kmRate: 0 }).customer.email).toBe("factuur@x.be");
+  });
+  it("valt terug op het algemene adres zonder facturatieadres", () => {
+    expect(buildInvoice({ wo: base, activity: null, seconds: 0, materials: [], kmRate: 0 }).customer.email).toBe("algemeen@x.be");
+  });
+});

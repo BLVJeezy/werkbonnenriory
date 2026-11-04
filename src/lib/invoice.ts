@@ -10,6 +10,8 @@ export type InvoiceCustomer = {
 type InvoiceWorkOrder = SiteAddressParts & {
   number: number | null; customer_name: string; address: string | null; street: string | null; house_number: string | null;
   postal_code: string | null; city: string | null; vat_number: string | null; email: string | null; billing_email: string | null;
+  /** Facturatiemail van de gekoppelde klant; gaat vóór het algemene adres van de werkbon. */
+  customer_billing_email?: string | null;
   distance_km: number | null; warranty: boolean; vat_rate: number; paid_amount: number | null; paid_at: string | null;
 };
 
@@ -35,7 +37,7 @@ export function buildInvoice(o: {
   const t = computeTotals({ seconds: o.seconds, hourlyRate: rate, distanceKm: wo.distance_km, kmRate: o.kmRate, materials: o.materials, vatRate: Number(wo.vat_rate), warranty: wo.warranty });
   const customer: InvoiceCustomer = {
     name: wo.customer_name, address: wo.address, siteAddress: wo.use_site_address ? formatSiteAddress(wo) : null,
-    vatNumber: wo.vat_number?.trim() || null, email: wo.billing_email?.trim() || wo.email?.trim() || null,
+    vatNumber: wo.vat_number?.trim() || null, email: wo.billing_email?.trim() || wo.customer_billing_email?.trim() || wo.email?.trim() || null,
     street: wo.street, houseNumber: wo.house_number, postalCode: wo.postal_code, city: wo.city,
   };
   const paid = wo.paid_at ? Number(wo.paid_amount ?? 0) : 0;
