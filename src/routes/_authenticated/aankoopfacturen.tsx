@@ -16,7 +16,7 @@ import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, sendPeppyrusTestInvoice, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
-import { attachPurchasePdf, importReceipt, importPurchaseInvoices, importPurchasesFromSimpla, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
+import { attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
   head: () => ({ meta: [{ title: "Aankoopfacturen — Riory Werkbonnen" }, { name: "description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:title", content: "Aankoopfacturen — Riory Werkbonnen" }, { property: "og:description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -37,7 +37,6 @@ const d = (s: string | null) => (s ? new Date(`${s}T12:00:00Z`).toLocaleDateStri
 function Aankoopfacturen() {
   const qc = useQueryClient();
   const doImport = useServerFn(importPurchaseInvoices);
-  const doSimpla = useServerFn(importPurchasesFromSimpla);
   const uploadPdf = useServerFn(attachPurchasePdf);
   const uploadTicket = useServerFn(importReceipt);
   const getPeppyrus = useServerFn(peppyrusStatus);
@@ -89,12 +88,6 @@ function Aankoopfacturen() {
     setBusy(false); refresh();
   }
   async function leesBestanden(files: FileList | File[]) { for (const f of Array.from(files)) await leesTicket(f); }
-  async function vanSimpla() {
-    setBusy(true);
-    try { const r = await doSimpla(); toast.success(`${r.imported} openstaande factuur/facturen uit Simpla ingelezen${r.skipped ? `, ${r.skipped} al aanwezig` : ""}`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Simpla inlezen mislukt"); }
-    setBusy(false); refresh();
-  }
   const update = useServerFn(updatePurchaseInvoice);
   const setStatus = useServerFn(setPurchaseInvoiceStatus);
   const payFile = useServerFn(paymentFile);
@@ -243,7 +236,6 @@ function Aankoopfacturen() {
           <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>
           {peppyrus?.configured && !peppyrus.live ? <Button variant="outline" disabled={busy} title="Stuurt een proeffactuur naar je eigen Peppol-adres in de testomgeving" onClick={stuurTest}>Testfactuur ontvangen</Button> : null}
           <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Inlezen vanuit mail"}</Button>
-          <Button variant="outline" disabled={busy} onClick={vanSimpla}>Inlezen uit Simpla</Button>
         </div>
       </div>
 
