@@ -320,6 +320,7 @@ function Facturen() {
                             {i.kind === "creditnota" && i.credit_for && (() => { const o = data.invoices.find((x) => x.id === i.credit_for); return o ? <NewInvoice copyFrom={o} copyLabel={`Nieuwe factuur i.p.v. ${o.number}`} onCreated={refresh} /> : null; })()}
                             {isInvoiceEditable(i) && <NewInvoice invoice={i} creditNote={i.kind === "creditnota"} onCreated={refresh} />}
                             {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
+                            {i.status === "verzonden" && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendCopy(i.id, i.number, (i.customer as { email?: string | null } | null)?.email ?? null)}>Kopie mailen</Button>}
                           </div>
                         </div>
                       </td></tr>
