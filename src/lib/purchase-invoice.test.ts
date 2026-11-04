@@ -26,6 +26,12 @@ describe("normalizePurchaseInvoice", () => {
     expect(inv.invoiceDate).toBeNull();
     expect(inv.dueDate).toBeNull();
   });
+
+  it("schrijft een BIC in hoofdletters zonder spaties", () => {
+    const inv = normalizePurchaseInvoice({ supplierName: "X", supplierBic: " gkcc bebB ", lines: [], net: 0, vat: 0, total: 0 });
+    expect(inv.supplierBic).toBe("GKCCBEBB");
+    expect(normalizePurchaseInvoice({ supplierName: "X", supplierBic: "   " }).supplierBic).toBeNull();
+  });
 });
 
 describe("purchaseInvoiceWarnings", () => {

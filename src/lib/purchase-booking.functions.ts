@@ -147,7 +147,7 @@ export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware(
           if (error) path = null;
         }
         const { data: row, error } = await context.supabase.from('purchase_invoices').insert({
-          supplier_name: p.supplierName, supplier_vat: p.supplierVat, supplier_iban: p.supplierIban, kind: p.kind,
+          supplier_name: p.supplierName, supplier_vat: p.supplierVat, supplier_iban: p.supplierIban, supplier_bic: p.supplierBic ?? null, kind: p.kind,
           invoice_number: p.invoiceNumber, invoice_date: p.invoiceDate, due_date: p.dueDate, lines: p.lines,
           net: p.net, vat: p.vat, total: p.total, payment_ref: p.paymentRef, source: 'peppol', status: 'te_controleren',
           pdf_path: path, peppyrus_message_id: id,

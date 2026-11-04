@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { daysUntilDue, dueLabel, learnedAccount, lineKey, parsePurchaseUbl, paymentCommunication, paymentMethodLock, supplierBankWarnings } from './purchase-booking';
+import { creditorBank, daysUntilDue, dueLabel, learnedAccount, lineKey, parsePurchaseUbl, paymentCommunication, paymentMethodLock, supplierBankWarnings } from './purchase-booking';
 
 describe('purchase booking', () => {
   it('learns per supplier and description, ignoring numbers', () => {
