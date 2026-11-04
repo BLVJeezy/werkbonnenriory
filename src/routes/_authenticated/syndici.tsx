@@ -185,9 +185,9 @@ function ResidentiesOverzicht({ rijen }: { rijen: ResidentyRij<Residentie>[] }) 
           .
         </p>
       ) : (
-        <div className={`mt-3 ${tableWrap}`}>
+        <div className="mt-3 max-h-[32rem] overflow-auto rounded-md border bg-card">
           <table className={tableCls}>
-            <thead className="bg-muted/40">
+            <thead className="sticky top-0 z-10 bg-muted">
               <tr>
                 <SortTh k="residentie" sort={sort}>
                   Residentie
@@ -463,9 +463,9 @@ function Syndici() {
                 Lijst van {g.rows.length} residentie{g.rows.length === 1 ? "" : "s"} openen
               </button>
             ) : (
-              <div className="mt-3 overflow-x-auto rounded-md border bg-muted/20">
+              <div className="mt-3 max-h-96 overflow-auto rounded-md border bg-muted/20">
                 <table className="w-full text-sm [&_tbody_tr]:border-t [&_td]:px-3 [&_td]:py-1.5 [&_td]:align-baseline">
-                  <thead className="text-left text-xs font-bold uppercase tracking-wide text-muted-foreground [&_th]:px-3 [&_th]:py-1.5">
+                  <thead className="sticky top-0 z-10 bg-card text-left text-xs font-bold uppercase tracking-wide text-muted-foreground [&_th]:px-3 [&_th]:py-1.5">
                     <tr>
                       <th className="w-24">Klantnr.</th>
                       <th>Residentie</th>
