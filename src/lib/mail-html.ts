@@ -18,7 +18,7 @@ function button(url: string, label: string, secondary = false) {
 }
 
 /** Zet een platte tekstmail om naar HTML in Riory-huisstijl. Regels die enkel een link zijn worden een knop. */
-export function brandedMailHtml(text: string, contactEmail = 'info@riory.be', imageUrl?: string | null) {
+export function brandedMailHtml(text: string, contactEmail = 'info@riory.be', imageUrl?: string | null, pixelUrl?: string | null) {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   const parts: string[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -44,7 +44,7 @@ export function brandedMailHtml(text: string, contactEmail = 'info@riory.be', im
   }
   // Openingsmeting: een onzichtbare pixel met hetzelfde token als de documentlink.
   const docLink = /https:\/\/werkbonnenriory\.lovable\.app\/document\/[a-f0-9%-]+/.exec(text)?.[0];
-  const pixel = docLink ? openPixelUrl(docLink) : null;
+  const pixel = pixelUrl ?? (docLink ? openPixelUrl(docLink) : null);
   return `<!doctype html><html lang="nl"><body style="margin:0;padding:0;background:#ffffff">${pixel ? `<img src="${esc(pixel)}" alt="" width="1" height="1" style="display:block;width:1px;height:1px;border:0;opacity:0" />` : ''}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${SOFT};padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden">
