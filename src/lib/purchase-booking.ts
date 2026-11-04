@@ -67,6 +67,14 @@ export function paymentMethodLock(method: string, status: string): string | null
 const tag = (xml: string, name: string) => new RegExp(`<(?:[\\w-]+:)?${name}\\b[^>]*>([\\s\\S]*?)</(?:[\\w-]+:)?${name}>`, 'i').exec(xml)?.[1]?.trim() ?? null;
 const tags = (xml: string, name: string) => [...xml.matchAll(new RegExp(`<(?:[\\w-]+:)?${name}\\b[^>]*>([\\s\\S]*?)</(?:[\\w-]+:)?${name}>`, 'gi'))].map(m => m[1] ?? '');
 const decode = (s: string | null) => s?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&').trim() || null;
+/** Pure: a figure inside a tag, or null when the tag is absent — so a missing amount is never read as 0. */
+const numTag = (xml: string, name: string): number | null => {
+  const s = decode(tag(xml, name));
+  if (s === null) return null;
+  const n = Number(s.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+};
+const UNITS: Record<string, string> = { EA: 'st', H87: 'st', C62: 'st', SET: 'set', KGM: 'kg', GRM: 'g', LTR: 'l', MTR: 'm', MTK: 'm²', DAY: 'dag', MON: 'maand', HUR: 'uur', ANN: 'jaar' };
 
 /** Pure: reads an incoming Peppol BIS 3 UBL invoice/credit note. */
 export function parsePurchaseUbl(xml: string): ParsedPurchaseInvoice & { kind: 'factuur' | 'creditnota'; pdfBase64: string | null } {
@@ -80,14 +88,22 @@ export function parsePurchaseUbl(xml: string): ParsedPurchaseInvoice & { kind: '
   const lineTag = kind === 'creditnota' ? 'CreditNoteLine' : 'InvoiceLine';
   const qtyTag = kind === 'creditnota' ? 'CreditedQuantity' : 'InvoicedQuantity';
   const totals = tag(xml, 'LegalMonetaryTotal') ?? '';
-  const lines = tags(xml, lineTag).map(l => ({
-    description: decode(tag(tag(l, 'Item') ?? '', 'Name')) ?? decode(tag(l, 'Description')) ?? 'Lijn',
-    quantity: Number(tag(l, qtyTag)) || 1,
-    unit: /unitCode="([^"]+)"/.exec(l)?.[1] ?? 'st',
-    unitPrice: Number(tag(tag(l, 'Price') ?? '', 'PriceAmount')) || 0,
-    amount: Number(tag(l, 'LineExtensionAmount')) || 0,
-  }));
   const taxTotal = tag(xml, 'TaxTotal') ?? '';
+  // Most Peppol invoices carry one tax category; then that percentage belongs to every line.
+  const percents = [...new Set(tags(taxTotal, 'TaxSubtotal').map(s => numTag(s, 'Percent')).filter((p): p is number => p !== null))];
+  const docRate = percents.length === 1 ? percents[0] : null;
+  const lines = tags(xml, lineTag).map(l => {
+    const unitCode = /unitCode="([^"]+)"/.exec(l)?.[1];
+    return {
+      description: decode(tag(tag(l, 'Item') ?? '', 'Name')) ?? decode(tag(l, 'Description')) ?? 'Lijn',
+      quantity: Number(tag(l, qtyTag)) || 1,
+      unit: (unitCode && UNITS[unitCode]) || unitCode || 'st',
+      unitPrice: Number(tag(tag(l, 'Price') ?? '', 'PriceAmount')) || 0,
+      amount: Number(tag(l, 'LineExtensionAmount')) || 0,
+      vatRate: numTag(l, 'Percent') ?? docRate,
+      vat: numTag(l, 'TaxAmount'),
+    };
+  });
   const ref = decode(tag(pm, 'PaymentID'));
   const number = decode(tag(xml.replace(/<(?:[\w-]+:)?(AccountingSupplierParty|AccountingCustomerParty|InvoiceLine|CreditNoteLine|BillingReference|OrderReference)[\s\S]*?<\/(?:[\w-]+:)?\1>/g, ''), 'ID'));
   const parsed = normalizePurchaseInvoice({
