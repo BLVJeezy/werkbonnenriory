@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { formatAddress } from "@/lib/address";
-import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
+import { SortTh, Th, tableCls, useSort } from "@/components/SortTable";
 import { filterChoices } from "@/lib/choice-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
