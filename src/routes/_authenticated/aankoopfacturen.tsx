@@ -246,6 +246,10 @@ function Aankoopfacturen() {
         </div>
       </div>
 
+      {peppyrus?.configured ? (peppyrus.participantId
+        ? <p className="text-sm text-muted-foreground">Peppol-adres van deze account: <span className="font-mono">{peppyrus.participantId}</span>{peppyrus.live ? '' : ' — testomgeving'}</p>
+        : <p className="text-sm text-destructive">Peppol nog niet gereed: {peppyrus.error ?? 'geen Peppol-adres gekend'}</p>) : null}
+
       <div
         role="button" tabIndex={0} aria-label="Facturen of kastickets hierheen slepen"
         onClick={() => document.getElementById('receipt-upload')?.click()}
