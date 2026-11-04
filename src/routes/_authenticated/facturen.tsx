@@ -10,7 +10,7 @@ import { euro, workOrderRevenue } from "@/lib/billing";
 import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
-import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoices } from "@/lib/invoices.functions";
+import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
 import { isInvoiceEditable } from "@/lib/invoice";
 import { QrCode, Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
@@ -66,6 +66,15 @@ function Facturen() {
   const toAccountant = useServerFn(sendAllToAccountant);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const byPost = useServerFn(sendInvoiceByPost);
+  const copyMail = useServerFn(sendInvoiceCopy);
+  async function sendCopy(id: string, number: string, currentEmail: string | null) {
+    const to = window.prompt(`Kopie van factuur ${number} mailen naar:`, currentEmail ?? "");
+    if (!to?.trim()) return;
+    setBusy(true);
+    try { await copyMail({ data: { invoiceId: id, to: to.trim() } }); toast.success(`Kopie verzonden naar ${to.trim()}`); refresh(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Kopie verzenden mislukt'); }
+    finally { setBusy(false); }
+  }
   async function sendPost(id: string, number: string) {
     if (!confirm(`Factuur ${number} per briefpost (bpost) versturen naar het adres van de klant?`)) return;
     setBusy(true);
@@ -311,6 +320,7 @@ function Facturen() {
                             {i.kind === "creditnota" && i.credit_for && (() => { const o = data.invoices.find((x) => x.id === i.credit_for); return o ? <NewInvoice copyFrom={o} copyLabel={`Nieuwe factuur i.p.v. ${o.number}`} onCreated={refresh} /> : null; })()}
                             {isInvoiceEditable(i) && <NewInvoice invoice={i} creditNote={i.kind === "creditnota"} onCreated={refresh} />}
                             {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
+                            {i.status === "verzonden" && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendCopy(i.id, i.number, (i.customer as { email?: string | null } | null)?.email ?? null)}>Kopie mailen</Button>}
                           </div>
                         </div>
                       </td></tr>
