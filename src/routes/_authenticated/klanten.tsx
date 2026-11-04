@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/klanten")({
   component: Klanten,
 });
 
-const FIELDS: { key: keyof CustomerRow; label: string; className: string }[] = [
+const FIELDS: { key: keyof CustomerRow | "syndicus"; label: string; className: string }[] = [
   { key: "name", label: "Naam", className: "min-w-48 flex-1" },
   { key: "street", label: "Straat", className: "min-w-40 flex-[2]" },
   { key: "house_number", label: "Nr.", className: "w-24" },
