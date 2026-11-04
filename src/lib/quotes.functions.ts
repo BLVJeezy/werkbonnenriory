@@ -266,7 +266,7 @@ export const sendQuote = createServerFn({ method: "POST" })
       linkText(quoteMailText({ kind: q.kind, number: q.number as string, customerName: (q.customer as InvoiceCustomer).name, link, lines: (q.lines as InvoiceLine[]) ?? [] }), tracking.url),
       { name: `Offerte-${q.number}.pdf`, contentType: "application/pdf", contentBytes: pdf },
     ));
-    const { error } = await context.supabase.from("quotes").update({ status: "verzonden", sent_at: new Date().toISOString() }).eq("id", q.id);
+    const { error } = await context.supabase.from("quotes").update({ status: "verzonden", sent_at: new Date().toISOString(), reminder_stage: 0, reminder_error: null }).eq("id", q.id);
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
