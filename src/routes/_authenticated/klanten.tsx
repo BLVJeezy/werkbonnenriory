@@ -39,6 +39,8 @@ function Klanten() {
     queryKey: ["customers"],
     queryFn: () => allCustomers(supabase),
   });
+  const { data: branches = [] } = useQuery({ queryKey: ["branches"], queryFn: async () => (await supabase.from("branches").select("*").order("name")).data ?? [] });
+  const branchName = (id: string | null | undefined) => branches.find((b) => b.id === id)?.name;
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
   const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number].filter(Boolean).join(' ') })), q).map(c => c.value));
   const rows = data.filter(c => matchingIds.has(c.id));
@@ -121,7 +123,7 @@ function Klanten() {
                 <Fragment key={c.id}>
                   <tr>
                     <td className="max-w-24 truncate font-mono text-xs text-muted-foreground" title={c.customer_number ?? ""}>{c.customer_number}</td>
-                    <td className="font-bold">{c.name}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
                     <td className="hidden max-w-56 truncate 2xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
