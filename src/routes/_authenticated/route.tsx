@@ -8,6 +8,7 @@ import { useRole, useLargeText, usePerms } from "@/lib/use-role";
 import { largeTextOn, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
 import { Menu, X } from "lucide-react";
 import { OverdueAfterNoticeAlert } from "@/components/OverdueAfterNoticeAlert";
+import { AdminNotifications } from "@/components/AdminNotifications";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -53,6 +54,7 @@ function Layout() {
 
   return (
     <div className={fullScreen ? 'flex h-dvh min-h-0 flex-col overflow-hidden bg-background' : 'min-h-screen bg-background'}>
+      {role === "admin" && <AdminNotifications />}
       <header className="no-print shrink-0 border-b-4 border-primary bg-secondary text-secondary-foreground">
         <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 sm:flex sm:flex-wrap sm:gap-4 sm:px-4">
           <Link to={role === "admin" ? "/dashboard" : "/werkbonnen"} className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>

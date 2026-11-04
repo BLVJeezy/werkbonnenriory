@@ -1,3 +1,4 @@
+import { OpenEye, useOpens } from "@/components/OpenEye";
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -40,6 +41,7 @@ function CompletedWorkOrders() {
   const [crew, setCrew] = useState('');
   const [from, setFrom] = useState('');
   const [until, setUntil] = useState('');
+  const opensW = useOpens(["werkbon"]);
   const { data = [], isPending, error } = useQuery({
     queryKey: ['work_orders', 'completed'],
     enabled: allowed,
@@ -84,7 +86,7 @@ function CompletedWorkOrders() {
     {error ? <p role="alert" className="text-destructive">Werkbonnen ophalen mislukt. Probeer opnieuw.</p> : isPending ? <p className="text-muted-foreground">Werkbonnen laden…</p> : <div className={tableWrap}>
       <table className={tableCls}><thead><tr><SortTh k="nr" sort={sort}>Nummer</SortTh><SortTh k="klant" sort={sort}>Klant</SortTh><SortTh k="ploeg" sort={sort}>Ploeg</SortTh><SortTh k="datum" sort={sort}>Afgewerkt op</SortTh><Th>Status</Th><Th>Werkbon</Th></tr></thead>
         <tbody>{sort.sorted.map(row => <tr key={row.id}>
-          <td className="whitespace-nowrap font-mono">{werkbonNr(row.number)}</td>
+          <td className="whitespace-nowrap font-mono"><span className="inline-flex items-center gap-1.5">{werkbonNr(row.number)}<OpenEye sent={!!opensW.data?.sent.has(row.id)} info={opensW.data?.opens[row.id]} /></span></td>
           <td className="min-w-48"><Link to="/werkbonnen/$id" params={{ id: row.id }} className="font-bold hover:underline">{row.customer_name}</Link><p className="text-xs text-muted-foreground">{destinationAddress(row)}</p></td>
           <td>{row.technicians?.name ?? 'Niet toegewezen'}</td>
           <td className="whitespace-nowrap">{new Date(completionDate(row)).toLocaleString('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'short', ...(row.signed_at || row.paid_at ? { timeStyle: 'short' as const } : {}) })}</td>

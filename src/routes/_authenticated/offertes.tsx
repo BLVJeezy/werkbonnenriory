@@ -1,3 +1,4 @@
+import { OpenEye, useOpens } from "@/components/OpenEye";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -72,6 +73,7 @@ function Offertes() {
   const suggest = useServerFn(suggestInsuranceQuote);
   const bestek = kind === "verzekering";
 
+  const opensQ = useOpens(["offerte"]);
   const { data: quotes = [] } = useQuery({
     queryKey: ["quotes"],
     queryFn: async () => (await supabase.from("quotes").select("*").order("created_at", { ascending: false })).data ?? [],
@@ -427,7 +429,7 @@ function Offertes() {
             <li key={q.id} className="space-y-2 p-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
                 <div className="flex min-w-0 items-center gap-2 sm:flex-1">
-                  <span className="font-mono font-bold">{q.number}{q.kind === "verzekering" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">Bestek</span>}</span>
+                  <span className="inline-flex items-center gap-1.5 font-mono font-bold">{q.number}{q.sent_at && <OpenEye info={opensQ.data?.opens[q.id]} />}{q.kind === "verzekering" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">Bestek</span>}</span>
                   <span className="min-w-0 break-words font-semibold">{c.name}</span>
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
