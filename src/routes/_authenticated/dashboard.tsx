@@ -9,7 +9,7 @@ import { euro } from "@/lib/billing";
 import { FinanceYear } from "@/components/FinanceYear";
 import { computeTotals } from "@/lib/billing";
 import { totalSeconds } from "@/lib/time";
-import { groupOmzet, type InvoiceOmzetRow } from "@/lib/dashboard";
+import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
 import {
   ResponsiveContainer,
   BarChart,
@@ -59,7 +59,7 @@ function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select("id, issue_date, net, vat, total, paid_amount, kind")
+        .select("id, issue_date, net, vat, total, paid_amount, kind, work_order_id")
         .gte("issue_date", from)
         .lte("issue_date", to);
       if (error) throw error;
