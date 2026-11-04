@@ -579,6 +579,7 @@ export type Database = {
           postal_code: string | null
           project_name: string | null
           street: string | null
+          syndicus: string | null
           vat_number: string | null
           vrij_beroep: boolean
         }
@@ -601,6 +602,7 @@ export type Database = {
           postal_code?: string | null
           project_name?: string | null
           street?: string | null
+          syndicus?: string | null
           vat_number?: string | null
           vrij_beroep?: boolean
         }
@@ -623,6 +625,7 @@ export type Database = {
           postal_code?: string | null
           project_name?: string | null
           street?: string | null
+          syndicus?: string | null
           vat_number?: string | null
           vrij_beroep?: boolean
         }
@@ -2752,6 +2755,7 @@ export type Database = {
           source_subject: string | null
           status: string
           street: string | null
+          syndicus: string | null
           technician_id: string | null
           urgent: boolean
           use_site_address: boolean
@@ -2808,6 +2812,7 @@ export type Database = {
           source_subject?: string | null
           status?: string
           street?: string | null
+          syndicus?: string | null
           technician_id?: string | null
           urgent?: boolean
           use_site_address?: boolean
@@ -2864,6 +2869,7 @@ export type Database = {
           source_subject?: string | null
           status?: string
           street?: string | null
+          syndicus?: string | null
           technician_id?: string | null
           urgent?: boolean
           use_site_address?: boolean
