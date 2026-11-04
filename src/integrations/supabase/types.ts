@@ -2606,6 +2606,54 @@ export type Database = {
         }
         Relationships: []
       }
+      syndici: {
+        Row: {
+          billing_email: string | null
+          city: string | null
+          company: string
+          contact: string | null
+          created_at: string
+          email: string | null
+          house_number: string | null
+          id: string
+          phone: string | null
+          postal_code: string | null
+          street: string | null
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          billing_email?: string | null
+          city?: string | null
+          company: string
+          contact?: string | null
+          created_at?: string
+          email?: string | null
+          house_number?: string | null
+          id?: string
+          phone?: string | null
+          postal_code?: string | null
+          street?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          billing_email?: string | null
+          city?: string | null
+          company?: string
+          contact?: string | null
+          created_at?: string
+          email?: string | null
+          house_number?: string | null
+          id?: string
+          phone?: string | null
+          postal_code?: string | null
+          street?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
       technicians: {
         Row: {
           can_payment: boolean
