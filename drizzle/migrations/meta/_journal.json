@@ -750,6 +750,13 @@
       "when": 1793793676346,
       "tag": "0106_syndicus_details",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1793794629628,
+      "tag": "0107_syndici_directory",
+      "breakpoints": true
     }
   ]
 }
