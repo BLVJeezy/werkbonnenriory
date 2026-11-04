@@ -39,8 +39,8 @@ function Syndici() {
         <Button asChild size="sm" variant="outline" className="ml-auto"><Link to="/klanten">Naar klanten</Link></Button>
       </div>
       <p className="text-sm text-muted-foreground">
-        {groups.length} syndicus{groups.length === 1 ? "" : "sen"} met samen {withSyndicus} klant{withSyndicus === 1 ? "" : "en"}.
-        {withoutSyndicus > 0 && <> Nog {withoutSyndicus} klant{withoutSyndicus === 1 ? "" : "en"} heeft geen syndicus; vink die in bij <Link to="/klanten" className="underline">Klanten</Link> en klik <strong className="font-semibold text-foreground">Syndicus toewijzen</strong>.</>}
+        {groups.length} syndicus{groups.length === 1 ? "" : "i"} met samen {withSyndicus} klant{withSyndicus === 1 ? "" : "en"}.
+        {withoutSyndicus > 0 && <> Nog {withoutSyndicus.toLocaleString("nl-BE")} klant{withoutSyndicus === 1 ? "" : "en"} {withoutSyndicus === 1 ? "heeft" : "hebben"} geen syndicus; vink die in bij <Link to="/klanten" className="underline">Klanten</Link> en klik <strong className="font-semibold text-foreground">Syndicus toewijzen</strong>.</>}
       </p>
 
       {groups.length === 0 && <div className="rounded-md border bg-card p-6 text-muted-foreground">Nog geen syndici bekend. Wijs een syndicus toe bij een klant, of selecteer meerdere VME's bij Klanten en klik <strong className="font-semibold text-foreground">Syndicus toewijzen</strong>.</div>}
