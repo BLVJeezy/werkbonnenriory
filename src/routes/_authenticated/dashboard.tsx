@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { useRole } from "@/lib/use-role";
 import { euro } from "@/lib/billing";
 import { FinanceYear } from "@/components/FinanceYear";
+import { computeTotals } from "@/lib/billing";
+import { totalSeconds } from "@/lib/time";
 import { groupOmzet, type InvoiceOmzetRow } from "@/lib/dashboard";
 import {
   ResponsiveContainer,
@@ -65,13 +67,38 @@ function Dashboard() {
     },
   });
 
+  // Omzet per dag volgens de werkdag van de afgewerkte werkbon, niet de factuurdatum.
+  const { data: woRows = [] } = useQuery({
+    queryKey: ["dashboard-omzet-werkbonnen", from, to],
+    enabled: role === "admin" && !!from && !!to && from <= to,
+    queryFn: async () => {
+      const early = new Date(`${from}T12:00:00Z`); early.setUTCDate(early.getUTCDate() - 60);
+      const [w, s, a] = await Promise.all([
+        supabase.from("work_orders").select("id, scheduled_date, signed_at, paid_amount, activity_id, distance_km, vat_rate, warranty, no_invoice, time_entries(started_at, ended_at), materials(quantity, unit_price)").eq("status", "afgetekend").eq("no_invoice", false).gte("signed_at", early.toISOString()).limit(5000),
+        supabase.from("settings").select("km_rate").eq("id", 1).single(),
+        supabase.from("activities").select("id, hourly_rate"),
+      ]);
+      if (w.error) throw w.error;
+      const kmRate = Number(s.data?.km_rate ?? 0);
+      return (w.data ?? []).flatMap((o) => {
+        const day = (o.scheduled_date ?? o.signed_at ?? "").slice(0, 10);
+        if (!day || day < from || day > to) return [];
+        const vatRate = Number(o.vat_rate);
+        const net = o.paid_amount != null
+          ? Number(o.paid_amount) / (1 + vatRate / 100)
+          : computeTotals({ seconds: totalSeconds(o.time_entries as never, Date.now()), hourlyRate: Number(a.data?.find((x) => x.id === o.activity_id)?.hourly_rate ?? 0), distanceKm: o.distance_km == null ? null : Number(o.distance_km), kmRate, materials: o.materials.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })), vatRate, warranty: o.warranty }).net;
+        return [{ id: o.id, issue_date: day, net, vat: 0, total: 0, paid_amount: 0, kind: "werkbon" } as InvoiceOmzetRow];
+      });
+    },
+  });
+
   if (role !== "admin") return null;
 
   const sign = (r: InvoiceOmzetRow) => (r.kind === "creditnota" ? -1 : 1);
-  const omzet = rows.reduce((s, r) => s + sign(r) * Number(r.net), 0);
+  const omzet = woRows.reduce((s, r) => s + Number(r.net), 0);
   const btw = rows.reduce((s, r) => s + sign(r) * Number(r.vat), 0);
   const openstaand = rows.reduce((s, r) => s + sign(r) * Math.max(0, Number(r.total) - Number(r.paid_amount)), 0);
-  const punten = groupOmzet(rows, from, to);
+  const punten = groupOmzet(woRows, from, to);
   const perMaand = punten.length > 62;
 
   return (
@@ -95,7 +122,7 @@ function Dashboard() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-md border bg-card p-3">
-          <p className="text-xs font-bold uppercase opacity-70">Omzet (excl. btw)</p>
+          <p className="text-xs font-bold uppercase opacity-70">Omzet werkbonnen (excl. btw)</p>
           <p className="text-xl font-black">{euro(omzet)}</p>
         </div>
         <div className="rounded-md border bg-card p-3">
@@ -114,7 +141,7 @@ function Dashboard() {
 
       <div className="rounded-md border bg-card p-3 sm:p-4">
         <p className="mb-3 text-sm font-bold uppercase opacity-70">
-          Omzet per {perMaand ? "maand" : "dag"} (excl. btw, creditnota’s afgetrokken)
+          Omzet per {perMaand ? "maand" : "dag"} volgens werkdag van de werkbonnen (excl. btw)
         </p>
         <div className="h-72 w-full sm:h-96">
           <ResponsiveContainer width="100%" height="100%">
