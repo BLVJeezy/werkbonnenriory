@@ -12,7 +12,7 @@ import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from "@/lib/suppli
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
-import { paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
+import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
 import { attachPurchasePdf, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
 const VAT_ACCOUNT = { number: "411000", name: "Terug te vorderen btw" };
 
 type Row = {
-  id: string; supplier_name: string; supplier_vat: string | null; supplier_iban: string | null;
+  id: string; supplier_name: string; supplier_vat: string | null; supplier_iban: string | null; supplier_bic: string | null;
   invoice_number: string | null; invoice_date: string | null; due_date: string | null;
   lines: PurchaseLine[]; net: number; vat: number; total: number; payment_ref: string | null;
   status: string; pdf_path: string | null; kind: "factuur" | "creditnota"; paid_at: string | null;
@@ -48,12 +48,13 @@ function Controle() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [sources, setSources] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
+  const [syncSupplier, setSyncSupplier] = useState(true);
 
   async function load() {
     const { data: r } = await supabase.from("purchase_invoices").select("*").eq("id", id).single();
     if (!r) { toast.error("Factuur niet gevonden"); return; }
     const row = { ...r, kind: r.kind === "creditnota" ? "creditnota" : "factuur", lines: (r.lines ?? []) as PurchaseLine[] } as Row;
-    setEdit(row); setSources({}); setPdfUrl(null);
+    setEdit(row); setSources({}); setPdfUrl(null); setSyncSupplier(true);
     if (row.pdf_path) {
       const { data } = await supabase.storage.from("aankoopfacturen").createSignedUrl(row.pdf_path, 3600);
       setPdfUrl(data?.signedUrl ?? null);
