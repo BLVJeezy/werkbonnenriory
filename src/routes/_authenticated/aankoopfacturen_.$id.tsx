@@ -13,6 +13,7 @@ import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
+import { bankOfIban, nextBic } from "@/lib/iban-bic";
 import { attachPurchasePdf, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
@@ -48,13 +49,13 @@ function Controle() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [sources, setSources] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
-  const [syncSupplier, setSyncSupplier] = useState(true);
 
   async function load() {
     const { data: r } = await supabase.from("purchase_invoices").select("*").eq("id", id).single();
     if (!r) { toast.error("Factuur niet gevonden"); return; }
     const row = { ...r, kind: r.kind === "creditnota" ? "creditnota" : "factuur", lines: (r.lines ?? []) as PurchaseLine[] } as Row;
-    setEdit(row); setSources({}); setPdfUrl(null); setSyncSupplier(true);
+    row.supplier_bic = nextBic(row.supplier_iban, row.supplier_bic, row.supplier_iban);
+    setEdit(row); setSources({}); setPdfUrl(null);
     if (row.pdf_path) {
       const { data } = await supabase.storage.from("aankoopfacturen").createSignedUrl(row.pdf_path, 3600);
       setPdfUrl(data?.signedUrl ?? null);
@@ -79,7 +80,7 @@ function Controle() {
     setBusy(true);
     try {
       const res = await update({ data: {
-        id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic, syncSupplier,
+        id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
         invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
         lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
       } });
@@ -114,6 +115,8 @@ function Controle() {
 
   const sup = suppliers.find((x) => x.id === edit.supplier_id) ?? null;
   const bank = creditorBank(edit, sup);
+  const derived = bankOfIban(edit.supplier_iban ?? sup?.iban ?? null);
+  const shownBic = edit.supplier_bic ?? sup?.bic ?? "";
   const warnings = [...new Set([...supplierBankWarnings(sup ? bank : null), ...purchaseInvoiceWarnings({
     supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
     invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
