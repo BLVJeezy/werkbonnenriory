@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePurchaseInvoice, type ParsedPurchaseInvoice } from "@/lib/purchase-invoice";
 import { canExportPurchase } from '@/lib/purchase-payment';
-import { paymentCommunication } from '@/lib/purchase-booking';
+import { paymentCommunication, creditorBank } from '@/lib/purchase-booking';
 
 type Ctx = { supabase: any; userId: string };
 
@@ -29,13 +29,16 @@ export const importPurchaseInvoices = createServerFn({ method: "POST" })
 /** Admin corrects the parsed values before approving. */
 export const updatePurchaseInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id: string; kind?: 'factuur' | 'creditnota'; paymentMethod?: string; supplierId?: string | null } & Partial<ParsedPurchaseInvoice>) => i)
+  .inputValidator((i: { id: string; kind?: 'factuur' | 'creditnota'; paymentMethod?: string; supplierId?: string | null; syncSupplier?: boolean } & Partial<ParsedPurchaseInvoice>) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    let supplier: { id: string; name: string; vat_number: string | null; iban: string | null; bic: string | null; payment_method: string } | null = null;
     if (data.supplierId) {
-      const { data: sup } = await context.supabase.from('suppliers').select('name,vat_number,iban,payment_method').eq('id', data.supplierId).single();
+      const { data: sup } = await context.supabase.from('suppliers').select('id,name,vat_number,iban,bic,payment_method').eq('id', data.supplierId).single();
       if (!sup) throw new Error('Leverancier niet gevonden');
-      data = { ...data, supplierName: sup.name, supplierVat: sup.vat_number, supplierIban: sup.iban ?? data.supplierIban ?? null, paymentMethod: data.paymentMethod ?? sup.payment_method } as typeof data;
+      supplier = sup;
+      // What the admin typed on this invoice wins; the supplier record only fills the gaps.
+      data = { ...data, supplierName: sup.name, supplierVat: data.supplierVat || sup.vat_number, supplierIban: data.supplierIban || sup.iban, supplierBic: data.supplierBic || sup.bic, paymentMethod: data.paymentMethod ?? sup.payment_method } as typeof data;
     }
     if (data.kind && !['factuur', 'creditnota'].includes(data.kind)) throw new Error('Ongeldig documenttype');
     if (data.paymentMethod && !['overschrijving','domiciliering','kaart','cash'].includes(data.paymentMethod)) throw new Error('Ongeldige betaalwijze');
@@ -45,14 +48,28 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
       lines: data.lines, net: data.net, vat: data.vat, total: data.total, paymentRef: data.paymentRef,
     });
     const { error } = await context.supabase.from("purchase_invoices").update({
-      supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban,
+      supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban, supplier_bic: n.supplierBic,
       invoice_number: n.invoiceNumber, invoice_date: n.invoiceDate, due_date: n.dueDate,
       lines: n.lines, net: n.net, vat: n.vat, total: n.total, payment_ref: n.paymentRef,
       ...(data.kind ? { kind: data.kind } : {}),
       ...(data.paymentMethod ? { payment_method: data.paymentMethod } : {}),
     }).eq("id", data.id).neq('status', 'betaald');
     if (error) throw new Error(error.message);
-    return { ok: true as const };
+    // A corrected bank detail is kept in the supplier list too, so it never has to be typed again.
+    let supplierSynced = false;
+    let supplierSyncError: string | null = null;
+    if (supplier && data.syncSupplier !== false) {
+      const patch: Record<string, string> = {};
+      for (const [col, val] of [['vat_number', n.supplierVat], ['iban', n.supplierIban], ['bic', n.supplierBic]] as const) {
+        if (val && supplier[col] !== val) patch[col] = val;
+      }
+      if (Object.keys(patch).length) {
+        const { error: supErr } = await context.supabase.from('suppliers').update(patch).eq('id', supplier.id);
+        if (supErr) supplierSyncError = supErr.message;
+        else supplierSynced = true;
+      }
+    }
+    return { ok: true as const, supplierSynced, supplierSyncError };
   });
 
 export const setPurchaseInvoiceStatus = createServerFn({ method: "POST" })
