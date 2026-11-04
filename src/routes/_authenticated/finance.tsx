@@ -1,3 +1,4 @@
+import { VAT_RATES, detectVatRate, vatFor, vatSide, type VatRate } from "@/lib/vat-rate";
 import { FinanceTasks } from "@/components/FinanceTasks";
 import { useFinanceSales } from "@/lib/use-finance-sales";
 import { syncFinancePurchases } from "@/lib/finance-purchases.functions";
@@ -509,8 +510,8 @@ function InvoiceEdit({ c, inv, rules, onDone }: { c: string; inv: any; rules: Ru
     for (const l of lines) {
       const before = inv.fin_invoice_lines.find((o: any) => o.id === l.id);
       if (linkedAssets.some((a) => a.invoice_line_id === l.id)) continue;
-      if (l.id) await db.from("fin_invoice_lines").update({ description: l.description, ex_vat: l.ex_vat, vat: l.vat, account: l.account, category: l.category, is_investment: l.is_investment }).eq("id", l.id);
-      else await db.from("fin_invoice_lines").insert({ invoice_id: inv.id, description: l.description, ex_vat: l.ex_vat, vat: l.vat, account: l.account, category: l.category, is_investment: l.is_investment });
+      if (l.id) await db.from("fin_invoice_lines").update({ description: l.description, ex_vat: l.ex_vat, vat: l.vat, vat_rate: detectVatRate(Number(l.ex_vat), Number(l.vat)), account: l.account, category: l.category, is_investment: l.is_investment }).eq("id", l.id);
+      else await db.from("fin_invoice_lines").insert({ invoice_id: inv.id, description: l.description, ex_vat: l.ex_vat, vat: l.vat, vat_rate: detectVatRate(Number(l.ex_vat), Number(l.vat)), account: l.account, category: l.category, is_investment: l.is_investment });
       const changed = !before || before.account !== l.account || before.category !== l.category;
       if (changed && l.account && scope !== "factuur") {
         const sk = normSupplier(inv.counterparty); const kw = scope === "leverancier" ? "" : keywordFrom(l.description);
@@ -550,7 +551,14 @@ function InvoiceEdit({ c, inv, rules, onDone }: { c: string; inv: any; rules: Ru
         <div key={l.id ?? i} className="mt-2 grid gap-1 rounded border border-border p-2 sm:grid-cols-3">
           <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.description ?? ""} onChange={(e) => upd(i, "description", e.target.value)} placeholder="Omschrijving" />
           <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.ex_vat} onChange={(e) => upd(i, "ex_vat", parseAmount(e.target.value) ?? 0)} placeholder="Excl. btw" />
-          <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.vat} onChange={(e) => upd(i, "vat", parseAmount(e.target.value) ?? 0)} placeholder="Btw" />
+          <div className="flex gap-1">
+            <select aria-label="Btw-tarief" disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} className="rounded border border-border bg-background p-1 text-sm" value={l.vat_rate ?? detectVatRate(Number(l.ex_vat), Number(l.vat)) ?? ""} onChange={(e) => { const r = e.target.value === "" ? null : (Number(e.target.value) as VatRate); setLines(lines.map((x, j) => (j === i ? { ...x, vat_rate: r, vat: r == null ? x.vat : vatFor(Number(x.ex_vat), r) } : x))); }}>
+              <option value="">?</option>{VAT_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
+            </select>
+            <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.vat} onChange={(e) => upd(i, "vat", parseAmount(e.target.value) ?? 0)} placeholder="Btw" />
+          </div>
+          {Number(l.ex_vat) !== 0 && detectVatRate(Number(l.ex_vat), Number(l.vat)) == null && <p className="text-xs text-warning sm:col-span-3">Btw past niet bij 0, 6 of 21% — waarschijnlijk fout uitgelezen, controleer de lijn.</p>}
+          <p className="text-xs text-muted-foreground sm:col-span-3">Btw {vatSide(inv.direction)}</p>
           <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} list="fin-accounts-inv" value={l.account ?? ""} onChange={(e) => { const nr = e.target.value; const a = accounts.find((x: any) => x.number === nr); setLines(lines.map((x, j) => (j === i ? { ...x, account: nr, category: x.category || a?.name || "" } : x))); }} placeholder="Grootboekrekening" />
           <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.category ?? ""} onChange={(e) => upd(i, "category", e.target.value)} placeholder="Categorie" />
           {l.account && !accounts.some((x: any) => x.number === l.account) && <p className="text-xs text-warning sm:col-span-3">Rekening {l.account} staat niet in het rekeningschema (Boekhouding → Rekeningschema).</p>}
