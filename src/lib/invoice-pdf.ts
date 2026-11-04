@@ -7,6 +7,7 @@ import { invoiceVatNotices } from './invoice-vat-notices';
 import { invoicePaymentReference } from './invoice-payment-reference';
 import { buildSepaQr } from './sepa-qr';
 import { splitLineText } from './line-text';
+import { supplierFooterLine } from './company-id';
 import QRCode from 'qrcode';
 
 export type InvoicePdfData = {
@@ -50,7 +51,7 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
     const lw = first ? 160 : 100, lh = lw * (logo.height / logo.width);
     page.drawImage(logo, { x: M, y: H - 30 - lh, width: lw, height: lh });
     page.drawRectangle({ x: 0, y: 0, width: W, height: 34, color: ink });
-    page.drawText(pr(`${d.company.name}  -  Natveld 47, 3740 Bilzen  -  ${d.company.vat}  -  info@riory.be  -  www.riory.be`), { x: M, y: 13, size: 8, font, color: white });
+    page.drawText(pr(supplierFooterLine(d.company)), { x: M, y: 13, size: 8, font, color: white });
     y = first ? H - 120 : H - 80;
   };
   const ensure = (h: number) => { if (y - h < 56) { page = doc.addPage([W, H]); chrome(false); } };
