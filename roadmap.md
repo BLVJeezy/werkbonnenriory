@@ -12,6 +12,6 @@
 - [ ] Fase 3: Ponto-betalingen (wacht op Ponto-toegang)
 - [x] Eén betaling over meerdere facturen afletteren
 
-- [ ] Aankoopfacturen: controle op eigen pagina met PDF ernaast, opslaan en volgende, leverancier uit lijst, btw op 411000
-- [ ] Bulkbetaling: kiezen tussen op vervaldag of zo snel mogelijk
-- [ ] Aankoopfacturen verwijderen + dubbele detecteren
+- [x] Aankoopfacturen: controle op eigen pagina met PDF ernaast, opslaan en volgende, leverancier uit lijst, btw op 411000
+- [x] Bulkbetaling: kiezen tussen op vervaldag of zo snel mogelijk
+- [x] Aankoopfacturen verwijderen + dubbele detecteren

@@ -142,7 +142,7 @@ function Controle() {
           </div>
         </div>
 
-        <div className="min-h-0 overflow-y-auto pr-1">
+        <div className="min-h-0 min-w-0 overflow-y-auto pr-2">
           <fieldset disabled={locked} className="space-y-3">
             {isPaid && <div className="rounded-md border-2 border-accent bg-accent p-3 font-black text-accent-foreground">✓ BETAALD{edit.paid_at ? ` op ${new Date(edit.paid_at).toLocaleDateString("nl-BE")}` : ""}</div>}
             {!isPaid && paymentMethodLock(edit.payment_method, edit.status) && <div className="rounded-md border-2 border-destructive p-2 text-sm font-bold text-destructive">{paymentMethodLock(edit.payment_method, edit.status)}</div>}
