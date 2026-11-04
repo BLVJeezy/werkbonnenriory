@@ -68,9 +68,12 @@ export const setPurchaseInvoiceStatus = createServerFn({ method: "POST" })
 /** A payment file is an instruction, never evidence of payment. */
 export const paymentFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { ids: string[] }) => i)
+  .inputValidator((i: { ids: string[]; onDueDate?: boolean }) => i)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
+    // Banks reject past execution dates: overdue invoices (or "as soon as possible") go out today.
+    const execDate = (due: string) => data.onDueDate === false || due < today ? today : due;
     const { data: rows, error } = await context.supabase.from("purchase_invoices").select("*").in("id", data.ids.slice(0, 200));
     if (error) throw new Error(error.message);
     if (!rows?.length) throw new Error("Geen facturen geselecteerd");
@@ -90,13 +93,30 @@ export const paymentFile = createServerFn({ method: "POST" })
       rows.map((r: any, i: number) => ({
         creditorName: r.supplier_name, creditorIban: ibanOf(r), creditorBic: (supById.get(r.supplier_id) as any)?.bic ?? null, amount: Number(r.total),
         remittance: paymentCommunication(r.payment_ref, r.invoice_number),
-        executionDate: r.due_date, endToEndId: `${messageId}-${i + 1}`,
+        executionDate: execDate(r.due_date), endToEndId: `${messageId}-${i + 1}`,
       })),
       messageId,
     );
     const { error: upErr } = await context.supabase.from("purchase_invoices").update({ status: "betaling_klaargezet", payment_file_at: new Date().toISOString() }).in("id", rows.map((r: any) => r.id)).eq('status', 'goedgekeurd');
     if (upErr) throw new Error(upErr.message);
     return { filename: `betalingen-${messageId}.xml`, xml };
+  });
+
+/** Admin removes duplicate/wrong purchase invoices; paid or payment-staged ones are protected. */
+export const deletePurchaseInvoices = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { ids: string[] }) => { if (!i.ids?.length) throw new Error('Niets geselecteerd'); return { ids: i.ids.slice(0, 200) }; })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: rows, error } = await context.supabase.from('purchase_invoices').select('id,pdf_path,status,booked_at').in('id', data.ids);
+    if (error) throw new Error(error.message);
+    const ok = (rows ?? []).filter((r: any) => !['betaald', 'betaling_klaargezet'].includes(r.status));
+    if (!ok.length) throw new Error('Betaalde of klaargezette facturen kunnen niet verwijderd worden');
+    const { error: delErr } = await context.supabase.from('purchase_invoices').delete().in('id', ok.map((r: any) => r.id));
+    if (delErr) throw new Error(delErr.message);
+    const paths = ok.map((r: any) => r.pdf_path).filter(Boolean);
+    if (paths.length) await context.supabase.storage.from('aankoopfacturen').remove(paths);
+    return { deleted: ok.length, skipped: (rows?.length ?? 0) - ok.length };
   });
 
 export const attachPurchasePdf = createServerFn({ method: 'POST' })
