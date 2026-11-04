@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { formatAddress } from "@/lib/address";
 import { allCustomers, customerKey, customerPatch, rowsToCustomers, type CustomerRow } from "@/lib/customers";
 import { filterChoices } from "@/lib/choice-search";
-import { syndicusDetailsPatch, syndicusLabel, syndicusSuggestions, type SyndicusDetailField, type SyndicusDetails } from "@/lib/syndicus";
+import { syndicusDetailsPatch, syndicusLabel, type SyndicusDetailField, type SyndicusDetails } from "@/lib/syndicus";
+import { customerDetailsFromDir, dirFromCustomer, syndicusKey, type SyndicusDir } from "@/lib/syndici";
+import { syncSyndicusFromCustomer } from "@/lib/syndici.functions";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search["q"] === "string" && search["q"] ? { q: search["q"] } : {}),
@@ -63,21 +65,41 @@ function Klanten() {
     queryFn: () => allCustomers(supabase),
   });
   const { data: branches = [] } = useQuery({ queryKey: ["branches"], queryFn: async () => (await supabase.from("branches").select("*").order("name")).data ?? [] });
+  const { data: directory = [] } = useQuery({
+    queryKey: ["syndici"],
+    queryFn: async () => {
+      const { data: rows, error } = await supabase.from("syndici").select("*").order("company");
+      if (error) throw new Error(error.message);
+      return (rows ?? []) as SyndicusDir[];
+    },
+  });
   const branchName = (id: string | null | undefined) => branches.find((b) => b.id === id)?.name;
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
   const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus, c.syndicus_company, c.syndicus_contact, c.syndicus_email, c.syndicus_billing_email, c.syndicus_phone].filter(Boolean).join(' ') })), q).map(c => c.value));
   const rows = data.filter(c => matchingIds.has(c.id));
   const sort = useSort(rows, { nr: c => c.customer_number, naam: c => c.name, plaats: c => c.city, tel: c => c.phone, mail: c => c.email, btw: c => c.vat_number, syndicus: c => c.syndicus ?? "" });
-  const syndici = syndicusSuggestions(data.map((c) => ({ syndicus: c.syndicus_company as string | null })));
-  // Eén rij per bekende syndicus: die wordt als sjabloon gebruikt bij bulk toewijzen.
+  // Eén keuze per bekende syndicus: eerst de contactfiche (die is volledig), dan
+  // de namen die voorlopig alleen bij klanten voorkomen.
   const templates = useMemo(() => {
-    const byName = new Map<string, (typeof data)[number]>();
+    const byKey = new Map<string, { name: string; details: SyndicusDetails }>();
+    for (const d of directory) {
+      const name = (d.company ?? "").trim();
+      const key = syndicusKey(name);
+      if (!key || byKey.has(key)) continue;
+      byKey.set(key, { name, details: customerDetailsFromDir(d) });
+    }
     for (const c of data) {
       const name = (c.syndicus_company as string | null)?.trim();
-      if (name && !byName.has(name)) byName.set(name, c);
+      const key = syndicusKey(name);
+      if (!key || byKey.has(key)) continue;
+      byKey.set(
+        key,
+        { name, details: Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])) as SyndicusDetails },
+      );
     }
-    return [...byName.entries()].sort((a, b) => a[0].localeCompare(b[0], "nl"));
-  }, [data]);
+    return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, "nl"));
+  }, [data, directory]);
+  const syndici = templates.map((t) => t.name);
   const allShownSelected = rows.length > 0 && rows.every((r) => sel.has(r.id));
 
   function toggleSel(id: string, on: boolean) {
@@ -91,10 +113,10 @@ function Klanten() {
 
   function pickTemplate(name: string) {
     setAssignTemplate(name);
-    const t = templates.find(([n]) => n === name)?.[1];
+    const t = templates.find((x) => x.name === name);
     if (t) {
-      setAssignCompany((t.syndicus_company as string | null) ?? "");
-      setAssignContact((t.syndicus_contact as string | null) ?? "");
+      setAssignCompany((t.details.syndicus_company as string | null) ?? "");
+      setAssignContact((t.details.syndicus_contact as string | null) ?? "");
     }
   }
 
