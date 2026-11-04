@@ -78,15 +78,17 @@ function Controle() {
     if (!edit) return;
     setBusy(true);
     try {
-      await update({ data: {
-        id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+      const res = await update({ data: {
+        id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic, syncSupplier,
         invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
         lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
       } });
+      if (res?.supplierSyncError) toast.warning(`Factuur opgeslagen, maar de leverancierslijst is niet bijgewerkt: ${res.supplierSyncError}`);
       if (opts.bookLines) await book({ data: { id: edit.id, lines: edit.lines } });
       if (opts.approve) await setStatus({ data: { ids: [edit.id], status: "goedgekeurd" } });
       await qc.invalidateQueries({ queryKey: ["purchase_invoices"] });
       await qc.invalidateQueries({ queryKey: ["purchase_queue"] });
+      if (res?.supplierSynced) await qc.invalidateQueries({ queryKey: ["suppliers"] });
       toast.success(opts.bookLines ? "Opgeslagen en geboekt" : "Opgeslagen");
       if (opts.next) {
         if (nextId) nav({ to: "/aankoopfacturen/$id", params: { id: nextId } });
@@ -111,8 +113,9 @@ function Controle() {
   if (!edit) return <p className="p-4 text-muted-foreground">Factuur laden…</p>;
 
   const sup = suppliers.find((x) => x.id === edit.supplier_id) ?? null;
-  const warnings = [...new Set([...supplierBankWarnings(sup ?? (edit.supplier_iban ? { iban: edit.supplier_iban, bic: null } : null)), ...purchaseInvoiceWarnings({
-    supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+  const bank = creditorBank(edit, sup);
+  const warnings = [...new Set([...supplierBankWarnings(sup ? bank : null), ...purchaseInvoiceWarnings({
+    supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
     invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
     lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
   })])];
@@ -151,7 +154,7 @@ function Controle() {
 
             <div className="space-y-1">
               <Label htmlFor="purchase-supplier">Leverancier</Label>
-              <select id="purchase-supplier" className={`h-10 w-full rounded-md border bg-background px-3 ${!sup ? "border-destructive" : ""}`} value={edit.supplier_id ?? ""} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: s2.iban ?? edit.supplier_iban, payment_method: s2.payment_method }); }}>
+              <select id="purchase-supplier" className={`h-10 w-full rounded-md border bg-background px-3 ${!sup ? "border-destructive" : ""}`} value={edit.supplier_id ?? ""} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: s2.iban ?? edit.supplier_iban, supplier_bic: s2.bic ?? edit.supplier_bic, payment_method: s2.payment_method }); }}>
                 {!sup && <option value="">— Kies uit leverancierslijst (uitgelezen: {edit.supplier_name}) —</option>}
                 {suppliers.map((x) => <option key={x.id} value={x.id}>{x.name}{x.vat_number ? ` (${x.vat_number})` : ""}</option>)}
               </select>
