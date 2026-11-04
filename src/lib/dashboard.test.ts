@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { groupOmzet, type InvoiceOmzetRow } from "./dashboard";
+import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "./dashboard";
 
-const inv = (issue_date: string, net: number, kind = "factuur"): InvoiceOmzetRow => ({
+const inv = (issue_date: string, net: number, kind = "factuur", work_order_id: string | null = null): InvoiceOmzetRow => ({
   id: issue_date + net + kind,
   issue_date,
   net,
@@ -9,6 +9,7 @@ const inv = (issue_date: string, net: number, kind = "factuur"): InvoiceOmzetRow
   total: net,
   paid_amount: 0,
   kind,
+  work_order_id,
 });
 
 describe("groupOmzet", () => {
