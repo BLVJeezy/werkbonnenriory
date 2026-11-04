@@ -1,5 +1,6 @@
 import rioryLogo from '@/assets/riory-mail-logo.png.asset.json';
 import { enterpriseNumber } from './company-id';
+import { openPixelUrl } from './document-tracking';
 
 /** Riory-huisstijl voor klantmails: zelfde kleuren als de pdf's (oranje balk, donkere inkt, zachte achtergrond). */
 const LOGO_URL = new URL(rioryLogo.url, 'https://werkbonnenriory.lovable.app').href;
@@ -41,7 +42,10 @@ export function brandedMailHtml(text: string, contactEmail = 'info@riory.be', im
     const muted = /tijdstip geregistreerd/i.test(line);
     parts.push(`<p style="margin:0;line-height:1.55;font-size:${muted ? 12 : 15}px;color:${muted ? MUTED : INK}">${esc(line).replace(/(https?:\/\/\S+)/g, (u) => `<a href="${u}" style="color:${ORANGE}">${u}</a>`)}</p>`);
   }
-  return `<!doctype html><html lang="nl"><body style="margin:0;padding:0;background:#ffffff">
+  // Openingsmeting: een onzichtbare pixel met hetzelfde token als de documentlink.
+  const docLink = /https:\/\/werkbonnenriory\.lovable\.app\/document\/[a-f0-9%-]+/.exec(text)?.[0];
+  const pixel = docLink ? openPixelUrl(docLink) : null;
+  return `<!doctype html><html lang="nl"><body style="margin:0;padding:0;background:#ffffff">${pixel ? `<img src="${esc(pixel)}" alt="" width="1" height="1" style="display:block;width:1px;height:1px;border:0;opacity:0" />` : ''}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${SOFT};padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden">
 <tr><td style="background:${ORANGE};height:6px;font-size:0;line-height:0">&nbsp;</td></tr>

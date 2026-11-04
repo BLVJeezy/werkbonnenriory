@@ -1,5 +1,10 @@
 export type DocumentType = 'factuur' | 'creditnota' | 'offerte' | 'werkbon' | 'herinnering';
 export const documentLink = (token: string) => `https://werkbonnenriory.lovable.app/document/${encodeURIComponent(token)}`;
+/** Pixel URL derived from a document link (same token). */
+export const openPixelUrl = (docUrl: string) => {
+  const m = /\/document\/([^/?#]+)$/.exec(docUrl);
+  return m ? `https://werkbonnenriory.lovable.app/api/public/mail-open/${m[1]}.gif` : null;
+};
 export function linkText(content: string, url: string) {
   return `${content}\n\nDocument openen:\n${url}\n\nBij openen via deze link wordt het tijdstip geregistreerd voor documentopvolging.`;
 }

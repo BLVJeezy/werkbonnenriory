@@ -716,16 +716,19 @@ export type Database = {
           delivery_id: string
           id: string
           opened_at: string
+          source: string
         }
         Insert: {
           delivery_id: string
           id?: string
           opened_at?: string
+          source?: string
         }
         Update: {
           delivery_id?: string
           id?: string
           opened_at?: string
+          source?: string
         }
         Relationships: [
           {
