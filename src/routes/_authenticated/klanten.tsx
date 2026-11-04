@@ -45,6 +45,53 @@ const SYNDICUS_FIELDS: { key: SyndicusDetailField; label: string; className: str
   { key: "syndicus_billing_email", label: "E-mail boekhouding", className: "min-w-44 flex-1" },
 ];
 
+/** De volledige klantfiche: eigen gegevens, syndicusblok en btw-keuzes. Gedeeld tussen bewerken en nieuw aanmaken. */
+function CustomerFormFields({ form, setForm }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>> }) {
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        {FIELDS.map((f) => (
+          <label key={f.key} className={`space-y-1 ${f.className}`}>
+            <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
+            <Input value={form[f.key] ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.label} />
+          </label>
+        ))}
+      </div>
+      <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-xs font-black uppercase tracking-wide text-primary">Syndicus</span>
+          <span className="text-xs text-muted-foreground">Bij een VME: het kantoor dat de opdracht gaf. Klant en factuur blijven op naam van de VME, met het eigen btw-nummer van de VME.</span>
+          {(form["syndicus_company"] || form["syndicus_contact"]) && (
+            <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setForm((prev) => ({ ...prev, ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, ""])) }))}>Syndicus wissen</Button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {SYNDICUS_FIELDS.map((f) => (
+            <label key={f.key} className={`space-y-1 ${f.className}`}>
+              <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
+              <Input
+                list={f.key === "syndicus_company" ? "syndicus-suggesties" : undefined}
+                value={form[f.key] ?? ""}
+                onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                placeholder={f.label}
+              />
+            </label>
+          ))}
+        </div>
+        {syndicusLabel(form) && <div className="mt-2 text-xs text-muted-foreground">Weergave in de lijst: <strong className="font-semibold text-foreground">{syndicusLabel(form)}</strong></div>}
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
+        Vrij beroep — altijd 21% btw, ook met een btw-nummer
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["oud6"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, oud6: e.target.checked ? "1" : "" }))} />
+        Particulier, woning ouder dan 10 jaar — 6% btw
+      </label>
+    </>
+  );
+}
+
 function Klanten() {
   const qc = useQueryClient();
   const search = Route.useSearch();
@@ -60,6 +107,7 @@ function Klanten() {
   const [assignCompany, setAssignCompany] = useState("");
   const [assignContact, setAssignContact] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [creating, setCreating] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["customers"],
     queryFn: () => allCustomers(supabase),
@@ -159,7 +207,34 @@ function Klanten() {
     }
   }
 
+  function openCreate() {
+    setEditing(null);
+    setForm({ vrij_beroep: "", oud6: "" });
+    setCreating(true);
+  }
+
+  async function createCustomer() {
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : null };
+    if (!patch.name) {
+      toast.error("De naam mag niet leeg zijn.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("customers").insert({ ...patch, name: patch.name });
+    setSaving(false);
+    if (error) {
+      toast.error(error.code === "23505" ? "Er bestaat al een klant met deze naam en adres." : error.message);
+      return;
+    }
+    toast.success(`${patch.name} aangemaakt`);
+    await ficheBijwerken(patch as Record<string, unknown>);
+    setCreating(false);
+    qc.invalidateQueries({ queryKey: ["customers"] });
+    qc.invalidateQueries({ queryKey: ["syndici"] });
+  }
+
   function openEdit(c: (typeof data)[number]) {
+    setCreating(false);
     setEditing(editing === c.id ? null : c.id);
     setForm({
       ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
@@ -221,12 +296,23 @@ function Klanten() {
       <datalist id="syndicus-suggesties">{syndici.map((s) => <option key={s} value={s} />)}</datalist>
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="text-3xl font-black uppercase">Klanten</h1>
-        <label className="ml-auto">
+        <Button className="ml-auto" variant={creating ? "secondary" : "default"} onClick={() => (creating ? setCreating(false) : openCreate())}>{creating ? "Sluiten" : "Nieuwe klant"}</Button>
+        <label>
           <input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importExcel(f); }} />
           <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
         </label>
       </div>
       <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} />
+      {creating && (
+        <div className="space-y-3 rounded-md border border-primary/40 bg-card p-4">
+          <div className="text-sm font-black uppercase tracking-wide">Nieuwe klant</div>
+          <CustomerFormFields form={form} setForm={setForm} />
+          <div className="flex gap-2">
+            <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>
+            <Button size="sm" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>Annuleren</Button>
+          </div>
+        </div>
+      )}
       {sel.size > 0 && (
         <div className="rounded-md border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -302,45 +388,7 @@ function Klanten() {
                       <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-                        <div className="flex flex-wrap gap-2">
-                          {FIELDS.map((f) => (
-                            <label key={f.key} className={`space-y-1 ${f.className}`}>
-                              <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
-                              <Input value={form[f.key] ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.label} />
-                            </label>
-                          ))}
-                        </div>
-                        <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
-                          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className="text-xs font-black uppercase tracking-wide text-primary">Syndicus</span>
-                            <span className="text-xs text-muted-foreground">Bij een VME: het kantoor dat de opdracht gaf. Klant en factuur blijven op naam van de VME, met het eigen btw-nummer van de VME.</span>
-                            {(form["syndicus_company"] || form["syndicus_contact"]) && (
-                              <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setForm((prev) => ({ ...prev, ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, ""])) }))}>Syndicus wissen</Button>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {SYNDICUS_FIELDS.map((f) => (
-                              <label key={f.key} className={`space-y-1 ${f.className}`}>
-                                <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
-                                <Input
-                                  list={f.key === "syndicus_company" ? "syndicus-suggesties" : undefined}
-                                  value={form[f.key] ?? ""}
-                                  onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                                  placeholder={f.label}
-                                />
-                              </label>
-                            ))}
-                          </div>
-                          {syndicusLabel(form) && <div className="mt-2 text-xs text-muted-foreground">Weergave in de lijst: <strong className="font-semibold text-foreground">{syndicusLabel(form)}</strong></div>}
-                        </div>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
-                          Vrij beroep — altijd 21% btw, ook met een btw-nummer
-                        </label>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["oud6"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, oud6: e.target.checked ? "1" : "" }))} />
-                          Particulier, woning ouder dan 10 jaar — 6% btw
-                        </label>
+                        <CustomerFormFields form={form} setForm={setForm} />
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
