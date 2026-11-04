@@ -2348,6 +2348,9 @@ export type Database = {
           net: number
           number: string
           photo_paths: string[]
+          reminder_error: string | null
+          reminder_sent_at: string | null
+          reminder_stage: number
           sent_at: string | null
           signature: string | null
           signed_at: string | null
@@ -2374,6 +2377,9 @@ export type Database = {
           net: number
           number: string
           photo_paths?: string[]
+          reminder_error?: string | null
+          reminder_sent_at?: string | null
+          reminder_stage?: number
           sent_at?: string | null
           signature?: string | null
           signed_at?: string | null
@@ -2400,6 +2406,9 @@ export type Database = {
           net?: number
           number?: string
           photo_paths?: string[]
+          reminder_error?: string | null
+          reminder_sent_at?: string | null
+          reminder_stage?: number
           sent_at?: string | null
           signature?: string | null
           signed_at?: string | null

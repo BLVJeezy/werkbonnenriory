@@ -47,6 +47,7 @@ import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/publ
 import { Route as ApiPublicCronFinanceRouteImport } from './routes/api/public/cron/finance'
 import { Route as ApiPublicNieuwsbriefAfbeeldingFileRouteImport } from './routes/api/public/nieuwsbrief-afbeelding/$file'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
+import { Route as ApiPublicQuotesRemindersRouteImport } from './routes/api/public/quotes/reminders'
 import { Route as ApiPublicRemindersProcessRouteImport } from './routes/api/public/reminders/process'
 import { Route as ApiPublicReviewsInvoicesRouteImport } from './routes/api/public/reviews/invoices'
 import { Route as ApiPublicReviewsWerkbonnenRouteImport } from './routes/api/public/reviews/werkbonnen'
@@ -255,6 +256,12 @@ const ApiPublicPontoSyncRoute = ApiPublicPontoSyncRouteImport.update({
   path: '/api/public/ponto/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicQuotesRemindersRoute =
+  ApiPublicQuotesRemindersRouteImport.update({
+    id: '/api/public/quotes/reminders',
+    path: '/api/public/quotes/reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicRemindersProcessRoute =
   ApiPublicRemindersProcessRouteImport.update({
     id: '/api/public/reminders/process',
@@ -312,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/quotes/reminders': typeof ApiPublicQuotesRemindersRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
   '/api/public/reviews/werkbonnen': typeof ApiPublicReviewsWerkbonnenRoute
@@ -354,6 +362,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/quotes/reminders': typeof ApiPublicQuotesRemindersRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
   '/api/public/reviews/werkbonnen': typeof ApiPublicReviewsWerkbonnenRoute
@@ -398,6 +407,7 @@ export interface FileRoutesById {
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
+  '/api/public/quotes/reminders': typeof ApiPublicQuotesRemindersRoute
   '/api/public/reminders/process': typeof ApiPublicRemindersProcessRoute
   '/api/public/reviews/invoices': typeof ApiPublicReviewsInvoicesRoute
   '/api/public/reviews/werkbonnen': typeof ApiPublicReviewsWerkbonnenRoute
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/finance'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/quotes/reminders'
     | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
     | '/api/public/reviews/werkbonnen'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/finance'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/quotes/reminders'
     | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
     | '/api/public/reviews/werkbonnen'
@@ -527,6 +539,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/finance'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
+    | '/api/public/quotes/reminders'
     | '/api/public/reminders/process'
     | '/api/public/reviews/invoices'
     | '/api/public/reviews/werkbonnen'
@@ -552,6 +565,7 @@ export interface RootRouteChildren {
   ApiPublicCronFinanceRoute: typeof ApiPublicCronFinanceRoute
   ApiPublicNieuwsbriefAfbeeldingFileRoute: typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
+  ApiPublicQuotesRemindersRoute: typeof ApiPublicQuotesRemindersRoute
   ApiPublicRemindersProcessRoute: typeof ApiPublicRemindersProcessRoute
   ApiPublicReviewsInvoicesRoute: typeof ApiPublicReviewsInvoicesRoute
   ApiPublicReviewsWerkbonnenRoute: typeof ApiPublicReviewsWerkbonnenRoute
@@ -825,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPontoSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/quotes/reminders': {
+      id: '/api/public/quotes/reminders'
+      path: '/api/public/quotes/reminders'
+      fullPath: '/api/public/quotes/reminders'
+      preLoaderRoute: typeof ApiPublicQuotesRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/reminders/process': {
       id: '/api/public/reminders/process'
       path: '/api/public/reminders/process'
@@ -918,6 +939,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicNieuwsbriefAfbeeldingFileRoute:
     ApiPublicNieuwsbriefAfbeeldingFileRoute,
   ApiPublicPontoSyncRoute: ApiPublicPontoSyncRoute,
+  ApiPublicQuotesRemindersRoute: ApiPublicQuotesRemindersRoute,
   ApiPublicRemindersProcessRoute: ApiPublicRemindersProcessRoute,
   ApiPublicReviewsInvoicesRoute: ApiPublicReviewsInvoicesRoute,
   ApiPublicReviewsWerkbonnenRoute: ApiPublicReviewsWerkbonnenRoute,
