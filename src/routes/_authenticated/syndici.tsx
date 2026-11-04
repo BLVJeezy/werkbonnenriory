@@ -450,7 +450,9 @@ function Syndici() {
               {details.map(([label, value]) => (
                 <div key={label} className="flex gap-2">
                   <dt className="min-w-36 text-xs font-bold uppercase text-muted-foreground">{label}</dt>
-                  <dd className={value ? "font-semibold" : "text-muted-foreground"}>{value || "nog niet ingevuld"}</dd>
+                  <dd className={`[overflow-wrap:anywhere] ${value ? "font-semibold" : "text-muted-foreground"}`}>
+                    {value || "nog niet ingevuld"}
+                  </dd>
                 </div>
               ))}
             </dl>
