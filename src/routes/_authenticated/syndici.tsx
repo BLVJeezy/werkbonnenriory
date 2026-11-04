@@ -6,17 +6,13 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { formatAddress } from "@/lib/address";
-import { SortTh, Th, tableCls, useSort } from "@/components/SortTable";
-import { filterChoices } from "@/lib/choice-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteSyndicus, saveSyndicus } from "@/lib/syndici.functions";
 import {
   SYNDICUS_DIR_FIELDS,
   dirFromCustomer,
-  residentiesOverzicht,
   syndicusGroups,
-  type ResidentyRij,
   type SyndicusDir,
   type SyndicusDirField,
   type SyndicusDirInput,
@@ -120,129 +116,6 @@ function Fiche({
   );
 }
 
-/** Wat het overzicht nodig heeft; de rijen komen uit de klantenlijst. */
-type Residentie = {
-  id: string;
-  name: string;
-  customer_number?: string | null;
-  street?: string | null;
-  house_number?: string | null;
-  postal_code?: string | null;
-  city?: string | null;
-};
-
-/** Eén lijst met alle residenties, elk met de syndicus die erbij hoort. */
-function ResidentiesOverzicht({ rijen }: { rijen: ResidentyRij<Residentie>[] }) {
-  const [q, setQ] = useState("");
-  const gevonden = useMemo(() => {
-    const keuzes = rijen.map((r) => ({
-      value: r.klant.id,
-      label: r.klant.name,
-      search: [
-        r.syndicus,
-        r.klant.customer_number,
-        r.klant.street,
-        r.klant.house_number,
-        r.klant.postal_code,
-        r.klant.city,
-      ]
-        .filter(Boolean)
-        .join(" "),
-    }));
-    const ids = new Set(filterChoices(keuzes, q).map((k) => k.value));
-    return rijen.filter((r) => ids.has(r.klant.id));
-  }, [rijen, q]);
-  const sort = useSort(
-    gevonden,
-    {
-      residentie: (r) => r.klant.name,
-      nr: (r) => r.klant.customer_number,
-      syndicus: (r) => r.syndicus,
-    },
-    "residentie",
-  );
-
-  return (
-    <section className="rounded-md border bg-card p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-black uppercase tracking-wide">Alle residenties op een rij</h2>
-        <span className="rounded bg-primary/15 px-2 py-0.5 text-xs font-bold">
-          {rijen.length} residentie{rijen.length === 1 ? "" : "s"}
-        </span>
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Zoek residentie, adres of syndicus"
-          className="ml-auto w-full sm:w-72"
-        />
-      </div>
-      {rijen.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          Nog geen residentie met syndicus. Wijs er een toe bij{" "}
-          <Link to="/klanten" className="underline">
-            Klanten
-          </Link>
-          .
-        </p>
-      ) : (
-        <div className="mt-3 max-h-[32rem] overflow-auto rounded-md border bg-card">
-          <table className={tableCls}>
-                  <thead className="sticky top-0 z-10 bg-muted">
-                    <tr>
-                      <SortTh k="residentie" sort={sort}>
-                        Residentie
-                      </SortTh>
-                      <SortTh k="nr" sort={sort}>
-                        Klantnr.
-                      </SortTh>
-                      <Th className="hidden sm:table-cell">Adres</Th>
-                      <SortTh k="syndicus" sort={sort} className="hidden sm:table-cell">
-                        Syndicus
-                      </SortTh>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sort.sorted.map((r) => (
-                      <tr key={r.klant.id}>
-                        <td className="font-bold">
-                          {r.klant.name}
-                          <span className="block text-xs font-normal text-muted-foreground sm:hidden">
-                            {formatAddress(r.klant) || "geen adres"}
-                          </span>
-                          <a
-                            href={`#syndicus-${encodeURIComponent(r.key)}`}
-                            className="block text-xs font-semibold underline sm:hidden [overflow-wrap:anywhere]"
-                          >
-                            {r.syndicus}
-                          </a>
-                        </td>
-                        <td className="font-mono text-xs text-muted-foreground">{r.klant.customer_number ?? "—"}</td>
-                        <td className="hidden text-muted-foreground sm:table-cell">{formatAddress(r.klant) || "geen adres"}</td>
-                        <td className="hidden sm:table-cell">
-                          <a
-                            href={`#syndicus-${encodeURIComponent(r.key)}`}
-                            className="font-semibold underline [overflow-wrap:anywhere]"
-                          >
-                            {r.syndicus}
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                    {sort.sorted.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="text-muted-foreground">
-                          Geen residentie gevonden voor “{q}”.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
-
 function Syndici() {
   const qc = useQueryClient();
   const { data = [] } = useQuery({ queryKey: ["customers"], queryFn: () => allCustomers(supabase) });
@@ -255,7 +128,6 @@ function Syndici() {
     },
   });
   const groups = useMemo(() => syndicusGroups(data, directory), [data, directory]);
-  const rijen = useMemo(() => residentiesOverzicht(groups), [groups]);
   const [open, setOpen] = useState<string | null>(null);
   const [confirmKey, setConfirmKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -318,8 +190,6 @@ function Syndici() {
           </>
         )}
       </p>
-
-      <ResidentiesOverzicht rijen={rijen} />
 
       <div className="flex flex-wrap items-center gap-2 pt-2">
         <h2 className="text-sm font-black uppercase tracking-wide">Per syndicus</h2>
