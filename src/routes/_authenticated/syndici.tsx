@@ -292,8 +292,9 @@ function Syndici() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        {groups.length} syndicus{groups.length === 1 ? "" : "i"} met samen {withSyndicus} klant{withSyndicus === 1 ? "" : "en"}.
-        {zonderVme > 0 && <> {zonderVme} {zonderVme === 1 ? "fiche heeft" : "fiches hebben"} nog geen VME.</>}
+        {groups.length} syndicus{groups.length === 1 ? "" : "i"} met samen {withSyndicus} residentie
+        {withSyndicus === 1 ? "" : "s"}.
+        {zonderVme > 0 && <> {zonderVme} {zonderVme === 1 ? "fiche heeft" : "fiches hebben"} nog geen residentie.</>}
         {data.length - withSyndicus > 0 && (
           <>
             {" "}
@@ -303,6 +304,21 @@ function Syndici() {
           </>
         )}
       </p>
+
+      <ResidentiesOverzicht rijen={rijen} />
+
+      <div className="flex flex-wrap items-center gap-2 pt-2">
+        <h2 className="text-sm font-black uppercase tracking-wide">Per syndicus</h2>
+        <span className="text-xs text-muted-foreground">klik op het aantal residenties om de lijst te openen</span>
+        <div className="ml-auto flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => allesResidenties(true)}>
+            Alles uitklappen
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => allesResidenties(false)}>
+            Alles inklappen
+          </Button>
+        </div>
+      </div>
 
       {open === "nieuw" && (
         <Fiche
