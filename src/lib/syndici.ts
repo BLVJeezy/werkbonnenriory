@@ -104,7 +104,7 @@ export function syndicusGroups<T extends SyndicusCustomer>(customers: T[], direc
     if (!key) continue;
     const g = group(key);
     g.dir = d;
-    g.label = syndicusLabel({ syndicus_company: d.company, syndicus_contact: d.contact }) ?? d.company.trim();
+    g.label = syndicusLabel({ syndicus_company: d.company, syndicus_contact: d.contact }) ?? (d.company ?? "").trim();
   }
   for (const c of customers) {
     const name = c.syndicus_company?.trim() || c.syndicus?.trim() || "";

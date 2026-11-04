@@ -12,7 +12,6 @@ import {
   SYNDICUS_DIR_FIELDS,
   dirFromCustomer,
   syndicusGroups,
-  type SyndicusCustomer,
   type SyndicusDir,
   type SyndicusDirField,
   type SyndicusDirInput,
@@ -41,7 +40,7 @@ const LEEG = Object.fromEntries(SYNDICUS_DIR_FIELDS.map((f) => [f, ""])) as Synd
 /** De klant met de meeste syndicusgegevens als bron voor een nieuwe fiche. */
 function ausDerKlant(rows: Record<string, unknown>[]): SyndicusDirInput {
   const bron =
-    rows.find((r) => r.syndicus_street || r.syndicus_email || r.syndicus_phone || r.syndicus_vat_number || r.syndicus_billing_email) ??
+    rows.find((r) => r["syndicus_street"] || r["syndicus_email"] || r["syndicus_phone"] || r["syndicus_vat_number"] || r["syndicus_billing_email"]) ??
     rows[0];
   return bron ? dirFromCustomer(bron) : LEEG;
 }
@@ -209,10 +208,10 @@ function Syndici() {
             "Adres",
             bron.street || bron.city
               ? formatAddress({
-                  street: bron.street,
-                  house_number: bron.house_number,
-                  postal_code: bron.postal_code,
-                  city: bron.city,
+                  street: bron.street ?? null,
+                  house_number: bron.house_number ?? null,
+                  postal_code: bron.postal_code ?? null,
+                  city: bron.city ?? null,
                 })
               : null,
           ],
@@ -296,7 +295,7 @@ function Syndici() {
               </p>
             ) : (
               <ul className="mt-4 border-t text-sm [&>li]:flex [&>li]:flex-wrap [&>li]:items-baseline [&>li]:gap-x-2 [&>li]:border-t [&>li]:py-1.5">
-                {g.rows.map((c: SyndicusCustomer) => (
+                {g.rows.map((c) => (
                   <li key={c.id}>
                     <span className="font-mono text-xs text-muted-foreground">
                       {(c as { customer_number?: string | null }).customer_number ?? "—"}

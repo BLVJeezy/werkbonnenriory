@@ -89,7 +89,7 @@ function Klanten() {
       byKey.set(key, { name, details: customerDetailsFromDir(d) });
     }
     for (const c of data) {
-      const name = (c.syndicus_company as string | null)?.trim();
+      const name = ((c.syndicus_company as string | null) ?? "").trim();
       const key = syndicusKey(name);
       if (!key || byKey.has(key)) continue;
       byKey.set(
