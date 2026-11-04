@@ -111,8 +111,8 @@ describe("syndicusGroups", () => {
       [fiche],
     );
     expect(g).toHaveLength(1);
-    expect(g[0].rows.map((r) => r.id)).toEqual(["c3"]);
-    expect(g[0].dir?.id).toBe("1");
-    expect(g[0].label).toBe("Immo Schrijnemakers BV – Olivier");
+    expect(g[0]?.rows.map((r) => r.id)).toEqual(["c3"]);
+    expect(g[0]?.dir?.id).toBe("1");
+    expect(g[0]?.label).toBe("Immo Schrijnemakers BV – Olivier");
   });
 });
