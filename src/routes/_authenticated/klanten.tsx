@@ -60,6 +60,7 @@ function Klanten() {
   const [assignCompany, setAssignCompany] = useState("");
   const [assignContact, setAssignContact] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [creating, setCreating] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["customers"],
     queryFn: () => allCustomers(supabase),
@@ -159,7 +160,34 @@ function Klanten() {
     }
   }
 
+  function openCreate() {
+    setEditing(null);
+    setForm({ vrij_beroep: "", oud6: "" });
+    setCreating(true);
+  }
+
+  async function createCustomer() {
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : null };
+    if (!patch.name) {
+      toast.error("De naam mag niet leeg zijn.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("customers").insert(patch);
+    setSaving(false);
+    if (error) {
+      toast.error(error.code === "23505" ? "Er bestaat al een klant met deze naam en adres." : error.message);
+      return;
+    }
+    toast.success(`${patch.name} aangemaakt`);
+    await ficheBijwerken(patch as Record<string, unknown>);
+    setCreating(false);
+    qc.invalidateQueries({ queryKey: ["customers"] });
+    qc.invalidateQueries({ queryKey: ["syndici"] });
+  }
+
   function openEdit(c: (typeof data)[number]) {
+    setCreating(false);
     setEditing(editing === c.id ? null : c.id);
     setForm({
       ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
