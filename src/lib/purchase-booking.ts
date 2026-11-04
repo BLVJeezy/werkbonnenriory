@@ -88,14 +88,22 @@ export function parsePurchaseUbl(xml: string): ParsedPurchaseInvoice & { kind: '
   const lineTag = kind === 'creditnota' ? 'CreditNoteLine' : 'InvoiceLine';
   const qtyTag = kind === 'creditnota' ? 'CreditedQuantity' : 'InvoicedQuantity';
   const totals = tag(xml, 'LegalMonetaryTotal') ?? '';
-  const lines = tags(xml, lineTag).map(l => ({
-    description: decode(tag(tag(l, 'Item') ?? '', 'Name')) ?? decode(tag(l, 'Description')) ?? 'Lijn',
-    quantity: Number(tag(l, qtyTag)) || 1,
-    unit: /unitCode="([^"]+)"/.exec(l)?.[1] ?? 'st',
-    unitPrice: Number(tag(tag(l, 'Price') ?? '', 'PriceAmount')) || 0,
-    amount: Number(tag(l, 'LineExtensionAmount')) || 0,
-  }));
   const taxTotal = tag(xml, 'TaxTotal') ?? '';
+  // Most Peppol invoices carry one tax category; then that percentage belongs to every line.
+  const percents = [...new Set(tags(taxTotal, 'TaxSubtotal').map(s => numTag(s, 'Percent')).filter((p): p is number => p !== null))];
+  const docRate = percents.length === 1 ? percents[0] : null;
+  const lines = tags(xml, lineTag).map(l => {
+    const unitCode = /unitCode="([^"]+)"/.exec(l)?.[1];
+    return {
+      description: decode(tag(tag(l, 'Item') ?? '', 'Name')) ?? decode(tag(l, 'Description')) ?? 'Lijn',
+      quantity: Number(tag(l, qtyTag)) || 1,
+      unit: (unitCode && UNITS[unitCode]) || unitCode || 'st',
+      unitPrice: Number(tag(tag(l, 'Price') ?? '', 'PriceAmount')) || 0,
+      amount: Number(tag(l, 'LineExtensionAmount')) || 0,
+      vatRate: numTag(l, 'Percent') ?? docRate,
+      vat: numTag(l, 'TaxAmount'),
+    };
+  });
   const ref = decode(tag(pm, 'PaymentID'));
   const number = decode(tag(xml.replace(/<(?:[\w-]+:)?(AccountingSupplierParty|AccountingCustomerParty|InvoiceLine|CreditNoteLine|BillingReference|OrderReference)[\s\S]*?<\/(?:[\w-]+:)?\1>/g, ''), 'ID'));
   const parsed = normalizePurchaseInvoice({
