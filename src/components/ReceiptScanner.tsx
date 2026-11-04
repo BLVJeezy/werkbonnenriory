@@ -96,7 +96,7 @@ export function ReceiptScanner({ disabled, onScan }: { disabled: boolean; onScan
   }
 
   return <>
-    <Button disabled={disabled} onClick={() => setOpen(true)}><ScanLine />Mobiele scanner</Button>
+    <Button disabled={disabled} onClick={() => setOpen(true)}><ScanLine />Bonnetje scannen</Button>
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-full flex-col gap-3 rounded-none p-4 sm:h-auto sm:max-h-[90dvh] sm:max-w-xl sm:rounded-md" onEscapeKeyDown={e=>{if(working)e.preventDefault();}} onPointerDownOutside={e=>{if(working)e.preventDefault();}}>
         <DialogTitle className="pr-8 font-black uppercase tracking-normal">Document scannen</DialogTitle>

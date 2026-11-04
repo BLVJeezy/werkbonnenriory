@@ -238,6 +238,7 @@ function Aankoopfacturen() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-black uppercase">Aankoopfacturen</h1>
         <div className="ml-auto flex flex-wrap gap-2">
+          <ReceiptScanner disabled={busy} onScan={leesTicket} />
           <Button asChild variant="outline"><Link to="/leveranciers">Leveranciers</Link></Button>
           <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>
           {peppyrus?.configured && !peppyrus.live ? <Button variant="outline" disabled={busy} title="Stuurt een proeffactuur naar je eigen Peppol-adres in de testomgeving" onClick={stuurTest}>Testfactuur ontvangen</Button> : null}
@@ -260,10 +261,10 @@ function Aankoopfacturen() {
       >
         <span className="font-bold">Sleep hier facturen, buitenlandse facturen of btw-ticketjes</span>
         <span className="text-sm text-muted-foreground">PDF, JPG, PNG of WebP — leverancier, lijnen, vervaldag en betalingskenmerk worden automatisch uitgelezen</span>
-        <input id="receipt-upload" type="file" multiple hidden accept="application/pdf,image/jpeg,image/png,image/webp" disabled={busy} onChange={(e) => { if (e.target.files) void leesBestanden(e.target.files); e.target.value = ''; }} />
+        <input id="receipt-upload" type="file" multiple hidden accept="application/pdf,image/jpeg,image/png,image/webp" capture="environment" disabled={busy} onChange={(e) => { if (e.target.files) void leesBestanden(e.target.files); e.target.value = ''; }} />
         {busy && <span role="status">Document wordt verwerkt…</span>}
       </div>
-      <div className="flex flex-wrap items-center gap-3"><ReceiptScanner disabled={busy} onScan={leesTicket} /><span className="text-sm text-muted-foreground">Afletteren van betalingen gebeurt automatisch in Boekhouding → Bank.</span></div>
+      <p className="text-sm text-muted-foreground">Afletteren van betalingen gebeurt automatisch in Boekhouding → Bank.</p>
 
       <div className="flex flex-wrap items-center gap-2">
         {([['te_controleren', 'Te controleren'], ['goedgekeurd', 'Gecontroleerd'], ['betaald', 'Betaald'], ['alle', 'Alle']] as const).map(([k, l]) => (
