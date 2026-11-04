@@ -1,17 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
 import { formatAddress } from "@/lib/address";
+import { SortTh, Th, tableCls, useSort } from "@/components/SortTable";
+import { filterChoices } from "@/lib/choice-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteSyndicus, saveSyndicus } from "@/lib/syndici.functions";
 import {
   SYNDICUS_DIR_FIELDS,
   dirFromCustomer,
+  residentiesOverzicht,
   syndicusGroups,
+  type ResidentyRij,
   type SyndicusDir,
   type SyndicusDirField,
   type SyndicusDirInput,
@@ -115,6 +120,129 @@ function Fiche({
   );
 }
 
+/** Wat het overzicht nodig heeft; de rijen komen uit de klantenlijst. */
+type Residentie = {
+  id: string;
+  name: string;
+  customer_number?: string | null;
+  street?: string | null;
+  house_number?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+};
+
+/** Eén lijst met alle residenties, elk met de syndicus die erbij hoort. */
+function ResidentiesOverzicht({ rijen }: { rijen: ResidentyRij<Residentie>[] }) {
+  const [q, setQ] = useState("");
+  const gevonden = useMemo(() => {
+    const keuzes = rijen.map((r) => ({
+      value: r.klant.id,
+      label: r.klant.name,
+      search: [
+        r.syndicus,
+        r.klant.customer_number,
+        r.klant.street,
+        r.klant.house_number,
+        r.klant.postal_code,
+        r.klant.city,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }));
+    const ids = new Set(filterChoices(keuzes, q).map((k) => k.value));
+    return rijen.filter((r) => ids.has(r.klant.id));
+  }, [rijen, q]);
+  const sort = useSort(
+    gevonden,
+    {
+      residentie: (r) => r.klant.name,
+      nr: (r) => r.klant.customer_number,
+      syndicus: (r) => r.syndicus,
+    },
+    "residentie",
+  );
+
+  return (
+    <section className="rounded-md border bg-card p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-black uppercase tracking-wide">Alle residenties op een rij</h2>
+        <span className="rounded bg-primary/15 px-2 py-0.5 text-xs font-bold">
+          {rijen.length} residentie{rijen.length === 1 ? "" : "s"}
+        </span>
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Zoek residentie, adres of syndicus"
+          className="ml-auto w-full sm:w-72"
+        />
+      </div>
+      {rijen.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Nog geen residentie met syndicus. Wijs er een toe bij{" "}
+          <Link to="/klanten" className="underline">
+            Klanten
+          </Link>
+          .
+        </p>
+      ) : (
+        <div className="mt-3 max-h-[32rem] overflow-auto rounded-md border bg-card">
+          <table className={tableCls}>
+                  <thead className="sticky top-0 z-10 bg-muted">
+                    <tr>
+                      <SortTh k="residentie" sort={sort}>
+                        Residentie
+                      </SortTh>
+                      <SortTh k="nr" sort={sort}>
+                        Klantnr.
+                      </SortTh>
+                      <Th className="hidden sm:table-cell">Adres</Th>
+                      <SortTh k="syndicus" sort={sort} className="hidden sm:table-cell">
+                        Syndicus
+                      </SortTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sort.sorted.map((r) => (
+                      <tr key={r.klant.id}>
+                        <td className="font-bold">
+                          {r.klant.name}
+                          <span className="block text-xs font-normal text-muted-foreground sm:hidden">
+                            {formatAddress(r.klant) || "geen adres"}
+                          </span>
+                          <a
+                            href={`#syndicus-${encodeURIComponent(r.key)}`}
+                            className="block text-xs font-semibold underline sm:hidden [overflow-wrap:anywhere]"
+                          >
+                            {r.syndicus}
+                          </a>
+                        </td>
+                        <td className="font-mono text-xs text-muted-foreground">{r.klant.customer_number ?? "—"}</td>
+                        <td className="hidden text-muted-foreground sm:table-cell">{formatAddress(r.klant) || "geen adres"}</td>
+                        <td className="hidden sm:table-cell">
+                          <a
+                            href={`#syndicus-${encodeURIComponent(r.key)}`}
+                            className="font-semibold underline [overflow-wrap:anywhere]"
+                          >
+                            {r.syndicus}
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                    {sort.sorted.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="text-muted-foreground">
+                          Geen residentie gevonden voor “{q}”.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Syndici() {
   const qc = useQueryClient();
   const { data = [] } = useQuery({ queryKey: ["customers"], queryFn: () => allCustomers(supabase) });
@@ -127,9 +255,20 @@ function Syndici() {
     },
   });
   const groups = useMemo(() => syndicusGroups(data, directory), [data, directory]);
+  const rijen = useMemo(() => residentiesOverzicht(groups), [groups]);
   const [open, setOpen] = useState<string | null>(null);
   const [confirmKey, setConfirmKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // De residentielijst van een syndicus is ingeklapt tenzij hier aan staat.
+  const [openVme, setOpenVme] = useState<Record<string, boolean>>({});
+
+  function toggleResidenties(key: string) {
+    setOpenVme((p) => ({ ...p, [key]: !p[key] }));
+  }
+
+  function allesResidenties(open: boolean) {
+    setOpenVme(Object.fromEntries(groups.map((g) => [g.key, open])));
+  }
 
   function ververst() {
     qc.invalidateQueries({ queryKey: ["syndici"] });
@@ -167,8 +306,9 @@ function Syndici() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        {groups.length} syndicus{groups.length === 1 ? "" : "i"} met samen {withSyndicus} klant{withSyndicus === 1 ? "" : "en"}.
-        {zonderVme > 0 && <> {zonderVme} {zonderVme === 1 ? "fiche heeft" : "fiches hebben"} nog geen VME.</>}
+        {groups.length} {groups.length === 1 ? "syndicus" : "syndici"} met samen {withSyndicus} residentie
+        {withSyndicus === 1 ? "" : "s"}.
+        {zonderVme > 0 && <> {zonderVme} {zonderVme === 1 ? "fiche heeft" : "fiches hebben"} nog geen residentie.</>}
         {data.length - withSyndicus > 0 && (
           <>
             {" "}
@@ -178,6 +318,21 @@ function Syndici() {
           </>
         )}
       </p>
+
+      <ResidentiesOverzicht rijen={rijen} />
+
+      <div className="flex flex-wrap items-center gap-2 pt-2">
+        <h2 className="text-sm font-black uppercase tracking-wide">Per syndicus</h2>
+        <span className="text-xs text-muted-foreground">klik op het aantal residenties om de lijst te openen</span>
+        <div className="ml-auto flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => allesResidenties(true)}>
+            Alles uitklappen
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => allesResidenties(false)}>
+            Alles inklappen
+          </Button>
+        </div>
+      </div>
 
       {open === "nieuw" && (
         <Fiche
@@ -220,13 +375,32 @@ function Syndici() {
           ["E-mail boekhouding", (bron.billing_email as string | null) ?? null],
         ];
         const bewerken = open === g.key;
+        const openResidenties = !!openVme[g.key];
         return (
-          <section key={g.key} className="rounded-md border bg-card p-4">
+          <section
+            key={g.key}
+            id={`syndicus-${encodeURIComponent(g.key)}`}
+            className="scroll-mt-20 rounded-md border bg-card p-4"
+          >
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="text-xl font-black uppercase">{g.label}</h2>
-              <span className="rounded bg-primary/15 px-2 py-0.5 text-xs font-bold">
-                {g.rows.length} VME{g.rows.length === 1 ? "" : "'s"}
-              </span>
+              {g.rows.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => toggleResidenties(g.key)}
+                  aria-expanded={openResidenties}
+                  className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 text-xs font-bold hover:bg-primary/25"
+                >
+                  {openResidenties ? (
+                    <ChevronDown className="size-3.5" aria-hidden="true" />
+                  ) : (
+                    <ChevronRight className="size-3.5" aria-hidden="true" />
+                  )}
+                  {g.rows.length} residentie{g.rows.length === 1 ? "" : "s"}
+                </button>
+              ) : (
+                <span className="rounded border px-2 py-0.5 text-xs">nog geen residentie</span>
+              )}
               {!g.dir && <span className="rounded border px-2 py-0.5 text-xs">nog geen fiche</span>}
               <div className="ml-auto flex flex-wrap gap-2">
                 {g.dir ? (
@@ -280,31 +454,58 @@ function Syndici() {
 
             <dl className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
               {details.map(([label, value]) => (
-                <div key={label} className="flex gap-2">
-                  <dt className="min-w-36 text-xs font-bold uppercase text-muted-foreground">{label}</dt>
-                  <dd className={value ? "font-semibold" : "text-muted-foreground"}>{value || "nog niet ingevuld"}</dd>
+                <div key={label} className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+                  <dt className="text-xs font-bold uppercase text-muted-foreground sm:min-w-36">{label}</dt>
+                  <dd className={`[overflow-wrap:anywhere] ${value ? "font-semibold" : "text-muted-foreground"}`}>
+                    {value || "nog niet ingevuld"}
+                  </dd>
                 </div>
               ))}
             </dl>
 
             {g.rows.length === 0 ? (
               <p className="mt-4 border-t pt-3 text-sm text-muted-foreground">
-                Nog geen VME toegewezen. Vink bij <Link to="/klanten" className="underline">Klanten</Link> de bijbehorende VME's
-                in en klik <strong className="font-semibold text-foreground">Syndicus toewijzen</strong>; deze fiches staan daar
-                al in de keuzelijst.
+                Nog geen residentie toegewezen. Vink bij <Link to="/klanten" className="underline">Klanten</Link> de bijbehorende
+                residenties in en klik <strong className="font-semibold text-foreground">Syndicus toewijzen</strong>; deze fiches
+                staan daar al in de keuzelijst.
               </p>
+            ) : !openResidenties ? (
+              <button
+                type="button"
+                onClick={() => toggleResidenties(g.key)}
+                className="mt-3 flex w-full items-center gap-2 border-t pt-3 text-left text-sm text-muted-foreground hover:text-foreground"
+              >
+                <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                Lijst van {g.rows.length} residentie{g.rows.length === 1 ? "" : "s"} openen
+              </button>
             ) : (
-              <ul className="mt-4 border-t text-sm [&>li]:flex [&>li]:flex-wrap [&>li]:items-baseline [&>li]:gap-x-2 [&>li]:border-t [&>li]:py-1.5">
-                {g.rows.map((c) => (
-                  <li key={c.id}>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {(c as { customer_number?: string | null }).customer_number ?? "—"}
-                    </span>
-                    <span className="font-bold">{c.name}</span>
-                    <span className="text-muted-foreground">{formatAddress(c) || "geen adres"}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-3 max-h-96 overflow-auto rounded-md border bg-muted/20">
+                <table className="w-full text-sm [&_tbody_tr]:border-t [&_td]:px-3 [&_td]:py-1.5 [&_td]:align-baseline">
+                  <thead className="sticky top-0 z-10 bg-card text-left text-xs font-bold uppercase tracking-wide text-muted-foreground [&_th]:px-3 [&_th]:py-1.5">
+                    <tr>
+                      <th className="w-24">Klantnr.</th>
+                      <th>Residentie</th>
+                      <th className="hidden sm:table-cell">Adres</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.rows.map((c) => (
+                      <tr key={c.id}>
+                        <td className="font-mono text-xs text-muted-foreground">
+                          {(c as { customer_number?: string | null }).customer_number ?? "—"}
+                        </td>
+                        <td className="font-bold">
+                          {c.name}
+                          <span className="block text-xs font-normal text-muted-foreground sm:hidden">
+                            {formatAddress(c) || "geen adres"}
+                          </span>
+                        </td>
+                        <td className="hidden text-muted-foreground sm:table-cell">{formatAddress(c) || "geen adres"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         );
