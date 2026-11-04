@@ -190,14 +190,15 @@ export const sendInvoiceCopy = createServerFn({ method: "POST" })
     if (await appUserReconnectRequired(profile)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
     if (!profile.ok) throw new Error(`Mailbox controleren mislukt [${profile.status}]: ${await profile.text()}`);
     assertInvoiceMailbox(await profile.json());
-    const res = await callAsAppUser({
-      gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
-      init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
-      requiredScopes: WERKBON_MAIL_SCOPES,
+    await tracking.send(async () => {
+      const res = await callAsAppUser({
+        gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
+        init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
+        requiredScopes: WERKBON_MAIL_SCOPES,
+      });
+      if (await appUserReconnectRequired(res)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
+      if (!res.ok) throw new Error(`Mail versturen mislukt [${res.status}]: ${await res.text()}`);
     });
-    if (await appUserReconnectRequired(res)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
-    if (!res.ok) throw new Error(`Mail versturen mislukt [${res.status}]: ${await res.text()}`);
-    await tracking.send(async () => {});
     return { ok: true as const, to: data.to, okioki: OKIOKI_INVOICE_EMAIL };
   });
 
