@@ -98,15 +98,28 @@ async function peppyrusCall(path: string, init?: RequestInit) {
   const key = process.env['PEPPYRUS_API_KEY'];
   if (!key) throw new Error('Peppyrus is voorbereid maar nog niet gekoppeld.');
   const res = await fetch(`${PEPPYRUS_URL()}${path}`, { ...init, headers: { 'X-Api-Key': key, Accept: 'application/json', ...(init?.headers ?? {}) }, signal: AbortSignal.timeout(30000) });
-  if (!res.ok) throw new Error(`Peppyrus ${path} mislukt (HTTP ${res.status}): ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) throw new Error(`Peppyrus ${path} mislukt (HTTP ${res.status}): ${(await res.text()).slice(0, 200) || 'leeg antwoord'}`);
   return res;
+}
+
+/** Which Peppol address does this Peppyrus account own? Never throws: setup problems are shown to the admin. */
+async function peppyrusParticipant(): Promise<{ participantId: string | null; error: string | null }> {
+  try {
+    const org = await (await peppyrusCall('/organization/peppol')).json() as any;
+    const list: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
+    const id = String((list.find(p => p?.canReceive) ?? list[0])?.participantId ?? '');
+    return id ? { participantId: id, error: null } : { participantId: null, error: 'Peppyrus kent geen Peppol-adres toe aan deze account.' };
+  } catch (e) { return { participantId: null, error: e instanceof Error ? e.message : String(e) }; }
 }
 
 /** Peppyrus is prepared but only active once an API key is added. */
 export const peppyrusStatus = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    return { configured: !!process.env['PEPPYRUS_API_KEY'], live: process.env['PEPPYRUS_LIVE'] === 'true' };
+    const configured = !!process.env['PEPPYRUS_API_KEY'];
+    const live = process.env['PEPPYRUS_LIVE'] === 'true';
+    if (!configured) return { configured, live, participantId: null, error: null };
+    return { configured, live, ...(await peppyrusParticipant()) };
   });
 
 export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
