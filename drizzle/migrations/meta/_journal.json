@@ -729,6 +729,13 @@
       "when": 1793780314127,
       "tag": "0103_quote_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1793785171321,
+      "tag": "0104_invoice_line_vat_rate",
+      "breakpoints": true
     }
   ]
 }

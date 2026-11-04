@@ -1114,6 +1114,7 @@ export type Database = {
           suggestion_rule_id: string | null
           user_id: string
           vat: number
+          vat_rate: number | null
         }
         Insert: {
           account?: string | null
@@ -1128,6 +1129,7 @@ export type Database = {
           suggestion_rule_id?: string | null
           user_id?: string
           vat?: number
+          vat_rate?: number | null
         }
         Update: {
           account?: string | null
@@ -1142,6 +1144,7 @@ export type Database = {
           suggestion_rule_id?: string | null
           user_id?: string
           vat?: number
+          vat_rate?: number | null
         }
         Relationships: [
           {
