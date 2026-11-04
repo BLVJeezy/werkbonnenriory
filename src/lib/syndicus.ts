@@ -30,3 +30,16 @@ export function applySyndicus<T extends SyndicusFields>(x: T): T & { use_site_ad
     use_site_address: false,
   };
 }
+
+/**
+ * De syndicusnamen die al bij klanten horen: zonder duplicaten, zonder lege namen,
+ * alfabetisch gesorteerd. Gebruikt als suggestielijst in het bewerkingsvak.
+ */
+export function syndicusSuggestions(rows: { syndicus?: string | null }[]): string[] {
+  const names = new Set<string>();
+  for (const r of rows) {
+    const s = r.syndicus?.trim();
+    if (s) names.add(s);
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, "nl"));
+}

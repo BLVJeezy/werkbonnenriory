@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applySyndicus } from "./syndicus";
+import { applySyndicus, syndicusSuggestions } from "./syndicus";
 
 const base = {
   customer_name: "Immo Schrijnemakers BV (Olivier Schrijnemakers)",
