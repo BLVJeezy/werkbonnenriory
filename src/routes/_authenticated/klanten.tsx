@@ -388,45 +388,7 @@ function Klanten() {
                       <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-                        <div className="flex flex-wrap gap-2">
-                          {FIELDS.map((f) => (
-                            <label key={f.key} className={`space-y-1 ${f.className}`}>
-                              <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
-                              <Input value={form[f.key] ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.label} />
-                            </label>
-                          ))}
-                        </div>
-                        <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
-                          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className="text-xs font-black uppercase tracking-wide text-primary">Syndicus</span>
-                            <span className="text-xs text-muted-foreground">Bij een VME: het kantoor dat de opdracht gaf. Klant en factuur blijven op naam van de VME, met het eigen btw-nummer van de VME.</span>
-                            {(form["syndicus_company"] || form["syndicus_contact"]) && (
-                              <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setForm((prev) => ({ ...prev, ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, ""])) }))}>Syndicus wissen</Button>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {SYNDICUS_FIELDS.map((f) => (
-                              <label key={f.key} className={`space-y-1 ${f.className}`}>
-                                <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
-                                <Input
-                                  list={f.key === "syndicus_company" ? "syndicus-suggesties" : undefined}
-                                  value={form[f.key] ?? ""}
-                                  onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                                  placeholder={f.label}
-                                />
-                              </label>
-                            ))}
-                          </div>
-                          {syndicusLabel(form) && <div className="mt-2 text-xs text-muted-foreground">Weergave in de lijst: <strong className="font-semibold text-foreground">{syndicusLabel(form)}</strong></div>}
-                        </div>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
-                          Vrij beroep — altijd 21% btw, ook met een btw-nummer
-                        </label>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["oud6"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, oud6: e.target.checked ? "1" : "" }))} />
-                          Particulier, woning ouder dan 10 jaar — 6% btw
-                        </label>
+                        <CustomerFormFields form={form} setForm={setForm} />
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
