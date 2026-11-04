@@ -296,12 +296,23 @@ function Klanten() {
       <datalist id="syndicus-suggesties">{syndici.map((s) => <option key={s} value={s} />)}</datalist>
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="text-3xl font-black uppercase">Klanten</h1>
-        <label className="ml-auto">
+        <Button className="ml-auto" variant={creating ? "secondary" : "default"} onClick={() => (creating ? setCreating(false) : openCreate())}>{creating ? "Sluiten" : "Nieuwe klant"}</Button>
+        <label>
           <input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importExcel(f); }} />
           <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
         </label>
       </div>
       <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} />
+      {creating && (
+        <div className="space-y-3 rounded-md border border-primary/40 bg-card p-4">
+          <div className="text-sm font-black uppercase tracking-wide">Nieuwe klant</div>
+          <CustomerFormFields form={form} setForm={setForm} />
+          <div className="flex gap-2">
+            <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>
+            <Button size="sm" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>Annuleren</Button>
+          </div>
+        </div>
+      )}
       {sel.size > 0 && (
         <div className="rounded-md border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
