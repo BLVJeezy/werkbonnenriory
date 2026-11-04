@@ -9,13 +9,14 @@ import { Input } from "@/components/ui/input";
 import { formatAddress } from "@/lib/address";
 import { allCustomers, customerKey, customerPatch, rowsToCustomers, type CustomerRow } from "@/lib/customers";
 import { filterChoices } from "@/lib/choice-search";
+import { syndicusDetailsPatch, syndicusLabel, syndicusSuggestions, type SyndicusDetailField } from "@/lib/syndicus";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   head: () => ({ meta: [{ title: "Klanten — Riory Werkbonnen" }, { name: "description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:title", content: "Klanten — Riory Werkbonnen" }, { property: "og:description", content: "Opgeslagen klanten van Riory, met Excel-import." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Klanten,
 });
 
-const FIELDS: { key: keyof CustomerRow | "syndicus"; label: string; className: string }[] = [
+const FIELDS: { key: keyof CustomerRow; label: string; className: string }[] = [
   { key: "name", label: "Naam", className: "min-w-48 flex-1" },
   { key: "street", label: "Straat", className: "min-w-40 flex-[2]" },
   { key: "house_number", label: "Nr.", className: "w-24" },
@@ -26,7 +27,19 @@ const FIELDS: { key: keyof CustomerRow | "syndicus"; label: string; className: s
   { key: "billing_email", label: "E-mail facturatie", className: "min-w-44 flex-1" },
   { key: "vat_number", label: "Btw-nummer", className: "w-44" },
   { key: "project_name", label: "Projectnaam", className: "min-w-36 flex-1" },
-  { key: "syndicus", label: "Syndicus", className: "min-w-44 flex-1" },
+];
+
+const SYNDICUS_FIELDS: { key: SyndicusDetailField; label: string; className: string }[] = [
+  { key: "syndicus_company", label: "Bedrijfsnaam", className: "min-w-48 flex-[2]" },
+  { key: "syndicus_contact", label: "Contactpersoon", className: "min-w-40 flex-1" },
+  { key: "syndicus_vat_number", label: "Btw-nummer", className: "w-44" },
+  { key: "syndicus_street", label: "Straat", className: "min-w-40 flex-[2]" },
+  { key: "syndicus_house_number", label: "Nr.", className: "w-24" },
+  { key: "syndicus_postal_code", label: "Postcode", className: "w-32" },
+  { key: "syndicus_city", label: "Plaats", className: "min-w-36 flex-1" },
+  { key: "syndicus_phone", label: "Telefoon", className: "w-40" },
+  { key: "syndicus_email", label: "E-mail", className: "min-w-44 flex-1" },
+  { key: "syndicus_billing_email", label: "E-mail boekhouding", className: "min-w-44 flex-1" },
 ];
 
 function Klanten() {
@@ -43,17 +56,25 @@ function Klanten() {
   const { data: branches = [] } = useQuery({ queryKey: ["branches"], queryFn: async () => (await supabase.from("branches").select("*").order("name")).data ?? [] });
   const branchName = (id: string | null | undefined) => branches.find((b) => b.id === id)?.name;
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
-  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus].filter(Boolean).join(' ') })), q).map(c => c.value));
+  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus, c.syndicus_company, c.syndicus_contact, c.syndicus_email, c.syndicus_billing_email, c.syndicus_phone].filter(Boolean).join(' ') })), q).map(c => c.value));
   const rows = data.filter(c => matchingIds.has(c.id));
-  const sort = useSort(rows, { nr: c => c.customer_number, naam: c => c.name, plaats: c => c.city, tel: c => c.phone, mail: c => c.email, btw: c => c.vat_number });
+  const sort = useSort(rows, { nr: c => c.customer_number, naam: c => c.name, plaats: c => c.city, tel: c => c.phone, mail: c => c.email, btw: c => c.vat_number, syndicus: c => c.syndicus ?? "" });
+  const syndici = syndicusSuggestions(data.map((c) => ({ syndicus: c.syndicus_company as string | null })));
 
   function openEdit(c: (typeof data)[number]) {
     setEditing(editing === c.id ? null : c.id);
-    setForm({ ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])), vrij_beroep: c.vrij_beroep ? "1" : "", oud6: Number(c.default_vat_rate) === 6 ? "1" : "" });
+    setForm({
+      ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
+      ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
+      // Older rows only have the syndicus name as one line of text: put it in the bedrijfsnaam field.
+      syndicus_company: (c.syndicus_company as string | null) ?? c.syndicus ?? "",
+      vrij_beroep: c.vrij_beroep ? "1" : "",
+      oud6: Number(c.default_vat_rate) === 6 ? "1" : "",
+    });
   }
 
   async function save(c: (typeof data)[number]) {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), syndicus: (form["syndicus"] ?? "").trim() || null, vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -97,6 +118,7 @@ function Klanten() {
 
   return (
     <div className="space-y-6">
+      <datalist id="syndicus-suggesties">{syndici.map((s) => <option key={s} value={s} />)}</datalist>
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="text-3xl font-black uppercase">Klanten</h1>
         <label className="ml-auto">
@@ -111,21 +133,23 @@ function Klanten() {
             <SortTh k="nr" sort={sort} className="w-px">Nr.</SortTh>
             <SortTh k="naam" sort={sort}>Naam</SortTh>
             <SortTh k="plaats" sort={sort} className="hidden md:table-cell">Adres</SortTh>
+            <SortTh k="syndicus" sort={sort} className="hidden lg:table-cell">Syndicus</SortTh>
             <SortTh k="tel" sort={sort} className="hidden lg:table-cell">Telefoon</SortTh>
             <SortTh k="mail" sort={sort} className="hidden 2xl:table-cell">E-mail</SortTh>
             <SortTh k="btw" sort={sort} className="hidden 2xl:table-cell">Btw-nummer</SortTh>
             <Th />
           </tr></thead>
           <tbody>
-            {sort.sorted.length === 0 && <tr><td colSpan={7} className="text-muted-foreground">Geen klanten.</td></tr>}
+            {sort.sorted.length === 0 && <tr><td colSpan={8} className="text-muted-foreground">Geen klanten.</td></tr>}
             {sort.sorted.map((c) => {
               const own = projects.filter(p => p.customer_id === c.id);
               return (
                 <Fragment key={c.id}>
                   <tr>
                     <td className="max-w-24 truncate font-mono text-xs text-muted-foreground" title={c.customer_number ?? ""}>{c.customer_number}</td>
-                    <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}{c.syndicus && <div className="text-xs font-normal text-muted-foreground">Syndicus: {c.syndicus}</div>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}{c.syndicus && <div className="text-xs font-normal text-muted-foreground lg:hidden">Syndicus: {c.syndicus}</div>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
+                    <td className="hidden text-muted-foreground lg:table-cell">{c.syndicus_company ?? c.syndicus ?? "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
                     <td className="hidden max-w-56 truncate 2xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
                     <td className="hidden whitespace-nowrap font-mono text-xs 2xl:table-cell">{c.vat_number ?? "—"}</td>
@@ -139,8 +163,8 @@ function Klanten() {
                     </td>
                   </tr>
                   {editing === c.id && (
-                    <tr className="bg-muted/30"><td colSpan={7}>
-                      <div className="space-y-2">
+                    <tr className="bg-muted/30"><td colSpan={8}>
+                      <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
                         <div className="flex flex-wrap gap-2">
@@ -150,6 +174,29 @@ function Klanten() {
                               <Input value={form[f.key] ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.label} />
                             </label>
                           ))}
+                        </div>
+                        <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
+                          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="text-xs font-black uppercase tracking-wide text-primary">Syndicus</span>
+                            <span className="text-xs text-muted-foreground">Bij een VME: het kantoor dat de opdracht gaf. Klant en factuur blijven op naam van de VME, met het eigen btw-nummer van de VME.</span>
+                            {(form["syndicus_company"] || form["syndicus_contact"]) && (
+                              <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setForm((prev) => ({ ...prev, ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, ""])) }))}>Syndicus wissen</Button>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {SYNDICUS_FIELDS.map((f) => (
+                              <label key={f.key} className={`space-y-1 ${f.className}`}>
+                                <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
+                                <Input
+                                  list={f.key === "syndicus_company" ? "syndicus-suggesties" : undefined}
+                                  value={form[f.key] ?? ""}
+                                  onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                                  placeholder={f.label}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                          {syndicusLabel(form) && <div className="mt-2 text-xs text-muted-foreground">Weergave in de lijst: <strong className="font-semibold text-foreground">{syndicusLabel(form)}</strong></div>}
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                           <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
