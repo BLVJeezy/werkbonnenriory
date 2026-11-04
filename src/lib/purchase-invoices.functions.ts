@@ -59,7 +59,7 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
     let supplierSynced = false;
     let supplierSyncError: string | null = null;
     if (supplier && data.syncSupplier !== false) {
-      const patch: Record<string, string> = {};
+      const patch: { vat_number?: string; iban?: string; bic?: string } = {};
       for (const [col, val] of [['vat_number', n.supplierVat], ['iban', n.supplierIban], ['bic', n.supplierBic]] as const) {
         if (val && supplier[col] !== val) patch[col] = val;
       }
@@ -108,7 +108,7 @@ export const paymentFile = createServerFn({ method: "POST" })
     const xml = buildPain001(
       { name: s.company_name ?? "Riory bv", iban: s.company_iban, bic: s.company_bic ?? null },
       rows.map((r: any, i: number) => ({
-        creditorName: r.supplier_name, creditorIban: bankOf(r).iban, creditorBic: bankOf(r).bic, amount: Number(r.total),
+        creditorName: r.supplier_name, creditorIban: bankOf(r).iban as string, creditorBic: bankOf(r).bic, amount: Number(r.total),
         remittance: paymentCommunication(r.payment_ref, r.invoice_number),
         executionDate: execDate(r.due_date), endToEndId: `${messageId}-${i + 1}`,
       })),
