@@ -70,7 +70,9 @@ function Finance() {
 
   const syncPurchasesAuto = useServerFn(syncFinancePurchases);
   useEffect(() => {
-    if (!company?.simpla_bound) return;
+    // Simpla is losgekoppeld voor aankoopfacturen (gebruiker, 4 nov 2026): geen automatische inlezing meer.
+    const simplaAan: boolean = false;
+    if (!company || !simplaAan) return;
     let stop = false;
     (async () => {
       const { data: st } = await db.from("fin_sync_status").select("last_success_at").eq("company_id", company.id).eq("source", "simpla").maybeSingle();
@@ -1050,8 +1052,7 @@ function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: 
   return (
     <div className="grid gap-3 lg:grid-cols-2">
       <Card title="Simpla — aankoopfacturen">
-        <p className="text-sm">{bound ? "Dit bedrijf is gekoppeld aan de Simpla-administratie." : "Niet gekoppeld: de Simpla-token hoort bij één administratie. Koppel die eerst aan het juiste bedrijf."} Laatste geslaagde sync: {sync.data?.last_success_at ? new Date(sync.data.last_success_at).toLocaleString("nl-BE") : "nog geen"}{sync.data?.last_error ? ` · laatste fout: ${sync.data.last_error}` : ""}.</p><p className="mt-1 text-sm">Facturen worden op Simpla-ID overgenomen; opnieuw uitvoeren maakt geen dubbels. Simpla geeft geen vervaldatum of grootboekrekening mee — die vul je aan bij beoordeling.</p>
-        {!bound && <Button size="sm" variant="outline" className="mt-2 mr-2" onClick={bind}>Simpla koppelen aan dit bedrijf</Button>}<Button size="sm" className="mt-2" disabled={busy || !bound} onClick={importSimpla}>{busy ? "Bezig…" : "Overnemen in dit bedrijf"}</Button>
+        <p className="text-sm">Losgekoppeld: aankoopfacturen komen niet meer uit Simpla, maar via Peppol, mail, scans en uploads. Eerder ingelezen facturen blijven bewaard.</p>
       </Card>
       <Card title={`Ponto (bank) — ${ponto?.connected ? "gekoppeld" : "niet gekoppeld"}`}>
         <p className="text-sm">{ponto?.connected ? "De bestaande Ponto-koppeling wordt gebruikt. Bankrekeningen en verrichtingen zijn bereikbaar via Boekhouding → Bank." : "Ponto is nog niet gekoppeld. Stel de koppeling in bij Facturen of importeer bankuittreksels als CSV/XLSX."}</p>
