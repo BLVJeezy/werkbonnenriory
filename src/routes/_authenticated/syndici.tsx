@@ -187,41 +187,49 @@ function ResidentiesOverzicht({ rijen }: { rijen: ResidentyRij<Residentie>[] }) 
       ) : (
         <div className="mt-3 max-h-[32rem] overflow-auto rounded-md border bg-card">
           <table className={tableCls}>
-            <thead className="sticky top-0 z-10 bg-muted">
-              <tr>
-                <SortTh k="residentie" sort={sort}>
-                  Residentie
-                </SortTh>
-                <SortTh k="nr" sort={sort}>
-                  Klantnr.
-                </SortTh>
-                <Th>Adres</Th>
-                <SortTh k="syndicus" sort={sort}>
-                  Syndicus
-                </SortTh>
-              </tr>
-            </thead>
-            <tbody>
-              {sort.sorted.map((r) => (
-                <tr key={r.klant.id}>
-                  <td className="font-bold">{r.klant.name}</td>
-                  <td className="font-mono text-xs text-muted-foreground">{r.klant.customer_number ?? "—"}</td>
-                  <td className="text-muted-foreground">{formatAddress(r.klant) || "geen adres"}</td>
-                  <td>
-                    <a href={`#syndicus-${encodeURIComponent(r.key)}`} className="font-semibold underline">
-                      {r.syndicus}
-                    </a>
-                  </td>
-                </tr>
-              ))}
-              {sort.sorted.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-muted-foreground">
-                    Geen residentie gevonden voor “{q}”.
-                  </td>
-                </tr>
-              )}
-            </tbody>
+                  <thead className="sticky top-0 z-10 bg-muted">
+                    <tr>
+                      <SortTh k="residentie" sort={sort}>
+                        Residentie
+                      </SortTh>
+                      <SortTh k="nr" sort={sort}>
+                        Klantnr.
+                      </SortTh>
+                      <Th className="hidden sm:table-cell">Adres</Th>
+                      <SortTh k="syndicus" sort={sort}>
+                        Syndicus
+                      </SortTh>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sort.sorted.map((r) => (
+                      <tr key={r.klant.id}>
+                        <td className="font-bold">
+                          {r.klant.name}
+                          <span className="block text-xs font-normal text-muted-foreground sm:hidden">
+                            {formatAddress(r.klant) || "geen adres"}
+                          </span>
+                        </td>
+                        <td className="font-mono text-xs text-muted-foreground">{r.klant.customer_number ?? "—"}</td>
+                        <td className="hidden text-muted-foreground sm:table-cell">{formatAddress(r.klant) || "geen adres"}</td>
+                        <td>
+                          <a
+                            href={`#syndicus-${encodeURIComponent(r.key)}`}
+                            className="font-semibold underline [overflow-wrap:anywhere]"
+                          >
+                            {r.syndicus}
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                    {sort.sorted.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="text-muted-foreground">
+                          Geen residentie gevonden voor “{q}”.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
           </table>
         </div>
       )}
@@ -469,7 +477,7 @@ function Syndici() {
                     <tr>
                       <th className="w-24">Klantnr.</th>
                       <th>Residentie</th>
-                      <th>Adres</th>
+                      <th className="hidden sm:table-cell">Adres</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -478,8 +486,13 @@ function Syndici() {
                         <td className="font-mono text-xs text-muted-foreground">
                           {(c as { customer_number?: string | null }).customer_number ?? "—"}
                         </td>
-                        <td className="font-bold">{c.name}</td>
-                        <td className="text-muted-foreground">{formatAddress(c) || "geen adres"}</td>
+                        <td className="font-bold">
+                          {c.name}
+                          <span className="block text-xs font-normal text-muted-foreground sm:hidden">
+                            {formatAddress(c) || "geen adres"}
+                          </span>
+                        </td>
+                        <td className="hidden text-muted-foreground sm:table-cell">{formatAddress(c) || "geen adres"}</td>
                       </tr>
                     ))}
                   </tbody>
