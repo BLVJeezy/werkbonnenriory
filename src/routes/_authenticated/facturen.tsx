@@ -253,7 +253,7 @@ function Facturen() {
         </div>
       </section>
 
-      {data.noInvoice.length > 0 && (
+      {(data.noInvoice?.length ?? 0) > 0 && (
         <section className="space-y-3 rounded-md border bg-card p-4">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-black uppercase">Niet te factureren</h2>
