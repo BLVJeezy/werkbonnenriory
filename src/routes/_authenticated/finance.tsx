@@ -510,8 +510,8 @@ function InvoiceEdit({ c, inv, rules, onDone }: { c: string; inv: any; rules: Ru
     for (const l of lines) {
       const before = inv.fin_invoice_lines.find((o: any) => o.id === l.id);
       if (linkedAssets.some((a) => a.invoice_line_id === l.id)) continue;
-      if (l.id) await db.from("fin_invoice_lines").update({ description: l.description, ex_vat: l.ex_vat, vat: l.vat, account: l.account, category: l.category, is_investment: l.is_investment }).eq("id", l.id);
-      else await db.from("fin_invoice_lines").insert({ invoice_id: inv.id, description: l.description, ex_vat: l.ex_vat, vat: l.vat, account: l.account, category: l.category, is_investment: l.is_investment });
+      if (l.id) await db.from("fin_invoice_lines").update({ description: l.description, ex_vat: l.ex_vat, vat: l.vat, vat_rate: detectVatRate(Number(l.ex_vat), Number(l.vat)), account: l.account, category: l.category, is_investment: l.is_investment }).eq("id", l.id);
+      else await db.from("fin_invoice_lines").insert({ invoice_id: inv.id, description: l.description, ex_vat: l.ex_vat, vat: l.vat, vat_rate: detectVatRate(Number(l.ex_vat), Number(l.vat)), account: l.account, category: l.category, is_investment: l.is_investment });
       const changed = !before || before.account !== l.account || before.category !== l.category;
       if (changed && l.account && scope !== "factuur") {
         const sk = normSupplier(inv.counterparty); const kw = scope === "leverancier" ? "" : keywordFrom(l.description);
