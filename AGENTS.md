@@ -21,8 +21,6 @@
 - Work orders keep customer and optional worksite addresses in split fields; resolve the destination through the shared address helper; a DB trigger invalidates cached driving distance on address changes.
 - Work-order mail/previews share the allowlist, Worker PDF and RLS-scoped private photo loader; photo annex precedes terms, errors block omission. Previews enforce crew visibility via PDF.js dialogs. Mail uses private attachments, never inline details/rates.
 - Signing and payment share the tested task-completion helper; navigate crews only after a successful save and after the mail attempt, even on failure, so a mail error cannot strand them on a completed task.
-- Billing math lives in `src/lib/billing.ts` and document line math (travel kilometres, per-line totals) in pure tested helpers in `src/lib/invoice.ts`, so quotes and invoices cannot drift; the UI computes totals live and stores only the paid amount when payment is recorded.
-- Every customer-driven VAT default goes through the single pure helper `vatRateForCustomer` in `src/lib/vat-number.ts`, and mail-text rules through tested helpers (urgency in `src/lib/urgent-mail.ts`, professional status in `src/lib/vat-number.ts`); screens never compute their own rate, so a new rule only has to be added once.
 - Work-order payment removal uses an admin-checked server function and a tested narrow patch; it preserves completion/signature and does not modify invoice payments.
 - Newsletters: email-bound audited consent, hashed-token unsubscribe POSTs; draft-only until delivery linked. Admin server AI creates unsaved suggestions; provider denials persist in settings.
 - PDF/UBL share invoice-vat-notices for all line rates; preserve tax treatment and sent snapshots.
@@ -49,4 +47,3 @@
 - Finance keeps Mail Assist math and admin+owner checks; local sales link to Riory BV, imported numbers dedupe. `fin_reconcile_bank` atomically claims ledger, locks invoice and posts balanced journal (partials open, overpayments fail). `fin_restore_archive` preserves IDs.
 - Range-paged reads order by id first (un-ordered paging drops rows; parallel salvo's on the joined journal query return 500). Dashboard journal figures use the `fin_journal_summary` month-aggregate RPC (invoker, so RLS holds); accounting pages keep raw lines for arbitrary periods.
 - Prior-year accountant figures are one `jaarafsluiting`-source entry that trialBalance counts only for periods ending in that year, so it never doubles the next opening balance.
-- Km origin = nearest active `branches` row (distance.functions.ts), else settings.base_address; one rule for all documents.
