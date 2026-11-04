@@ -82,7 +82,7 @@ function Controle() {
       const res = await update({ data: {
         id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
         invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
-        lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
+        lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: paymentCommunication(edit.payment_ref, edit.invoice_number),
       } });
       if (res?.supplierSyncError) toast.warning(`Factuur opgeslagen, maar de leverancierslijst is niet bijgewerkt: ${res.supplierSyncError}`);
       if (opts.bookLines) await book({ data: { id: edit.id, lines: edit.lines } });
@@ -117,6 +117,7 @@ function Controle() {
   const bank = creditorBank(edit, sup);
   const derived = bankOfIban(edit.supplier_iban ?? sup?.iban ?? null);
   const shownBic = edit.supplier_bic ?? sup?.bic ?? "";
+  const shownRef = paymentCommunication(edit.payment_ref, edit.invoice_number) ?? "";
   const warnings = [...new Set([...supplierBankWarnings(sup ? bank : null), ...purchaseInvoiceWarnings({
     supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
     invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
@@ -185,8 +186,8 @@ function Controle() {
               <div className="space-y-1"><Label>Factuurnummer</Label><Input value={edit.invoice_number ?? ""} onChange={(e) => setEdit({ ...edit, invoice_number: e.target.value || null })} /></div>
               <div className="space-y-1"><Label>Factuurdatum</Label><Input type="date" value={edit.invoice_date ?? ""} onChange={(e) => setEdit({ ...edit, invoice_date: e.target.value || null })} /></div>
               <div className="space-y-1"><Label>Vervaldag</Label><Input type="date" value={edit.due_date ?? ""} onChange={(e) => setEdit({ ...edit, due_date: e.target.value || null })} /></div>
-              <div className="space-y-1 sm:col-span-3"><Label>Betalingskenmerk</Label><Input value={edit.payment_ref ?? ""} onChange={(e) => setEdit({ ...edit, payment_ref: e.target.value || null })} />
-                <p className="text-xs text-muted-foreground">Mededeling: {paymentCommunication(edit.payment_ref, edit.invoice_number) ?? "—"}</p></div>
+              <div className="space-y-1 sm:col-span-3"><Label>Betalingskenmerk</Label><Input value={shownRef} onChange={(e) => setEdit({ ...edit, payment_ref: e.target.value || null })} />
+                <p className="text-xs text-muted-foreground">{!edit.payment_ref?.trim() && edit.invoice_number?.trim() ? "Geen kenmerk op het document; het factuurnummer wordt als mededeling gebruikt." : "Dit wordt de mededeling bij de overboeking."}</p></div>
             </div>
 
             <div className="space-y-2">
