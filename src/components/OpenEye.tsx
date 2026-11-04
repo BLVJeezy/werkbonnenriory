@@ -27,7 +27,7 @@ export function useOpens(types: string[]) {
   });
 }
 
-export function OpenEye({ info, sent = true }: { info?: OpenInfo; sent?: boolean }) {
+export function OpenEye({ info, sent = true }: { info?: OpenInfo | undefined; sent?: boolean }) {
   if (!sent) return null;
   const label = info ? `Geopend ${new Date(info.last).toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" })}${info.count > 1 ? ` · ${info.count}×` : ""}` : "Nog niet geopend";
   return (
