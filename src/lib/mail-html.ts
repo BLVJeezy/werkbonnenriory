@@ -1,4 +1,5 @@
 import rioryLogo from '@/assets/riory-mail-logo.png.asset.json';
+import { enterpriseNumber } from './company-id';
 
 /** Riory-huisstijl voor klantmails: zelfde kleuren als de pdf's (oranje balk, donkere inkt, zachte achtergrond). */
 const LOGO_URL = new URL(rioryLogo.url, 'https://werkbonnenriory.lovable.app').href;
@@ -47,7 +48,7 @@ export function brandedMailHtml(text: string, contactEmail = 'info@riory.be', im
 <tr><td style="padding:22px 28px 6px"><img src="${LOGO_URL}" alt="Riory" width="240" height="49" style="display:block;width:240px;max-width:100%;height:auto;border:0;color:${INK};font-size:26px;font-weight:800"></td></tr>
 ${imageUrl ? `<tr><td style="padding:10px 28px 0"><img src="${esc(imageUrl)}" alt="" width="544" style="display:block;width:100%;max-width:544px;height:auto;border:0;border-radius:6px"></td></tr>` : ''}
 <tr><td style="padding:14px 28px 24px">${parts.join('\n')}</td></tr>
-<tr><td style="background:${INK};padding:16px 28px;color:#ffffff;font-size:12px;line-height:1.6">Riory bv · Natveld 47, 3740 Bilzen · BTW BE 0840.931.404<br><a href="https://www.riory.be" style="color:${ORANGE};text-decoration:none">www.riory.be</a> · <a href="mailto:${esc(contactEmail)}" style="color:${ORANGE};text-decoration:none">${esc(contactEmail)}</a></td></tr>
+<tr><td style="background:${INK};padding:16px 28px;color:#ffffff;font-size:12px;line-height:1.6">Riory bv · Natveld 47, 3740 Bilzen · BTW BE 0840.931.404${enterpriseNumber('BE0840931404') ? ` · Ondernemingsnummer ${enterpriseNumber('BE0840931404')}` : ''}<br><a href="https://www.riory.be" style="color:${ORANGE};text-decoration:none">www.riory.be</a> · <a href="mailto:${esc(contactEmail)}" style="color:${ORANGE};text-decoration:none">${esc(contactEmail)}</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
