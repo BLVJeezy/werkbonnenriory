@@ -26,6 +26,7 @@ const FIELDS: { key: keyof CustomerRow; label: string; className: string }[] = [
   { key: "billing_email", label: "E-mail facturatie", className: "min-w-44 flex-1" },
   { key: "vat_number", label: "Btw-nummer", className: "w-44" },
   { key: "project_name", label: "Projectnaam", className: "min-w-36 flex-1" },
+  { key: "syndicus", label: "Syndicus", className: "min-w-44 flex-1" },
 ];
 
 function Klanten() {
@@ -42,7 +43,7 @@ function Klanten() {
   const { data: branches = [] } = useQuery({ queryKey: ["branches"], queryFn: async () => (await supabase.from("branches").select("*").order("name")).data ?? [] });
   const branchName = (id: string | null | undefined) => branches.find((b) => b.id === id)?.name;
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
-  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number].filter(Boolean).join(' ') })), q).map(c => c.value));
+  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus].filter(Boolean).join(' ') })), q).map(c => c.value));
   const rows = data.filter(c => matchingIds.has(c.id));
   const sort = useSort(rows, { nr: c => c.customer_number, naam: c => c.name, plaats: c => c.city, tel: c => c.phone, mail: c => c.email, btw: c => c.vat_number });
 
@@ -52,7 +53,7 @@ function Klanten() {
   }
 
   async function save(c: (typeof data)[number]) {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), syndicus: (form["syndicus"] ?? "").trim() || null, vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -123,7 +124,7 @@ function Klanten() {
                 <Fragment key={c.id}>
                   <tr>
                     <td className="max-w-24 truncate font-mono text-xs text-muted-foreground" title={c.customer_number ?? ""}>{c.customer_number}</td>
-                    <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}{c.syndicus && <div className="text-xs font-normal text-muted-foreground">Syndicus: {c.syndicus}</div>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
                     <td className="hidden max-w-56 truncate 2xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
