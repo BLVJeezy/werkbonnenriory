@@ -10,7 +10,7 @@ import { euro, workOrderRevenue } from "@/lib/billing";
 import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
-import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoices } from "@/lib/invoices.functions";
+import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
 import { isInvoiceEditable } from "@/lib/invoice";
 import { QrCode, Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
@@ -66,6 +66,15 @@ function Facturen() {
   const toAccountant = useServerFn(sendAllToAccountant);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const byPost = useServerFn(sendInvoiceByPost);
+  const copyMail = useServerFn(sendInvoiceCopy);
+  async function sendCopy(id: string, number: string, currentEmail: string | null) {
+    const to = window.prompt(`Kopie van factuur ${number} mailen naar:`, currentEmail ?? "");
+    if (!to?.trim()) return;
+    setBusy(true);
+    try { await copyMail({ data: { invoiceId: id, to: to.trim() } }); toast.success(`Kopie verzonden naar ${to.trim()}`); refresh(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Kopie verzenden mislukt'); }
+    finally { setBusy(false); }
+  }
   async function sendPost(id: string, number: string) {
     if (!confirm(`Factuur ${number} per briefpost (bpost) versturen naar het adres van de klant?`)) return;
     setBusy(true);
