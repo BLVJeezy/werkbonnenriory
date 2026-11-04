@@ -361,13 +361,32 @@ function Syndici() {
           ["E-mail boekhouding", (bron.billing_email as string | null) ?? null],
         ];
         const bewerken = open === g.key;
+        const openResidenties = !!openVme[g.key];
         return (
-          <section key={g.key} className="rounded-md border bg-card p-4">
+          <section
+            key={g.key}
+            id={`syndicus-${encodeURIComponent(g.key)}`}
+            className="scroll-mt-20 rounded-md border bg-card p-4"
+          >
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="text-xl font-black uppercase">{g.label}</h2>
-              <span className="rounded bg-primary/15 px-2 py-0.5 text-xs font-bold">
-                {g.rows.length} VME{g.rows.length === 1 ? "" : "'s"}
-              </span>
+              {g.rows.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => toggleResidenties(g.key)}
+                  aria-expanded={openResidenties}
+                  className="flex items-center gap-1 rounded bg-primary/15 px-2 py-0.5 text-xs font-bold hover:bg-primary/25"
+                >
+                  {openResidenties ? (
+                    <ChevronDown className="size-3.5" aria-hidden="true" />
+                  ) : (
+                    <ChevronRight className="size-3.5" aria-hidden="true" />
+                  )}
+                  {g.rows.length} residentie{g.rows.length === 1 ? "" : "s"}
+                </button>
+              ) : (
+                <span className="rounded border px-2 py-0.5 text-xs">nog geen residentie</span>
+              )}
               {!g.dir && <span className="rounded border px-2 py-0.5 text-xs">nog geen fiche</span>}
               <div className="ml-auto flex flex-wrap gap-2">
                 {g.dir ? (
@@ -430,22 +449,42 @@ function Syndici() {
 
             {g.rows.length === 0 ? (
               <p className="mt-4 border-t pt-3 text-sm text-muted-foreground">
-                Nog geen VME toegewezen. Vink bij <Link to="/klanten" className="underline">Klanten</Link> de bijbehorende VME's
-                in en klik <strong className="font-semibold text-foreground">Syndicus toewijzen</strong>; deze fiches staan daar
-                al in de keuzelijst.
+                Nog geen residentie toegewezen. Vink bij <Link to="/klanten" className="underline">Klanten</Link> de bijbehorende
+                residenties in en klik <strong className="font-semibold text-foreground">Syndicus toewijzen</strong>; deze fiches
+                staan daar al in de keuzelijst.
               </p>
+            ) : !openResidenties ? (
+              <button
+                type="button"
+                onClick={() => toggleResidenties(g.key)}
+                className="mt-3 flex w-full items-center gap-2 border-t pt-3 text-left text-sm text-muted-foreground hover:text-foreground"
+              >
+                <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                Lijst van {g.rows.length} residentie{g.rows.length === 1 ? "" : "s"} openen
+              </button>
             ) : (
-              <ul className="mt-4 border-t text-sm [&>li]:flex [&>li]:flex-wrap [&>li]:items-baseline [&>li]:gap-x-2 [&>li]:border-t [&>li]:py-1.5">
-                {g.rows.map((c) => (
-                  <li key={c.id}>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {(c as { customer_number?: string | null }).customer_number ?? "—"}
-                    </span>
-                    <span className="font-bold">{c.name}</span>
-                    <span className="text-muted-foreground">{formatAddress(c) || "geen adres"}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-3 overflow-x-auto rounded-md border bg-muted/20">
+                <table className="w-full text-sm [&_tbody_tr]:border-t [&_td]:px-3 [&_td]:py-1.5 [&_td]:align-baseline">
+                  <thead className="text-left text-xs font-bold uppercase tracking-wide text-muted-foreground [&_th]:px-3 [&_th]:py-1.5">
+                    <tr>
+                      <th className="w-24">Klantnr.</th>
+                      <th>Residentie</th>
+                      <th>Adres</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.rows.map((c) => (
+                      <tr key={c.id}>
+                        <td className="font-mono text-xs text-muted-foreground">
+                          {(c as { customer_number?: string | null }).customer_number ?? "—"}
+                        </td>
+                        <td className="font-bold">{c.name}</td>
+                        <td className="text-muted-foreground">{formatAddress(c) || "geen adres"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         );
