@@ -152,6 +152,55 @@ export const sendInvoices = createServerFn({ method: "POST" })
     return results;
   });
 
+/** Sends a copy of an already-sent invoice to another address (e.g. the billing e-mail), without changing the invoice. */
+export const sendInvoiceCopy = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { invoiceId: string; to: string }) => {
+    if (typeof i?.invoiceId !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(i?.to ?? "")) throw new Error("Ongeldige factuur of e-mailadres");
+    return { invoiceId: i.invoiceId, to: i.to.trim() };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: inv } = await context.supabase.from("invoices").select("*").eq("id", data.invoiceId).single();
+    if (!inv) throw new Error("Factuur niet gevonden");
+    const { pdfData } = await import('./invoice-sending.server');
+    const d = await pdfData(context.supabase, inv);
+    const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
+    const { createInvoicePdf } = await import("@/lib/invoice-pdf");
+    const b64 = (bytes: Uint8Array) => { let s = ""; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
+    const pdf = b64(await createInvoicePdf(d));
+    const { invoiceUbl } = await import("@/lib/invoice-ubl");
+    const { peppolIdFromVat } = await import('./invoice');
+    const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId: '0208:0840931404', receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
+    const { prepareDocument } = await import('./document-tracking.server');
+    const tracking = await prepareDocument(inv.kind === 'creditnota' ? 'creditnota' : 'factuur', inv.id, `${label} ${d.number}`, data.to, pdf);
+    const { invoiceMailWithCc, OKIOKI_INVOICE_EMAIL } = await import('./invoice-delivery');
+    const { isFullyPaid } = await import("@/lib/invoice");
+    const payload = invoiceMailWithCc(data.to, d.number, pdf, ubl, label, tracking.url, isFullyPaid(d.total, d.paidAmount));
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
+    const { getConnectionKeyForUser } = await import('./appUserConnections.server');
+    const { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } = await import('./mail-senders');
+    let key: string | null = null;
+    for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, INVOICE_MAILBOX_KEY); if (key) break; }
+    if (!key) throw new Error(`Koppel eerst de mailbox ${INVOICE_MAILBOX_ADDRESS}`);
+    const { callAsAppUser, appUserReconnectRequired } = await import("@/integrations/lovable/appUserConnector");
+    const { WERKBON_MAIL_SCOPES } = await import('./outlook-scopes');
+    const profile = await callAsAppUser({ gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me?$select=mail,userPrincipalName", requiredScopes: WERKBON_MAIL_SCOPES });
+    if (await appUserReconnectRequired(profile)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
+    if (!profile.ok) throw new Error(`Mailbox controleren mislukt [${profile.status}]: ${await profile.text()}`);
+    assertInvoiceMailbox(await profile.json());
+    const res = await callAsAppUser({
+      gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
+      init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
+      requiredScopes: WERKBON_MAIL_SCOPES,
+    });
+    if (await appUserReconnectRequired(res)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
+    if (!res.ok) throw new Error(`Mail versturen mislukt [${res.status}]: ${await res.text()}`);
+    await tracking.send(async () => {});
+    return { ok: true as const, to: data.to, okioki: OKIOKI_INVOICE_EMAIL };
+  });
+
 export const invoicePdf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { invoiceId: string }) => i)
