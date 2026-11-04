@@ -192,13 +192,22 @@ function Controle() {
 
             <div className="space-y-2">
               <Label>Lijnen en boeking</Label>
-              {edit.lines.map((l, i) => (
+              {edit.lines.map((l, i) => {
+                const t = lineTotals(l);
+                return (
                 <div key={i} className="space-y-1 rounded-md border p-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Input className="min-w-32 flex-1" value={l.description} onChange={(e) => upd(i, { description: e.target.value })} />
-                    <Input type="number" step="any" className="w-16" aria-label="Aantal" value={l.quantity} onChange={(e) => upd(i, { quantity: Number(e.target.value) })} />
-                    <Input type="number" step="0.01" className="w-24" aria-label="Bedrag" value={l.amount} onChange={(e) => upd(i, { amount: Number(e.target.value) })} />
+                    <Input className="min-w-32 flex-1" placeholder="Omschrijving" value={l.description} onChange={(e) => upd(i, { description: e.target.value })} />
                     <Button type="button" size="sm" variant="ghost" aria-label="Lijn verwijderen" onClick={() => setEdit({ ...edit, lines: edit.lines.filter((_, n) => n !== i) })}>✕</Button>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+                    <Field label="Aantal"><Input type="number" step="any" className="h-8 w-16" aria-label="Aantal" value={l.quantity} onChange={(e) => upd(i, { quantity: Number(e.target.value) })} /></Field>
+                    <Field label="Eenheid"><Input className="h-8 w-16" aria-label="Eenheid" value={l.unit} onChange={(e) => upd(i, { unit: e.target.value || "st" })} /></Field>
+                    <Field label="Prijs/st"><Input type="number" step="0.01" className="h-8 w-24" aria-label="Prijs per stuk" value={l.unitPrice} onChange={(e) => upd(i, { unitPrice: Number(e.target.value) })} /></Field>
+                    <Field label="Btw %"><Input type="number" step="0.1" className="h-8 w-16" aria-label="Btw-tarief" placeholder="—" value={l.vatRate ?? ""} onChange={(e) => upd(i, { vatRate: e.target.value === "" ? null : Number(e.target.value), vat: null, total: null })} /></Field>
+                    <Field label="Ex btw"><Input type="number" step="0.01" className="h-8 w-24" aria-label="Bedrag exclusief btw" value={l.amount} onChange={(e) => upd(i, { amount: Number(e.target.value), vat: null, total: null })} /></Field>
+                    <Field label="Btw"><p className="h-8 px-1 font-mono text-sm leading-8">{euro(t.vat)}</p></Field>
+                    <Field label="Incl btw"><p className="h-8 px-1 font-mono text-sm font-bold leading-8">{euro(t.total)}</p></Field>
                   </div>
                   <div className="flex items-center gap-2">
                     <select aria-label="Grootboekrekening" className={`h-9 flex-1 rounded-md border bg-background px-2 text-sm ${!l.account ? "border-destructive" : ""}`} value={l.account ?? ""} onChange={(e) => upd(i, { account: e.target.value || null })}>
@@ -208,7 +217,8 @@ function Controle() {
                     {sources[i] && <span className="text-xs text-muted-foreground">{sources[i] === "geleerd" ? "geleerd" : "AI-voorstel"}</span>}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               <div className="flex items-center justify-between rounded-md border bg-muted/50 p-2 text-sm">
                 <span>Btw {euro(Number(edit.vat))} → <span className="font-mono">{VAT_ACCOUNT.number}</span> {VAT_ACCOUNT.name}</span>
                 <span className="text-xs text-muted-foreground">automatisch</span>
