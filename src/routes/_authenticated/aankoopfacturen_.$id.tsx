@@ -248,3 +248,13 @@ function Controle() {
     </div>
   );
 }
+
+/** Tiny labelled box so one purchase line reads like the document it came from. */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-0.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      {children}
+    </div>
+  );
+}
