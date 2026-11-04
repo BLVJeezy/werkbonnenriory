@@ -3,7 +3,6 @@ import {
   customerDetailsFromDir,
   dirFromCustomer,
   mergeSyndicusDir,
-  residentiesOverzicht,
   syndicusDirPatch,
   syndicusGroups,
   syndicusKey,
@@ -126,28 +125,5 @@ describe("syndicusGroups", () => {
       [],
     );
     expect(g[0]?.rows.map((r) => r.name)).toEqual(["VME Astrid", "VME Zonne"]);
-  });
-});
-
-describe("residentiesOverzicht", () => {
-  const parkzicht = { id: "a", name: "VME Parkzicht", syndicus: null, syndicus_company: "Immo Schrijnemakers BV" };
-  const astrid = { id: "b", name: "VME Astrid", syndicus: "Syndicaat Maas", syndicus_company: null };
-  const berg = { id: "c", name: "VME Berg", syndicus: "Syndicaat Maas", syndicus_company: null };
-
-  it("zet elke residentie bij zijn syndicus, gesorteerd op residentienaam", () => {
-    const r = residentiesOverzicht(syndicusGroups([berg, astrid, parkzicht], [fiche]));
-    expect(r.map((x) => [x.klant.name, x.syndicus])).toEqual([
-      ["VME Astrid", "Syndicaat Maas"],
-      ["VME Berg", "Syndicaat Maas"],
-      ["VME Parkzicht", "Immo Schrijnemakers BV – Olivier"],
-    ]);
-  });
-
-  it("neemt een fiche zonder residentie niet op", () => {
-    const r = residentiesOverzicht(
-      syndicusGroups([parkzicht], [fiche, { ...fiche, id: "9", company: "Lege Syndicus BV", contact: null }]),
-    );
-    expect(r).toHaveLength(1);
-    expect(r[0]?.key).toBe(syndicusKey("Immo Schrijnemakers BV"));
   });
 });

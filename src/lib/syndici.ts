@@ -116,20 +116,3 @@ export function syndicusGroups<T extends SyndicusCustomer>(customers: T[], direc
   for (const g of byKey.values()) g.rows.sort((a, b) => a.name.localeCompare(b.name, "nl"));
   return [...byKey.values()].sort((a, b) => a.label.localeCompare(b.label, "nl"));
 }
-
-/** Eén residentie (VME) met de syndicus die erbij hoort. */
-export type ResidentyRij<T> = {
-  key: string;
-  syndicus: string;
-  klant: T;
-};
-
-/**
- * Alle residenties op één rij, gesorteerd op residentienaam: het overzicht waarin
- * je in één oogopslag ziet welke residentie bij welke syndicus hoort.
- */
-export function residentiesOverzicht<T extends SyndicusCustomer>(groups: SyndicusGroup<T>[]): ResidentyRij<T>[] {
-  return groups
-    .flatMap((g) => g.rows.map((c) => ({ key: g.key, syndicus: g.label, klant: c })))
-    .sort((a, b) => a.klant.name.localeCompare(b.klant.name, "nl"));
-}
