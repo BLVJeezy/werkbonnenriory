@@ -438,6 +438,8 @@ function Offertes() {
                 </div>
               </div>
               {q.signed_name && <p className="text-xs text-muted-foreground">Getekend door {q.signed_name}</p>}
+              {q.status === "verzonden" && Number(q.reminder_stage) > 0 && <p className="text-xs text-muted-foreground">{q.reminder_stage}e herinnering verstuurd{q.reminder_sent_at ? ` op ${new Date(q.reminder_sent_at).toLocaleDateString("nl-BE")}` : ""}</p>}
+              {q.reminder_error && <p className="text-xs font-bold text-destructive">Herinnering mislukt: {q.reminder_error}</p>}
               <select aria-label={`Ploeg offerte ${q.number}`} className="h-10 w-full min-w-0 rounded-md border bg-background px-2 text-foreground sm:h-9 sm:w-56" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
                 setBusy(true);
                 try {
