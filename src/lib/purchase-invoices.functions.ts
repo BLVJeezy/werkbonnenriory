@@ -98,8 +98,8 @@ export const paymentFile = createServerFn({ method: "POST" })
     if (notApproved.length) throw new Error("Enkel goedgekeurde facturen met betaalwijze overschrijving kunnen in een betaalbestand (domiciliëring, kaart en cash nooit)");
     const { data: sups } = await context.supabase.from('suppliers').select('id,iban,bic').in('id', rows.map((r: any) => r.supplier_id).filter(Boolean));
     const supById = new Map((sups ?? []).map((x: any) => [x.id, x]));
-    const ibanOf = (r: any) => r.supplier_iban || (supById.get(r.supplier_id) as any)?.iban;
-    const missing = rows.filter((r: any) => !ibanOf(r) || !r.due_date || !(Number(r.total) > 0));
+    const bankOf = (r: any) => creditorBank(r, supById.get(r.supplier_id) as any);
+    const missing = rows.filter((r: any) => !bankOf(r).iban || !r.due_date || !(Number(r.total) > 0));
     if (missing.length) throw new Error(`Onvolledige facturen: ${missing.map((r: any) => r.invoice_number ?? r.supplier_name).join(", ")} (IBAN, vervaldag en bedrag vereist)`);
     const { data: s } = await context.supabase.from("settings").select("company_name, company_iban, company_bic").eq("id", 1).single();
     if (!s?.company_iban) throw new Error("Vul eerst het IBAN van Riory in bij de factuurinstellingen");
@@ -108,7 +108,7 @@ export const paymentFile = createServerFn({ method: "POST" })
     const xml = buildPain001(
       { name: s.company_name ?? "Riory bv", iban: s.company_iban, bic: s.company_bic ?? null },
       rows.map((r: any, i: number) => ({
-        creditorName: r.supplier_name, creditorIban: ibanOf(r), creditorBic: (supById.get(r.supplier_id) as any)?.bic ?? null, amount: Number(r.total),
+        creditorName: r.supplier_name, creditorIban: bankOf(r).iban, creditorBic: bankOf(r).bic, amount: Number(r.total),
         remittance: paymentCommunication(r.payment_ref, r.invoice_number),
         executionDate: execDate(r.due_date), endToEndId: `${messageId}-${i + 1}`,
       })),

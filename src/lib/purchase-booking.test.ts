@@ -19,6 +19,11 @@ describe('purchase booking', () => {
   it('warns when IBAN or BIC is missing', () => {
     expect(supplierBankWarnings({ iban: 'BE1', bic: null })).toEqual(['BIC ontbreekt bij deze leverancier']);
   });
+  it('pays with the invoice bank details first, then the supplier record', () => {
+    const sup = { iban: 'BE71 0961 2345 6769', bic: 'GKCCBEBB' };
+    expect(creditorBank({ supplier_iban: 'BE68 5390 0754 7034', supplier_bic: null }, sup)).toEqual({ iban: 'BE68 5390 0754 7034', bic: 'GKCCBEBB' });
+    expect(creditorBank({ supplier_iban: null, supplier_bic: ' KREDBEBB ' }, null)).toEqual({ iban: null, bic: 'KREDBEBB' });
+  });
   it('locks domiciliation until settled', () => {
     expect(paymentMethodLock('domiciliering', 'goedgekeurd')).toMatch(/niet manueel/);
     expect(paymentMethodLock('domiciliering', 'betaald')).toBeNull();
