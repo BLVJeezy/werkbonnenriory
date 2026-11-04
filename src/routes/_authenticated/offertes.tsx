@@ -73,6 +73,7 @@ function Offertes() {
   const suggest = useServerFn(suggestInsuranceQuote);
   const bestek = kind === "verzekering";
 
+  const opensQ = useOpens(["offerte"]);
   const { data: quotes = [] } = useQuery({
     queryKey: ["quotes"],
     queryFn: async () => (await supabase.from("quotes").select("*").order("created_at", { ascending: false })).data ?? [],

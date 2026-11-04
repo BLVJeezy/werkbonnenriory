@@ -41,6 +41,7 @@ function CompletedWorkOrders() {
   const [crew, setCrew] = useState('');
   const [from, setFrom] = useState('');
   const [until, setUntil] = useState('');
+  const opensW = useOpens(["werkbon"]);
   const { data = [], isPending, error } = useQuery({
     queryKey: ['work_orders', 'completed'],
     enabled: allowed,
