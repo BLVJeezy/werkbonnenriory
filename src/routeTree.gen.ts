@@ -31,6 +31,7 @@ import { Route as AuthenticatedMedewerkersRouteImport } from './routes/_authenti
 import { Route as AuthenticatedNieuwsbrievenRouteImport } from './routes/_authenticated/nieuwsbrieven'
 import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
+import { Route as AuthenticatedSyndiciRouteImport } from './routes/_authenticated/syndici'
 import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as VideoTokenRouteImport } from './routes/video.$token'
@@ -168,6 +169,11 @@ const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
   path: '/producten',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSyndiciRoute = AuthenticatedSyndiciRouteImport.update({
+  id: '/syndici',
+  path: '/syndici',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const DocumentTokenRoute = DocumentTokenRouteImport.update({
   id: '/document/$token',
   path: '/document/$token',
@@ -303,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
+  '/syndici': typeof AuthenticatedSyndiciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
@@ -346,6 +353,7 @@ export interface FileRoutesByTo {
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
+  '/syndici': typeof AuthenticatedSyndiciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
@@ -391,6 +399,7 @@ export interface FileRoutesById {
   '/_authenticated/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
+  '/_authenticated/syndici': typeof AuthenticatedSyndiciRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
+    | '/syndici'
     | '/document/$token'
     | '/offerte/$token'
     | '/video/$token'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/nieuwsbrieven'
     | '/offertes'
     | '/producten'
+    | '/syndici'
     | '/document/$token'
     | '/offerte/$token'
     | '/video/$token'
@@ -523,6 +534,7 @@ export interface FileRouteTypes {
     | '/_authenticated/nieuwsbrieven'
     | '/_authenticated/offertes'
     | '/_authenticated/producten'
+    | '/_authenticated/syndici'
     | '/document/$token'
     | '/offerte/$token'
     | '/video/$token'
@@ -727,6 +739,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProductenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/syndici': {
+      id: '/_authenticated/syndici'
+      path: '/syndici'
+      fullPath: '/syndici'
+      preLoaderRoute: typeof AuthenticatedSyndiciRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/document/$token': {
       id: '/document/$token'
       path: '/document/$token'
@@ -888,6 +907,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNieuwsbrievenRoute: typeof AuthenticatedNieuwsbrievenRoute
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
+  AuthenticatedSyndiciRoute: typeof AuthenticatedSyndiciRoute
   AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
 }
@@ -911,6 +931,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNieuwsbrievenRoute: AuthenticatedNieuwsbrievenRoute,
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
+  AuthenticatedSyndiciRoute: AuthenticatedSyndiciRoute,
   AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,
 }
