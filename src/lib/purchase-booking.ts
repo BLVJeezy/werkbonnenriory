@@ -44,6 +44,17 @@ export function supplierBankWarnings(s: { iban: string | null; bic: string | nul
   return w;
 }
 
+/** Pure: the bank details actually used to pay — what the admin typed on the invoice wins over the supplier record. */
+export function creditorBank(
+  inv: { supplier_iban?: string | null; supplier_bic?: string | null },
+  sup: { iban: string | null; bic: string | null } | null | undefined,
+): { iban: string | null; bic: string | null } {
+  return {
+    iban: inv.supplier_iban?.trim() || sup?.iban?.trim() || null,
+    bic: inv.supplier_bic?.trim() || sup?.bic?.trim() || null,
+  };
+}
+
 /** Pure: domiciliation/card/cash invoices must never be paid manually via a SEPA file. */
 export function paymentMethodLock(method: string, status: string): string | null {
   if (status === 'betaald') return null;

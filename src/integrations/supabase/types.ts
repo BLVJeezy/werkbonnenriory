@@ -2229,6 +2229,7 @@ export type Database = {
           simpla_bill_id: number | null
           source: string
           status: string
+          supplier_bic: string | null
           supplier_iban: string | null
           supplier_id: string | null
           supplier_name: string
@@ -2261,6 +2262,7 @@ export type Database = {
           simpla_bill_id?: number | null
           source?: string
           status?: string
+          supplier_bic?: string | null
           supplier_iban?: string | null
           supplier_id?: string | null
           supplier_name?: string
@@ -2293,6 +2295,7 @@ export type Database = {
           simpla_bill_id?: number | null
           source?: string
           status?: string
+          supplier_bic?: string | null
           supplier_iban?: string | null
           supplier_id?: string | null
           supplier_name?: string

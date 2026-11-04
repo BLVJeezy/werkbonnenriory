@@ -7,9 +7,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { saveSupplier } from '@/lib/suppliers.functions';
+import { saveSupplier, fillSupplierBics } from '@/lib/suppliers.functions';
 import { PAYMENT_METHODS, VAT_RULES } from '@/lib/supplier-rules';
 import { supplierBankWarnings } from '@/lib/purchase-booking';
+import { bankOfIban, nextBic } from '@/lib/iban-bic';
 import type { Database } from '@/integrations/supabase/types';
 import { SortTh, Th, tableCls, tableWrap, useSort } from '@/components/SortTable';
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
@@ -18,7 +19,7 @@ export const Route = createFileRoute('/_authenticated/leveranciers')({
   component: Suppliers,
 });
 function Suppliers() {
-  const qc = useQueryClient(); const save = useServerFn(saveSupplier);
+  const qc = useQueryClient(); const save = useServerFn(saveSupplier); const fill = useServerFn(fillSupplierBics);
   const [edit, setEdit] = useState<Supplier | null>(null); const [busy, setBusy] = useState(false); const [search,setSearch] = useState('');
   const { data: rows = [] } = useQuery({ queryKey: ['suppliers'], queryFn: async () => {
     const {data,error} = await supabase.from('suppliers').select('*').order('name'); if(error) throw error; return data;
@@ -30,8 +31,16 @@ function Suppliers() {
     try { await save({ data: edit }); await qc.invalidateQueries({ queryKey: ['suppliers'] }); setEdit(null); toast.success('Leverancier opgeslagen'); }
     catch(e) { toast.error(e instanceof Error ? e.message : 'Opslaan mislukt'); } finally { setBusy(false); }
   }
+  async function fillBics() {
+    setBusy(true);
+    try {
+      const r = await fill();
+      toast[r.filled ? 'success' : 'info'](r.filled ? `${r.filled} BIC ${r.filled === 1 ? 'aangevuld' : 's aangevuld'} uit het IBAN` : 'Geen BIC kon uit een IBAN worden gehaald');
+      await qc.invalidateQueries({ queryKey: ['suppliers'] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'BIC’s aanvullen mislukt'); } finally { setBusy(false); }
+  }
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black uppercase">Leveranciers</h1></div>
+    <div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black uppercase">Leveranciers</h1><Button variant="outline" disabled={busy} onClick={fillBics}>BIC’s aanvullen uit IBAN</Button></div>
     {rows.some(r=>supplierBankWarnings(r).length) && <p className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm font-bold">⚠ {rows.filter(r=>supplierBankWarnings(r).length).length} leverancier(s) zonder volledige IBAN/BIC. Elke leverancier heeft deze gegevens nodig.</p>}
     <p className="text-sm text-muted-foreground">De standaard betaalwijze geldt voor alle nog niet afgeletterde facturen van die leverancier.</p>
     <Input aria-label="Leverancier zoeken" placeholder="Leverancier zoeken" value={search} onChange={e=>setSearch(e.target.value)} />
@@ -49,8 +58,8 @@ function Suppliers() {
     {edit && <section className="space-y-4 border-t pt-4"><h2 className="text-xl font-bold">{edit.name}</h2><div className="grid gap-4 sm:grid-cols-2">
       <div><Label htmlFor="supplier-name">Naam</Label><Input id="supplier-name" value={edit.name} onChange={e=>setEdit({...edit,name:e.target.value})}/></div>
       <div><Label htmlFor="supplier-vat">Btw-nummer</Label><Input id="supplier-vat" value={edit.vat_number??''} onChange={e=>setEdit({...edit,vat_number:e.target.value||null})}/></div>
-      <div><Label htmlFor="supplier-iban">IBAN</Label><Input id="supplier-iban" value={edit.iban??''} onChange={e=>setEdit({...edit,iban:e.target.value||null})}/></div>
-      <div><Label htmlFor="supplier-bic">BIC</Label><Input id="supplier-bic" value={edit.bic??''} onChange={e=>setEdit({...edit,bic:e.target.value.toUpperCase()||null})}/></div>
+      <div><Label htmlFor="supplier-iban">IBAN</Label><Input id="supplier-iban" value={edit.iban??''} onChange={e=>{const v=e.target.value||null; setEdit({...edit,iban:v,bic:nextBic(edit.iban,edit.bic,v)});}}/></div>
+      <div><Label htmlFor="supplier-bic">BIC</Label><Input id="supplier-bic" value={edit.bic??''} onChange={e=>setEdit({...edit,bic:e.target.value.toUpperCase()||null})}/>{edit.bic && edit.bic === bankOfIban(edit.iban).bic && <p className="text-xs text-muted-foreground">uit IBAN — {bankOfIban(edit.iban).bank}</p>}</div>
       {supplierBankWarnings(edit).length>0 && <p className="text-sm font-bold text-destructive sm:col-span-2">⚠ {supplierBankWarnings(edit).join(' · ')} — nodig om te betalen.</p>}
       <div><Label htmlFor="supplier-payment">Standaard betaalwijze</Label><select id="supplier-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={e=>setEdit({...edit,payment_method:e.target.value})}>{Object.entries(PAYMENT_METHODS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
       <div><Label htmlFor="supplier-rule">Btw-regel</Label><select id="supplier-rule" className="h-10 w-full rounded-md border bg-background px-3" value={edit.vat_rule} onChange={e=>setEdit({...edit,vat_rule:e.target.value})}>{Object.entries(VAT_RULES).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>

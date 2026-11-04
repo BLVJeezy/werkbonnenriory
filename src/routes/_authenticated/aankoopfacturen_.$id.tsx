@@ -12,7 +12,8 @@ import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from "@/lib/suppli
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
-import { paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
+import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
+import { bankOfIban, nextBic } from "@/lib/iban-bic";
 import { attachPurchasePdf, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
 const VAT_ACCOUNT = { number: "411000", name: "Terug te vorderen btw" };
 
 type Row = {
-  id: string; supplier_name: string; supplier_vat: string | null; supplier_iban: string | null;
+  id: string; supplier_name: string; supplier_vat: string | null; supplier_iban: string | null; supplier_bic: string | null;
   invoice_number: string | null; invoice_date: string | null; due_date: string | null;
   lines: PurchaseLine[]; net: number; vat: number; total: number; payment_ref: string | null;
   status: string; pdf_path: string | null; kind: "factuur" | "creditnota"; paid_at: string | null;
@@ -53,6 +54,7 @@ function Controle() {
     const { data: r } = await supabase.from("purchase_invoices").select("*").eq("id", id).single();
     if (!r) { toast.error("Factuur niet gevonden"); return; }
     const row = { ...r, kind: r.kind === "creditnota" ? "creditnota" : "factuur", lines: (r.lines ?? []) as PurchaseLine[] } as Row;
+    row.supplier_bic = nextBic(row.supplier_iban, row.supplier_bic, row.supplier_iban);
     setEdit(row); setSources({}); setPdfUrl(null);
     if (row.pdf_path) {
       const { data } = await supabase.storage.from("aankoopfacturen").createSignedUrl(row.pdf_path, 3600);
@@ -77,15 +79,17 @@ function Controle() {
     if (!edit) return;
     setBusy(true);
     try {
-      await update({ data: {
-        id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+      const res = await update({ data: {
+        id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
         invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
         lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
       } });
+      if (res?.supplierSyncError) toast.warning(`Factuur opgeslagen, maar de leverancierslijst is niet bijgewerkt: ${res.supplierSyncError}`);
       if (opts.bookLines) await book({ data: { id: edit.id, lines: edit.lines } });
       if (opts.approve) await setStatus({ data: { ids: [edit.id], status: "goedgekeurd" } });
       await qc.invalidateQueries({ queryKey: ["purchase_invoices"] });
       await qc.invalidateQueries({ queryKey: ["purchase_queue"] });
+      if (res?.supplierSynced) await qc.invalidateQueries({ queryKey: ["suppliers"] });
       toast.success(opts.bookLines ? "Opgeslagen en geboekt" : "Opgeslagen");
       if (opts.next) {
         if (nextId) nav({ to: "/aankoopfacturen/$id", params: { id: nextId } });
@@ -110,8 +114,11 @@ function Controle() {
   if (!edit) return <p className="p-4 text-muted-foreground">Factuur laden…</p>;
 
   const sup = suppliers.find((x) => x.id === edit.supplier_id) ?? null;
-  const warnings = [...new Set([...supplierBankWarnings(sup ?? (edit.supplier_iban ? { iban: edit.supplier_iban, bic: null } : null)), ...purchaseInvoiceWarnings({
-    supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban,
+  const bank = creditorBank(edit, sup);
+  const derived = bankOfIban(edit.supplier_iban ?? sup?.iban ?? null);
+  const shownBic = edit.supplier_bic ?? sup?.bic ?? "";
+  const warnings = [...new Set([...supplierBankWarnings(sup ? bank : null), ...purchaseInvoiceWarnings({
+    supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
     invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
     lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
   })])];
@@ -150,7 +157,7 @@ function Controle() {
 
             <div className="space-y-1">
               <Label htmlFor="purchase-supplier">Leverancier</Label>
-              <select id="purchase-supplier" className={`h-10 w-full rounded-md border bg-background px-3 ${!sup ? "border-destructive" : ""}`} value={edit.supplier_id ?? ""} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: s2.iban ?? edit.supplier_iban, payment_method: s2.payment_method }); }}>
+              <select id="purchase-supplier" className={`h-10 w-full rounded-md border bg-background px-3 ${!sup ? "border-destructive" : ""}`} value={edit.supplier_id ?? ""} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) { const iban = s2.iban ?? edit.supplier_iban; setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: iban, supplier_bic: s2.bic ?? nextBic(edit.supplier_iban, edit.supplier_bic, iban), payment_method: s2.payment_method }); } }}>
                 {!sup && <option value="">— Kies uit leverancierslijst (uitgelezen: {edit.supplier_name}) —</option>}
                 {suppliers.map((x) => <option key={x.id} value={x.id}>{x.name}{x.vat_number ? ` (${x.vat_number})` : ""}</option>)}
               </select>
@@ -158,11 +165,15 @@ function Controle() {
             </div>
 
             <details className="rounded-md border p-2">
-              <summary className="cursor-pointer text-sm font-bold">Leveranciersgegevens{sup ? `: ${sup.vat_number ?? "geen btw-nr."} · ${sup.iban ?? edit.supplier_iban ?? "geen IBAN"}` : ""}</summary>
+              <summary className="cursor-pointer text-sm font-bold">Leveranciersgegevens{sup ? `: ${edit.supplier_vat ?? sup.vat_number ?? "geen btw-nr."} · ${bank.iban ?? "geen IBAN"} · ${bank.bic ?? "geen BIC"}` : ""}</summary>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <div className="space-y-1"><Label>Btw-nummer</Label><Input value={edit.supplier_vat ?? ""} onChange={(e) => setEdit({ ...edit, supplier_vat: e.target.value || null })} /></div>
-                <div className="space-y-1"><Label>IBAN</Label><Input value={edit.supplier_iban ?? ""} onChange={(e) => setEdit({ ...edit, supplier_iban: e.target.value || null })} /></div>
-                <div className="space-y-1 sm:col-span-2"><Label htmlFor="purchase-payment">Betaalwijze</Label><select id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={(e) => setEdit({ ...edit, payment_method: e.target.value })}>{Object.entries(PAYMENT_METHODS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <div className="space-y-1"><Label>Btw-nummer</Label><Input value={edit.supplier_vat ?? sup?.vat_number ?? ""} onChange={(e) => setEdit({ ...edit, supplier_vat: e.target.value || null })} /></div>
+                <div className="space-y-1"><Label>IBAN</Label><Input value={edit.supplier_iban ?? sup?.iban ?? ""} onChange={(e) => { const v = e.target.value || null; setEdit({ ...edit, supplier_iban: v, supplier_bic: nextBic(edit.supplier_iban, edit.supplier_bic, v) }); }} /></div>
+                <div className="space-y-1"><Label>BIC</Label><Input placeholder="Bijv. GKCCBEBB" value={shownBic} onChange={(e) => setEdit({ ...edit, supplier_bic: e.target.value.toUpperCase().replace(/\s/g, "") || null })} />
+                  {shownBic && shownBic === derived.bic && <p className="text-xs text-muted-foreground">uit IBAN — {derived.bank}</p>}
+                </div>
+                <div className="space-y-1"><Label htmlFor="purchase-payment">Betaalwijze</Label><select id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={(e) => setEdit({ ...edit, payment_method: e.target.value })}>{Object.entries(PAYMENT_METHODS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <p className="text-xs text-muted-foreground sm:col-span-2">Bewerkte gegevens worden automatisch ook in de leverancierslijst bewaard.</p>
               </div>
             </details>
 

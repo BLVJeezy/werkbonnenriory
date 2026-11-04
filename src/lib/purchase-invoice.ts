@@ -4,6 +4,7 @@ export type ParsedPurchaseInvoice = {
   supplierName: string;
   supplierVat: string | null;
   supplierIban: string | null;
+  supplierBic: string | null;
   invoiceNumber: string | null;
   invoiceDate: string | null;
   dueDate: string | null;
@@ -20,6 +21,11 @@ const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null
 const isoDate = (v: unknown) => {
   const s = str(v);
   return s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+};
+/** A BIC is always upper case and written without spaces, so the same code stays in one shape. */
+const bic = (v: unknown) => {
+  const s = str(v);
+  return s ? s.toUpperCase().replace(/\s/g, "") : null;
 };
 
 /** Pure: normalizes raw AI output into a clean purchase invoice; never trusts the AI's totals blindly. */
@@ -47,6 +53,7 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
     supplierName: str(o["supplierName"]) ?? "Onbekend",
     supplierVat: str(o["supplierVat"]),
     supplierIban: str(o["supplierIban"]),
+    supplierBic: bic(o["supplierBic"]),
     invoiceNumber: str(o["invoiceNumber"]),
     invoiceDate: isoDate(o["invoiceDate"]),
     dueDate: isoDate(o["dueDate"]),
