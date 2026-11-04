@@ -15,3 +15,5 @@
 - [x] Aankoopfacturen: controle op eigen pagina met PDF ernaast, opslaan en volgende, leverancier uit lijst, btw op 411000
 - [x] Bulkbetaling: kiezen tussen op vervaldag of zo snel mogelijk
 - [x] Aankoopfacturen verwijderen + dubbele detecteren
+- [ ] Aankoopfacturen: btw/IBAN/BIC-vak bij leverancier, gewijzigde gegevens automatisch meebewaren in de leverancierslijst
+- [ ] Automatische BIC invullen op basis van het IBAN (bankenlijst BE/NL)
