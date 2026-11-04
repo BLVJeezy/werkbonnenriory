@@ -38,7 +38,8 @@ export const createInvoices = createServerFn({ method: "POST" })
       ]);
       const seconds = (t.data ?? []).reduce((sum: number, e: any) => sum + (e.ended_at ? (new Date(e.ended_at).getTime() - new Date(e.started_at).getTime()) / 1000 : 0), 0);
       const act = (acts ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
-      const inv = buildInvoice({ wo: { ...wo, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) }, activity: act, seconds, kmRate: Number(s?.km_rate ?? 0), materials: m.data ?? [] });
+      const { data: klant } = wo.customer_id ? await supabase.from("customers").select("billing_email").eq("id", wo.customer_id).maybeSingle() : { data: null };
+      const inv = buildInvoice({ wo: { ...wo, customer_billing_email: klant?.billing_email ?? null, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) }, activity: act, seconds, kmRate: Number(s?.km_rate ?? 0), materials: m.data ?? [] });
       const issue = new Date().toISOString().slice(0, 10);
       // Atomic: number and invoice are created in one transaction, so a failed insert cannot burn a number.
       const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
