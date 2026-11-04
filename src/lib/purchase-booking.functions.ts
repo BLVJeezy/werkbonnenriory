@@ -91,6 +91,16 @@ export const bookPurchaseInvoice = createServerFn({ method: 'POST' }).middleware
   });
 
 const PEPPYRUS_URL = () => process.env['PEPPYRUS_LIVE'] === 'true' ? 'https://api.peppyrus.be/v1' : 'https://api.test.peppyrus.be/v1';
+const b64 = (bytes: Uint8Array) => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
+
+/** Single place that talks to Peppyrus, so every call carries the same key, timeout and error text. */
+async function peppyrusCall(path: string, init?: RequestInit) {
+  const key = process.env['PEPPYRUS_API_KEY'];
+  if (!key) throw new Error('Peppyrus is voorbereid maar nog niet gekoppeld.');
+  const res = await fetch(`${PEPPYRUS_URL()}${path}`, { ...init, headers: { 'X-Api-Key': key, Accept: 'application/json', ...(init?.headers ?? {}) }, signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error(`Peppyrus ${path} mislukt (HTTP ${res.status}): ${(await res.text()).slice(0, 200)}`);
+  return res;
+}
 
 /** Peppyrus is prepared but only active once an API key is added. */
 export const peppyrusStatus = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
@@ -102,14 +112,7 @@ export const peppyrusStatus = createServerFn({ method: 'POST' }).middleware([req
 export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const key = process.env['PEPPYRUS_API_KEY'];
-    if (!key) throw new Error('Peppyrus is voorbereid maar nog niet gekoppeld.');
-    const base = PEPPYRUS_URL();
-    const call = async (path: string, init?: RequestInit) => {
-      const res = await fetch(`${base}${path}`, { ...init, headers: { 'X-Api-Key': key, Accept: 'application/json', ...(init?.headers ?? {}) }, signal: AbortSignal.timeout(30000) });
-      if (!res.ok) throw new Error(`Peppyrus ${path} mislukt (HTTP ${res.status}): ${(await res.text()).slice(0, 200)}`);
-      return res;
-    };
+
     const list = await (await call('/message/list?folder=INBOX&confirmed=false&perPage=50')).json() as any;
     const items: any[] = Array.isArray(list) ? list : (list.items ?? list.data ?? []);
     const { parsePurchaseUbl } = await import('./purchase-booking');
