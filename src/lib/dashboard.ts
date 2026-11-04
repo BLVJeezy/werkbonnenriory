@@ -6,7 +6,17 @@ export type InvoiceOmzetRow = {
   total: number | string;
   paid_amount: number | string;
   kind: string;
+  work_order_id?: string | null;
 };
+
+/**
+ * Facturen die niet aan een werkbon gekoppeld zijn (zelf gemaakt) meetellen in de
+ * omzet per dag op hun eigen factuurdatum. Facturen wél aan een werkbon worden
+ * overgeslagen: die omzet komt al van de werkbon zelf, anders wordt ze dubbel geteld.
+ */
+export function manualInvoiceRows(rows: InvoiceOmzetRow[]): InvoiceOmzetRow[] {
+  return rows.filter((r) => !r.work_order_id);
+}
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
