@@ -71,7 +71,8 @@ function Finance() {
   const syncPurchasesAuto = useServerFn(syncFinancePurchases);
   useEffect(() => {
     // Simpla is losgekoppeld voor aankoopfacturen (gebruiker, 4 nov 2026): geen automatische inlezing meer.
-    if (!company || true) return;
+    const simplaAan: boolean = false;
+    if (!company || !simplaAan) return;
     let stop = false;
     (async () => {
       const { data: st } = await db.from("fin_sync_status").select("last_success_at").eq("company_id", company.id).eq("source", "simpla").maybeSingle();
