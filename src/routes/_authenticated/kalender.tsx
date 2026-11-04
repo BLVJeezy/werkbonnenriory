@@ -183,7 +183,7 @@ function Kalender() {
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
-      <div className="col-span-full flex flex-wrap items-center gap-2"><label className="flex cursor-pointer items-center gap-1.5 text-xs font-bold"><input type="checkbox" className="accent-primary" checked={w.first_customer} onChange={(e) => set(w.id, { first_customer: e.target.checked })} />Eerste klant</label><CustomerInvite task={w} />{w.scheduled_date && <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => plan(w.id, null)}>Terug naar nog in te plannen</Button>}</div>
+      <div className="col-span-full flex flex-wrap items-center gap-2"><Button type="button" size="sm" variant={w.urgent ? "destructive" : "outline"} aria-pressed={!!w.urgent} title="Markeer deze taak als dringend" className="h-7 shrink-0 text-xs" onClick={() => set(w.id, { urgent: !w.urgent })}>{w.urgent ? "Dringend ✓" : "Dringend"}</Button><label className="flex cursor-pointer items-center gap-1.5 text-xs font-bold"><input type="checkbox" className="accent-primary" checked={w.first_customer} onChange={(e) => set(w.id, { first_customer: e.target.checked })} />Eerste klant</label><CustomerInvite task={w} />{w.scheduled_date && <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => plan(w.id, null)}>Terug naar nog in te plannen</Button>}</div>
       </div>
     </div>
   );
