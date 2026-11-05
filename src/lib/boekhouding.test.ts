@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, statements, trialBalance, vatReport } from "./boekhouding";
+import { controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, statements, trialBalance, vatReport } from "./boekhouding";
 
 const post = (lines: any[], date = "2026-03-10", journal = "aankoop") => lines.map((l) => ({ ...l, entry_date: date, journal }));
 
 describe("boekhouding", () => {
+  it("gebruikt de bestaande Riory-centralisatierekeningen voor betalingen", () => {
+    expect(controlAccounts(["400110", "440110", "550200"])).toEqual({ klanten: "400110", leveranciers: "440110", bank: "550200" });
+    expect(paymentEntry(-75.91, "550200", controlAccounts(["440110"]).leveranciers)).toEqual([
+      { account: "440110", debit: 75.91, credit: 0 },
+      { account: "550200", debit: 0, credit: 75.91 },
+    ]);
+  });
   it("aankoopfactuur is in evenwicht met btw en leverancier", () => {
     const { lines } = invoiceToEntry({ direction: "aankoop", doc_type: "factuur", lines: [{ account: "611120", ex_vat: 275, vat: 57.75 }] });
     expect(isBalanced(lines).ok).toBe(true);
