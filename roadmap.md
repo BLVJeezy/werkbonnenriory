@@ -5,5 +5,5 @@
 - [x] Aankoopfacturen uit Simpla verwijderen
 - [x] Verkoopfacturen via Peppyrus verzenden
 
-- [ ] Testfactuur Peppol werkt niet: oorzaak zoeken
-- [ ] Zoomknop op documentvoorbeeld aankoopfactuur
+- [x] Testfactuur Peppol: formaatfout verzender opgelost (ontvangst wacht op Peppol-routering)
+- [x] Zoomknop op documentvoorbeeld aankoopfactuur
