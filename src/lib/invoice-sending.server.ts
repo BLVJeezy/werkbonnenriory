@@ -111,18 +111,15 @@ export async function sendOne(supabase: any, inv: any) {
     });
     // Peppol leg: only for Belgian VAT customers, once (peppol_sent_at), and never blocks the mail that already went out.
     let peppolNote: string | null = null;
-    const receiverId = peppolIdFromVat(d.customer.vatNumber);
     if (peppolActive && receiverId && !inv.peppol_sent_at) {
       try {
-        const key = process.env['PEPPYRUS_API_KEY'];
-        if (!key) throw new Error('Peppyrus-sleutel ontbreekt');
-        const base = process.env['PEPPYRUS_LIVE'] === 'true' ? 'https://api.peppyrus.be/v1' : 'https://api.test.peppyrus.be/v1';
+        if (!peppyrusKey) throw new Error('Peppyrus-sleutel ontbreekt');
         const credit = inv.kind === 'creditnota';
-        const res = await fetch(`${base}/message`, {
+        const res = await fetch(`${PEPPYRUS_BASE()}/message`, {
           method: 'POST', signal: AbortSignal.timeout(30000),
-          headers: { 'X-Api-Key': key, Accept: 'application/json', 'Content-Type': 'application/json' },
+          headers: { 'X-Api-Key': peppyrusKey, Accept: 'application/json', 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sender: SENDER_PEPPOL_ID, recipient: receiverId,
+            sender: senderId, recipient: receiverId,
             processType: 'cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0',
             documentType: credit
               ? 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1'
