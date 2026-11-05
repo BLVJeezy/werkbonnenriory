@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Afletterlabels per factuur in de bankkeuzelijst; beide statussen zichtbaar gecontroleerd en acht tests geslaagd.
+
 - [x] Aankoopfacturen uit de app zichtbaar bij bankverrichtingen; Littera 2603032 gevonden en geselecteerd, 20 tests geslaagd. Geen echte betaling gekoppeld.
 
 - [x] Vrije factuurkeuze bij bankverrichtingen en veilige koppeling van terugstortingen; 14 tests en zes ingelogde controles van de betaalregels geslaagd. Geen echte boeking uitgevoerd.

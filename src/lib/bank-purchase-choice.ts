@@ -5,6 +5,7 @@ export function purchaseBankChoices(rows: any[], claims: any[]) {
     return { ...p, id: `purchase:${p.id}`, purchase_id: p.id, direction: 'aankoop', doc_type: p.kind,
       number: p.invoice_number, counterparty: p.supplier_name,
       paid_amount: payments.length || paid ? paid : p.status === 'betaald' ? Number(p.total) : 0,
+      bank_reconciled: payments.length > 0,
       fin_invoice_lines: [{ ex_vat: Number(p.total), vat: 0 }] };
   });
 }
