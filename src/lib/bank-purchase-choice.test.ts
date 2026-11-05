@@ -11,4 +11,7 @@ describe('aankoopfacturen in bankkeuze', () => {
   it('behoudt handmatig betaald gemarkeerde aankopen', () => {
     expect(purchaseBankChoices([{ ...row, status: 'betaald' }], [])[0]?.paid_amount).toBe(302.50);
   });
+  it('behoudt de oorspronkelijke betaling bij een extra betaling', () => {
+    expect(purchaseBankChoices([{ ...row, bank_paid_base: 302.50 }], [{ purchase_invoice_id: 'p', amount: -20 }])[0]?.paid_amount).toBe(322.50);
+  });
 });
