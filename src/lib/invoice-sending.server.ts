@@ -5,6 +5,17 @@ import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } fr
 import { getConnectionKeyForUser } from './appUserConnections.server';
 import { deliverInvoice,invoiceMail,invoiceMailWithCc,OKIOKI_INVOICE_EMAIL } from './invoice-delivery';
 const SENDER_PEPPOL_ID='0208:0840931404';
+const PEPPYRUS_BASE = () => process.env['PEPPYRUS_LIVE'] === 'true' ? 'https://api.peppyrus.be/v1' : 'https://api.test.peppyrus.be/v1';
+/** The Peppol address this Peppyrus account sends from (isSender), e.g. 9925:BE0840931404; falls back to the 0208 constant. Never throws. */
+async function peppyrusSenderId(key: string): Promise<string> {
+  try {
+    const res = await fetch(`${PEPPYRUS_BASE()}/organization/peppol`, { headers: { 'X-Api-Key': key, Accept: 'application/json' }, signal: AbortSignal.timeout(30000) });
+    if (!res.ok) return SENDER_PEPPOL_ID;
+    const org = await res.json() as any;
+    const list: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
+    return String(list.find(p => p?.isSender)?.participantId ?? SENDER_PEPPOL_ID);
+  } catch { return SENDER_PEPPOL_ID; }
+}
 const b64 = (bytes: Uint8Array) => { let s = ""; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
 
 export async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
