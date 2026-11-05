@@ -109,7 +109,7 @@ function Aankoopfacturen() {
       await refresh(); qc.invalidateQueries({queryKey:['suppliers']});
       const {data: row} = await supabase.from('purchase_invoices').select('*').eq('id',r.id).single();
       if (row) nav({ to: '/aankoopfacturen/$id', params: { id: row.id } });
-      toast.success(r.duplicate ? 'Dit document was al ingelezen' : 'Kasticket ingelezen — te controleren');
+      toast.success(r.duplicate ? 'Dit document was al ingelezen' : r.unread ? 'Opgeslagen bij Te controleren — niet automatisch uitgelezen, vul zelf aan' : 'Kasticket ingelezen — te controleren');
       return true;
     } catch(e) { toast.error(e instanceof Error ? e.message : 'Inlezen mislukt'); return false; }
     finally { setBusy(false); }
