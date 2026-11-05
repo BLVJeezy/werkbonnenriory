@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { checkAccountantPackage, sendAccountantPackage } from "@/lib/accountant-package.functions";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -13,7 +14,7 @@ const yearEnd = (y: number) => `${y}-12-31`;
 const monthStartAgo = (n: number) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - n); return iso(d); };
 const nl = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
 
-type Chk = { from: string; to: string; sales: number; purchases: number; warnings: string[] };
+type Chk = { from: string; to: string; onlyNew: boolean; sales: number; purchases: number; alreadySent: number; warnings: string[] };
 
 /** Two mails to the accountant for one chosen period: UBL documents + Excel comparison pack. */
 export function AccountantPackage({ accountantEmail }: { accountantEmail: string | null }) {
@@ -21,6 +22,7 @@ export function AccountantPackage({ accountantEmail }: { accountantEmail: string
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState(yearStart(year));
   const [to, setTo] = useState(yearEnd(year));
+  const [onlyNew, setOnlyNew] = useState(true);
   const [chk, setChk] = useState<Chk | null>(null);
   const [checking, setChecking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -31,20 +33,20 @@ export function AccountantPackage({ accountantEmail }: { accountantEmail: string
     if (!open) return;
     let alive = true;
     setChecking(true);
-    check({ data: { from, to } })
+    check({ data: { from, to, onlyNew } })
       .then((r) => { if (alive) setChk(r); })
       .catch((e) => { if (alive) { setChk(null); toast.error(e instanceof Error ? e.message : "Controleren mislukt"); } })
       .finally(() => { if (alive) setChecking(false); });
     return () => { alive = false; };
-  }, [open, from, to, check]);
+  }, [open, from, to, onlyNew, check]);
 
-  const stale = !chk || chk.from !== from || chk.to !== to;
+  const stale = !chk || chk.from !== from || chk.to !== to || chk.onlyNew !== onlyNew;
 
   async function send() {
     if (stale) return;
     setBusy(true);
     try {
-      const r = await sendPack({ data: { from, to } });
+      const r = await sendPack({ data: { from, to, onlyNew } });
       if (r.warnings.length) toast.warning(`2 mails verzonden naar ${r.to}, maar de boekhouding is niet volledig (${r.warnings.length} punten).`);
       else toast.success(`2 mails verzonden naar ${r.to} (${r.ubl} UBL-bestanden + boekhoudpakket).`);
       setOpen(false);
