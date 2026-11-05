@@ -80,15 +80,17 @@ function OfferteTekenen() {
       </dl>
       {optionLines.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-black uppercase text-primary">Opties — klik aan wat je wil meenemen</h2>
-          <p className="text-sm text-muted-foreground">Deze opties zijn niet inbegrepen in het totaal hierboven. Vink aan welke je wil; ze worden dan mee ondertekend en aangerekend.</p>
+          <h2 className="text-sm font-black uppercase text-primary">{signed ? "Niet gekozen opties — worden niet uitgevoerd" : "Opties — klik aan wat je wil meenemen"}</h2>
+          <p className="text-sm text-muted-foreground">{signed ? "Je gekozen opties staan hierboven in de offerte. Deze opties heb je niet gekozen." : "Deze opties zijn niet inbegrepen in het totaal hierboven. Vink aan welke je wil; ze worden dan mee ondertekend en aangerekend."}</p>
           <ul className="divide-y rounded-md border bg-card">
             {optionLines.map(({ line: l, index }) => {
               const { title, detail } = splitLineText(l.description);
               const on = chosen.has(index);
+              // Once a choice is made (or the offer is signed), unchosen options fade so nobody confuses them with the chosen work.
+              const faded = signed || (chosen.size > 0 && !on);
               return (
                 <li key={index}>
-                  <label className={`flex cursor-pointer items-start gap-3 p-3 ${on ? "bg-accent" : ""} ${signed ? "cursor-default" : ""}`}>
+                  <label className={`flex cursor-pointer items-start gap-3 p-3 transition-opacity ${on ? "bg-accent ring-2 ring-inset ring-primary" : ""} ${faded ? "opacity-40 grayscale" : ""} ${signed ? "cursor-default" : ""}`}>
                     <input
                       type="checkbox"
                       className="mt-1 h-5 w-5"
