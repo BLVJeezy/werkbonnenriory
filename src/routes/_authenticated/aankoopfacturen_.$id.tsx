@@ -229,7 +229,6 @@ function Controle() {
                   </div>
                   <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
                     <Field label="Aantal"><Input type="number" step="any" className="h-8 w-16" aria-label="Aantal" value={l.quantity} onChange={(e) => upd(i, { quantity: Number(e.target.value) })} /></Field>
-                    <Field label="Eenheid"><Input className="h-8 w-16" aria-label="Eenheid" value={l.unit} onChange={(e) => upd(i, { unit: e.target.value || "st" })} /></Field>
                     <Field label="Prijs/st"><Input type="number" step="0.01" className="h-8 w-24" aria-label="Prijs per stuk" value={l.unitPrice} onChange={(e) => upd(i, { unitPrice: Number(e.target.value) })} /></Field>
                     <Field label="Korting %"><Input type="number" min="0" max="100" step="0.01" className="h-8 w-20" aria-label="Korting procent" value={l.discountPercent ?? ""} onChange={(e) => discountLines(i, Number(e.target.value), "percent")} /></Field>
                     <Field label="Korting € ex btw"><Input type="number" min="0" step="0.01" className="h-8 w-24" aria-label="Korting bedrag" value={l.discountAmount ?? ""} onChange={(e) => discountLines(i, Number(e.target.value), "amount")} /></Field>
