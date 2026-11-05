@@ -2,3 +2,5 @@
 
 - [x] Dokapi-ombouw stopgezet: Peppyrus blijft het Peppol-accesspoint (gebruiker 5 nov 2026: "peppyrus is toch aangesloten")
 - [x] Dokapi-wijzigingen teruggedraaid: Peppyrus-code en scherm hersteld, dokapi-bestanden verwijderd, kolommen als DEPRECATED gemarkeerd, geheugen bijgewerkt
+- [ ] Aankoopfacturen uit Simpla verwijderen
+- [ ] Verkoopfacturen via Peppyrus verzenden
