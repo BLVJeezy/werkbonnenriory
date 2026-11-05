@@ -136,5 +136,5 @@ export async function pagesToPdf(pages: Blob[]): Promise<File> {
     const w = 595, h = (img.height / img.width) * w;
     pdf.addPage([w, h]).drawImage(img, { x: 0, y: 0, width: w, height: h });
   }
-  return new File([await pdf.save()], 'scan.pdf', { type: 'application/pdf' });
+  return new File([new Uint8Array(await pdf.save()) as BlobPart], 'scan.pdf', { type: 'application/pdf' });
 }
