@@ -869,6 +869,13 @@
       "when": 1793898327764,
       "tag": "0123_split_bank_invoice_allocations",
       "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1793898712096,
+      "tag": "0124_use_company_control_accounts_for_bank_linking",
+      "breakpoints": true
     }
   ]
 }
