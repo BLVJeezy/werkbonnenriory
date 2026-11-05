@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Eén betaling eenvoudig over meerdere facturen verdelen, met bedrag per factuur en totaalcontrole.
+
 - [x] Afletterlabels per factuur in de bankkeuzelijst; beide statussen zichtbaar gecontroleerd en acht tests geslaagd.
 
 - [x] Aankoopfacturen uit de app zichtbaar bij bankverrichtingen; Littera 2603032 gevonden en geselecteerd, 20 tests geslaagd. Geen echte betaling gekoppeld.
