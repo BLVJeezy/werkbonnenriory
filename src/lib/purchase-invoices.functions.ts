@@ -169,24 +169,33 @@ export const importReceipt = createServerFn({ method: 'POST' }).middleware([requ
     if (!valid || bytes.length > 10000000) throw new Error('Bestandstype of bestandsgrootte ongeldig.');
     const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2,'0')).join('');
     const { data: existing } = await context.supabase.from('purchase_invoices').select('id').eq('upload_hash', hash).maybeSingle();
-    if (existing) return { id: existing.id, duplicate: true };
-    const key = process.env['LOVABLE_API_KEY'];
-    if (!key) throw new Error('AI-koppeling ontbreekt');
-    const { extractReceipt } = await import('./receipt.server');
-    const n = await extractReceipt(key, data.base64, data.mime);
+    if (existing) return { id: existing.id, duplicate: true, unread: false };
     const ext = data.mime === 'application/pdf' ? 'pdf' : data.mime.split('/')[1];
     const path = `tickets/${crypto.randomUUID()}.${ext}`;
     const storage = context.supabase.storage.from('aankoopfacturen');
     const { error: uploadError } = await storage.upload(path, bytes, { contentType: data.mime });
     if (uploadError) throw new Error('Origineel document opslaan mislukt');
+    // Sla het document altijd eerst op als "te_controleren", zodat een scan nooit verloren gaat —
+    // ook wanneer de AI-uitlezing mislukt. De beheerder vult dan zelf aan.
     const { data: row, error } = await context.supabase.from('purchase_invoices').insert({
-      supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban, supplier_bic: n.supplierBic,
-      invoice_number: n.invoiceNumber, invoice_date: n.invoiceDate, due_date: n.dueDate,
-      lines: n.lines, net: n.net, vat: n.vat, total: n.total, payment_ref: n.paymentRef,
-      source: 'kasticket', status: 'te_controleren', pdf_path: path, upload_hash: hash,
+      lines: [], source: 'kasticket', status: 'te_controleren', pdf_path: path, upload_hash: hash,
     }).select('id').single();
     if (error || !row) { await storage.remove([path]); throw new Error(error?.code === '23505' ? 'Dit kasticket is al ingelezen.' : 'Aankoopdocument opslaan mislukt'); }
-    return { id: row.id, duplicate: false };
+    const key = process.env['LOVABLE_API_KEY'];
+    if (!key) return { id: row.id, duplicate: false, unread: true };
+    try {
+      const { extractReceipt } = await import('./receipt.server');
+      const n = await extractReceipt(key, data.base64, data.mime);
+      const { error: readError } = await context.supabase.from('purchase_invoices').update({
+        supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban, supplier_bic: n.supplierBic,
+        invoice_number: n.invoiceNumber, invoice_date: n.invoiceDate, due_date: n.dueDate,
+        lines: n.lines, net: n.net, vat: n.vat, total: n.total, payment_ref: n.paymentRef,
+      }).eq('id', row.id);
+      if (readError) return { id: row.id, duplicate: false, unread: true };
+      return { id: row.id, duplicate: false, unread: false };
+    } catch {
+      return { id: row.id, duplicate: false, unread: true };
+    }
   });
 
 /** Reads unpaid purchase bills from Simpla (read-only API) and adds new ones for admin review. */
