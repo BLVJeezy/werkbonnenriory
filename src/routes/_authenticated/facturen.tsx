@@ -152,8 +152,7 @@ function Facturen() {
     refresh();
   }
   async function sendSel(ids: string[]) {
-    const okioki = !data?.settings?.peppol_active;
-    if (!confirm(`${ids.length} factuur/facturen nu verzenden? De klant krijgt de PDF${okioki ? "; bij een ingevuld btw-nummer gaat een aparte UBL-mail naar BE0840931404701144@okioki.app." : "; Peppol is actief, er gaat geen kopie meer naar OkiOki."}`)) return;
+    if (!confirm(sendConfirmText(ids.length, Boolean(data?.settings?.peppol_active)))) return;
     setBusy(true);
     try {
       const r = await send({ data: { invoiceIds: ids } });

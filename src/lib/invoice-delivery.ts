@@ -10,6 +10,13 @@ export function needsOkioki(peppolActive = false) {
   return !peppolActive;
 }
 
+/** What the admin is asked to confirm before a send goes out, so the wording never promises an OkiOki copy that is off. */
+export function sendConfirmText(count: number, peppolActive: boolean) {
+  return `${count} factuur/facturen nu verzenden? De klant krijgt de PDF${peppolActive
+    ? "; Peppol is actief, er gaat geen kopie meer naar OkiOki."
+    : `; bij een ingevuld btw-nummer gaat een aparte UBL-mail naar ${OKIOKI_INVOICE_EMAIL}.`}`;
+}
+
 type Att = { name: string; contentType: string; contentBytes: string };
 const file = (a: Att) => ({ "@odata.type": "#microsoft.graph.fileAttachment", ...a });
 
