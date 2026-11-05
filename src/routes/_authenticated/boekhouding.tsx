@@ -717,6 +717,7 @@ function Bank({ c }: { c: string }) {
     return purchaseBankChoices(rows, [...claims, ...allocations.map((a) => ({ ...a, amount: -Number(a.amount) }))]);
   } });
   const invoiceChoices = [...appPurchases, ...allInv];
+  const { data: paymentAllocations = [] } = useQuery({ queryKey: ['fin', 'bank-allocations', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_bank_allocations').select('*').eq('company_id', c).order('id').range(a, b)) });
   const { data: bankReferences = [] } = useQuery({ queryKey: ['fin', 'bank-invoice-references', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_journal_entries').select('reference').eq('company_id', c).eq('source', 'bank').not('reference', 'is', null).order('id').range(a, b)) });
   const reconciledNumbers = new Set(bankReferences.flatMap((r) => String(r.reference).split(',').map((number) => number.trim())));
   const reconciled = (i: any) => isInvoiceReconciled(i, total(i), tx.some((t) => i.purchase_id ? t.matched_purchase_invoice_id === i.purchase_id : t.matched_invoice_id === i.id) || (!i.purchase_id && !!i.number && reconciledNumbers.has(i.number)));
@@ -880,7 +881,7 @@ function Bank({ c }: { c: string }) {
                 <div className="mt-1 flex flex-wrap gap-1">
                   {cands.map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => match(t, i)}>Afletteren: {i.counterparty} {i.number}</Button>)}
                   {!cands.length && paidCands(t).slice(0, 3).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren (al betaald): {i.counterparty} {i.number}</Button>)}
-                  <Button size="sm" variant="outline" onClick={() => { setManualTx(t); setInvoiceSearch(''); setManualInvoiceId(''); }}>Factuur kiezen</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setManualTx(t); setInvoiceSearch(''); setManualInvoiceId(''); setSplitAmounts({}); }}>Factuur kiezen</Button>
                   <AccountPicker accounts={accounts} onPick={(nr) => book(t, nr)} />
                   {!cands.length && <Button size="sm" variant="ghost" onClick={() => book(t, WACHT)}>Naar wachtrekening</Button>}
                 </div>
@@ -931,6 +932,7 @@ function Bank({ c }: { c: string }) {
                 {inv ? <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs">Factuur {inv.number} · {inv.counterparty} · {inv.invoice_date}</span>
                   : t.matched_purchase_invoice_id ? <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs">Aankoopfactuur {appPurchases.find((p) => p.purchase_id === t.matched_purchase_invoice_id)?.number} · {appPurchases.find((p) => p.purchase_id === t.matched_purchase_invoice_id)?.counterparty}</span>
                   : t.matched_invoice_id ? <span className="text-xs text-muted-foreground">afgeletterd</span>
+                  : paymentAllocations.some((a) => a.transaction_id === t.id) ? <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs">Verdeeld: {paymentAllocations.filter((a) => a.transaction_id === t.id).map((a) => { const i = invoiceChoices.find((i) => a.purchase_invoice_id ? i.purchase_id === a.purchase_invoice_id : i.id === a.invoice_id); return `${i?.counterparty ?? ''} ${i?.number ?? ''} ${eur(Number(a.amount))}`; }).join(' · ')}</span>
                   : wachtIds.has(t.id) ? <span className="text-xs text-primary">op wachtrekening</span>
                   : <span className="text-xs text-muted-foreground">geboekt zonder factuur</span>}
               </span>
