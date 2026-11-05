@@ -201,7 +201,7 @@ export const sendInvoiceCopy = createServerFn({ method: "POST" })
       if (await appUserReconnectRequired(res)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
       if (!res.ok) throw new Error(`Mail versturen mislukt [${res.status}]: ${await res.text()}`);
     });
-    return { ok: true as const, to: data.to, okioki: OKIOKI_INVOICE_EMAIL };
+    return { ok: true as const, to: data.to, okioki: peppolActive ? null : OKIOKI_INVOICE_EMAIL };
   });
 
 export const invoicePdf = createServerFn({ method: "POST" })
