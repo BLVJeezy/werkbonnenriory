@@ -12,6 +12,7 @@ import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
+import { sendConfirmText } from "@/lib/invoice-delivery";
 import { isInvoiceEditable } from "@/lib/invoice";
 import { QrCode, Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";

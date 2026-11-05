@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { deliverInvoice, invoiceMailWithCc } from "./invoice-delivery";
+import { deliverInvoice, invoiceMailWithCc, sendConfirmText } from "./invoice-delivery";
 
 const mk = () => ({ sendWithCc: vi.fn().mockResolvedValue(undefined), sendUbl: vi.fn().mockResolvedValue(undefined), record: vi.fn().mockResolvedValue(undefined) });
 
