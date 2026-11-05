@@ -778,6 +778,13 @@
       "when": 1793816254636,
       "tag": "0110_purchase_invoice_supplier_bic",
       "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1793864458174,
+      "tag": "0111_peppol_active_no_okioki_copy",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { createCreditNote, createInvoices, invoicePdf, sendAllToAccountant, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
+import { sendConfirmText } from "@/lib/invoice-delivery";
 import { isInvoiceEditable } from "@/lib/invoice";
 import { QrCode, Trash2 } from "lucide-react";
 import { deleteSelectedWorkOrders } from "@/lib/delete-task";
@@ -152,7 +153,7 @@ function Facturen() {
     refresh();
   }
   async function sendSel(ids: string[]) {
-    if (!confirm(`${ids.length} factuur/facturen nu verzenden? De klant krijgt de PDF; bij een ingevuld btw-nummer gaat een aparte UBL-mail naar BE0840931404701144@okioki.app.`)) return;
+    if (!confirm(sendConfirmText(ids.length, Boolean(data?.settings?.peppol_active)))) return;
     setBusy(true);
     try {
       const r = await send({ data: { invoiceIds: ids } });

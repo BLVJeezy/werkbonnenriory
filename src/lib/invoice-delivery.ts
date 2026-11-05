@@ -5,9 +5,16 @@ import { INVOICE_MAILBOX_ADDRESS } from './mail-senders';
 
 export const OKIOKI_INVOICE_EMAIL = "BE0840931404701144@okioki.app";
 
-/** Every invoice and credit note goes to OkiOki as UBL, also for private customers. */
-export function needsOkioki(_customer?: Pick<InvoiceCustomer, "vatNumber">) {
-  return true;
+/** OkiOki only receives the UBL copy while the document is not yet delivered through Peppol. */
+export function needsOkioki(peppolActive = false) {
+  return !peppolActive;
+}
+
+/** What the admin is asked to confirm before a send goes out, so the wording never promises an OkiOki copy that is off. */
+export function sendConfirmText(count: number, peppolActive: boolean) {
+  return `${count} factuur/facturen nu verzenden? De klant krijgt de PDF${peppolActive
+    ? "; Peppol is actief, er gaat geen kopie meer naar OkiOki."
+    : `; bij een ingevuld btw-nummer gaat een aparte UBL-mail naar ${OKIOKI_INVOICE_EMAIL}.`}`;
 }
 
 type Att = { name: string; contentType: string; contentBytes: string };
@@ -27,33 +34,35 @@ export function invoiceMail(to: string, number: string, contentBytes: string, fo
   } };
 }
 
-/** Customer mail with PDF + UBL, OkiOki in BCC so the customer cannot see it. */
-export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur", docUrl?: string, paid = false) {
+/** Customer mail with PDF + UBL, OkiOki in BCC so the customer cannot see it. With okioki off (Peppol live) no copy goes out. */
+export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, ublBytes: string, label = "Factuur", docUrl?: string, paid = false, okioki = true) {
   const m = invoiceMail(to, number, pdfBytes, "pdf", label, docUrl, paid);
   return { message: { ...m.message,
     // Outlook asks the customer's mail program for a read receipt; the customer may decline, so absence never means "unread".
     isReadReceiptRequested: true,
-    bccRecipients: [{ emailAddress: { address: OKIOKI_INVOICE_EMAIL } }],
+    ...(okioki ? { bccRecipients: [{ emailAddress: { address: OKIOKI_INVOICE_EMAIL } }] } : {}),
     attachments: [...m.message.attachments, file({ name: `${label}-${number}.xml`, contentType: "application/xml", contentBytes: ublBytes })],
   } };
 }
 
-/** One mail to the customer with OkiOki in CC; a retry after an older PDF-only send just sends the UBL to OkiOki. */
+/** One mail to the customer; OkiOki is only copied while Peppol delivery is not live yet. */
 export async function deliverInvoice(o: {
   customer: Pick<InvoiceCustomer, "vatNumber" | "email">;
   pdfSent: boolean; okiokiSent: boolean;
+  peppolActive?: boolean;
   sendWithCc: (to: string) => Promise<void>;
   sendUbl: (to: string) => Promise<void>;
   record: (leg: "pdf" | "okioki") => Promise<void>;
 }) {
+  const okioki = needsOkioki(o.peppolActive);
   if (!o.customer.email) throw new Error("Geen facturatie- of klantmailadres: vul dit eerst in");
   if (!o.pdfSent) {
     await o.sendWithCc(o.customer.email);
     await o.record("pdf");
-    await o.record("okioki");
+    if (okioki) await o.record("okioki");
     return;
   }
-  if (!o.okiokiSent) {
+  if (okioki && !o.okiokiSent) {
     await o.sendUbl(OKIOKI_INVOICE_EMAIL);
     await o.record("okioki");
   }
