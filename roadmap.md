@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Aankoopfacturen: kortingen uitlezen en zelf toevoegen/aanpassen
+- [x] Aankoopfacturen: kortingen uitlezen en zelf toevoegen/aanpassen
 
 - [x] Bestekken: foto's van de klant kiezen — bestond al en werkt (getest met 15 foto's)
 - [x] Filmpjes uploaden en met klant delen via een kijklink (niet downloadbaar)
