@@ -785,6 +785,13 @@
       "when": 1793864458174,
       "tag": "0111_peppol_active_no_okioki_copy",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1793864800905,
+      "tag": "0112_quote_task_chosen_options_only",
+      "breakpoints": true
     }
   ]
 }
