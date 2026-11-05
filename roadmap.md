@@ -4,3 +4,6 @@
 - [x] Dokapi-wijzigingen teruggedraaid: Peppyrus-code en scherm hersteld, dokapi-bestanden verwijderd, kolommen als DEPRECATED gemarkeerd, geheugen bijgewerkt
 - [x] Aankoopfacturen uit Simpla verwijderen
 - [x] Verkoopfacturen via Peppyrus verzenden
+
+- [ ] Testfactuur Peppol werkt niet: oorzaak zoeken
+- [ ] Zoomknop op documentvoorbeeld aankoopfactuur
