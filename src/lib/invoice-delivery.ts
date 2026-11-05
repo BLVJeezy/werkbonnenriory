@@ -38,22 +38,24 @@ export function invoiceMailWithCc(to: string, number: string, pdfBytes: string, 
   } };
 }
 
-/** One mail to the customer with OkiOki in CC; a retry after an older PDF-only send just sends the UBL to OkiOki. */
+/** One mail to the customer; OkiOki is only copied while Peppol delivery is not live yet. */
 export async function deliverInvoice(o: {
   customer: Pick<InvoiceCustomer, "vatNumber" | "email">;
   pdfSent: boolean; okiokiSent: boolean;
+  peppolActive?: boolean;
   sendWithCc: (to: string) => Promise<void>;
   sendUbl: (to: string) => Promise<void>;
   record: (leg: "pdf" | "okioki") => Promise<void>;
 }) {
+  const okioki = needsOkioki(o.peppolActive);
   if (!o.customer.email) throw new Error("Geen facturatie- of klantmailadres: vul dit eerst in");
   if (!o.pdfSent) {
     await o.sendWithCc(o.customer.email);
     await o.record("pdf");
-    await o.record("okioki");
+    if (okioki) await o.record("okioki");
     return;
   }
-  if (!o.okiokiSent) {
+  if (okioki && !o.okiokiSent) {
     await o.sendUbl(OKIOKI_INVOICE_EMAIL);
     await o.record("okioki");
   }

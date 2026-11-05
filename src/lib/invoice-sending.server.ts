@@ -69,6 +69,8 @@ export async function sendOne(supabase: any, inv: any) {
   inv = claimed;
   try {
     const d = await pdfData(supabase, inv);
+    const { data: s } = await supabase.from("settings").select("peppol_active").eq("id", 1).maybeSingle();
+    const peppolActive = Boolean(s?.peppol_active);
     const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
