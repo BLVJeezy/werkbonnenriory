@@ -13,6 +13,10 @@ export type PurchaseLine = {
   vat?: number | null;
   /** Line total including tax, read or derived; null when unknown. */
   total?: number | null;
+  /** Discount metadata only: amount is already net AFTER this discount. */
+  discountPercent?: number | null;
+  discountAmount?: number | null;
+  discountBase?: number | null;
 };
 
 export type ParsedPurchaseInvoice = {
@@ -32,6 +36,11 @@ export type ParsedPurchaseInvoice = {
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" ? Number(v.replace(",", ".")) || 0 : 0);
+const optionalNum = (v: unknown): number | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 const isoDate = (v: unknown) => {
   const s = str(v);
@@ -67,10 +76,15 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
     const unit = str(lo["unit"]) ?? "st";
     const unitPrice = num(lo["unitPrice"]);
     const rate = vatRateValue(lo["vatRate"]);
+    const discountPercent = vatRateValue(lo["discountPercent"]);
+    const discountAmount = optionalNum(lo["discountAmount"]);
+    const base = optionalNum(lo["discountBase"]) ?? r2(quantity * unitPrice);
+    const discount = discountAmount ?? (discountPercent !== null ? r2(base * discountPercent / 100) : 0);
     // What the document states wins; a missing figure is derived from the rest of the line, never invented.
-    let net = r2(num(lo["net"]) || num(lo["amount"])) || r2(quantity * unitPrice);
-    let vat: number | null = r2(num(lo["vat"])) || null;
-    let total: number | null = r2(num(lo["total"])) || null;
+    const statedNet = optionalNum(lo["net"]) ?? optionalNum(lo["amount"]);
+    let net = r2(statedNet ?? (base - discount));
+    let vat: number | null = optionalNum(lo["vat"]);
+    let total: number | null = optionalNum(lo["total"]);
     if (!net && total && vat) net = r2(total - vat);
     if (!net && total && rate !== null) net = r2(total / (1 + rate / 100));
     if (vat === null && total !== null && net) vat = r2(total - net);
@@ -88,6 +102,9 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
       vatRate,
       vat,
       total,
+      ...(discountPercent !== null || discountAmount !== null ? {
+        discountPercent, discountAmount: r2(discount), discountBase: r2(net + discount),
+      } : {}),
     };
   });
   const linesNet = r2(lines.reduce((s, l) => s + l.amount, 0));
@@ -109,6 +126,26 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
     total: total || r2(net + vat),
     paymentRef: str(o["paymentRef"]),
   };
+}
+
+/** Explicit user edit: replace the discount, never subtract it a second time. */
+export function setPurchaseLineDiscount(line: PurchaseLine, value: number, mode: "percent" | "amount"): PurchaseLine {
+  if (!Number.isFinite(value) || value < 0) throw new Error("Korting moet een positief getal zijn");
+  const base = r2(line.discountBase ?? line.amount + (line.discountAmount ?? 0));
+  if (base < 0) throw new Error("Geen korting op een negatieve lijn");
+  const discount = r2(mode === "percent" ? base * value / 100 : value);
+  if ((mode === "percent" && value > 100) || discount > base) throw new Error("Korting mag niet groter zijn dan het lijnbedrag");
+  const amount = r2(base - discount);
+  const vat = line.vatRate != null ? r2(amount * line.vatRate / 100) : null;
+  return { ...line, discountBase: base, discountPercent: mode === "percent" ? value : null, discountAmount: discount, amount, vat, total: vat === null ? null : r2(amount + vat) };
+}
+
+/** Adjust document totals by the edited lines' delta; keep unrelated source differences intact. */
+export function purchaseDiscountTotals(before: PurchaseLine[], after: PurchaseLine[], totals: { net: number; vat: number; total: number }) {
+  const sum = (lines: PurchaseLine[]) => lines.reduce((s, l) => { const t = lineTotals(l); return { net: s.net + t.net, vat: s.vat + t.vat }; }, { net: 0, vat: 0 });
+  const a = sum(before), b = sum(after);
+  const net = r2(totals.net + b.net - a.net), vat = r2(totals.vat + b.vat - a.vat);
+  return { net, vat, total: r2(totals.total + b.net - a.net + b.vat - a.vat) };
 }
 
 /** Pure: the three amounts of one line — what is known, plus what follows from the tax percentage. */

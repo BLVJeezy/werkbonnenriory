@@ -1,7 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings } from "./purchase-invoice";
+import { lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals } from "./purchase-invoice";
 
 describe("normalizePurchaseInvoice", () => {
+  it("leest korting zonder reeds afgeprijsde bedragen dubbel te verminderen", () => {
+    const inv = normalizePurchaseInvoice({ lines: [{ quantity: 2, unitPrice: 50, net: 90, vatRate: 21, discountPercent: 10, discountAmount: 10 }], net: 90, vat: 18.9, total: 108.9 });
+    expect(inv.lines[0]).toMatchObject({ amount: 90, discountPercent: 10, discountAmount: 10, discountBase: 100 });
+    expect(inv.total).toBe(108.9);
+  });
+  it("leidt ontbrekend netto af na korting", () => {
+    expect(normalizePurchaseInvoice({ lines: [{ quantity: 2, unitPrice: 50, discountPercent: 10, vatRate: 21 }] }).lines[0]).toMatchObject({ amount: 90, vat: 18.9, total: 108.9 });
+  });
+  it("behoudt expliciet nul netto bij volledige korting", () => {
+    expect(normalizePurchaseInvoice({ lines: [{ quantity: 1, unitPrice: 100, net: 0, vat: 0, total: 0, discountPercent: 100 }] }).lines[0]).toMatchObject({ amount: 0, vat: 0, total: 0 });
+  });
+  it("vervangt een manuele korting en herrekent document en btw", () => {
+    const line = { description: 'Buis', quantity: 2, unit: 'st', unitPrice: 50, amount: 100, vatRate: 21, vat: 21, total: 121 };
+    const first = setPurchaseLineDiscount(line, 10, 'percent');
+    const second = setPurchaseLineDiscount(first, 20, 'amount');
+    expect(second.amount).toBe(80);
+    expect(purchaseDiscountTotals([line], [second], { net: 100, vat: 21, total: 121 })).toEqual({ net: 80, vat: 16.8, total: 96.8 });
+    expect(setPurchaseLineDiscount(second, 0, 'percent').amount).toBe(100);
+    expect(() => setPurchaseLineDiscount(line, 101, 'percent')).toThrow();
+  });
+  it("berekent korting per btw-tarief", () => {
+    const lines = [6, 21].map(vatRate => ({ description: 'Lijn', quantity: 1, unit: 'st', unitPrice: 100, amount: 100, vatRate }));
+    expect(purchaseDiscountTotals(lines, lines.map(l => setPurchaseLineDiscount(l, 10, 'percent')), { net: 200, vat: 27, total: 227 })).toEqual({ net: 180, vat: 24.3, total: 204.3 });
+  });
   it("normaliseert ruwe AI-output met komma-getallen", () => {
     const inv = normalizePurchaseInvoice({
       supplierName: "  Desco BV ", supplierVat: "BE0404123456", supplierIban: "BE71 0961 2345 6769",

@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { creditorBank, daysUntilDue, dueLabel, learnedAccount, lineKey, parsePurchaseUbl, paymentCommunication, paymentMethodLock, supplierBankWarnings } from './purchase-booking';
 
 describe('purchase booking', () => {
+  it('leest UBL-lijnkorting en documentkorting zonder dubbele aftrek', () => {
+    const xml = `<Invoice><ID>DISC-1</ID><TaxTotal><TaxAmount>16.8</TaxAmount></TaxTotal><LegalMonetaryTotal><TaxExclusiveAmount>80</TaxExclusiveAmount><PayableAmount>96.8</PayableAmount></LegalMonetaryTotal><AllowanceCharge><ChargeIndicator>false</ChargeIndicator><Amount>10</Amount><TaxCategory><Percent>21</Percent></TaxCategory></AllowanceCharge><InvoiceLine><InvoicedQuantity>2</InvoicedQuantity><LineExtensionAmount>90</LineExtensionAmount><AllowanceCharge><ChargeIndicator>false</ChargeIndicator><MultiplierFactorNumeric>10</MultiplierFactorNumeric><Amount>10</Amount></AllowanceCharge><Item><Name>Buis</Name><ClassifiedTaxCategory><Percent>21</Percent></ClassifiedTaxCategory></Item><Price><PriceAmount>50</PriceAmount></Price></InvoiceLine></Invoice>`;
+    const r = parsePurchaseUbl(xml);
+    expect(r.lines[0]).toMatchObject({ amount: 90, discountPercent: 10, discountAmount: 10, vatRate: 21 });
+    expect(r.lines[1]).toMatchObject({ amount: -10, vat: -2.1 });
+    expect(r.net).toBe(80);
+    expect(r.total).toBe(96.8);
+  });
   it('learns per supplier and description, ignoring numbers', () => {
     const rules = [{ supplier_id: 's1', match_key: lineKey('Diesel 45,2 L'), account: '612200', uses: 3 }];
     expect(learnedAccount({ description: 'Diesel 51,0 L', quantity: 1, unit: 'st', unitPrice: 1, amount: 1 }, 's1', rules)).toBe('612200');
