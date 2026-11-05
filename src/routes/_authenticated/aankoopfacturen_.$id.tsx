@@ -130,11 +130,11 @@ function Controle() {
   const derived = bankOfIban(edit.supplier_iban ?? sup?.iban ?? null);
   const shownBic = edit.supplier_bic ?? sup?.bic ?? "";
   const shownRef = paymentCommunication(edit.payment_ref, edit.invoice_number) ?? "";
-  const warnings = [...new Set([...supplierBankWarnings(sup ? bank : null), ...purchaseInvoiceWarnings({
+  const warnings = [...new Set([...supplierBankWarnings(sup ? bank : null, edit.payment_method, edit.status), ...purchaseInvoiceWarnings({
     supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
     invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
     lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
-  })])];
+  }, edit.payment_method, edit.status)])];
   const isPaid = edit.status === "betaald";
   const locked = isPaid || edit.status === "betaling_klaargezet";
   const signedTotal = edit.kind === "creditnota" ? -Math.abs(Number(edit.total)) : Number(edit.total);
