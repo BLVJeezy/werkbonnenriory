@@ -36,6 +36,6 @@ export function peppolTestInvoiceData(company: TestInvoiceCompany, today: string
 }
 
 /** UBL addressed to the same participant that sends it, so one test account closes the loop. */
-export function peppolTestInvoiceUbl(data: InvoicePdfData, participantId: string, pdfBase64: string) {
-  return invoiceUbl(data, { senderId: participantId, receiverId: participantId, pdfBase64 });
+export function peppolTestInvoiceUbl(data: InvoicePdfData, senderId: string, receiverId: string, pdfBase64: string) {
+  return invoiceUbl(data, { senderId, receiverId, pdfBase64 });
 }
