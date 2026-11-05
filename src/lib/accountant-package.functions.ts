@@ -121,9 +121,9 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
     const { data: s } = await supabase.from("settings").select("*").eq("id", 1).single();
     const mailTo = s?.accountant_email?.trim();
     if (!mailTo) throw new Error("Vul eerst het e-mailadres van de boekhouder in");
-    const { from, to } = data;
+    const { from, to, onlyNew } = data;
     const label = periodLabel(from, to);
-    const d = await loadPeriod(context, from, to);
+    const d = await loadPeriod(context, from, to, onlyNew);
     const send = await mailer();
 
     // ---- Mail 1: UBL ----
@@ -140,9 +140,10 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
       const safe = `${p.supplier_name}-${p.invoice_number ?? p.id.slice(0, 8)}`.replace(/[^\w.-]+/g, "_").slice(0, 80);
       ubl.push(file(`Aankoop-${p.kind === "creditnota" ? "Creditnota" : "Factuur"}-${safe}.xml`, "application/xml", b64(purchaseUbl({ ...p, lines: Array.isArray(p.lines) ? p.lines : [] }, buyer))));
     }
-    if (!ubl.length) throw new Error(`Er zijn geen aankoop- of verkoopfacturen tussen ${label}`);
+    if (!ubl.length) throw new Error(onlyNew ? `Alle aankoop- en verkoopfacturen tussen ${label} werden al eerder doorgestuurd naar de boekhouder.` : `Er zijn geen aankoop- of verkoopfacturen tussen ${label}`);
     const warnText = d.warnings.length ? `\n\nOpgelet — de boekhouding is nog niet volledig:\n- ${d.warnings.join("\n- ")}` : "";
-    await send(mailTo, `Aankoop- en verkoopfacturen ${label} in UBL — Riory`, `In de bijlage vindt u ${d.sales.length} verkoop- en ${d.purchases.length} aankoopdocumenten van ${label} in UBL-formaat.${warnText}`, ubl);
+    const scopeText = onlyNew ? " (enkel de documenten die u nog niet eerder ontving)" : "";
+    await send(mailTo, `Aankoop- en verkoopfacturen ${label} in UBL — Riory`, `In de bijlage vindt u ${d.sales.length} verkoop- en ${d.purchases.length} aankoopdocumenten van ${label} in UBL-formaat${scopeText}.${warnText}`, ubl);
 
     // ---- Mail 2: comparison pack (Excel) ----
     const XLSX = await import("xlsx");
