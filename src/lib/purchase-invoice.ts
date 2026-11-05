@@ -1,4 +1,5 @@
 import { bicFromIban } from "./iban-bic";
+import { needsPurchaseBankDetails } from './supplier-rules';
 
 export type PurchaseLine = {
   description: string;
@@ -167,7 +168,7 @@ export function lineTotals(l: PurchaseLine): { net: number; vat: number; total: 
 }
 
 /** Pure: consistency warnings the admin should check before approving. */
-export function purchaseInvoiceWarnings(inv: ParsedPurchaseInvoice): string[] {
+export function purchaseInvoiceWarnings(inv: ParsedPurchaseInvoice, method = 'overschrijving', status = 'te_controleren'): string[] {
   const w: string[] = [];
   const linesNet = r2(inv.lines.reduce((s, l) => s + l.amount, 0));
   if (inv.lines.length && Math.abs(linesNet - inv.net) > 0.02) w.push(`Som van de lijnen (${linesNet.toFixed(2)}) wijkt af van het nettobedrag (${inv.net.toFixed(2)})`);
@@ -177,7 +178,7 @@ export function purchaseInvoiceWarnings(inv: ParsedPurchaseInvoice): string[] {
     if (Math.abs(linesVat - inv.vat) > 0.02) w.push(`Btw van de lijnen (${linesVat.toFixed(2)}) wijkt af van de btw op het document (${inv.vat.toFixed(2)})`);
   }
   if (!inv.total) w.push("Geen totaalbedrag gevonden");
-  if (!inv.supplierIban) w.push("Geen IBAN van de leverancier gevonden — nodig om te betalen");
+  if (needsPurchaseBankDetails(method, status) && !inv.supplierIban) w.push("Geen IBAN van de leverancier gevonden — nodig om te betalen");
   if (!inv.dueDate) w.push("Geen vervaldag gevonden");
   if (!inv.invoiceNumber) w.push("Geen factuurnummer gevonden");
   return w;

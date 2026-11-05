@@ -228,10 +228,10 @@ function Aankoopfacturen() {
     supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
     invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
     lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
-  }) : [];
+  }, edit.payment_method, edit.status) : [];
 
   const editSupplier = edit ? suppliers.find((x) => x.id === edit.supplier_id) : null;
-  const bankWarnings = edit ? supplierBankWarnings(editSupplier ? creditorBank(edit, editSupplier) : null) : [];
+  const bankWarnings = edit ? supplierBankWarnings(editSupplier ? creditorBank(edit, editSupplier) : null, edit.payment_method, edit.status) : [];
   const dups = findPurchaseDuplicates(rows);
   const visible = rows.filter((r) => tab === 'alle' ? true : tab === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === tab);
   const count = (t: string) => rows.filter((r) => t === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === t).length;
@@ -296,7 +296,7 @@ function Aankoopfacturen() {
           const due = dueLabel(daysUntilDue(r.due_date, today));
           const lock = paymentMethodLock(r.payment_method, r.status);
           const sup = suppliers.find((x) => x.id === r.supplier_id);
-          const bankMissing = !paid && supplierBankWarnings(sup ? creditorBank(r, sup) : null).length > 0;
+          const bankMissing = !paid && supplierBankWarnings(creditorBank(r, sup), r.payment_method, r.status).length > 0;
           return (
           <li key={r.id} className={`flex flex-wrap items-center gap-3 p-3 ${paid ? 'bg-accent/40' : due.overdue ? 'bg-destructive/10' : ''}`}>
             <input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} onChange={() => toggle(r.id)} />

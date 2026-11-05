@@ -1,4 +1,5 @@
 import { normalizePurchaseInvoice, type ParsedPurchaseInvoice, type PurchaseLine } from './purchase-invoice';
+import { needsPurchaseBankDetails } from './supplier-rules';
 
 /** Pure: stable key for learning a booking from a line description (numbers/dates stripped). */
 export function lineKey(description: string): string {
@@ -36,7 +37,8 @@ export function paymentCommunication(paymentRef: string | null, invoiceNumber: s
 }
 
 /** Pure: every supplier needs IBAN and BIC for SEPA payments. */
-export function supplierBankWarnings(s: { iban: string | null; bic: string | null } | null | undefined): string[] {
+export function supplierBankWarnings(s: { iban: string | null; bic: string | null } | null | undefined, method = 'overschrijving', status = 'te_controleren'): string[] {
+  if (!needsPurchaseBankDetails(method, status)) return s ? [] : ['Kies een leverancier'];
   if (!s) return ['Kies een leverancier'];
   const w: string[] = [];
   if (!s.iban?.trim()) w.push('IBAN ontbreekt bij deze leverancier');
