@@ -128,39 +128,8 @@ export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware(
   .handler(async ({ context }) => {
     await assertAdmin(context);
 
-    const list = await (await peppyrusCall('/message/list?folder=INBOX&confirmed=false&perPage=50')).json() as any;
-    const items: any[] = Array.isArray(list) ? list : (list.items ?? list.data ?? []);
-    const { parsePurchaseUbl } = await import('./purchase-booking');
-    let imported = 0, skipped = 0; const errors: string[] = [];
-    for (const it of items) {
-      const id = String(it.id);
-      const { data: exists } = await context.supabase.from('purchase_invoices').select('id').eq('peppyrus_message_id', id).maybeSingle();
-      if (exists) { skipped++; await peppyrusCall(`/message/${id}/confirm`, { method: 'PATCH' }).catch(() => null); continue; }
-      try {
-        const msg = await (await peppyrusCall(`/message/${id}`)).json() as any;
-        const xml = new TextDecoder().decode(Uint8Array.from(atob(msg.fileContent ?? ''), c => c.charCodeAt(0)));
-        const p = parsePurchaseUbl(xml) as ReturnType<typeof parsePurchaseUbl> & { supplierBic?: string };
-        let pdf = p.pdfBase64;
-        if (!pdf) { const r = await (await peppyrusCall(`/message/${id}/render?format=pdf`)).json().catch(() => null) as any; pdf = r?.fileContent ?? r?.content ?? null; }
-        let path: string | null = null;
-        if (pdf) {
-          path = `peppol/${crypto.randomUUID()}.pdf`;
-          const { error } = await context.supabase.storage.from('aankoopfacturen').upload(path, Uint8Array.from(atob(pdf), c => c.charCodeAt(0)), { contentType: 'application/pdf' });
-          if (error) path = null;
-        }
-        const { data: row, error } = await context.supabase.from('purchase_invoices').insert({
-          supplier_name: p.supplierName, supplier_vat: p.supplierVat, supplier_iban: p.supplierIban, supplier_bic: p.supplierBic ?? null, kind: p.kind,
-          invoice_number: p.invoiceNumber, invoice_date: p.invoiceDate, due_date: p.dueDate, lines: p.lines,
-          net: p.net, vat: p.vat, total: p.total, payment_ref: p.paymentRef, source: 'peppol', status: 'te_controleren',
-          pdf_path: path, peppyrus_message_id: id,
-        }).select('supplier_id').single();
-        if (error) throw new Error(error.message);
-        if (p.supplierBic && row?.supplier_id) await context.supabase.from('suppliers').update({ bic: p.supplierBic }).eq('id', row.supplier_id).is('bic', null);
-        await peppyrusCall(`/message/${id}/confirm`, { method: 'PATCH' });
-        imported++;
-      } catch (e) { errors.push(e instanceof Error ? e.message : String(e)); }
-    }
-    return { imported, skipped, errors };
+    const { receivePeppolInvoices } = await import('./peppol-receive.server');
+    return receivePeppolInvoices(context.supabase);
   });
 
 /** Sends a labelled test invoice to Riory's own Peppol address, so the receive flow can be checked without a real supplier. */
