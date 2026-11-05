@@ -116,10 +116,10 @@ describe("fillMissingVatRates", () => {
       { description: "B", quantity: 1, unit: "st", unitPrice: 50, amount: 50, vatRate: 6 },
     ], 150, 31.5);
     expect(lines[0]!).toMatchObject({ vatRate: 21, vat: 21, total: 121 });
-    expect(lines[1].vatRate).toBe(6);
+    expect(lines[1]!.vatRate).toBe(6);
   });
   it("valt terug op 21% als het document geen tarief verraadt", () => {
     const lines = fillMissingVatRates([{ description: "A", quantity: 1, unit: "st", unitPrice: 10, amount: 10 }], 0, 0);
-    expect(lines[0].vatRate).toBe(21);
+    expect(lines[0]!.vatRate).toBe(21);
   });
 });
