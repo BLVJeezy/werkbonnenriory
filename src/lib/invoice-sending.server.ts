@@ -77,7 +77,7 @@ export async function sendOne(supabase: any, inv: any) {
     const { invoiceUbl } = await import("@/lib/invoice-ubl");
     const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
     await deliverInvoice({
-      customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at),
+      customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at), peppolActive,
       sendWithCc: async (to) => {
         if (inv.contract_id) {
           const {error}=await supabase.from('invoices').update({auto_send_started_at:new Date().toISOString()}).eq('id',inv.id);
@@ -86,7 +86,7 @@ export async function sendOne(supabase: any, inv: any) {
         const { prepareDocument } = await import('./document-tracking.server');
         const tracking = await prepareDocument(inv.kind === 'creditnota' ? 'creditnota' : 'factuur', inv.id, `${label} ${d.number}`, to, pdf);
         const { isFullyPaid } = await import("@/lib/invoice");
-        const payload = invoiceMailWithCc(to, d.number, pdf, ubl, label, tracking.url, isFullyPaid(d.total, d.paidAmount));
+        const payload = invoiceMailWithCc(to, d.number, pdf, ubl, label, tracking.url, isFullyPaid(d.total, d.paidAmount), !peppolActive);
         await tracking.send(() => sendMail(to, d.number, pdf, "pdf", label, payload));
       },
       sendUbl: (to) => sendMail(to, d.number, ubl, "ubl", label),
@@ -95,8 +95,8 @@ export async function sendOne(supabase: any, inv: any) {
         if (error) throw new Error(error.message);
       },
     });
-    const via = "okioki";
-    const to = `${d.customer.email}; cc ${OKIOKI_INVOICE_EMAIL}`;
+    const via = peppolActive ? "email" : "okioki";
+    const to = peppolActive ? d.customer.email : `${d.customer.email}; cc ${OKIOKI_INVOICE_EMAIL}`;
     const { error } = await supabase.from("invoices").update({ status: "verzonden", sent_via: via, sent_to: to, sent_at: new Date().toISOString(), send_error: null, delivery_lock_until: null }).eq("id", inv.id);
     if (error) throw new Error(error.message);
     return { id: inv.id, ok: true as const, via };

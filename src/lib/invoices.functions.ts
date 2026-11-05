@@ -176,7 +176,9 @@ export const sendInvoiceCopy = createServerFn({ method: "POST" })
     const tracking = await prepareDocument(inv.kind === 'creditnota' ? 'creditnota' : 'factuur', inv.id, `${label} ${d.number}`, data.to, pdf);
     const { invoiceMailWithCc, OKIOKI_INVOICE_EMAIL } = await import('./invoice-delivery');
     const { isFullyPaid } = await import("@/lib/invoice");
-    const payload = invoiceMailWithCc(data.to, d.number, pdf, ubl, label, tracking.url, isFullyPaid(d.total, d.paidAmount));
+    const { data: st } = await context.supabase.from("settings").select("peppol_active").eq("id", 1).maybeSingle();
+    const peppolActive = Boolean(st?.peppol_active);
+    const payload = invoiceMailWithCc(data.to, d.number, pdf, ubl, label, tracking.url, isFullyPaid(d.total, d.paidAmount), !peppolActive);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
     const { getConnectionKeyForUser } = await import('./appUserConnections.server');
