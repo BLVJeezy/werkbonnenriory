@@ -8,7 +8,7 @@ const participantId = '0208:0840931404';
 describe('peppol test invoice', () => {
   it('is read back by the purchase-invoice parser with supplier, lines and totals', () => {
     const data = peppolTestInvoiceData(company, '2026-11-04');
-    const p = parsePurchaseUbl(peppolTestInvoiceUbl(data, participantId, 'AA=='));
+    const p = parsePurchaseUbl(peppolTestInvoiceUbl(data, participantId, participantId, 'AA=='));
     expect(p.kind).toBe('factuur');
     expect(p.supplierName).toBe('Riory BV');
     expect(p.supplierVat).toBe('BE0840931404');
@@ -27,7 +27,7 @@ describe('peppol test invoice', () => {
   it('keeps the bank reference rule by staying under ten digits', () => {
     const data = peppolTestInvoiceData(company, '2026-11-04');
     expect(data.number.replace(/\D/g, '')).toBe('20261104');
-    expect(peppolTestInvoiceUbl(data, participantId, '')).toContain('<cbc:DueDate>2026-11-19</cbc:DueDate>');
-    expect(peppolTestInvoiceUbl(data, participantId, '')).not.toContain('EmbeddedDocumentBinaryObject');
+    expect(peppolTestInvoiceUbl(data, participantId, participantId, '')).toContain('<cbc:DueDate>2026-11-19</cbc:DueDate>');
+    expect(peppolTestInvoiceUbl(data, participantId, participantId, '')).not.toContain('EmbeddedDocumentBinaryObject');
   });
 });

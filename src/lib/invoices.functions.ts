@@ -8,7 +8,7 @@ import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } fr
 import { deliverInvoice, invoiceMail, invoiceMailWithCc, OKIOKI_INVOICE_EMAIL } from "@/lib/invoice-delivery";
 
 type Ctx = { supabase: any; userId: string };
-const SENDER_PEPPOL_ID = "0208:0840931404";
+const SENDER_PEPPOL_ID = "9925:BE0840931404";
 
 async function assertAdmin({ supabase, userId }: Ctx) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });

@@ -5,6 +5,17 @@ import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } fr
 import { getConnectionKeyForUser } from './appUserConnections.server';
 import { deliverInvoice,invoiceMail,invoiceMailWithCc,OKIOKI_INVOICE_EMAIL } from './invoice-delivery';
 const SENDER_PEPPOL_ID='0208:0840931404';
+const PEPPYRUS_BASE = () => process.env['PEPPYRUS_LIVE'] === 'true' ? 'https://api.peppyrus.be/v1' : 'https://api.test.peppyrus.be/v1';
+/** The Peppol address this Peppyrus account sends from (isSender), e.g. 9925:BE0840931404; falls back to the 0208 constant. Never throws. */
+async function peppyrusSenderId(key: string): Promise<string> {
+  try {
+    const res = await fetch(`${PEPPYRUS_BASE()}/organization/peppol`, { headers: { 'X-Api-Key': key, Accept: 'application/json' }, signal: AbortSignal.timeout(30000) });
+    if (!res.ok) return SENDER_PEPPOL_ID;
+    const org = await res.json() as any;
+    const list: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
+    return String(list.find(p => p?.isSender)?.participantId ?? SENDER_PEPPOL_ID);
+  } catch { return SENDER_PEPPOL_ID; }
+}
 const b64 = (bytes: Uint8Array) => { let s = ""; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
 
 export async function pdfData(supabase: any, inv: any): Promise<InvoicePdfData> {
@@ -75,7 +86,10 @@ export async function sendOne(supabase: any, inv: any) {
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
     const { invoiceUbl } = await import("@/lib/invoice-ubl");
-    const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
+    const receiverId = peppolIdFromVat(d.customer.vatNumber);
+    const peppyrusKey = process.env['PEPPYRUS_API_KEY'];
+    const senderId = peppolActive && receiverId && !inv.peppol_sent_at && peppyrusKey ? await peppyrusSenderId(peppyrusKey) : SENDER_PEPPOL_ID;
+    const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId, receiverId, pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
     await deliverInvoice({
       customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at), peppolActive,
       sendWithCc: async (to) => {
@@ -97,18 +111,15 @@ export async function sendOne(supabase: any, inv: any) {
     });
     // Peppol leg: only for Belgian VAT customers, once (peppol_sent_at), and never blocks the mail that already went out.
     let peppolNote: string | null = null;
-    const receiverId = peppolIdFromVat(d.customer.vatNumber);
     if (peppolActive && receiverId && !inv.peppol_sent_at) {
       try {
-        const key = process.env['PEPPYRUS_API_KEY'];
-        if (!key) throw new Error('Peppyrus-sleutel ontbreekt');
-        const base = process.env['PEPPYRUS_LIVE'] === 'true' ? 'https://api.peppyrus.be/v1' : 'https://api.test.peppyrus.be/v1';
+        if (!peppyrusKey) throw new Error('Peppyrus-sleutel ontbreekt');
         const credit = inv.kind === 'creditnota';
-        const res = await fetch(`${base}/message`, {
+        const res = await fetch(`${PEPPYRUS_BASE()}/message`, {
           method: 'POST', signal: AbortSignal.timeout(30000),
-          headers: { 'X-Api-Key': key, Accept: 'application/json', 'Content-Type': 'application/json' },
+          headers: { 'X-Api-Key': peppyrusKey, Accept: 'application/json', 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sender: SENDER_PEPPOL_ID, recipient: receiverId,
+            sender: senderId, recipient: receiverId,
             processType: 'cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0',
             documentType: credit
               ? 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1'

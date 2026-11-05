@@ -103,13 +103,15 @@ async function peppyrusCall(path: string, init?: RequestInit) {
 }
 
 /** Which Peppol address does this Peppyrus account own? Never throws: setup problems are shown to the admin. */
-async function peppyrusParticipant(): Promise<{ participantId: string | null; error: string | null }> {
+async function peppyrusParticipant(): Promise<{ participantId: string | null; senderId: string | null; error: string | null }> {
   try {
     const org = await (await peppyrusCall('/organization/peppol')).json() as any;
     const list: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
     const id = String((list.find(p => p?.canReceive) ?? list[0])?.participantId ?? '');
-    return id ? { participantId: id, error: null } : { participantId: null, error: 'Peppyrus kent geen Peppol-adres toe aan deze account.' };
-  } catch (e) { return { participantId: null, error: e instanceof Error ? e.message : String(e) }; }
+    const sender = String(list.find(p => p?.isSender)?.participantId ?? '');
+    if (!id) return { participantId: null, senderId: sender || null, error: 'Peppyrus kent geen Peppol-adres toe aan deze account.' };
+    return { participantId: id, senderId: sender || null, error: null };
+  } catch (e) { return { participantId: null, senderId: null, error: e instanceof Error ? e.message : String(e) }; }
 }
 
 /** Peppyrus is prepared but only active once an API key is added. */
@@ -172,19 +174,20 @@ export const sendPeppyrusTestInvoice = createServerFn({ method: 'POST' }).middle
       name: s?.company_name ?? 'Riory BV', vat: s?.company_vat ?? 'BE0840931404',
       iban: s?.company_iban ?? null, bic: s?.company_bic ?? null,
     }, today);
-    const { participantId, error } = await peppyrusParticipant();
+    const { participantId, senderId, error } = await peppyrusParticipant();
     if (!participantId) throw new Error(error ?? 'Peppyrus vond geen Peppol-adres voor je organisatie in deze omgeving.');
+    if (!senderId) throw new Error('Peppyrus heeft geen verzendadres (isSender) voor deze omgeving.');
     const { createInvoicePdf } = await import('@/lib/invoice-pdf');
-    const xml = peppolTestInvoiceUbl(data, participantId, b64(await createInvoicePdf(data)));
+    const xml = peppolTestInvoiceUbl(data, senderId, participantId, b64(await createInvoicePdf(data)));
     const msg = await (await peppyrusCall('/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: participantId, recipient: participantId,
+        sender: senderId, recipient: participantId,
         processType: PEPPOL_INVOICE_PROCESS, documentType: PEPPOL_INVOICE_DOCUMENT,
         fileContent: b64(new TextEncoder().encode(xml)),
       }),
     })).json() as any;
-    return { number: data.number, participantId, messageId: msg?.id ?? null };
+    return { number: data.number, participantId, senderId, messageId: msg?.id ?? null };
   });
 
