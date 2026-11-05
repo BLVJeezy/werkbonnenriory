@@ -9,8 +9,8 @@ import { statements, trialBalance, isBalanced } from "@/lib/boekhouding";
 
 type Ctx = { supabase: any; userId: string };
 const SENDER_PEPPOL_ID = "0208:0840931404";
-/** The UI sends a start and end date; normalizePeriod explains what is wrong when they are not usable. */
-const periodInput = (i: { from?: string; to?: string }) => normalizePeriod(i);
+/** The UI sends a start and end date; normalizePeriod explains what is wrong when they are not usable. onlyNew = only documents not yet sent to the accountant. */
+const periodInput = (i: { from?: string; to?: string; onlyNew?: boolean }) => ({ ...normalizePeriod(i), onlyNew: i?.onlyNew === true });
 
 async function assertAdmin({ supabase, userId }: Ctx) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -27,15 +27,20 @@ async function fetchAll(q: (from: number, to: number) => any) {
   }
 }
 
-/** Everything the accountant mails need for one chosen period. */
-async function loadPeriod(ctx: Ctx, from: string, to: string) {
+/** Everything the accountant mails need for one chosen period. onlyNew limits the UBL mail to documents never sent to the accountant before. */
+async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) {
   const { supabase, userId } = ctx;
   const { data: companies } = await supabase.from("companies").select("id,name").eq("user_id", userId);
   const company = (companies ?? []).find((c: any) => /riory/i.test(c.name)) ?? companies?.[0] ?? null;
   const c = company?.id;
+  const docQ = (table: string, dateCol: string) => (a: number, b: number) => {
+    let q = supabase.from(table).select("*").gte(dateCol, from).lte(dateCol, to).order("id").range(a, b);
+    if (onlyNew) q = q.is("accountant_sent_at", null);
+    return q;
+  };
   const [sales, purchases, finInv, months, bank, invs, accounts, refs, lines] = await Promise.all([
-    fetchAll((a, b) => supabase.from("invoices").select("*").gte("issue_date", from).lte("issue_date", to).order("id").range(a, b)),
-    fetchAll((a, b) => supabase.from("purchase_invoices").select("*").gte("invoice_date", from).lte("invoice_date", to).order("id").range(a, b)),
+    fetchAll(docQ("invoices", "issue_date")),
+    fetchAll(docQ("purchase_invoices", "invoice_date")),
     c ? fetchAll((a, b) => supabase.from("fin_invoices").select("id,review_status,source,source_ref,invoice_date").eq("company_id", c).gte("invoice_date", from).lte("invoice_date", to).order("id").range(a, b)) : [],
     c ? supabase.from("fin_months").select("*").eq("company_id", c).gte("month", from).lte("month", to).then((r: any) => r.data ?? []) : [],
     c ? fetchAll((a, b) => supabase.from("fin_bank_tx").select("*").eq("company_id", c).gte("tx_date", from).lte("tx_date", to).order("id").range(a, b)) : [],
@@ -65,12 +70,23 @@ async function loadPeriod(ctx: Ctx, from: string, to: string) {
   return { company, sales, purchases, bank, invs, accounts, tb, periodLines, warnings };
 }
 
+/** How many documents of the period were already sent to the accountant (for the checkbox explanation). */
+async function alreadySentCount(ctx: Ctx, from: string, to: string) {
+  const { supabase } = ctx;
+  const [s, p] = await Promise.all([
+    supabase.from("invoices").select("id", { count: "exact", head: true }).gte("issue_date", from).lte("issue_date", to).not("accountant_sent_at", "is", null),
+    supabase.from("purchase_invoices").select("id", { count: "exact", head: true }).gte("invoice_date", from).lte("invoice_date", to).not("accountant_sent_at", "is", null),
+  ]);
+  return (s.count ?? 0) + (p.count ?? 0);
+}
+
 export const checkAccountantPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth]).inputValidator(periodInput)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const d = await loadPeriod(context, data.from, data.to);
-    return { from: data.from, to: data.to, warnings: d.warnings, sales: d.sales.length, purchases: d.purchases.length };
+    const d = await loadPeriod(context, data.from, data.to, data.onlyNew);
+    const alreadySent = await alreadySentCount(context, data.from, data.to);
+    return { from: data.from, to: data.to, onlyNew: data.onlyNew, warnings: d.warnings, sales: d.sales.length, purchases: d.purchases.length, alreadySent };
   });
 
 const b64 = (s: string) => { const u = new TextEncoder().encode(s); let o = ""; for (let i = 0; i < u.length; i += 8192) o += String.fromCharCode(...u.subarray(i, i + 8192)); return btoa(o); };
@@ -105,9 +121,9 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
     const { data: s } = await supabase.from("settings").select("*").eq("id", 1).single();
     const mailTo = s?.accountant_email?.trim();
     if (!mailTo) throw new Error("Vul eerst het e-mailadres van de boekhouder in");
-    const { from, to } = data;
+    const { from, to, onlyNew } = data;
     const label = periodLabel(from, to);
-    const d = await loadPeriod(context, from, to);
+    const d = await loadPeriod(context, from, to, onlyNew);
     const send = await mailer();
 
     // ---- Mail 1: UBL ----
@@ -124,9 +140,10 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
       const safe = `${p.supplier_name}-${p.invoice_number ?? p.id.slice(0, 8)}`.replace(/[^\w.-]+/g, "_").slice(0, 80);
       ubl.push(file(`Aankoop-${p.kind === "creditnota" ? "Creditnota" : "Factuur"}-${safe}.xml`, "application/xml", b64(purchaseUbl({ ...p, lines: Array.isArray(p.lines) ? p.lines : [] }, buyer))));
     }
-    if (!ubl.length) throw new Error(`Er zijn geen aankoop- of verkoopfacturen tussen ${label}`);
+    if (!ubl.length) throw new Error(onlyNew ? `Alle aankoop- en verkoopfacturen tussen ${label} werden al eerder doorgestuurd naar de boekhouder.` : `Er zijn geen aankoop- of verkoopfacturen tussen ${label}`);
     const warnText = d.warnings.length ? `\n\nOpgelet — de boekhouding is nog niet volledig:\n- ${d.warnings.join("\n- ")}` : "";
-    await send(mailTo, `Aankoop- en verkoopfacturen ${label} in UBL — Riory`, `In de bijlage vindt u ${d.sales.length} verkoop- en ${d.purchases.length} aankoopdocumenten van ${label} in UBL-formaat.${warnText}`, ubl);
+    const scopeText = onlyNew ? " (enkel de documenten die u nog niet eerder ontving)" : "";
+    await send(mailTo, `Aankoop- en verkoopfacturen ${label} in UBL — Riory`, `In de bijlage vindt u ${d.sales.length} verkoop- en ${d.purchases.length} aankoopdocumenten van ${label} in UBL-formaat${scopeText}.${warnText}`, ubl);
 
     // ---- Mail 2: comparison pack (Excel) ----
     const XLSX = await import("xlsx");
@@ -162,5 +179,11 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
     await send(mailTo, `Boekhouding ${label} ter vergelijking — balans, afschrijvingen en stukken — Riory`,
       `In de bijlage vindt u de balans, proef- en saldibalans, afschrijvingstabellen, dagboeken, facturenlijsten en banktransacties van ${label} uit onze opvolgboekhouding, ter vergelijking met uw boekhouding.${warnText}`,
       [file(`Boekhouding-Riory-${periodSlug(from, to)}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx)]);
+    // Only after both mails are sent: mark the documents so "enkel nog niet doorgestuurd" skips them next time.
+    const now = new Date().toISOString();
+    const salesIds = d.sales.map((i: any) => i.id);
+    const purchaseIds = d.purchases.map((p: any) => p.id);
+    if (salesIds.length) await supabase.from("invoices").update({ accountant_sent_at: now }).in("id", salesIds);
+    if (purchaseIds.length) await supabase.from("purchase_invoices").update({ accountant_sent_at: now }).in("id", purchaseIds);
     return { to: mailTo, period: label, ubl: ubl.length, warnings: d.warnings };
   });

@@ -813,6 +813,13 @@
       "when": 1793877100775,
       "tag": "0115_deprecate_dokapi_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1793881455806,
+      "tag": "0116_accountant_sent_at",
+      "breakpoints": true
     }
   ]
 }

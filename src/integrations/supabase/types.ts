@@ -1782,6 +1782,7 @@ export type Database = {
       }
       invoices: {
         Row: {
+          accountant_sent_at: string | null
           auto_send_started_at: string | null
           contract_id: string | null
           contract_reference: string | null
@@ -1818,6 +1819,7 @@ export type Database = {
           work_order_id: string | null
         }
         Insert: {
+          accountant_sent_at?: string | null
           auto_send_started_at?: string | null
           contract_id?: string | null
           contract_reference?: string | null
@@ -1854,6 +1856,7 @@ export type Database = {
           work_order_id?: string | null
         }
         Update: {
+          accountant_sent_at?: string | null
           auto_send_started_at?: string | null
           contract_id?: string | null
           contract_reference?: string | null
@@ -2214,6 +2217,7 @@ export type Database = {
       }
       purchase_invoices: {
         Row: {
+          accountant_sent_at: string | null
           bank_payment_ref: string | null
           bank_transaction_key: string | null
           booked_at: string | null
@@ -2248,6 +2252,7 @@ export type Database = {
           vat_deductible_percent: number
         }
         Insert: {
+          accountant_sent_at?: string | null
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
           booked_at?: string | null
@@ -2282,6 +2287,7 @@ export type Database = {
           vat_deductible_percent?: number
         }
         Update: {
+          accountant_sent_at?: string | null
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
           booked_at?: string | null
@@ -3065,6 +3071,7 @@ export type Database = {
           p_work_order_id: string
         }
         Returns: {
+          accountant_sent_at: string | null
           auto_send_started_at: string | null
           contract_id: string | null
           contract_reference: string | null
