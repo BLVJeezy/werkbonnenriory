@@ -11,6 +11,8 @@ import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { manualBankPreview } from "@/lib/manual-bank-invoice";
 import { PontoConnection } from "@/components/PontoConnection";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -698,7 +700,28 @@ function Bank({ c }: { c: string }) {
   }, [tx, open, paidNoTx, accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
   // Factuurinfo bij afgeletterde verrichtingen + wachtrekening (499000) voor verrichtingen zonder factuur.
   const WACHT = "499000";
-  const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("id, number, counterparty, invoice_date").eq("company_id", c).order("id").range(a, b))) as any[] });
+  const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).order("id").range(a, b))) as any[] });
+  const [manualTx, setManualTx] = useState<any>(null);
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [manualInvoiceId, setManualInvoiceId] = useState("");
+  const [manualBusy, setManualBusy] = useState(false);
+  const manualInvoice = allInv.find((i) => i.id === manualInvoiceId);
+  const manualPreview = manualInvoice && manualTx ? manualBankPreview(manualInvoice.direction, total(manualInvoice), Number(manualInvoice.paid_amount ?? 0), Number(manualTx.amount)) : null;
+  const linkManual = async () => {
+    if (!manualTx || !manualInvoice || !manualPreview || manualPreview.error || manualBusy) return;
+    if (!confirm(`${manualPreview.mode === 'refund' ? 'Terugstorting' : 'Betaling'} ${eur(Number(manualTx.amount))} koppelen aan ${manualInvoice.counterparty} ${manualInvoice.number}?${manualPreview.mode === 'overpayment' ? ` Teveel betaald: ${eur(manualPreview.overpaid)}.` : ''}`)) return;
+    setManualBusy(true);
+    try {
+      if (manualPreview.mode !== 'payment') {
+        const { error } = await db.rpc('fin_link_manual_bank', { _transaction: manualTx.id, _invoice: manualInvoice.id, _mode: manualPreview.mode });
+        if (error) throw new Error(error.message);
+      } else if (manualInvoice.status === 'betaald') await settle(manualTx, manualInvoice);
+      else await reconcile(manualTx, manualInvoice);
+      toast.success(manualPreview.mode === 'refund' ? 'Terugstorting gekoppeld; factuur blijft betaald' : 'Betaling gekoppeld en geboekt');
+      setManualTx(null); await refresh();
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Koppelen mislukt'); }
+    finally { setManualBusy(false); }
+  };
   const invById = useMemo(() => new Map<string, any>(allInv.map((i: any) => [i.id, i])), [allInv]);
   const { data: wachtLines = [] } = useQuery({ queryKey: ["fin", "wacht", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_lines").select("entry_id").eq("company_id", c).eq("account", WACHT).order("id").range(a, b))) as any[] });
   const { data: herEntries = [] } = useQuery({ queryKey: ["fin", "wacht-her", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_journal_entries").select("source_ref").eq("company_id", c).eq("source", "wacht").order("id").range(a, b))) as any[] });
@@ -717,6 +740,21 @@ function Bank({ c }: { c: string }) {
   const openVis = open.filter((i: any) => !zo || `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zo)).slice(0, 300);
   return (
     <div className="space-y-3">
+      <Dialog open={!!manualTx} onOpenChange={(value) => { if (!value && !manualBusy) setManualTx(null); }}>
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
+          <DialogHeader><DialogTitle>Bankverrichting aan factuur koppelen</DialogTitle><DialogDescription>{manualTx ? `${manualTx.tx_date} · ${manualTx.counterparty ?? ''} · ${eur(Number(manualTx.amount))}` : ''}</DialogDescription></DialogHeader>
+          <Input aria-label="Zoek te koppelen factuur" placeholder="Zoek op factuurnummer, klant of leverancier…" value={invoiceSearch} onChange={(e) => setInvoiceSearch(e.target.value)} />
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {allInv.filter((i) => i.doc_type === 'factuur' && `${i.number ?? ''} ${i.counterparty ?? ''}`.toLowerCase().includes(invoiceSearch.trim().toLowerCase())).sort((a, b) => String(b.invoice_date).localeCompare(String(a.invoice_date))).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
+              <input type="radio" name="manual-invoice" value={i.id} checked={manualInvoiceId === i.id} onChange={() => setManualInvoiceId(i.id)} className="mt-1" />
+              <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.direction} · {i.status}</span></span>
+              <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))}</span></span>
+            </label>)}
+          </div>
+          {manualPreview && <div className="text-sm" aria-live="polite">{manualPreview.error ? <p className="text-destructive">{manualPreview.error}</p> : <><p>{manualPreview.mode === 'refund' ? 'Terugstorting — factuur blijft betaald' : manualPreview.mode === 'overpayment' ? 'Betaling met teveel betaald bedrag' : 'Betaling'}</p><p>Na koppeling: nog te betalen {eur(manualPreview.remaining)} · teveel betaald {eur(manualPreview.overpaid)}</p></>}</div>}
+          <div className="flex justify-end gap-2"><Button variant="outline" disabled={manualBusy} onClick={() => setManualTx(null)}>Annuleren</Button><Button disabled={!manualPreview || !!manualPreview.error || manualBusy} onClick={linkManual}>{manualBusy ? 'Koppelen…' : manualPreview?.mode === 'refund' ? 'Terugstorting koppelen' : 'Betaling koppelen'}</Button></div>
+        </DialogContent>
+      </Dialog>
       <AccountList accounts={accounts} />
       <Link to="/facturen"><Button size="sm" variant="outline">Naar facturen</Button></Link>
       <PontoCard c={c} bankAcc={bankAcc} onDone={refresh} />
@@ -798,6 +836,7 @@ function Bank({ c }: { c: string }) {
                 <div className="mt-1 flex flex-wrap gap-1">
                   {cands.map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => match(t, i)}>Afletteren: {i.counterparty} {i.number}</Button>)}
                   {!cands.length && paidCands(t).slice(0, 3).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren (al betaald): {i.counterparty} {i.number}</Button>)}
+                  <Button size="sm" variant="outline" onClick={() => { setManualTx(t); setInvoiceSearch(''); setManualInvoiceId(''); }}>Factuur kiezen</Button>
                   <AccountPicker accounts={accounts} onPick={(nr) => book(t, nr)} />
                   {!cands.length && <Button size="sm" variant="ghost" onClick={() => book(t, WACHT)}>Naar wachtrekening</Button>}
                 </div>
