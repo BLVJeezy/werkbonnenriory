@@ -15,6 +15,7 @@ import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } fro
 import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
 import { bankOfIban, nextBic } from "@/lib/iban-bic";
 import { attachPurchasePdf, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
+import { PdfPreview } from "@/components/PdfPreview";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
   head: () => ({ meta: [{ title: "Aankoopfactuur controleren — Riory Werkbonnen" }, { name: "description", content: "Aankoopfactuur naast het originele document controleren en boeken." }, { property: "og:title", content: "Aankoopfactuur controleren — Riory Werkbonnen" }, { property: "og:description", content: "Aankoopfactuur naast het originele document controleren en boeken." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -161,7 +162,9 @@ function Controle() {
       <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-2">
         <div className="flex min-h-[50vh] flex-col gap-2 md:min-h-0">
           {pdfUrl
-            ? (isImage ? <img alt="Origineel aankoopdocument" src={pdfUrl} className="min-h-0 flex-1 border object-contain" /> : <iframe title="Origineel aankoopfactuur" src={pdfUrl} className="min-h-0 w-full flex-1 border" />)
+            ? (isImage
+              ? <img alt="Origineel aankoopdocument" src={pdfUrl} className="min-h-0 flex-1 border object-contain" />
+              : <div className="min-h-0 flex-1 overflow-y-auto border">{pdfBase64 ? <PdfPreview base64={pdfBase64} /> : <p className="p-4 text-sm text-muted-foreground">Document laden…</p>}</div>)
             : <div className="flex flex-1 items-center justify-center border border-dashed p-4 text-sm text-destructive">Het originele document ontbreekt.</div>}
           <div className="flex flex-wrap items-center gap-2">
             <Label htmlFor="purchase-pdf" className="text-xs">{edit.pdf_path ? "Ander PDF" : "Origineel PDF toevoegen"}</Label>
