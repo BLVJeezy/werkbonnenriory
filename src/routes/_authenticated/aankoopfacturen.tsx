@@ -15,7 +15,7 @@ import { findPurchaseDuplicates } from '@/lib/purchase-duplicates';
 import { canExportPurchase } from '@/lib/purchase-payment';
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
-import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, sendPeppyrusTestInvoice, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
+import { bookPurchaseInvoice, dokapiStatus, listExpenseAccounts, sendDokapiTestInvoice, setupDokapiWebhook, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { creditorBank, daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { deletePurchaseInvoices, attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
@@ -43,13 +43,13 @@ function Aankoopfacturen() {
   const doImport = useServerFn(importPurchaseInvoices);
   const uploadPdf = useServerFn(attachPurchasePdf);
   const uploadTicket = useServerFn(importReceipt);
-  const getPeppyrus = useServerFn(peppyrusStatus);
-  const doPeppyrus = useServerFn(importFromPeppyrus);
-  const sendTest = useServerFn(sendPeppyrusTestInvoice);
+  const getDokapi = useServerFn(dokapiStatus);
+  const sendTest = useServerFn(sendDokapiTestInvoice);
+  const setupWebhook = useServerFn(setupDokapiWebhook);
   const getAccounts = useServerFn(listExpenseAccounts);
   const suggest = useServerFn(suggestPurchaseAccounts);
   const book = useServerFn(bookPurchaseInvoice);
-  const { data: peppyrus } = useQuery({ queryKey: ['peppyrus'], queryFn: () => getPeppyrus() });
+  const { data: dokapi } = useQuery({ queryKey: ['dokapi'], queryFn: () => getDokapi() });
   const { data: accounts = [] } = useQuery({ queryKey: ['expense-accounts'], queryFn: () => getAccounts() });
   const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: async () => (await supabase.from('suppliers').select('*').order('name')).data ?? [] });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -57,25 +57,21 @@ function Aankoopfacturen() {
   const [drag, setDrag] = useState(false);
   const [sources, setSources] = useState<Record<number, string>>({});
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
-  async function vanPeppyrus() {
+  /** Registers our webhook at Dokapi once; incoming Peppol invoices then arrive automatically. */
+  async function koppelWebhook() {
     setBusy(true);
-    try { const r = await doPeppyrus(); toast.success(`${r.imported} Peppol-factuur/facturen ontvangen${r.skipped ? `, ${r.skipped} al aanwezig` : ''}`); r.errors.forEach(e => toast.error(e)); }
-    catch (e) { toast.error(e instanceof Error ? e.message : 'Peppyrus ophalen mislukt'); }
-    setBusy(false); refresh();
+    try { const r = await setupWebhook(); toast.success(`Webhook ingesteld: nieuwe Peppol-facturen komen vanaf nu automatisch binnen`); void r; }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Webhook instellen mislukt'); }
+    setBusy(false);
   }
-  /** Sends our own test invoice through Peppol and then reads the inbox back, so one click proves the whole route. */
+  /** Sends our own test invoice through Peppol; it arrives via the webhook like any supplier invoice. */
   async function stuurTest() {
     setBusy(true);
     try {
       const r = await sendTest();
-      toast.success(`Testfactuur ${r.number} verstuurd naar ${r.participantId}`);
-      await new Promise(res => setTimeout(res, 4000));
-      const g = await doPeppyrus();
-      if (g.imported) toast.success(`${g.imported} Peppol-factuur/facturen ontvangen`);
-      else toast.info('Nog niet aangekomen — haal over een minuut opnieuw op via Peppol');
-      g.errors.forEach(e => toast.error(e));
+      toast.success(`Testfactuur ${r.number} verstuurd naar ${r.participantId} — ze komt automatisch binnen via de webhook`);
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Testfactuur versturen mislukt'); }
-    setBusy(false); refresh();
+    setBusy(false);
   }
   async function stelVoor(row: Row) {
     try {
@@ -247,15 +243,15 @@ function Aankoopfacturen() {
         <div className="ml-auto flex flex-wrap gap-2">
           <ReceiptScanner disabled={busy} onScan={leesTicket} />
           <Button asChild variant="outline"><Link to="/leveranciers">Leveranciers</Link></Button>
-          <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>
-          {peppyrus?.configured && !peppyrus.live ? <Button variant="outline" disabled={busy} title="Stuurt een proeffactuur naar je eigen Peppol-adres in de testomgeving" onClick={stuurTest}>Testfactuur ontvangen</Button> : null}
+          <Button variant="outline" disabled={busy || !dokapi?.configured} title={dokapi?.configured ? 'Eenmalig: registreert de webhook zodat Peppol-facturen automatisch binnenkomen' : 'Dokapi is voorbereid maar nog niet gekoppeld'} onClick={koppelWebhook}>{dokapi?.configured ? 'Peppol-ontvangst activeren' : 'Peppol (Dokapi) — nog niet gekoppeld'}</Button>
+          {dokapi?.configured ? <Button variant="outline" disabled={busy} title="Stuurt een proeffactuur naar je eigen Peppol-adres" onClick={stuurTest}>Testfactuur ontvangen</Button> : null}
           <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Inlezen vanuit mail"}</Button>
         </div>
       </div>
 
-      {peppyrus?.configured ? (peppyrus.participantId
-        ? <p className="text-sm text-muted-foreground">Peppol-adres van deze account: <span className="font-mono">{peppyrus.participantId}</span>{peppyrus.live ? '' : ' — testomgeving'}</p>
-        : <p className="text-sm text-destructive">Peppol nog niet gereed: {peppyrus.error ?? 'geen Peppol-adres gekend'}</p>) : null}
+      {dokapi?.configured ? (dokapi.participantId
+        ? <p className="text-sm text-muted-foreground">Peppol-adres van deze account: <span className="font-mono">{dokapi.participantId}</span>{dokapi.live ? '' : ' — testomgeving'}. Ontvangen facturen verschijnen automatisch bij Te controleren.</p>
+        : <p className="text-sm text-destructive">Peppol nog niet gereed: {dokapi.error ?? 'geen Peppol-adres gekend'}</p>) : null}
 
       <div
         role="button" tabIndex={0} aria-label="Facturen of kastickets hierheen slepen"

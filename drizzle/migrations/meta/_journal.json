@@ -799,6 +799,13 @@
       "when": 1793865086637,
       "tag": "0113_invoice_extra_work_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1793876967504,
+      "tag": "0114_dokapi_peppol_columns",
+      "breakpoints": true
     }
   ]
 }

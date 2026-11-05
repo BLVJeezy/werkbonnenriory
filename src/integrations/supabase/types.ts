@@ -1802,6 +1802,7 @@ export type Database = {
           paid_amount: number
           paid_at: string | null
           pdf_sent_at: string | null
+          peppol_sent_at: string | null
           post_error: string | null
           post_reference: string | null
           post_requested_at: string | null
@@ -1837,6 +1838,7 @@ export type Database = {
           paid_amount?: number
           paid_at?: string | null
           pdf_sent_at?: string | null
+          peppol_sent_at?: string | null
           post_error?: string | null
           post_reference?: string | null
           post_requested_at?: string | null
@@ -1872,6 +1874,7 @@ export type Database = {
           paid_amount?: number
           paid_at?: string | null
           pdf_sent_at?: string | null
+          peppol_sent_at?: string | null
           post_error?: string | null
           post_reference?: string | null
           post_requested_at?: string | null
@@ -2215,6 +2218,7 @@ export type Database = {
           bank_transaction_key: string | null
           booked_at: string | null
           created_at: string
+          dokapi_document_id: string | null
           due_date: string | null
           email_message_id: string | null
           id: string
@@ -2248,6 +2252,7 @@ export type Database = {
           bank_transaction_key?: string | null
           booked_at?: string | null
           created_at?: string
+          dokapi_document_id?: string | null
           due_date?: string | null
           email_message_id?: string | null
           id?: string
@@ -2281,6 +2286,7 @@ export type Database = {
           bank_transaction_key?: string | null
           booked_at?: string | null
           created_at?: string
+          dokapi_document_id?: string | null
           due_date?: string | null
           email_message_id?: string | null
           id?: string
@@ -2500,6 +2506,7 @@ export type Database = {
           next_quote_number: number
           payment_days: number
           peppol_active: boolean
+          peppol_webhook_secret: string | null
           ponto_client_ciphertext: string | null
           ponto_last_sync: string | null
           terms_text: string | null
@@ -2519,6 +2526,7 @@ export type Database = {
           next_quote_number?: number
           payment_days?: number
           peppol_active?: boolean
+          peppol_webhook_secret?: string | null
           ponto_client_ciphertext?: string | null
           ponto_last_sync?: string | null
           terms_text?: string | null
@@ -2538,6 +2546,7 @@ export type Database = {
           next_quote_number?: number
           payment_days?: number
           peppol_active?: boolean
+          peppol_webhook_secret?: string | null
           ponto_client_ciphertext?: string | null
           ponto_last_sync?: string | null
           terms_text?: string | null
@@ -3076,6 +3085,7 @@ export type Database = {
           paid_amount: number
           paid_at: string | null
           pdf_sent_at: string | null
+          peppol_sent_at: string | null
           post_error: string | null
           post_reference: string | null
           post_requested_at: string | null

@@ -75,7 +75,17 @@ export async function sendOne(supabase: any, inv: any) {
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
     const { invoiceUbl } = await import("@/lib/invoice-ubl");
-    const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
+    const ublXml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" });
+    const ubl = b64(new TextEncoder().encode(ublXml));
+    // Peppol leg first (via Dokapi): if it fails, nothing was sent yet and a retry is safe.
+    let peppolSent = Boolean(inv.peppol_sent_at);
+    if (peppolActive && !peppolSent && d.customer.vatNumber) {
+      const { sendPeppolDocument } = await import("./dokapi");
+      await sendPeppolDocument(peppolIdFromVat(d.customer.vatNumber)!, ublXml, `factuur-${d.number}`, SENDER_PEPPOL_ID);
+      const { error } = await supabase.from("invoices").update({ peppol_sent_at: new Date().toISOString() }).eq("id", inv.id);
+      if (error) throw new Error(error.message);
+      peppolSent = true;
+    }
     await deliverInvoice({
       customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at), peppolActive,
       sendWithCc: async (to) => {
@@ -95,7 +105,7 @@ export async function sendOne(supabase: any, inv: any) {
         if (error) throw new Error(error.message);
       },
     });
-    const via = peppolActive ? "email" : "okioki";
+    const via = peppolSent ? "peppol" : peppolActive ? "email" : "okioki";
     const to = peppolActive ? d.customer.email : `${d.customer.email}; cc ${OKIOKI_INVOICE_EMAIL}`;
     const { error } = await supabase.from("invoices").update({ status: "verzonden", sent_via: via, sent_to: to, sent_at: new Date().toISOString(), send_error: null, delivery_lock_until: null }).eq("id", inv.id);
     if (error) throw new Error(error.message);
