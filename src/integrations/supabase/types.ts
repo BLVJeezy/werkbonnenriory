@@ -3195,6 +3195,10 @@ export type Database = {
         Returns: undefined
       }
       ensure_approved_quote_task: { Args: { p_id: string }; Returns: string }
+      fin_active_control_account: {
+        Args: { _company: string; _direction: string }
+        Returns: string
+      }
       fin_capitalize_invoice_line: {
         Args: {
           _asset_account: string
