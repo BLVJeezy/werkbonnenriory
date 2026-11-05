@@ -99,7 +99,8 @@ export function monthsInPeriod(from: string, to: string, today: string): string[
   const out: string[] = [];
   const first = from.slice(0, 7);
   const last = to.slice(0, 7);
-  let [y, m] = first.split("-").map(Number);
+  let y = Number(first.slice(0, 4));
+  let m = Number(first.slice(5, 7));
   while (true) {
     const key = `${y}-${String(m).padStart(2, "0")}`;
     if (key > last) break;
