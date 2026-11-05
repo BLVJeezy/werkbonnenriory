@@ -72,10 +72,15 @@ export function AccountantPackage({ accountantEmail }: { accountantEmail: string
           <Button variant="outline" size="sm" onClick={() => { setFrom(monthStartAgo(2)); setTo(today()); }}>Laatste 3 maanden</Button>
           <Button variant="outline" size="sm" onClick={() => { setFrom(monthStartAgo(11)); setTo(today()); }}>Laatste 12 maanden</Button>
         </div>
+        <label className="flex items-start gap-2 text-sm">
+          <Checkbox checked={onlyNew} onCheckedChange={(v) => setOnlyNew(v === true)} className="mt-0.5" />
+          <span><span className="font-semibold">Enkel doorsturen wat nog niet doorgestuurd is.</span>{" "}
+            <span className="text-muted-foreground">Documenten die al in een vorig pakket naar de boekhouder gingen, worden overgeslagen.</span></span>
+        </label>
         <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
           <p className="font-semibold">{nl(from)} tot {nl(to)}</p>
           {checking && <p className="text-muted-foreground">Controleren…</p>}
-          {!checking && chk && <p>{chk.sales} verkoop- en {chk.purchases} aankoopdocumenten in deze periode.</p>}
+          {!checking && chk && <p>{chk.sales} verkoop- en {chk.purchases} aankoopdocumenten {onlyNew ? "nog niet doorgestuurd" : "in deze periode"}{onlyNew && chk.alreadySent > 0 ? ` (${chk.alreadySent} al eerder doorgestuurd)` : ""}.</p>}
           {!checking && !chk && <p className="text-destructive">Deze periode kon niet gecontroleerd worden. Pas de data aan.</p>}
           {!checking && chk && (chk.warnings.length ? (
             <div className="space-y-1">
