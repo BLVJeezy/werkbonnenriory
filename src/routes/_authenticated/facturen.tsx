@@ -115,7 +115,7 @@ function Facturen() {
           opens[d.document_id] = cur;
         }
       }
-      const invoiced = new Set((i.data ?? []).map((x) => x.work_order_id));
+      const invoiced = new Set((i.data ?? []).flatMap((x) => [x.work_order_id, ...((x as { extra_work_order_ids?: string[] }).extra_work_order_ids ?? [])]));
       const uninvoiced = (w.data ?? []).filter((x) => !invoiced.has(x.id)) as unknown as TodoRow[];
       return { todo: uninvoiced.filter((x) => !x.no_invoice), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], settings: s.data, activities: a.data ?? [], opens };
     },

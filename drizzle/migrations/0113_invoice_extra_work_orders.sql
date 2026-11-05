@@ -1,0 +1,2 @@
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS extra_work_order_ids uuid[] NOT NULL DEFAULT '{}';
+COMMENT ON COLUMN public.invoices.extra_work_order_ids IS 'Further work orders of the same customer merged into this invoice; work_order_id holds the first.';
