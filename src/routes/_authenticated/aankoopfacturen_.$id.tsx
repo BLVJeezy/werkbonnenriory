@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from "@/lib/supplier-rules";
 import { euro } from "@/lib/billing";
-import { lineTotals, purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
+import { lineTotals, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
 import { bankOfIban, nextBic } from "@/lib/iban-bic";
@@ -49,6 +49,7 @@ function Controle() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [sources, setSources] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
+  const [allDiscount, setAllDiscount] = useState(0);
 
   async function load() {
     const { data: r } = await supabase.from("purchase_invoices").select("*").eq("id", id).single();
@@ -129,6 +130,15 @@ function Controle() {
   const upd = (i: number, patch: Partial<PurchaseLine>) => setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
   const isImage = edit.pdf_path && !edit.pdf_path.toLowerCase().endsWith(".pdf");
   const canBook = !edit.lines.some((l) => !l.account);
+  function discountLines(index: number | null, value: number, mode: "percent" | "amount") {
+    if (!edit) return;
+    const targets = edit.lines.filter((l, i) => (index === null ? l.amount >= 0 : i === index));
+    if (targets.some((l) => l.vatRate == null)) { toast.error("Vul eerst het btw-tarief in voor de lijnen met korting"); return; }
+    try {
+      const lines = edit.lines.map((l, i) => (index === null ? l.amount >= 0 : i === index) ? setPurchaseLineDiscount(l, value, mode) : l);
+      setEdit({ ...edit, lines, ...purchaseDiscountTotals(edit.lines, lines, edit) });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Korting niet toegepast"); }
+  }
 
   return (
     <div className="flex h-[calc(100dvh-7rem)] min-h-0 flex-col gap-3">
@@ -192,6 +202,10 @@ function Controle() {
 
             <div className="space-y-2">
               <Label>Lijnen en boeking</Label>
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label="Korting alle lijnen %"><Input type="number" min="0" max="100" step="0.01" className="h-8 w-24" aria-label="Korting alle lijnen" value={allDiscount} onChange={(e) => setAllDiscount(Number(e.target.value))} /></Field>
+                <Button type="button" variant="outline" size="sm" onClick={() => discountLines(null, allDiscount, "percent")}>Korting toepassen</Button>
+              </div>
               {edit.lines.map((l, i) => {
                 const t = lineTotals(l);
                 return (
@@ -204,6 +218,8 @@ function Controle() {
                     <Field label="Aantal"><Input type="number" step="any" className="h-8 w-16" aria-label="Aantal" value={l.quantity} onChange={(e) => upd(i, { quantity: Number(e.target.value) })} /></Field>
                     <Field label="Eenheid"><Input className="h-8 w-16" aria-label="Eenheid" value={l.unit} onChange={(e) => upd(i, { unit: e.target.value || "st" })} /></Field>
                     <Field label="Prijs/st"><Input type="number" step="0.01" className="h-8 w-24" aria-label="Prijs per stuk" value={l.unitPrice} onChange={(e) => upd(i, { unitPrice: Number(e.target.value) })} /></Field>
+                    <Field label="Korting %"><Input type="number" min="0" max="100" step="0.01" className="h-8 w-20" aria-label="Korting procent" value={l.discountPercent ?? ""} onChange={(e) => discountLines(i, Number(e.target.value), "percent")} /></Field>
+                    <Field label="Korting € ex btw"><Input type="number" min="0" step="0.01" className="h-8 w-24" aria-label="Korting bedrag" value={l.discountAmount ?? ""} onChange={(e) => discountLines(i, Number(e.target.value), "amount")} /></Field>
                     <Field label="Btw %"><Input type="number" step="0.1" className="h-8 w-16" aria-label="Btw-tarief" placeholder="—" value={l.vatRate ?? ""} onChange={(e) => upd(i, { vatRate: e.target.value === "" ? null : Number(e.target.value), vat: null, total: null })} /></Field>
                     <Field label="Ex btw"><Input type="number" step="0.01" className="h-8 w-24" aria-label="Bedrag exclusief btw" value={l.amount} onChange={(e) => upd(i, { amount: Number(e.target.value), vat: null, total: null })} /></Field>
                     <Field label="Btw"><p className="h-8 px-1 font-mono text-sm leading-8">{euro(t.vat)}</p></Field>

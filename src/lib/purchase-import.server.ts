@@ -19,11 +19,12 @@ const schema = {
       type: "array",
       items: {
         type: "object", additionalProperties: false,
-        required: ["description", "quantity", "unit", "unitPrice", "amount", "vatRate", "net", "vat", "total"],
+        required: ["description", "quantity", "unit", "unitPrice", "amount", "vatRate", "net", "vat", "total", "discountPercent", "discountAmount"],
         properties: {
           description: { type: "string" }, quantity: { type: ["number", "null"] }, unit: { type: ["string", "null"] },
           unitPrice: { type: ["number", "null"] }, amount: { type: ["number", "null"] },
           vatRate: { type: ["number", "null"] }, net: { type: ["number", "null"] }, vat: { type: ["number", "null"] }, total: { type: ["number", "null"] },
+          discountPercent: { type: ["number", "null"] }, discountAmount: { type: ["number", "null"] },
         },
       },
     },
@@ -45,7 +46,7 @@ async function extractWithAI(apiKey: string, pdfText: string, subject: string): 
       reasoning: { effort: "low" },
       instructions:
         "Je leest de tekst van een aankoopfactuur (PDF) van een leverancier. Haal eruit: leveranciersnaam, btw-nummer en IBAN van de leverancier, factuurnummer, factuurdatum en vervaldag (YYYY-MM-DD), elke factuurlijn met omschrijving, aantal, eenheid, prijs per stuk (unitPrice), btw-tarief in procent (vatRate), bedrag exclusief btw (net of amount), btw-bedrag (vat) en bedrag inclusief btw (total), het totaal excl. btw van het document (net), het btw-bedrag (vat), het totaal incl. btw (total) en de gestructureerde mededeling of betaalreferentie (paymentRef, bv. +++123/4567/89074+++). Getallen als getallen (punt als decimaalteken). Gebruik null als iets ontbreekt. Verwar het btw-nummer of IBAN van de klant (Riory) nooit met dat van de leverancier.",
-      input: `Onderwerp mail: ${subject}\n\nFactuurtekst:\n${pdfText.slice(0, 15000)}`,
+      input: `Lees ook kortingen per lijn: discountPercent en discountAmount (totale lijnkorting exclusief btw). net/amount, vat en total zijn NA korting, niet dubbel aftrekken. Ontbrekende kortingvelden zijn null. Algemene documentkortingen die niet in de productlijnen zitten: afzonderlijke negatieve lijn Korting, aantal 1, met toepasselijk btw-tarief (splits per tarief). Voorwaardelijke betalingskortingen niet aftrekken; vermeld de voorwaarde in de omschrijving. Behoud de gedrukte documenttotalen.\nOnderwerp mail: ${subject}\n\nFactuurtekst:\n${pdfText.slice(0, 15000)}`,
       text: { format: { type: "json_schema", name: "aankoopfactuur", strict: true, schema } },
     }),
   });
