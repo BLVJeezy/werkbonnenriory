@@ -827,6 +827,7 @@ export type Database = {
           entry_id: string | null
           id: string
           matched_invoice_id: string | null
+          matched_purchase_invoice_id: string | null
           tx_date: string
           user_id: string
         }
@@ -842,6 +843,7 @@ export type Database = {
           entry_id?: string | null
           id?: string
           matched_invoice_id?: string | null
+          matched_purchase_invoice_id?: string | null
           tx_date: string
           user_id?: string
         }
@@ -857,6 +859,7 @@ export type Database = {
           entry_id?: string | null
           id?: string
           matched_invoice_id?: string | null
+          matched_purchase_invoice_id?: string | null
           tx_date?: string
           user_id?: string
         }
@@ -880,6 +883,13 @@ export type Database = {
             columns: ["matched_invoice_id"]
             isOneToOne: false
             referencedRelation: "fin_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bank_tx_matched_purchase_invoice_id_fkey"
+            columns: ["matched_purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -2218,6 +2228,7 @@ export type Database = {
       purchase_invoices: {
         Row: {
           accountant_sent_at: string | null
+          bank_paid_base: number
           bank_payment_ref: string | null
           bank_transaction_key: string | null
           booked_at: string | null
@@ -2253,6 +2264,7 @@ export type Database = {
         }
         Insert: {
           accountant_sent_at?: string | null
+          bank_paid_base?: number
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
           booked_at?: string | null
@@ -2288,6 +2300,7 @@ export type Database = {
         }
         Update: {
           accountant_sent_at?: string | null
+          bank_paid_base?: number
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
           booked_at?: string | null
@@ -3146,6 +3159,10 @@ export type Database = {
       }
       fin_link_manual_bank: {
         Args: { _invoice: string; _mode: string; _transaction: string }
+        Returns: Json
+      }
+      fin_link_purchase_bank: {
+        Args: { _mode?: string; _purchase: string; _transaction: string }
         Returns: Json
       }
       fin_manual_bank_amounts: {
