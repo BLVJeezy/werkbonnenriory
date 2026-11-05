@@ -103,13 +103,15 @@ async function peppyrusCall(path: string, init?: RequestInit) {
 }
 
 /** Which Peppol address does this Peppyrus account own? Never throws: setup problems are shown to the admin. */
-async function peppyrusParticipant(): Promise<{ participantId: string | null; error: string | null }> {
+async function peppyrusParticipant(): Promise<{ participantId: string | null; senderId: string | null; error: string | null }> {
   try {
     const org = await (await peppyrusCall('/organization/peppol')).json() as any;
     const list: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
     const id = String((list.find(p => p?.canReceive) ?? list[0])?.participantId ?? '');
-    return id ? { participantId: id, error: null } : { participantId: null, error: 'Peppyrus kent geen Peppol-adres toe aan deze account.' };
-  } catch (e) { return { participantId: null, error: e instanceof Error ? e.message : String(e) }; }
+    const sender = String(list.find(p => p?.isSender)?.participantId ?? '');
+    if (!id) return { participantId: null, senderId: sender || null, error: 'Peppyrus kent geen Peppol-adres toe aan deze account.' };
+    return { participantId: id, senderId: sender || null, error: null };
+  } catch (e) { return { participantId: null, senderId: null, error: e instanceof Error ? e.message : String(e) }; }
 }
 
 /** Peppyrus is prepared but only active once an API key is added. */
