@@ -1,0 +1,2 @@
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS peppol_active boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.settings.peppol_active IS 'When true, invoices and credit notes are delivered through Peppol and no copy goes to OkiOki anymore.';
