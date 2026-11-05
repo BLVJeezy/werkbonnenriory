@@ -814,6 +814,65 @@ export type Database = {
         }
         Relationships: []
       }
+      fin_bank_allocations: {
+        Row: {
+          amount: number
+          company_id: string
+          id: string
+          invoice_id: string | null
+          purchase_invoice_id: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          id?: string
+          invoice_id?: string | null
+          purchase_invoice_id?: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          id?: string
+          invoice_id?: string | null
+          purchase_invoice_id?: string | null
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_bank_allocations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bank_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "fin_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bank_allocations_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bank_allocations_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "fin_bank_tx"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_bank_tx: {
         Row: {
           amount: number
@@ -3218,6 +3277,10 @@ export type Database = {
           _transaction: string
         }
         Returns: string
+      }
+      fin_split_bank_payment: {
+        Args: { _allocations: Json; _transaction: string }
+        Returns: Json
       }
       forward_external_appointment: {
         Args: { p_id: string; p_instruction: string }
