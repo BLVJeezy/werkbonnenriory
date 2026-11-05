@@ -6,7 +6,7 @@ describe("normalizePurchaseInvoice", () => {
     expect(normalizePurchaseInvoice({ supplierIban: " be68 5390 0754 7034 " }).supplierIban).toBe("BE68539007547034");
   });
   it("vult ontbrekende BIC uit de vaste IBAN-bankcodetabel", () => {
-    expect(normalizePurchaseInvoice({ supplierIban: "BE68539007547034" }).supplierBic).toBe("GKCCBEBB");
+    expect(normalizePurchaseInvoice({ supplierIban: "BE71096123456769" }).supplierBic).toBe("GKCCBEBB");
   });
   it("behoudt de expliciet uitgelezen BIC", () => {
     expect(normalizePurchaseInvoice({ supplierIban: "BE68539007547034", supplierBic: "gkcc bebb xxx" }).supplierBic).toBe("GKCCBEBBXXX");
