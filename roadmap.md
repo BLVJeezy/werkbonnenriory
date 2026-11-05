@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Vrije factuurkeuze bij bankverrichtingen en veilige koppeling van terugstortingen van teveel betaalde bedragen.
+- [x] Vrije factuurkeuze bij bankverrichtingen en veilige koppeling van terugstortingen; 14 tests en zes ingelogde controles van de betaalregels geslaagd. Geen echte boeking uitgevoerd.
 
 - [x] Peppol automatisch ophalen elke vijf minuten; beveiligde controle en handmatige import getest, unieke bericht-ID's bevestigd. Nieuwe ontvangstcode moet nog gepubliceerd worden voor de ingestelde achtergrondcontrole.
 
