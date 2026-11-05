@@ -155,7 +155,8 @@ export function buildManualCreditNote(lines: Parameters<typeof buildManualInvoic
 /** Pure: merges per-work-order invoices of one customer into one invoice; each order becomes a titled group and paid amounts add up, so the remainder stays payable. */
 export function mergeWorkOrderInvoices(parts: { number: number | null; lines: InvoiceLine[]; net: number; vat: number; total: number; paidAmount: number }[]) {
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  if (parts.length === 1) return { lines: parts[0].lines, net: parts[0].net, vat: parts[0].vat, total: parts[0].total, paidAmount: parts[0].paidAmount };
+  const one = parts[0];
+  if (parts.length === 1 && one) return { lines: one.lines, net: one.net, vat: one.vat, total: one.total, paidAmount: one.paidAmount };
   const lines = parts.flatMap((p) => p.lines.map((l) => ({ ...l, group: `Werkbon ${p.number ?? "Nieuw"}` })));
   return {
     lines,

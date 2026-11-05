@@ -27,7 +27,7 @@ export const createInvoices = createServerFn({ method: "POST" })
     const created: string[] = [], skipped: (number | null)[] = [];
     let sent = 0, failed = 0;
     // Work orders of the same customer (same VAT rate) go onto one invoice; paid amounts add up so any rest stays payable.
-    const { data: prior } = await supabase.from("invoices").select("work_order_id, extra_work_order_ids");
+    const { data: prior } = (await supabase.from("invoices").select("*")) as { data: { work_order_id: string | null; extra_work_order_ids?: string[] | null }[] | null };
     const invoiced = new Set<string>();
     for (const p of prior ?? []) { if (p.work_order_id) invoiced.add(p.work_order_id); for (const x of p.extra_work_order_ids ?? []) invoiced.add(x); }
     const groups = new Map<string, { wo: any; inv: ReturnType<typeof buildInvoice> }[]>();
@@ -49,6 +49,7 @@ export const createInvoices = createServerFn({ method: "POST" })
     }
     for (const parts of groups.values()) {
       const first = parts[0];
+      if (!first) continue;
       const merged = mergeWorkOrderInvoices(parts.map((p) => ({ number: p.wo.number, lines: p.inv.lines, net: p.inv.net, vat: p.inv.vat, total: p.inv.total, paidAmount: p.inv.paidAmount })));
       const issue = new Date().toISOString().slice(0, 10);
       // Atomic: number and invoice are created in one transaction, so a failed insert cannot burn a number.
