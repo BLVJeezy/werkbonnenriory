@@ -47,6 +47,7 @@ function Controle() {
   const { data: queue = [] } = useQuery({ queryKey: ["purchase_queue"], queryFn: async () => (await supabase.from("purchase_invoices").select("id").eq("status", "te_controleren").order("created_at", { ascending: false })).data ?? [] });
   const [edit, setEdit] = useState<Row | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [sources, setSources] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [allDiscount, setAllDiscount] = useState(0);
@@ -58,10 +59,17 @@ function Controle() {
     row.supplier_bic = nextBic(row.supplier_iban, row.supplier_bic, row.supplier_iban);
     setEdit(row); setSources({});
     setPdfUrl((old) => { if (old) URL.revokeObjectURL(old); return null; });
+    setPdfBase64(null);
     if (row.pdf_path) {
-      // Blob-URL i.p.v. rechtstreekse storage-URL: Chrome blokkeert PDF's in een cross-origin iframe.
+      // Blob + PdfPreview i.p.v. rechtstreekse storage-URL: Chrome blokkeert PDF's in een cross-origin iframe.
       const { data: blob } = await supabase.storage.from("aankoopfacturen").download(row.pdf_path);
-      if (blob) setPdfUrl(URL.createObjectURL(blob));
+      if (blob) {
+        setPdfUrl(URL.createObjectURL(blob));
+        const buf = await blob.arrayBuffer();
+        let bin = ""; const bytes = new Uint8Array(buf);
+        for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+        setPdfBase64(btoa(bin));
+      }
     }
     if (row.status !== "betaald" && row.lines.some((l) => !l.account)) {
       try {
