@@ -51,4 +51,10 @@ describe("invoice delivery", () => {
     expect(Object.keys(m.message)).not.toContain("bccRecipients");
     expect(m.message.toRecipients).toEqual([{ emailAddress: { address: "klant@example.be" } }]);
   });
+  it("promises the OkiOki copy in the confirmation only while Peppol is not live", () => {
+    expect(sendConfirmText(2, false)).toContain("BE0840931404701144@okioki.app");
+    const off = sendConfirmText(2, true);
+    expect(off).not.toContain("okioki.app");
+    expect(off).toContain("geen kopie meer naar OkiOki");
+  });
 });
