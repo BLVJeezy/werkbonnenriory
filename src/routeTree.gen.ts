@@ -41,7 +41,6 @@ import { Route as AuthenticatedWerkbonnenIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedWerkbonnenIdRouteImport } from './routes/_authenticated/werkbonnen.$id'
 import { Route as AfspraakKlantTokenRouteImport } from './routes/afspraak.klant.$token'
 import { Route as AfspraakPloegTokenRouteImport } from './routes/afspraak.ploeg.$token'
-import { Route as ApiPublicDokapiWebhookRouteImport } from './routes/api/public/dokapi-webhook'
 import { Route as NieuwsbriefUitschrijvenTokenRouteImport } from './routes/nieuwsbrief.uitschrijven.$token'
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
@@ -225,11 +224,6 @@ const AfspraakPloegTokenRoute = AfspraakPloegTokenRouteImport.update({
   path: '/afspraak/ploeg/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicDokapiWebhookRoute = ApiPublicDokapiWebhookRouteImport.update({
-  id: '/api/public/dokapi-webhook',
-  path: '/api/public/dokapi-webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NieuwsbriefUitschrijvenTokenRoute =
   NieuwsbriefUitschrijvenTokenRouteImport.update({
     id: '/nieuwsbrief/uitschrijven/$token',
@@ -337,7 +331,6 @@ export interface FileRoutesByFullPath {
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
-  '/api/public/dokapi-webhook': typeof ApiPublicDokapiWebhookRoute
   '/nieuwsbrief/uitschrijven/$token': typeof NieuwsbriefUitschrijvenTokenRoute
   '/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
@@ -384,7 +377,6 @@ export interface FileRoutesByTo {
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
-  '/api/public/dokapi-webhook': typeof ApiPublicDokapiWebhookRoute
   '/nieuwsbrief/uitschrijven/$token': typeof NieuwsbriefUitschrijvenTokenRoute
   '/werkbonnen': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
@@ -433,7 +425,6 @@ export interface FileRoutesById {
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
   '/afspraak/ploeg/$token': typeof AfspraakPloegTokenRoute
-  '/api/public/dokapi-webhook': typeof ApiPublicDokapiWebhookRoute
   '/nieuwsbrief/uitschrijven/$token': typeof NieuwsbriefUitschrijvenTokenRoute
   '/_authenticated/werkbonnen/': typeof AuthenticatedWerkbonnenIndexRoute
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
@@ -482,7 +473,6 @@ export interface FileRouteTypes {
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
-    | '/api/public/dokapi-webhook'
     | '/nieuwsbrief/uitschrijven/$token'
     | '/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
@@ -529,7 +519,6 @@ export interface FileRouteTypes {
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
-    | '/api/public/dokapi-webhook'
     | '/nieuwsbrief/uitschrijven/$token'
     | '/werkbonnen'
     | '/api/oauth/microsoft_outlook/return'
@@ -577,7 +566,6 @@ export interface FileRouteTypes {
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
     | '/afspraak/ploeg/$token'
-    | '/api/public/dokapi-webhook'
     | '/nieuwsbrief/uitschrijven/$token'
     | '/_authenticated/werkbonnen/'
     | '/api/oauth/microsoft_outlook/return'
@@ -606,7 +594,6 @@ export interface RootRouteChildren {
   WerkbonTekenenIdRoute: typeof WerkbonTekenenIdRoute
   AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
-  ApiPublicDokapiWebhookRoute: typeof ApiPublicDokapiWebhookRoute
   NieuwsbriefUitschrijvenTokenRoute: typeof NieuwsbriefUitschrijvenTokenRoute
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
@@ -848,13 +835,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AfspraakPloegTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/dokapi-webhook': {
-      id: '/api/public/dokapi-webhook'
-      path: '/api/public/dokapi-webhook'
-      fullPath: '/api/public/dokapi-webhook'
-      preLoaderRoute: typeof ApiPublicDokapiWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/nieuwsbrief/uitschrijven/$token': {
       id: '/nieuwsbrief/uitschrijven/$token'
       path: '/nieuwsbrief/uitschrijven/$token'
@@ -1013,7 +993,6 @@ const rootRouteChildren: RootRouteChildren = {
   WerkbonTekenenIdRoute: WerkbonTekenenIdRoute,
   AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
-  ApiPublicDokapiWebhookRoute: ApiPublicDokapiWebhookRoute,
   NieuwsbriefUitschrijvenTokenRoute: NieuwsbriefUitschrijvenTokenRoute,
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,

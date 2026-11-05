@@ -90,53 +90,101 @@ export const bookPurchaseInvoice = createServerFn({ method: 'POST' }).middleware
     return { ok: true as const };
   });
 
+const PEPPYRUS_URL = () => process.env['PEPPYRUS_LIVE'] === 'true' ? 'https://api.peppyrus.be/v1' : 'https://api.test.peppyrus.be/v1';
 const b64 = (bytes: Uint8Array) => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
 
-/** Dokapi is prepared but only active once client-id + secret are added. */
-export const dokapiStatus = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+/** Single place that talks to Peppyrus, so every call carries the same key, timeout and error text. */
+async function peppyrusCall(path: string, init?: RequestInit) {
+  const key = process.env['PEPPYRUS_API_KEY'];
+  if (!key) throw new Error('Peppyrus is voorbereid maar nog niet gekoppeld.');
+  const res = await fetch(`${PEPPYRUS_URL()}${path}`, { ...init, headers: { 'X-Api-Key': key, Accept: 'application/json', ...(init?.headers ?? {}) }, signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error(`Peppyrus ${path} mislukt (HTTP ${res.status}): ${(await res.text()).slice(0, 200) || 'leeg antwoord'}`);
+  return res;
+}
+
+/** Which Peppol address does this Peppyrus account own? Never throws: setup problems are shown to the admin. */
+async function peppyrusParticipant(): Promise<{ participantId: string | null; error: string | null }> {
+  try {
+    const org = await (await peppyrusCall('/organization/peppol')).json() as any;
+    const list: any[] = Array.isArray(org?.participants) ? org.participants : [org?.participants].filter(Boolean);
+    const id = String((list.find(p => p?.canReceive) ?? list[0])?.participantId ?? '');
+    return id ? { participantId: id, error: null } : { participantId: null, error: 'Peppyrus kent geen Peppol-adres toe aan deze account.' };
+  } catch (e) { return { participantId: null, error: e instanceof Error ? e.message : String(e) }; }
+}
+
+/** Peppyrus is prepared but only active once an API key is added. */
+export const peppyrusStatus = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { dokapiConfigured, dokapiLive, dokapiParticipant } = await import('./dokapi');
-    const configured = dokapiConfigured();
-    const live = dokapiLive();
+    const configured = !!process.env['PEPPYRUS_API_KEY'];
+    const live = process.env['PEPPYRUS_LIVE'] === 'true';
     if (!configured) return { configured, live, participantId: null, error: null };
-    return { configured, live, ...(await dokapiParticipant()) };
+    return { configured, live, ...(await peppyrusParticipant()) };
   });
 
-/** Registers our public webhook at Dokapi and stores the generated signature secret, so incoming invoices arrive automatically. */
-export const setupDokapiWebhook = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+export const importFromPeppyrus = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { dokapiCall } = await import('./dokapi');
-    const secret = (await (await dokapiCall('/webhooks/secretKey', { method: 'POST' })).text()).trim().replace(/^"|"$/g, '');
-    if (!secret) throw new Error('Dokapi gaf geen webhook-geheim terug.');
-    const url = 'https://werkbonnenriory.lovable.app/api/public/dokapi-webhook';
-    await dokapiCall('/webhooks', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, events: ['incoming-peppol-documents'] }),
-    });
-    const { error } = await context.supabase.from('settings').update({ peppol_webhook_secret: secret }).eq('id', 1);
-    if (error) throw new Error(error.message);
-    return { url };
+
+    const list = await (await peppyrusCall('/message/list?folder=INBOX&confirmed=false&perPage=50')).json() as any;
+    const items: any[] = Array.isArray(list) ? list : (list.items ?? list.data ?? []);
+    const { parsePurchaseUbl } = await import('./purchase-booking');
+    let imported = 0, skipped = 0; const errors: string[] = [];
+    for (const it of items) {
+      const id = String(it.id);
+      const { data: exists } = await context.supabase.from('purchase_invoices').select('id').eq('peppyrus_message_id', id).maybeSingle();
+      if (exists) { skipped++; await peppyrusCall(`/message/${id}/confirm`, { method: 'PATCH' }).catch(() => null); continue; }
+      try {
+        const msg = await (await peppyrusCall(`/message/${id}`)).json() as any;
+        const xml = new TextDecoder().decode(Uint8Array.from(atob(msg.fileContent ?? ''), c => c.charCodeAt(0)));
+        const p = parsePurchaseUbl(xml) as ReturnType<typeof parsePurchaseUbl> & { supplierBic?: string };
+        let pdf = p.pdfBase64;
+        if (!pdf) { const r = await (await peppyrusCall(`/message/${id}/render?format=pdf`)).json().catch(() => null) as any; pdf = r?.fileContent ?? r?.content ?? null; }
+        let path: string | null = null;
+        if (pdf) {
+          path = `peppol/${crypto.randomUUID()}.pdf`;
+          const { error } = await context.supabase.storage.from('aankoopfacturen').upload(path, Uint8Array.from(atob(pdf), c => c.charCodeAt(0)), { contentType: 'application/pdf' });
+          if (error) path = null;
+        }
+        const { data: row, error } = await context.supabase.from('purchase_invoices').insert({
+          supplier_name: p.supplierName, supplier_vat: p.supplierVat, supplier_iban: p.supplierIban, supplier_bic: p.supplierBic ?? null, kind: p.kind,
+          invoice_number: p.invoiceNumber, invoice_date: p.invoiceDate, due_date: p.dueDate, lines: p.lines,
+          net: p.net, vat: p.vat, total: p.total, payment_ref: p.paymentRef, source: 'peppol', status: 'te_controleren',
+          pdf_path: path, peppyrus_message_id: id,
+        }).select('supplier_id').single();
+        if (error) throw new Error(error.message);
+        if (p.supplierBic && row?.supplier_id) await context.supabase.from('suppliers').update({ bic: p.supplierBic }).eq('id', row.supplier_id).is('bic', null);
+        await peppyrusCall(`/message/${id}/confirm`, { method: 'PATCH' });
+        imported++;
+      } catch (e) { errors.push(e instanceof Error ? e.message : String(e)); }
+    }
+    return { imported, skipped, errors };
   });
 
 /** Sends a labelled test invoice to Riory's own Peppol address, so the receive flow can be checked without a real supplier. */
-export const sendDokapiTestInvoice = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+export const sendPeppyrusTestInvoice = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { data: s } = await context.supabase.from('settings').select('company_name,company_vat,company_iban,company_bic').eq('id', 1).single();
     const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
-    const { peppolTestInvoiceData, peppolTestInvoiceUbl } = await import('./peppol-test-invoice');
+    const { peppolTestInvoiceData, peppolTestInvoiceUbl, PEPPOL_INVOICE_PROCESS, PEPPOL_INVOICE_DOCUMENT } = await import('./peppol-test-invoice');
     const data = peppolTestInvoiceData({
       name: s?.company_name ?? 'Riory BV', vat: s?.company_vat ?? 'BE0840931404',
       iban: s?.company_iban ?? null, bic: s?.company_bic ?? null,
     }, today);
-    const { dokapiParticipant, sendPeppolDocument } = await import('./dokapi');
-    const { participantId, error } = await dokapiParticipant();
-    if (!participantId) throw new Error(error ?? 'Dokapi vond geen Peppol-adres voor je organisatie in deze omgeving.');
+    const { participantId, error } = await peppyrusParticipant();
+    if (!participantId) throw new Error(error ?? 'Peppyrus vond geen Peppol-adres voor je organisatie in deze omgeving.');
     const { createInvoicePdf } = await import('@/lib/invoice-pdf');
     const xml = peppolTestInvoiceUbl(data, participantId, b64(await createInvoicePdf(data)));
-    const ulid = await sendPeppolDocument(participantId, xml, `test-${data.number}`, participantId);
-    return { number: data.number, participantId, documentId: ulid };
+    const msg = await (await peppyrusCall('/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: participantId, recipient: participantId,
+        processType: PEPPOL_INVOICE_PROCESS, documentType: PEPPOL_INVOICE_DOCUMENT,
+        fileContent: b64(new TextEncoder().encode(xml)),
+      }),
+    })).json() as any;
+    return { number: data.number, participantId, messageId: msg?.id ?? null };
   });
 
