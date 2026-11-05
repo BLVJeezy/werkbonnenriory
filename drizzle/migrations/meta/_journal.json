@@ -841,6 +841,13 @@
       "when": 1793897168068,
       "tag": "0119_manual_bank_invoice_refunds",
       "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1793897283094,
+      "tag": "0120_guard_manual_bank_mode",
+      "breakpoints": true
     }
   ]
 }
