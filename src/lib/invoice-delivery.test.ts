@@ -32,4 +32,23 @@ describe("invoice delivery", () => {
   it("asks Outlook for a read receipt on the customer invoice mail", () => {
     expect(invoiceMailWithCc("klant@example.be", "2026-1", "JVBERg==", "PHhtbD4=").message.isReadReceiptRequested).toBe(true);
   });
+  it("sends no OkiOki copy once Peppol delivery is active", async () => {
+    const f = mk();
+    await deliverInvoice({ customer: { email: "klant@example.be", vatNumber: null }, pdfSent: false, okiokiSent: false, peppolActive: true, ...f });
+    expect(f.sendWithCc).toHaveBeenCalledWith("klant@example.be");
+    expect(f.record.mock.calls).toEqual([["pdf"]]);
+    expect(f.sendUbl).not.toHaveBeenCalled();
+  });
+  it("does not retry the OkiOki leg once Peppol delivery is active", async () => {
+    const f = mk();
+    await deliverInvoice({ customer: { email: "klant@example.be", vatNumber: null }, pdfSent: true, okiokiSent: false, peppolActive: true, ...f });
+    expect(f.sendWithCc).not.toHaveBeenCalled();
+    expect(f.sendUbl).not.toHaveBeenCalled();
+    expect(f.record).not.toHaveBeenCalled();
+  });
+  it("leaves the OkiOki BCC out of the customer mail when the copy is off", () => {
+    const m = invoiceMailWithCc("klant@example.be", "2026-1", "JVBERg==", "PHhtbD4=", "Factuur", undefined, false, false);
+    expect(Object.keys(m.message)).not.toContain("bccRecipients");
+    expect(m.message.toRecipients).toEqual([{ emailAddress: { address: "klant@example.be" } }]);
+  });
 });
