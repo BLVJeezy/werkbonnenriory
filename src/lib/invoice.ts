@@ -151,3 +151,23 @@ export function isInvoiceEditable(inv: { kind: string; status: string; sent_at: 
 export function buildManualCreditNote(lines: Parameters<typeof buildManualInvoice>[0]) {
   return buildCreditNote(buildManualInvoice(lines));
 }
+
+/** Pure: merges per-work-order invoices of one customer into one invoice; each order becomes a titled group and paid amounts add up, so the remainder stays payable. */
+export function mergeWorkOrderInvoices(parts: { number: number | null; lines: InvoiceLine[]; net: number; vat: number; total: number; paidAmount: number }[]) {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  if (parts.length === 1) return { lines: parts[0].lines, net: parts[0].net, vat: parts[0].vat, total: parts[0].total, paidAmount: parts[0].paidAmount };
+  const lines = parts.flatMap((p) => p.lines.map((l) => ({ ...l, group: `Werkbon ${p.number ?? "Nieuw"}` })));
+  return {
+    lines,
+    net: r2(parts.reduce((s, p) => s + p.net, 0)),
+    vat: r2(parts.reduce((s, p) => s + p.vat, 0)),
+    total: r2(parts.reduce((s, p) => s + p.total, 0)),
+    paidAmount: r2(parts.reduce((s, p) => s + p.paidAmount, 0)),
+  };
+}
+
+/** Pure: key that keeps work orders of the same customer (and VAT rate) on one invoice. */
+export function invoiceMergeKey(wo: { customer_id?: string | null; customer_name?: string | null; vat_rate?: number | string | null }) {
+  const who = wo.customer_id || `naam:${(wo.customer_name ?? "").trim().toLowerCase().replace(/\s+/g, " ")}`;
+  return `${who}|${Number(wo.vat_rate ?? 0)}`;
+}

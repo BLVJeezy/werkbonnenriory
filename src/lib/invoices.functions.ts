@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { addDays, buildCreditNote, buildInvoice, buildManualCreditNote, buildManualInvoice, canInvoiceWorkOrder, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
+import { addDays, buildCreditNote, buildInvoice, buildManualCreditNote, buildManualInvoice, canInvoiceWorkOrder, invoiceMergeKey, mergeWorkOrderInvoices, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
 import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from "@/lib/mail-senders";
@@ -26,12 +26,16 @@ export const createInvoices = createServerFn({ method: "POST" })
     const { data: acts } = await supabase.from("activities").select("*");
     const created: string[] = [], skipped: (number | null)[] = [];
     let sent = 0, failed = 0;
+    // Work orders of the same customer (same VAT rate) go onto one invoice; paid amounts add up so any rest stays payable.
+    const { data: prior } = await supabase.from("invoices").select("work_order_id, extra_work_order_ids");
+    const invoiced = new Set<string>();
+    for (const p of prior ?? []) { if (p.work_order_id) invoiced.add(p.work_order_id); for (const x of p.extra_work_order_ids ?? []) invoiced.add(x); }
+    const groups = new Map<string, { wo: any; inv: ReturnType<typeof buildInvoice> }[]>();
     for (const id of data.workOrderIds) {
       const { data: wo } = await supabase.from("work_orders").select("*").eq("id", id).single();
       // Contract- en "niet factureren"-werkbonnen (bijv. garantie) worden nooit gefactureerd.
       if (!wo || !canInvoiceWorkOrder(wo)) continue;
-      const { data: existing } = await supabase.from("invoices").select("id").eq("work_order_id", id).maybeSingle();
-      if (existing) { skipped.push(wo.number); continue; }
+      if (invoiced.has(id)) { skipped.push(wo.number); continue; }
       const [t, m] = await Promise.all([
         supabase.from("time_entries").select("*").eq("work_order_id", id),
         supabase.from("materials").select("*").eq("work_order_id", id).order("created_at"),
@@ -40,15 +44,22 @@ export const createInvoices = createServerFn({ method: "POST" })
       const act = (acts ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
       const { data: klant } = wo.customer_id ? await supabase.from("customers").select("billing_email").eq("id", wo.customer_id).maybeSingle() : { data: null };
       const inv = buildInvoice({ wo: { ...wo, customer_billing_email: klant?.billing_email ?? null, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) }, activity: act, seconds, kmRate: Number(s?.km_rate ?? 0), materials: m.data ?? [] });
+      const key = invoiceMergeKey(wo);
+      groups.set(key, [...(groups.get(key) ?? []), { wo, inv }]);
+    }
+    for (const parts of groups.values()) {
+      const first = parts[0];
+      const merged = mergeWorkOrderInvoices(parts.map((p) => ({ number: p.wo.number, lines: p.inv.lines, net: p.inv.net, vat: p.inv.vat, total: p.inv.total, paidAmount: p.inv.paidAmount })));
       const issue = new Date().toISOString().slice(0, 10);
       // Atomic: number and invoice are created in one transaction, so a failed insert cannot burn a number.
       const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
-        p_work_order_id: id, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
-        p_customer: inv.customer, p_lines: inv.lines, p_vat_rate: inv.vatRate, p_net: inv.net, p_vat: inv.vat, p_total: inv.total, p_paid_amount: inv.paidAmount,
+        p_work_order_id: first.wo.id, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+        p_customer: first.inv.customer, p_lines: merged.lines, p_vat_rate: first.inv.vatRate, p_net: merged.net, p_vat: merged.vat, p_total: merged.total, p_paid_amount: merged.paidAmount,
       });
       if (error) throw new Error(error.message);
+      if (parts.length > 1) await supabase.from("invoices").update({ extra_work_order_ids: parts.slice(1).map((p) => p.wo.id) } as never).eq("id", row.id);
       created.push(row.number);
-      if (isFullyPaid(inv.total, inv.paidAmount)) { const r = await (await import('./invoice-sending.server')).sendOne(supabase, row); r.ok ? sent++ : failed++; }
+      if (isFullyPaid(merged.total, merged.paidAmount)) { const r = await (await import('./invoice-sending.server')).sendOne(supabase, row); r.ok ? sent++ : failed++; }
     }
     return { created, skipped, sent, failed };
   });

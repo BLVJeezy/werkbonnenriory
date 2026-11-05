@@ -1790,6 +1790,7 @@ export type Database = {
           customer: Json
           delivery_lock_until: string | null
           due_date: string
+          extra_work_order_ids: string[]
           id: string
           issue_date: string
           kind: string
@@ -1824,6 +1825,7 @@ export type Database = {
           customer: Json
           delivery_lock_until?: string | null
           due_date: string
+          extra_work_order_ids?: string[]
           id?: string
           issue_date?: string
           kind?: string
@@ -1858,6 +1860,7 @@ export type Database = {
           customer?: Json
           delivery_lock_until?: string | null
           due_date?: string
+          extra_work_order_ids?: string[]
           id?: string
           issue_date?: string
           kind?: string
@@ -3061,6 +3064,7 @@ export type Database = {
           customer: Json
           delivery_lock_until: string | null
           due_date: string
+          extra_work_order_ids: string[]
           id: string
           issue_date: string
           kind: string
