@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Eén betaling eenvoudig over meerdere facturen verdelen, met bedrag per factuur en totaalcontrole.
+- [x] Eén betaling over meerdere facturen verdelen; €75,91 = Lovable €75 + BNP €0,91 zichtbaar gecontroleerd, elf tests geslaagd. Geen echte aflettering uitgevoerd.
 
 - [x] Afletterlabels per factuur in de bankkeuzelijst; beide statussen zichtbaar gecontroleerd en acht tests geslaagd.
 
