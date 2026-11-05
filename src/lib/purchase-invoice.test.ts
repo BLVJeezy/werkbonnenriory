@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals } from "./purchase-invoice";
+import { fillMissingVatRates, lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals } from "./purchase-invoice";
 
 describe("normalizePurchaseInvoice", () => {
   it("leest korting zonder reeds afgeprijsde bedragen dubbel te verminderen", () => {
@@ -106,5 +106,20 @@ describe("purchaseInvoiceWarnings", () => {
     const w = purchaseInvoiceWarnings({ ...ok, supplierIban: null, dueDate: null });
     expect(w.some((x) => x.includes("IBAN"))).toBe(true);
     expect(w.some((x) => x.includes("vervaldag"))).toBe(true);
+  });
+});
+
+describe("fillMissingVatRates", () => {
+  it("vult ontbrekende tarieven met het documenttarief", () => {
+    const lines = fillMissingVatRates([
+      { description: "A", quantity: 1, unit: "st", unitPrice: 100, amount: 100 },
+      { description: "B", quantity: 1, unit: "st", unitPrice: 50, amount: 50, vatRate: 6 },
+    ], 150, 31.5);
+    expect(lines[0]!).toMatchObject({ vatRate: 21, vat: 21, total: 121 });
+    expect(lines[1]!.vatRate).toBe(6);
+  });
+  it("valt terug op 21% als het document geen tarief verraadt", () => {
+    const lines = fillMissingVatRates([{ description: "A", quantity: 1, unit: "st", unitPrice: 10, amount: 10 }], 0, 0);
+    expect(lines[0]!.vatRate).toBe(21);
   });
 });

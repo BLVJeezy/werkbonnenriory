@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from "@/lib/supplier-rules";
 import { euro } from "@/lib/billing";
-import { lineTotals, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals, type PurchaseLine } from "@/lib/purchase-invoice";
+import { fillMissingVatRates, lineTotals, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
 import { bankOfIban, nextBic } from "@/lib/iban-bic";
@@ -56,7 +56,7 @@ function Controle() {
   async function load() {
     const { data: r } = await supabase.from("purchase_invoices").select("*").eq("id", id).single();
     if (!r) { toast.error("Factuur niet gevonden"); return; }
-    const row = { ...r, kind: r.kind === "creditnota" ? "creditnota" : "factuur", lines: (r.lines ?? []) as PurchaseLine[] } as Row;
+    const row = { ...r, kind: r.kind === "creditnota" ? "creditnota" : "factuur", lines: fillMissingVatRates((r.lines ?? []) as PurchaseLine[], Number(r.net), Number(r.vat)) } as Row;
     row.supplier_bic = nextBic(row.supplier_iban, row.supplier_bic, row.supplier_iban);
     setEdit(row); setSources({});
     setPdfUrl((old) => { if (old) URL.revokeObjectURL(old); return null; });

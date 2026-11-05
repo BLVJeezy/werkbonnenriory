@@ -67,6 +67,13 @@ function rateFromVat(net: number, vat: number): number {
   return VAT_GRID.find((g) => Math.abs(g - raw) < 0.5) ?? Math.round(raw * 10) / 10;
 }
 
+/** Pure: give every line a tax percentage — the document's own rate when it says one, otherwise 21%. */
+export function fillMissingVatRates(lines: PurchaseLine[], docNet: number, docVat: number): PurchaseLine[] {
+  const docRate = docNet > 0 && docVat >= 0 ? rateFromVat(docNet, docVat) : null;
+  const fallback = docRate !== null && VAT_GRID.includes(docRate) ? docRate : 21;
+  return lines.map((l) => l.vatRate != null ? l : { ...l, vatRate: fallback, vat: r2(l.amount * fallback / 100), total: r2(l.amount * (1 + fallback / 100)) });
+}
+
 /** Pure: normalizes raw AI output into a clean purchase invoice; never trusts the AI's totals blindly. */
 export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
   const o = (raw ?? {}) as Record<string, unknown>;
