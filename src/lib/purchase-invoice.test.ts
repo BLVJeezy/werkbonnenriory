@@ -2,6 +2,20 @@ import { describe, expect, it } from "vitest";
 import { fillMissingVatRates, lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals } from "./purchase-invoice";
 
 describe("normalizePurchaseInvoice", () => {
+  it("normaliseert het uitgelezen IBAN van de leverancier", () => {
+    expect(normalizePurchaseInvoice({ supplierIban: " be68 5390 0754 7034 " }).supplierIban).toBe("BE68539007547034");
+  });
+  it("vult ontbrekende BIC uit de vaste IBAN-bankcodetabel", () => {
+    expect(normalizePurchaseInvoice({ supplierIban: "BE71096123456769" }).supplierBic).toBe("GKCCBEBB");
+  });
+  it("behoudt de expliciet uitgelezen BIC", () => {
+    expect(normalizePurchaseInvoice({ supplierIban: "BE68539007547034", supplierBic: "gkcc bebb xxx" }).supplierBic).toBe("GKCCBEBBXXX");
+  });
+  it("verzint geen bankgegevens bij ontbrekende brongegevens", () => {
+    const inv = normalizePurchaseInvoice({ supplierName: "Leverancier" });
+    expect(inv.supplierIban).toBeNull();
+    expect(inv.supplierBic).toBeNull();
+  });
   it("leest korting zonder reeds afgeprijsde bedragen dubbel te verminderen", () => {
     const inv = normalizePurchaseInvoice({ lines: [{ quantity: 2, unitPrice: 50, net: 90, vatRate: 21, discountPercent: 10, discountAmount: 10 }], net: 90, vat: 18.9, total: 108.9 });
     expect(inv.lines[0]).toMatchObject({ amount: 90, discountPercent: 10, discountAmount: 10, discountBase: 100 });

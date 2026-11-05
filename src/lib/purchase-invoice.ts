@@ -1,3 +1,5 @@
+import { bicFromIban } from "./iban-bic";
+
 export type PurchaseLine = {
   description: string;
   quantity: number;
@@ -119,11 +121,13 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
   const vat = r2(num(o["vat"]));
   // Prefer the invoice's own total; fall back to the sum of the lines.
   const net = r2(num(o["net"])) || (total ? r2(total - vat) : linesNet);
+  const supplierIban = str(o["supplierIban"])?.toUpperCase().replace(/\s/g, "") || null;
+  const derivedBic = supplierIban && /^(BE\d{14}|NL\d{2}[A-Z]{4}\d{10})$/.test(supplierIban) ? bicFromIban(supplierIban) : null;
   return {
     supplierName: str(o["supplierName"]) ?? "Onbekend",
     supplierVat: str(o["supplierVat"]),
-    supplierIban: str(o["supplierIban"]),
-    supplierBic: bic(o["supplierBic"]),
+    supplierIban,
+    supplierBic: bic(o["supplierBic"]) ?? derivedBic,
     invoiceNumber: str(o["invoiceNumber"]),
     invoiceDate: isoDate(o["invoiceDate"]),
     dueDate: isoDate(o["dueDate"]),

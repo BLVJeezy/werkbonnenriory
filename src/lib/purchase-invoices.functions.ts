@@ -180,7 +180,7 @@ export const importReceipt = createServerFn({ method: 'POST' }).middleware([requ
     const { error: uploadError } = await storage.upload(path, bytes, { contentType: data.mime });
     if (uploadError) throw new Error('Origineel document opslaan mislukt');
     const { data: row, error } = await context.supabase.from('purchase_invoices').insert({
-      supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban,
+      supplier_name: n.supplierName, supplier_vat: n.supplierVat, supplier_iban: n.supplierIban, supplier_bic: n.supplierBic,
       invoice_number: n.invoiceNumber, invoice_date: n.invoiceDate, due_date: n.dueDate,
       lines: n.lines, net: n.net, vat: n.vat, total: n.total, payment_ref: n.paymentRef,
       source: 'kasticket', status: 'te_controleren', pdf_path: path, upload_hash: hash,
