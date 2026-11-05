@@ -86,7 +86,10 @@ export async function sendOne(supabase: any, inv: any) {
     const { createInvoicePdf } = await import("@/lib/invoice-pdf");
     const pdf = b64(await createInvoicePdf(d));
     const { invoiceUbl } = await import("@/lib/invoice-ubl");
-    const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
+    const receiverId = peppolIdFromVat(d.customer.vatNumber);
+    const peppyrusKey = process.env['PEPPYRUS_API_KEY'];
+    const senderId = peppolActive && receiverId && !inv.peppol_sent_at && peppyrusKey ? await peppyrusSenderId(peppyrusKey) : SENDER_PEPPOL_ID;
+    const ubl = b64(new TextEncoder().encode(invoiceUbl(d, { senderId, receiverId, pdfBase64: pdf, creditNote: inv.kind === "creditnota" })));
     await deliverInvoice({
       customer: d.customer, pdfSent: Boolean(inv.pdf_sent_at), okiokiSent: Boolean(inv.okioki_sent_at), peppolActive,
       sendWithCc: async (to) => {
