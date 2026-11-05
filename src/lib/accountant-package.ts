@@ -67,17 +67,45 @@ export function accountantWarnings(x: CompletenessInput): string[] {
   if (x.bankUnbooked) w.push(`${n(x.bankUnbooked, "banktransactie is", "banktransacties zijn")} nog niet geboekt of afgeletterd.`);
   if (x.monthsIncomplete.length) w.push(`Maanden niet als volledig afgevinkt: ${x.monthsIncomplete.join(", ")}.`);
   if (x.investmentsIncomplete.length) w.push(`Afschrijvingsgegevens ontbreken voor: ${x.investmentsIncomplete.join(", ")}.`);
-  if (!x.journalLines) w.push("Er zijn nog geen boekingen voor dit jaar — balans en resultaat zijn leeg.");
+  if (!x.journalLines) w.push("Er zijn nog geen boekingen in deze periode — balans en resultaat zijn leeg.");
   else if (Math.round(x.trialDiff * 100) !== 0) w.push(`De proefbalans sluit niet (verschil € ${x.trialDiff.toFixed(2)}).`);
   return w;
 }
 
-/** Months (YYYY-MM) of the year that have already ended by `today`. */
-export function elapsedMonths(year: number, today: string): string[] {
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Pure: turns whatever the UI sent into a usable ISO period, or explains what is wrong. */
+export function normalizePeriod(i: { from?: string | null; to?: string | null }): { from: string; to: string } {
+  const from = String(i?.from ?? "").trim();
+  const to = String(i?.to ?? "").trim();
+  if (!DATE_RE.test(from) || !DATE_RE.test(to)) throw new Error("Kies een geldige begin- en einddatum (jjjj-mm-dd).");
+  const y = Number(from.slice(0, 4));
+  if (y < 2000 || y > 2100) throw new Error("Het boekjaar moet tussen 2000 en 2100 liggen.");
+  if (from > to) throw new Error("De begindatum moet voor de einddatum liggen.");
+  return { from, to };
+}
+
+/** "01/01/2026 tot 31/12/2026" — same wording in mails, screen and file names. */
+export function periodLabel(from: string, to: string) {
+  const d = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
+  return `${d(from)} tot ${d(to)}`;
+}
+
+/** File-name safe version of the period, e.g. 2026-01-01_tot_2026-12-31. */
+export const periodSlug = (from: string, to: string) => `${from}_tot_${to}`;
+
+/** Months (YYYY-MM) inside the period that have already ended by `today`. */
+export function monthsInPeriod(from: string, to: string, today: string): string[] {
   const out: string[] = [];
-  for (let m = 1; m <= 12; m++) {
-    const key = `${year}-${String(m).padStart(2, "0")}`;
+  const first = from.slice(0, 7);
+  const last = to.slice(0, 7);
+  let y = Number(first.slice(0, 4));
+  let m = Number(first.slice(5, 7));
+  while (true) {
+    const key = `${y}-${String(m).padStart(2, "0")}`;
+    if (key > last) break;
     if (key < today.slice(0, 7)) out.push(key);
+    if (++m > 12) { m = 1; y++; }
   }
   return out;
 }

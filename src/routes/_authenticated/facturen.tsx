@@ -11,7 +11,7 @@ import { euro, workOrderRevenue } from "@/lib/billing";
 import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
-import { checkAccountantPackage, sendAccountantPackage } from "@/lib/accountant-package.functions";
+import { AccountantPackage } from "@/components/AccountantPackage";
 import { createCreditNote, createInvoices, invoicePdf, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
 import { sendConfirmText } from "@/lib/invoice-delivery";
 import { isInvoiceEditable } from "@/lib/invoice";
@@ -67,8 +67,6 @@ function Facturen() {
   const send = useServerFn(sendInvoices);
   const getPdf = useServerFn(invoicePdf);
   const creditNote = useServerFn(createCreditNote);
-  const checkPack = useServerFn(checkAccountantPackage);
-  const sendPack = useServerFn(sendAccountantPackage);
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const byPost = useServerFn(sendInvoiceByPost);
   const copyMail = useServerFn(sendInvoiceCopy);
@@ -176,22 +174,6 @@ function Facturen() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Creditnota mislukt"); }
     setBusy(false);
     refresh();
-  }
-  async function sendToAccountant() {
-    const input = window.prompt("Welk boekjaar naar de boekhouder sturen?", String(new Date().getFullYear()));
-    if (!input) return;
-    const year = Number(input);
-    if (!Number.isInteger(year) || year < 2000) return void toast.error("Ongeldig jaar");
-    setBusy(true);
-    try {
-      const chk = await checkPack({ data: { year } });
-      const warn = chk.warnings.length ? `\n\n⚠️ DE BOEKHOUDING IS NIET VOLLEDIG:\n- ${chk.warnings.join("\n- ")}\n\nDe waarschuwingen worden ook in de mails vermeld.` : "\n\nDe boekhouding is volledig.";
-      if (!confirm(`Naar ${s?.accountant_email ?? "de boekhouder"} sturen:\n1. Mail met ${chk.sales} verkoop- en ${chk.purchases} aankoopdocumenten van ${year} in UBL\n2. Mail met balans, afschrijvingstabellen en alle stukken uit de boekhouding (Excel)${warn}\n\nVersturen?`)) { setBusy(false); return; }
-      const r = await sendPack({ data: { year } });
-      if (r.warnings.length) toast.warning(`2 mails verzonden naar ${r.to}, maar de boekhouding is niet volledig (${r.warnings.length} punten).`);
-      else toast.success(`2 mails verzonden naar ${r.to} (${r.ubl} UBL-bestanden + boekhoudpakket).`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden mislukt"); }
-    setBusy(false);
   }
   async function download(id: string) {
     const r = await getPdf({ data: { invoiceId: id } });
@@ -306,7 +288,7 @@ function Facturen() {
             <NewInvoice onCreated={refresh} creditNote />
             <Button variant="outline" size="sm" onClick={() => setSelInv(selInv.length ? [] : openIds)}>{selInv.length ? "Niets selecteren" : "Alle openstaande"}</Button>
             <Button size="sm" disabled={!selInv.length || busy} onClick={() => sendSel(selInv)}>Verzenden ({selInv.length})</Button>
-            <Button variant="outline" size="sm" disabled={busy} onClick={sendToAccountant}>Alles naar boekhouder</Button>
+            <AccountantPackage accountantEmail={s?.accountant_email ?? null} />
           </div>
         </div>
         <div className="overflow-x-auto">
