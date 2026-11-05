@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, ZoomIn, ZoomOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 /** Browser-rendered PDF pages work even where native blob PDF tabs are blocked. */
 export function PdfPreview({ base64 }: { base64: string }) {
   const container = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [zoom, setZoom] = useState(1);
   useEffect(() => {
     let cancelled = false;
     let destroy: (() => void) | undefined;
@@ -27,12 +29,12 @@ export function PdfPreview({ base64 }: { base64: string }) {
         if (cancelled) return;
         const width = Math.max(240, Math.min(host.clientWidth, 1000));
         const original = page.getViewport({ scale: 1 });
-        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const ratio = Math.min(window.devicePixelRatio || 1, 2) * 2;
         const viewport = page.getViewport({ scale: width / original.width * ratio });
         const canvas = document.createElement('canvas');
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);
-        canvas.className = 'block h-auto w-full';
+        canvas.className = 'block h-auto max-w-none';
         canvas.setAttribute('aria-label', `PDF pagina ${i}`);
         host.appendChild(canvas);
         const canvasContext = canvas.getContext('2d');
@@ -47,6 +49,11 @@ export function PdfPreview({ base64 }: { base64: string }) {
   return <div className="relative min-h-40">
     {loading && <p role="status" className="flex items-center justify-center gap-2 p-6 text-muted-foreground"><LoaderCircle className="size-5 animate-spin" /> Voorbeeld laden…</p>}
     {error && <p role="alert" className="p-4 text-destructive">{error}</p>}
-    <div ref={container} className="space-y-4" />
+    <div className="sticky top-0 z-10 flex justify-end gap-1 p-1">
+      <Button size="icon" variant="secondary" aria-label="Uitzoomen" disabled={zoom <= 1} onClick={() => setZoom(z => Math.max(1, z - 0.5))}><ZoomOut /></Button>
+      <span className="self-center rounded bg-secondary px-2 text-sm font-mono">{Math.round(zoom * 100)}%</span>
+      <Button size="icon" variant="secondary" aria-label="Inzoomen" disabled={zoom >= 4} onClick={() => setZoom(z => Math.min(4, z + 0.5))}><ZoomIn /></Button>
+    </div>
+    <div className="overflow-auto"><div ref={container} className="space-y-4 [&>canvas]:w-[var(--pdf-zoom)]" style={{ ['--pdf-zoom' as string]: `${zoom * 100}%` }} /></div>
   </div>;
 }
