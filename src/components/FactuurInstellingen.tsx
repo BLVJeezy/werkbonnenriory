@@ -39,7 +39,7 @@ export function FactuurInstellingen() {
       <div className="space-y-1"><Label>E-mail boekhouder (voor UBL-verzending)</Label>
         <Input type="email" defaultValue={s.accountant_email} onBlur={(e) => e.target.value !== s.accountant_email && saveSetting({ accountant_email: e.target.value })} /></div>
       <div className="flex items-start gap-2 sm:col-span-2">
-        <input id="peppol-actief" type="checkbox" className="mt-1 h-4 w-4 accent-primary" checked={!!s.peppol_active} onChange={(e) => saveSetting({ peppol_active: e.target.checked })} />
+        <input id="peppol-actief" type="checkbox" className="mt-1 h-4 w-4 accent-primary" defaultChecked={!!s.peppol_active} onChange={(e) => saveSetting({ peppol_active: e.target.checked })} />
         <div className="space-y-0.5">
           <Label htmlFor="peppol-actief">Peppol actief — geen OkiOki-kopie meer</Label>
           <p className="text-sm text-muted-foreground">Zet dit aan zodra je Peppol-adres echt actief is. Facturen en creditnota’s gaan dan alleen naar de klant; de UBL-kopie naar OkiOki stopt.</p>
