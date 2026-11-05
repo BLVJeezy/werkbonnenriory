@@ -8,7 +8,7 @@ import { depreciationByYear, depreciationSchedule, missingDeprParams } from "@/l
 import { statements, trialBalance, isBalanced } from "@/lib/boekhouding";
 
 type Ctx = { supabase: any; userId: string };
-const SENDER_PEPPOL_ID = "0208:0840931404";
+const SENDER_PEPPOL_ID = "9925:BE0840931404";
 /** The UI sends a start and end date; normalizePeriod explains what is wrong when they are not usable. onlyNew = only documents not yet sent to the accountant. */
 const periodInput = (i: { from?: string; to?: string; onlyNew?: boolean }) => ({ ...normalizePeriod(i), onlyNew: i?.onlyNew === true });
 
