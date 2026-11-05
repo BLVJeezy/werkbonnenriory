@@ -52,7 +52,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
     <cbc:EndpointID schemeID="${sScheme}">${sId}</cbc:EndpointID>
     <cac:PostalAddress><cbc:StreetName>Natveld 47</cbc:StreetName><cbc:CityName>Bilzen</cbc:CityName><cbc:PostalZone>3740</cbc:PostalZone><cac:Country><cbc:IdentificationCode>BE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
     <cac:PartyTaxScheme><cbc:CompanyID>${esc(d.company.vat.replace(/[^A-Z0-9]/gi, ""))}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
-    <cac:PartyLegalEntity><cbc:RegistrationName>${esc(d.company.name)}</cbc:RegistrationName><cbc:CompanyID schemeID="0208">${sId}</cbc:CompanyID></cac:PartyLegalEntity>
+    <cac:PartyLegalEntity><cbc:RegistrationName>${esc(d.company.name)}</cbc:RegistrationName><cbc:CompanyID schemeID="0208">${esc(d.company.vat.replace(/\D/g, "").padStart(10, "0"))}</cbc:CompanyID></cac:PartyLegalEntity>
   </cac:Party></cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty><cac:Party>
     ${rScheme && rId ? `<cbc:EndpointID schemeID="${esc(rScheme)}">${esc(rId)}</cbc:EndpointID>` : ""}
