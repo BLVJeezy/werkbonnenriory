@@ -179,5 +179,11 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
     await send(mailTo, `Boekhouding ${label} ter vergelijking — balans, afschrijvingen en stukken — Riory`,
       `In de bijlage vindt u de balans, proef- en saldibalans, afschrijvingstabellen, dagboeken, facturenlijsten en banktransacties van ${label} uit onze opvolgboekhouding, ter vergelijking met uw boekhouding.${warnText}`,
       [file(`Boekhouding-Riory-${periodSlug(from, to)}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx)]);
+    // Only after both mails are sent: mark the documents so "enkel nog niet doorgestuurd" skips them next time.
+    const now = new Date().toISOString();
+    const salesIds = d.sales.map((i: any) => i.id);
+    const purchaseIds = d.purchases.map((p: any) => p.id);
+    if (salesIds.length) await supabase.from("invoices").update({ accountant_sent_at: now }).in("id", salesIds);
+    if (purchaseIds.length) await supabase.from("purchase_invoices").update({ accountant_sent_at: now }).in("id", purchaseIds);
     return { to: mailTo, period: label, ubl: ubl.length, warnings: d.warnings };
   });
