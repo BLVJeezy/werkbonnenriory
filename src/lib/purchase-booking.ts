@@ -94,23 +94,35 @@ export function parsePurchaseUbl(xml: string): ParsedPurchaseInvoice & { kind: '
   const docRate = percents.length === 1 ? percents[0] : null;
   const lines = tags(xml, lineTag).map(l => {
     const unitCode = /unitCode="([^"]+)"/.exec(l)?.[1];
+    const item = tag(l, 'Item') ?? '';
+    const withoutPrice = l.replace(/<(?:[\w-]+:)?Price\b[^>]*>[\s\S]*?<\/(?:[\w-]+:)?Price>/gi, '');
+    const allowances = tags(withoutPrice, 'AllowanceCharge').filter(a => decode(tag(a, 'ChargeIndicator')) === 'false');
+    const discountAmount = allowances.reduce((s, a) => s + (numTag(a, 'Amount') ?? 0), 0);
     return {
       description: decode(tag(tag(l, 'Item') ?? '', 'Name')) ?? decode(tag(l, 'Description')) ?? 'Lijn',
       quantity: Number(tag(l, qtyTag)) || 1,
       unit: (unitCode && UNITS[unitCode]) || unitCode || 'st',
       unitPrice: Number(tag(tag(l, 'Price') ?? '', 'PriceAmount')) || 0,
-      amount: Number(tag(l, 'LineExtensionAmount')) || 0,
-      vatRate: numTag(l, 'Percent') ?? docRate,
+      amount: numTag(l, 'LineExtensionAmount'),
+      vatRate: numTag(item, 'Percent') ?? docRate,
       vat: numTag(l, 'TaxAmount'),
+      ...(allowances.length ? { discountAmount, discountPercent: allowances.length === 1 ? numTag(allowances[0] ?? '', 'MultiplierFactorNumeric') : null } : {}),
     };
   });
+  // Root allowances are NOT part of LineExtensionAmount, but ARE in TaxExclusiveAmount.
+  const root = xml.replace(/<(?:[\w-]+:)?(InvoiceLine|CreditNoteLine)\b[^>]*>[\s\S]*?<\/(?:[\w-]+:)?\1>/gi, '');
+  const documentDiscounts = tags(root, 'AllowanceCharge').filter(a => decode(tag(a, 'ChargeIndicator')) === 'false').map(a => ({
+    description: `Korting${decode(tag(a, 'AllowanceChargeReason')) ? `: ${decode(tag(a, 'AllowanceChargeReason'))}` : ''}`,
+    quantity: 1, unit: 'st', unitPrice: -(numTag(a, 'Amount') ?? 0), amount: -(numTag(a, 'Amount') ?? 0),
+    vatRate: numTag(tag(a, 'TaxCategory') ?? '', 'Percent') ?? docRate, vat: null,
+  }));
   const ref = decode(tag(pm, 'PaymentID'));
   const number = decode(tag(xml.replace(/<(?:[\w-]+:)?(AccountingSupplierParty|AccountingCustomerParty|InvoiceLine|CreditNoteLine|BillingReference|OrderReference)[\s\S]*?<\/(?:[\w-]+:)?\1>/g, ''), 'ID'));
   const parsed = normalizePurchaseInvoice({
     supplierName: name, supplierVat: vat, supplierIban: decode(tag(fin, 'ID'))?.replace(/\s/g, ''),
     invoiceNumber: number, invoiceDate: decode(tag(xml, 'IssueDate')),
     dueDate: decode(tag(xml, 'DueDate')) ?? decode(tag(pm, 'PaymentDueDate')),
-    lines, net: Number(tag(totals, 'TaxExclusiveAmount')) || undefined, vat: Number(tag(taxTotal, 'TaxAmount')) || 0,
+    lines: [...lines, ...documentDiscounts], net: Number(tag(totals, 'TaxExclusiveAmount')) || undefined, vat: Number(tag(taxTotal, 'TaxAmount')) || 0,
     total: Number(tag(totals, 'PayableAmount')) || Number(tag(totals, 'TaxInclusiveAmount')) || undefined,
     paymentRef: ref,
   });
