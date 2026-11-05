@@ -1,4 +1,3 @@
--- Approved-quote tasks list only the work to perform; unchosen optional lines are named separately as "niet uitvoeren".
 CREATE OR REPLACE FUNCTION public.ensure_approved_quote_task(p_id uuid) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $function$
 DECLARE q public.quotes%ROWTYPE; s public.work_orders%ROWTYPE; task_id uuid; description_text text; skipped_text text;
 BEGIN
