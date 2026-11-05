@@ -806,6 +806,13 @@
       "when": 1793876967504,
       "tag": "0114_dokapi_peppol_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1793877100775,
+      "tag": "0115_deprecate_dokapi_columns",
+      "breakpoints": true
     }
   ]
 }
