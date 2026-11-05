@@ -9,8 +9,8 @@ import { statements, trialBalance, isBalanced } from "@/lib/boekhouding";
 
 type Ctx = { supabase: any; userId: string };
 const SENDER_PEPPOL_ID = "0208:0840931404";
-/** The UI sends a start and end date; normalizePeriod explains what is wrong when they are not usable. */
-const periodInput = (i: { from?: string; to?: string }) => normalizePeriod(i);
+/** The UI sends a start and end date; normalizePeriod explains what is wrong when they are not usable. onlyNew = only documents not yet sent to the accountant. */
+const periodInput = (i: { from?: string; to?: string; onlyNew?: boolean }) => ({ ...normalizePeriod(i), onlyNew: i?.onlyNew === true });
 
 async function assertAdmin({ supabase, userId }: Ctx) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -27,15 +27,20 @@ async function fetchAll(q: (from: number, to: number) => any) {
   }
 }
 
-/** Everything the accountant mails need for one chosen period. */
-async function loadPeriod(ctx: Ctx, from: string, to: string) {
+/** Everything the accountant mails need for one chosen period. onlyNew limits the UBL mail to documents never sent to the accountant before. */
+async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) {
   const { supabase, userId } = ctx;
   const { data: companies } = await supabase.from("companies").select("id,name").eq("user_id", userId);
   const company = (companies ?? []).find((c: any) => /riory/i.test(c.name)) ?? companies?.[0] ?? null;
   const c = company?.id;
+  const docQ = (table: string, dateCol: string) => (a: number, b: number) => {
+    let q = supabase.from(table).select("*").gte(dateCol, from).lte(dateCol, to).order("id").range(a, b);
+    if (onlyNew) q = q.is("accountant_sent_at", null);
+    return q;
+  };
   const [sales, purchases, finInv, months, bank, invs, accounts, refs, lines] = await Promise.all([
-    fetchAll((a, b) => supabase.from("invoices").select("*").gte("issue_date", from).lte("issue_date", to).order("id").range(a, b)),
-    fetchAll((a, b) => supabase.from("purchase_invoices").select("*").gte("invoice_date", from).lte("invoice_date", to).order("id").range(a, b)),
+    fetchAll(docQ("invoices", "issue_date")),
+    fetchAll(docQ("purchase_invoices", "invoice_date")),
     c ? fetchAll((a, b) => supabase.from("fin_invoices").select("id,review_status,source,source_ref,invoice_date").eq("company_id", c).gte("invoice_date", from).lte("invoice_date", to).order("id").range(a, b)) : [],
     c ? supabase.from("fin_months").select("*").eq("company_id", c).gte("month", from).lte("month", to).then((r: any) => r.data ?? []) : [],
     c ? fetchAll((a, b) => supabase.from("fin_bank_tx").select("*").eq("company_id", c).gte("tx_date", from).lte("tx_date", to).order("id").range(a, b)) : [],
