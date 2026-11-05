@@ -834,6 +834,13 @@
       "when": 1793887685604,
       "tag": "0118_fix_reconcile_multi_total_ambiguity",
       "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "7",
+      "when": 1793897168068,
+      "tag": "0119_manual_bank_invoice_refunds",
+      "breakpoints": true
     }
   ]
 }

@@ -3144,6 +3144,20 @@ export type Database = {
           source: string
         }[]
       }
+      fin_link_manual_bank: {
+        Args: { _invoice: string; _mode: string; _transaction: string }
+        Returns: Json
+      }
+      fin_manual_bank_amounts: {
+        Args: {
+          _amount: number
+          _direction: string
+          _mode: string
+          _paid: number
+          _total: number
+        }
+        Returns: Json
+      }
       fin_post_entry: {
         Args: {
           _company: string
