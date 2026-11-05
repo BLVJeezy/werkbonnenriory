@@ -70,12 +70,23 @@ async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) 
   return { company, sales, purchases, bank, invs, accounts, tb, periodLines, warnings };
 }
 
+/** How many documents of the period were already sent to the accountant (for the checkbox explanation). */
+async function alreadySentCount(ctx: Ctx, from: string, to: string) {
+  const { supabase } = ctx;
+  const [s, p] = await Promise.all([
+    supabase.from("invoices").select("id", { count: "exact", head: true }).gte("issue_date", from).lte("issue_date", to).not("accountant_sent_at", "is", null),
+    supabase.from("purchase_invoices").select("id", { count: "exact", head: true }).gte("invoice_date", from).lte("invoice_date", to).not("accountant_sent_at", "is", null),
+  ]);
+  return (s.count ?? 0) + (p.count ?? 0);
+}
+
 export const checkAccountantPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth]).inputValidator(periodInput)
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const d = await loadPeriod(context, data.from, data.to);
-    return { from: data.from, to: data.to, warnings: d.warnings, sales: d.sales.length, purchases: d.purchases.length };
+    const d = await loadPeriod(context, data.from, data.to, data.onlyNew);
+    const alreadySent = await alreadySentCount(context, data.from, data.to);
+    return { from: data.from, to: data.to, onlyNew: data.onlyNew, warnings: d.warnings, sales: d.sales.length, purchases: d.purchases.length, alreadySent };
   });
 
 const b64 = (s: string) => { const u = new TextEncoder().encode(s); let o = ""; for (let i = 0; i < u.length; i += 8192) o += String.fromCharCode(...u.subarray(i, i + 8192)); return btoa(o); };
