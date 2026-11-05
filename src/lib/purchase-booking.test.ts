@@ -36,6 +36,15 @@ describe('purchase booking', () => {
   it('warns when IBAN or BIC is missing', () => {
     expect(supplierBankWarnings({ iban: 'BE1', bic: null })).toEqual(['BIC ontbreekt bij deze leverancier']);
   });
+  it.each(['kaart', 'domiciliering', 'cash'])('vereist geen IBAN of BIC bij %s', method => {
+    expect(supplierBankWarnings({ iban: null, bic: null }, method, 'te_controleren')).toEqual([]);
+  });
+  it('vereist geen bankgegevens nadat de betaling is gebeurd', () => {
+    expect(supplierBankWarnings({ iban: null, bic: null }, 'overschrijving', 'betaald')).toEqual([]);
+  });
+  it('blijft bankgegevens vragen voor een open overschrijving', () => {
+    expect(supplierBankWarnings({ iban: null, bic: null }, 'overschrijving', 'te_controleren')).toHaveLength(2);
+  });
   it('pays with the invoice bank details first, then the supplier record', () => {
     const sup = { iban: 'BE71 0961 2345 6769', bic: 'GKCCBEBB' };
     expect(creditorBank({ supplier_iban: 'BE68 5390 0754 7034', supplier_bic: null }, sup)).toEqual({ iban: 'BE68 5390 0754 7034', bic: 'GKCCBEBB' });
