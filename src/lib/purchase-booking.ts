@@ -130,3 +130,8 @@ export function parsePurchaseUbl(xml: string): ParsedPurchaseInvoice & { kind: '
   const pdfMatch = /<(?:[\w-]+:)?EmbeddedDocumentBinaryObject[^>]*mimeCode="application\/pdf"[^>]*>([\s\S]*?)<\//i.exec(xml);
   return { ...parsed, kind, pdfBase64: pdfMatch?.[1]?.replace(/\s/g, '') || null, ...(bic ? { supplierBic: bic } : {}) } as ParsedPurchaseInvoice & { kind: 'factuur' | 'creditnota'; pdfBase64: string | null };
 }
+
+/** Pure: a Peppol test invoice only makes sense when this account can both send and receive. */
+export function canSendPeppolTest(status: { configured: boolean; participantId?: string | null; senderId?: string | null }) {
+  return status.configured && !!status.participantId && !!status.senderId;
+}
