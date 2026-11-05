@@ -2,3 +2,4 @@
 - Every customer-driven VAT default goes through the single pure helper `vatRateForCustomer` in `src/lib/vat-number.ts`, and mail-text rules through tested helpers (urgency in `src/lib/urgent-mail.ts`, professional status in `src/lib/vat-number.ts`); screens never compute their own rate, so a new rule only has to be added once.
 - Km origin = nearest active `branches` row (distance.functions.ts), else settings.base_address; one rule for all documents.
 - PDF/mail/receipt extraction requests and persists supplier IBAN and printed BIC; the shared purchase normalizer supplies missing BIC from known bank codes, so import paths cannot drift.
+- Manual and managed scheduled Peppol receipt share `peppol-receive.server.ts`; cron authentication precedes admin access, and message IDs deduplicate imports so background receipt never books or sends invoices.
