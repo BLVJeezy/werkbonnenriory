@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { creditorBank, daysUntilDue, dueLabel, learnedAccount, lineKey, parsePurchaseUbl, paymentCommunication, paymentMethodLock, supplierBankWarnings } from './purchase-booking';
+import { canSendPeppolTest, creditorBank, daysUntilDue, dueLabel, learnedAccount, lineKey, parsePurchaseUbl, paymentCommunication, paymentMethodLock, supplierBankWarnings } from './purchase-booking';
 
 describe('purchase booking', () => {
+  it('toont de testfactuurknop enkel als verzenden én ontvangen geregistreerd zijn', () => {
+    expect(canSendPeppolTest({ configured: true, participantId: '0208:0840931404', senderId: '9925:BE0840931404' })).toBe(true);
+    expect(canSendPeppolTest({ configured: true, participantId: '0208:0840931404', senderId: null })).toBe(false);
+    expect(canSendPeppolTest({ configured: true, participantId: null, senderId: '9925:BE0840931404' })).toBe(false);
+    expect(canSendPeppolTest({ configured: false })).toBe(false);
+  });
+
   it('leest UBL-lijnkorting en documentkorting zonder dubbele aftrek', () => {
     const xml = `<Invoice><ID>DISC-1</ID><TaxTotal><TaxAmount>16.8</TaxAmount></TaxTotal><LegalMonetaryTotal><TaxExclusiveAmount>80</TaxExclusiveAmount><PayableAmount>96.8</PayableAmount></LegalMonetaryTotal><AllowanceCharge><ChargeIndicator>false</ChargeIndicator><Amount>10</Amount><TaxCategory><Percent>21</Percent></TaxCategory></AllowanceCharge><InvoiceLine><InvoicedQuantity>2</InvoicedQuantity><LineExtensionAmount>90</LineExtensionAmount><AllowanceCharge><ChargeIndicator>false</ChargeIndicator><MultiplierFactorNumeric>10</MultiplierFactorNumeric><Amount>10</Amount></AllowanceCharge><Item><Name>Buis</Name><ClassifiedTaxCategory><Percent>21</Percent></ClassifiedTaxCategory></Item><Price><PriceAmount>50</PriceAmount></Price></InvoiceLine></Invoice>`;
     const r = parsePurchaseUbl(xml);

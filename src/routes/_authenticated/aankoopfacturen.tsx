@@ -16,7 +16,7 @@ import { canExportPurchase } from '@/lib/purchase-payment';
 import { euro } from "@/lib/billing";
 import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, sendPeppyrusTestInvoice, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
-import { creditorBank, daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
+import { canSendPeppolTest, creditorBank, daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { deletePurchaseInvoices, attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
@@ -248,13 +248,13 @@ function Aankoopfacturen() {
           <ReceiptScanner disabled={busy} onScan={leesTicket} />
           <Button asChild variant="outline"><Link to="/leveranciers">Leveranciers</Link></Button>
           <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>
-          {peppyrus?.configured && !peppyrus.live ? <Button variant="outline" disabled={busy} title="Stuurt een proeffactuur naar je eigen Peppol-adres in de testomgeving" onClick={stuurTest}>Testfactuur ontvangen</Button> : null}
+          {peppyrus && canSendPeppolTest(peppyrus) ? <Button variant="outline" disabled={busy} title={peppyrus.live ? 'Stuurt een proeffactuur via Peppol naar je eigen adres in de live-omgeving en haalt hem daarna op' : 'Stuurt een proeffactuur naar je eigen Peppol-adres in de testomgeving'} onClick={stuurTest}>Testfactuur ontvangen{peppyrus.live ? ' (live)' : ''}</Button> : null}
           <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Inlezen vanuit mail"}</Button>
         </div>
       </div>
 
       {peppyrus?.configured ? (peppyrus.participantId
-        ? <p className="text-sm text-muted-foreground">Peppol-adres van deze account: <span className="font-mono">{peppyrus.participantId}</span>{peppyrus.live ? '' : ' — testomgeving'}</p>
+        ? <p className="text-sm text-muted-foreground">Peppol-adres van deze account: <span className="font-mono">{peppyrus.participantId}</span>{peppyrus.senderId ? <> · verzenden vanaf <span className="font-mono">{peppyrus.senderId}</span></> : ' · verzenden nog niet geregistreerd'}{peppyrus.live ? '' : ' — testomgeving'}</p>
         : <p className="text-sm text-destructive">Peppol nog niet gereed: {peppyrus.error ?? 'geen Peppol-adres gekend'}</p>) : null}
 
       <div
