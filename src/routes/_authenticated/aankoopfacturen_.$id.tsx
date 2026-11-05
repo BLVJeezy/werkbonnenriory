@@ -58,8 +58,9 @@ function Controle() {
     row.supplier_bic = nextBic(row.supplier_iban, row.supplier_bic, row.supplier_iban);
     setEdit(row); setSources({}); setPdfUrl(null);
     if (row.pdf_path) {
-      const { data } = await supabase.storage.from("aankoopfacturen").createSignedUrl(row.pdf_path, 3600);
-      setPdfUrl(data?.signedUrl ?? null);
+      // Blob-URL i.p.v. rechtstreekse storage-URL: Chrome blokkeert PDF's in een cross-origin iframe.
+      const { data: blob } = await supabase.storage.from("aankoopfacturen").download(row.pdf_path);
+      if (blob) setPdfUrl(URL.createObjectURL(blob));
     }
     if (row.status !== "betaald" && row.lines.some((l) => !l.account)) {
       try {
