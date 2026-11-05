@@ -95,7 +95,33 @@ export async function sendOne(supabase: any, inv: any) {
         if (error) throw new Error(error.message);
       },
     });
-    const via = peppolActive ? "email" : "okioki";
+    // Peppol leg: only for Belgian VAT customers, once (peppol_sent_at), and never blocks the mail that already went out.
+    let peppolNote: string | null = null;
+    const receiverId = peppolIdFromVat(d.customer.vatNumber);
+    if (peppolActive && receiverId && !inv.peppol_sent_at) {
+      try {
+        const key = process.env['PEPPYRUS_API_KEY'];
+        if (!key) throw new Error('Peppyrus-sleutel ontbreekt');
+        const base = process.env['PEPPYRUS_LIVE'] === 'true' ? 'https://api.peppyrus.be/v1' : 'https://api.test.peppyrus.be/v1';
+        const credit = inv.kind === 'creditnota';
+        const res = await fetch(`${base}/message`, {
+          method: 'POST', signal: AbortSignal.timeout(30000),
+          headers: { 'X-Api-Key': key, Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: SENDER_PEPPOL_ID, recipient: receiverId,
+            processType: 'cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0',
+            documentType: credit
+              ? 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1'
+              : 'busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1',
+            fileContent: ubl,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+        await supabase.from('invoices').update({ peppol_sent_at: new Date().toISOString() }).eq('id', inv.id);
+        inv.peppol_sent_at = new Date().toISOString();
+      } catch (e) { peppolNote = `Mail verstuurd, maar Peppol mislukt: ${e instanceof Error ? e.message : String(e)}`; }
+    }
+    const via = peppolActive ? (inv.peppol_sent_at ? "peppol" : "email") : "okioki";
     const to = peppolActive ? d.customer.email : `${d.customer.email}; cc ${OKIOKI_INVOICE_EMAIL}`;
     const { error } = await supabase.from("invoices").update({ status: "verzonden", sent_via: via, sent_to: to, sent_at: new Date().toISOString(), send_error: null, delivery_lock_until: null }).eq("id", inv.id);
     if (error) throw new Error(error.message);
