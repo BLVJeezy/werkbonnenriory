@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Fout bij afletteren herstellen: bestaande actieve centralisatierekeningen gebruiken, zonder betalingen of boekingen uit te voeren.
+
 - [x] Eén betaling over meerdere facturen verdelen; €75,91 = Lovable €75 + BNP €0,91 zichtbaar gecontroleerd, elf tests geslaagd. Geen echte aflettering uitgevoerd.
 
 - [x] Afletterlabels per factuur in de bankkeuzelijst; beide statussen zichtbaar gecontroleerd en acht tests geslaagd.
