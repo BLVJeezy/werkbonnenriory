@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, ImagePlus, RotateCw, ScanLine, RefreshCw, LoaderCircle } from 'lucide-react';
+import { Camera, ImagePlus, RotateCw, ScanLine, RefreshCw, LoaderCircle, Plus } from 'lucide-react';
+import { processScan, pagesToPdf } from '@/lib/document-scan';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
@@ -7,6 +8,8 @@ export function ReceiptScanner({ disabled, onScan }: { disabled: boolean; onScan
   const [open, setOpen] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [pages, setPages] = useState<Blob[]>([]);
+  const [processing, setProcessing] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [working, setWorking] = useState(false);
@@ -56,7 +59,7 @@ export function ReceiptScanner({ disabled, onScan }: { disabled: boolean; onScan
 
   function close(value: boolean) {
     if (working) return;
-    stopCamera(); setOpen(value); setPhoto(null); setError('');
+    stopCamera(); setOpen(value); setPhoto(null); setPages([]); setError('');
   }
 
   async function capture() {
@@ -68,7 +71,19 @@ export function ReceiptScanner({ disabled, onScan }: { disabled: boolean; onScan
     ctx.drawImage(element, 0, 0);
     const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
     if (!blob) { setError('Foto nemen mislukt.'); return; }
-    stopCamera(); setPhoto(new File([blob], 'scan.jpg', { type: 'image/jpeg' }));
+    stopCamera(); await useRaw(blob);
+  }
+
+  async function useRaw(raw: Blob) {
+    setProcessing(true); setError('');
+    try { setPhoto(new File([await processScan(raw)], 'scan.jpg', { type: 'image/jpeg' })); }
+    catch { setPhoto(new File([raw], 'scan.jpg', { type: raw.type || 'image/jpeg' })); }
+    finally { setProcessing(false); }
+  }
+
+  function addPage() {
+    if (!photo) return;
+    setPages(p => [...p, photo]); setPhoto(null); void startCamera();
   }
 
   async function rotate() {
@@ -88,8 +103,8 @@ export function ReceiptScanner({ disabled, onScan }: { disabled: boolean; onScan
   async function scan() {
     if (!photo) return; setWorking(true); setError('');
     try {
-      const success = await onScan(photo);
-      if (success) { stopCamera(); setOpen(false); setPhoto(null); }
+      const success = await onScan(await pagesToPdf([...pages, photo]));
+      if (success) { stopCamera(); setOpen(false); setPhoto(null); setPages([]); }
       else setError('Document niet ingelezen. Je foto blijft beschikbaar.');
     } catch { setError('Document niet ingelezen. Je foto blijft beschikbaar.'); }
     finally { setWorking(false); }
@@ -107,17 +122,20 @@ export function ReceiptScanner({ disabled, onScan }: { disabled: boolean; onScan
             {!ready && <div className="absolute inset-0 flex items-center justify-center text-muted-foreground"><Camera className="size-16" strokeWidth={1}/></div>}
           </>}
         </div>
+        {pages.length > 0 && <p className="text-sm text-muted-foreground">{pages.length} pagina{pages.length>1?"'s":''} klaar — dit is pagina {pages.length+1}</p>}
+        {processing && <p role="status" className="flex items-center gap-2 text-sm"><LoaderCircle className="size-4 motion-safe:animate-spin"/>Document rechtzetten…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {working && <p role="status" className="flex items-center gap-2 text-sm"><LoaderCircle className="size-4 motion-safe:animate-spin"/>Document wordt uitgelezen…</p>}
-        <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-label="Scanfoto kiezen" className="hidden" onChange={e=>{const file=e.target.files?.[0]; if(file){stopCamera();setPhoto(file);setError('');} e.target.value='';}} />
+        <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" aria-label="Scanfoto kiezen" className="hidden" onChange={e=>{const file=e.target.files?.[0]; if(file){stopCamera();void useRaw(file);} e.target.value='';}} />
         <div className="flex shrink-0 flex-wrap justify-center gap-2">
           {photo ? <>
             <Button variant="outline" disabled={working} onClick={()=>{stopCamera();setPhoto(null);setError('');}}><RefreshCw/>Opnieuw</Button>
             <Button variant="outline" size="icon" title="Foto draaien" aria-label="Foto draaien" disabled={working} onClick={rotate}><RotateCw/></Button>
-            <Button disabled={working} onClick={scan}><ScanLine/>Uitlezen</Button>
+            <Button variant="outline" disabled={working} onClick={addPage}><Plus/>Pagina toevoegen</Button>
+            <Button disabled={working} onClick={scan}><ScanLine/>Opslaan{pages.length?` (${pages.length+1})`:''}</Button>
           </> : <>
             {ready ? <Button className="h-12" onClick={capture}><Camera/>Foto nemen</Button> : <Button disabled={starting} className="h-12" onClick={startCamera}><Camera/>{starting?'Camera openen…':'Camera openen'}</Button>}
-            <Button variant="outline" className="h-12" onClick={()=>input.current?.click()}><ImagePlus/>Foto kiezen</Button>
+            <Button variant="outline" className="h-12" disabled={processing} onClick={()=>input.current?.click()}><ImagePlus/>Foto kiezen</Button>
           </>}
         </div>
       </DialogContent>
