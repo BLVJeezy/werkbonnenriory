@@ -17,7 +17,7 @@ describe("monthsInPeriod", () => {
 
 describe("normalizePeriod", () => {
   it("keeps a valid start and end date", () => expect(normalizePeriod({ from: "2026-03-01", to: "2026-03-31" })).toEqual({ from: "2026-03-01", to: "2026-03-31" }));
-  it("refuses a start date after the end date", () => expect(() => normalizePeriod({ from: "2026-04-01", to: "2026-03-31" })).toThrow("begindatum");
+  it("refuses a start date after the end date", () => expect(() => normalizePeriod({ from: "2026-04-01", to: "2026-03-31" })).toThrow("begindatum"));
   it("refuses dates that are not jjjj-mm-dd", () => expect(() => normalizePeriod({ from: "01/03/2026", to: "2026-03-31" })).toThrow("geldige begin- en einddatum"));
   it("refuses years outside 2000-2100", () => expect(() => normalizePeriod({ from: "1999-01-01", to: "1999-12-31" })).toThrow("2000"));
 });
