@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Aankoopfacturen uit de app zichtbaar en veilig koppelbaar maken bij de bankverrichtingen.
+
 - [x] Vrije factuurkeuze bij bankverrichtingen en veilige koppeling van terugstortingen; 14 tests en zes ingelogde controles van de betaalregels geslaagd. Geen echte boeking uitgevoerd.
 
 - [x] Peppol automatisch ophalen elke vijf minuten; beveiligde controle en handmatige import getest, unieke bericht-ID's bevestigd. Nieuwe ontvangstcode moet nog gepubliceerd worden voor de ingestelde achtergrondcontrole.
