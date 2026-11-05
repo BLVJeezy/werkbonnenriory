@@ -2228,6 +2228,7 @@ export type Database = {
       purchase_invoices: {
         Row: {
           accountant_sent_at: string | null
+          bank_paid_base: number
           bank_payment_ref: string | null
           bank_transaction_key: string | null
           booked_at: string | null
@@ -2263,6 +2264,7 @@ export type Database = {
         }
         Insert: {
           accountant_sent_at?: string | null
+          bank_paid_base?: number
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
           booked_at?: string | null
@@ -2298,6 +2300,7 @@ export type Database = {
         }
         Update: {
           accountant_sent_at?: string | null
+          bank_paid_base?: number
           bank_payment_ref?: string | null
           bank_transaction_key?: string | null
           booked_at?: string | null
