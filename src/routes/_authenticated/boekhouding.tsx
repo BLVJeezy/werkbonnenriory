@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { manualBankPreview } from "@/lib/manual-bank-invoice";
 import { purchaseBankChoices } from "@/lib/bank-purchase-choice";
+import { isInvoiceReconciled } from "@/lib/bank-reconciliation-status";
+import { Badge } from "@/components/ui/badge";
 import { PontoConnection } from "@/components/PontoConnection";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -713,6 +715,9 @@ function Bank({ c }: { c: string }) {
     return purchaseBankChoices(rows, claims);
   } });
   const invoiceChoices = [...appPurchases, ...allInv];
+  const { data: bankReferences = [] } = useQuery({ queryKey: ['fin', 'bank-invoice-references', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_journal_entries').select('reference').eq('company_id', c).eq('source', 'bank').not('reference', 'is', null).order('id').range(a, b)) });
+  const reconciledNumbers = new Set(bankReferences.flatMap((r) => String(r.reference).split(',').map((number) => number.trim())));
+  const reconciled = (i: any) => isInvoiceReconciled(i, total(i), tx.some((t) => i.purchase_id ? t.matched_purchase_invoice_id === i.purchase_id : t.matched_invoice_id === i.id) || (!i.purchase_id && !!i.number && reconciledNumbers.has(i.number)));
   const [manualTx, setManualTx] = useState<any>(null);
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [manualInvoiceId, setManualInvoiceId] = useState("");
@@ -763,7 +768,7 @@ function Bank({ c }: { c: string }) {
           <div className="max-h-72 space-y-1 overflow-y-auto">
             {invoiceChoices.filter((i) => i.doc_type === 'factuur' && `${i.number ?? ''} ${i.counterparty ?? ''}`.toLowerCase().includes(invoiceSearch.trim().toLowerCase())).sort((a, b) => String(b.invoice_date).localeCompare(String(a.invoice_date))).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
               <input type="radio" name="manual-invoice" value={i.id} checked={manualInvoiceId === i.id} onChange={() => setManualInvoiceId(i.id)} className="mt-1" />
-              <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction} · {i.status}</span></span>
+              <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
               <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))}</span></span>
             </label>)}
           </div>
