@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Alleen toegewezen bankbedragen verwerken; restant openhouden en verder in delen afletteren, met controles en tests.
-- [ ] Laatst afgeletterde Lovable-betaling controleren op een onterecht verwerkt restbedrag.
+- [x] Alleen toegewezen bankbedragen verwerken; restant openhouden en verder in delen afletteren. Twintig tests geslaagd; ingelogde keuze toont verdere deelbedragen zonder nieuwe echte aflettering.
+- [x] Laatst afgeletterde Lovable-betaling gecorrigeerd: BNP €1,09 betaald, €90 open; oorspronkelijke €91,09 behouden en deelboeking in evenwicht.
 
 - [x] Fout bij afletteren hersteld: actieve centralisatierekeningen van het bedrijf gebruiken bij verdelen, handmatig koppelen en aankoopkoppeling; geen betalingen of boekingen uitgevoerd.
 
