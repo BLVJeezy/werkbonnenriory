@@ -452,6 +452,33 @@ function Balans({ c, companyName }: { c: string; companyName: string }) {
           ];
           exportXlsx(`balans_${companyName}_${to}.xlsx`, rows);
         }}>Exporteer Excel</Button>
+        <Button size="sm" variant="outline" onClick={() => {
+          const cl = (r: { account: string }) => accountClass(r.account);
+          const isAct = (r: { account: string; saldo: number }) => [2, 3].includes(cl(r)) || (cl(r) >= 4 && cl(r) <= 5 && r.saldo > 0);
+          const isPas = (r: { account: string; saldo: number }) => cl(r) === 1 || (cl(r) >= 4 && cl(r) <= 5 && r.saldo < 0);
+          const line = (r: { account: string; saldo: number }, sign: number) => ({ rekening: r.account, naam: name(r.account), bedrag: r2(sign * r.saldo) });
+          const act = tb.filter((r) => r.saldo && isAct(r)).map((r) => line(r, 1));
+          const pas = tb.filter((r) => r.saldo && isPas(r)).map((r) => line(r, -1));
+          const wb = XLSX.utils.book_new();
+          const add = (rows: Record<string, unknown>[], title: string) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ info: "Geen gegevens" }]), title);
+          add([
+            { onderdeel: "Bedrijf", waarde: companyName }, { onderdeel: "Periode", waarde: `${from} t/m ${to}` },
+            { onderdeel: "Opbrengsten", waarde: st.opbrengsten }, { onderdeel: "Kosten", waarde: st.kosten }, { onderdeel: "Belastingen", waarde: st.belastingen },
+            { onderdeel: "Resultaat", waarde: st.resultaat }, { onderdeel: "Totaal activa", waarde: st.activa }, { onderdeel: "Totaal passiva", waarde: st.passiva },
+            { onderdeel: "Balans sluit", waarde: st.sluit ? "ja" : "NEE — controleer openingsbalans" },
+          ], "Samenvatting");
+          add([...act, { rekening: "", naam: "TOTAAL ACTIVA", bedrag: st.activa }], "Activa");
+          add([...pas, { rekening: "", naam: "Resultaat van de periode", bedrag: st.resultaat }, { rekening: "", naam: "TOTAAL PASSIVA", bedrag: st.passiva }], "Passiva");
+          add([
+            ...tb.filter((r) => cl(r) === 7 && r.saldo).map((r) => ({ soort: "Opbrengst", ...line(r, -1) })),
+            ...tb.filter((r) => cl(r) === 6 && !r.account.startsWith("67") && r.saldo).map((r) => ({ soort: "Kost", ...line(r, 1) })),
+            ...tb.filter((r) => r.account.startsWith("67") && r.saldo).map((r) => ({ soort: "Belasting", ...line(r, 1) })),
+            { soort: "", rekening: "", naam: "RESULTAAT", bedrag: st.resultaat },
+          ], "Resultatenrekening");
+          add(tb.map((r) => ({ rekening: r.account, naam: name(r.account), debet: r2(r.debit), credit: r2(r.credit), saldo: r2(r.saldo) })), "Saldibalans");
+          add(posted.filter((l) => l.entry_date <= to).sort((a, b) => a.entry_date.localeCompare(b.entry_date) || a.account.localeCompare(b.account)).map((l) => ({ datum: l.entry_date, dagboek: l.journal, rekening: l.account, naam: name(l.account), omschrijving: l.description ?? "", debet: r2(l.debit), credit: r2(l.credit) })), "Boekingen");
+          XLSX.writeFile(wb, `volledige_balans_${companyName}_${to}.xlsx`);
+        }}>Volledige balans (Excel)</Button>
       </div>
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">{companyName} — Balans & resultatenrekening</h1>
