@@ -830,6 +830,8 @@ function Bank({ c }: { c: string }) {
     catch (e: any) { toast.error(e.message); }
   };
   const [zoekOpen, setZoekOpen] = useState("");
+  const [zoekPaid, setZoekPaid] = useState("");
+  const [zoekVerwerkt, setZoekVerwerkt] = useState("");
   const zo = zoekOpen.trim().toLowerCase();
   const openVis = open.filter((i: any) => !zo || `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zo)).slice(0, 300);
   return (
@@ -960,8 +962,22 @@ function Bank({ c }: { c: string }) {
         )}
       </Card>
       {paidNoTx.length > 0 && <Card title={`Betaald gemarkeerd, nog niet afgeletterd (${paidNoTx.length})`}>
-        <div className="max-h-[40dvh] space-y-1 overflow-y-auto text-sm">
-          {paidNoTx.map((i: any) => <div key={i.id} className="flex items-center justify-between gap-2 rounded border border-border p-2"><span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span></span><span>{eur(total(i))}</span></div>)}
+        <Input className="mb-2 max-w-sm" aria-label="Zoek betaald gemarkeerde factuur" placeholder="Zoek factuur (naam, nummer of bedrag)…" value={zoekPaid} onChange={(e) => setZoekPaid(e.target.value)} />
+        <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
+          {paidNoTx.filter((i: any) => !zoekPaid.trim() || `${i.counterparty ?? ""} ${i.number ?? ""} ${total(i)}`.toLowerCase().includes(zoekPaid.trim().toLowerCase())).slice(0, 300).map((i: any) => {
+            const kandidaten = tx.filter((t) => !t.entry_id && !t.allocated_amount && (Number(t.amount) < 0) === (i.direction === "aankoop"));
+            const exact = kandidaten.filter((t) => Math.abs(effAmt(t) - total(i)) < 0.025);
+            return <div key={i.id} className="rounded border border-border p-2">
+              <div className="flex items-center justify-between gap-2"><span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span></span><span>{eur(total(i))}</span></div>
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                {exact.slice(0, 3).map((t) => <Button key={t.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren met {t.tx_date} · {t.counterparty ?? ""} {eur(Number(t.amount))}</Button>)}
+                <select aria-label={`Betaling kiezen voor ${i.number}`} className="h-8 max-w-full rounded-md border border-input bg-background px-2 text-xs" value="" onChange={(e) => { const t = kandidaten.find((x) => x.id === e.target.value); if (t && confirm(`${i.number} afletteren met betaling van ${t.tx_date} (${eur(Number(t.amount))})?`)) settleClick(t, i); }}>
+                  <option value="">Andere betaling kiezen…</option>
+                  {kandidaten.map((t) => <option key={t.id} value={t.id}>{t.tx_date} · {t.counterparty ?? ""} · {eur(Number(t.amount))}</option>)}
+                </select>
+              </div>
+            </div>;
+          })}
         </div>
         <p className="mt-1 text-xs text-muted-foreground">Zodra de bijhorende bankverrichting binnen is, lettert de app ze automatisch af bij gelijk bedrag en naam of nummer; anders via de knop "Afletteren (al betaald)" bij de verrichting.</p>
       </Card>}
@@ -978,8 +994,9 @@ function Bank({ c }: { c: string }) {
         <p className="mt-1 text-xs text-muted-foreground">Deze facturen staan nog open op Klanten/Leveranciers tot er een betaling aan gekoppeld wordt.</p>
       </Card>
       <Card title={`Verwerkt (${tx.filter((t) => t.entry_id).length})`}>
+        <Input className="mb-2 max-w-sm" aria-label="Zoek verwerkte betaling" placeholder="Zoek betaling (naam, mededeling, bedrag, factuur)…" value={zoekVerwerkt} onChange={(e) => setZoekVerwerkt(e.target.value)} />
         <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
-          {tx.filter((t) => t.entry_id).slice(0, 300).map((t) => {
+          {tx.filter((t) => { if (!t.entry_id) return false; const q = zoekVerwerkt.trim().toLowerCase(); if (!q) return true; const m = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null; return `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount} ${t.tx_date} ${m?.number ?? ""} ${m?.counterparty ?? ""}`.toLowerCase().includes(q); }).slice(0, 300).map((t) => {
             const inv = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null;
             return (
             <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
