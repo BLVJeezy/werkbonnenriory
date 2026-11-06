@@ -883,6 +883,13 @@
       "when": 1793945480402,
       "tag": "0125_allow_incremental_bank_allocations",
       "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1793945557225,
+      "tag": "0126_cap_legacy_manual_payment_to_invoice_balance",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,8 @@
+DO $$ DECLARE def text; BEGIN
+ SELECT pg_get_functiondef('public.fin_link_manual_bank(uuid,uuid,text)'::regprocedure) INTO def;
+ def:=replace(def,'result:=public.fin_manual_bank_amounts(f.direction,invoice_total,current_paid,t.amount,_mode);', 'IF _mode=''overpayment'' THEN IF (f.direction=''aankoop'' AND t.amount>=0) OR (f.direction=''verkoop'' AND t.amount<=0) THEN RAISE EXCEPTION ''Betalingsrichting past niet bij de factuur''; END IF; RETURN public.fin_split_bank_payment(t.id,jsonb_build_array(jsonb_build_object(''type'',''finance'',''id'',f.id,''amount'',least(abs(t.amount),greatest(invoice_total-current_paid,0))))); END IF; IF EXISTS(SELECT 1 FROM public.fin_bank_allocations WHERE transaction_id=t.id) THEN RAISE EXCEPTION ''Letter het resterende bankbedrag via de verdeling af''; END IF; result:=public.fin_manual_bank_amounts(f.direction,invoice_total,current_paid,t.amount,_mode);');
+ EXECUTE def;
+ SELECT pg_get_functiondef('public.fin_link_purchase_bank(uuid,uuid,text)'::regprocedure) INTO def;
+ def:=replace(def,'IF _mode IN (''overpayment'',''refund'') THEN', 'IF _mode IN (''payment'',''overpayment'') AND p.status<>''betaald'' THEN IF t.amount>=0 THEN RAISE EXCEPTION ''Betalingsrichting past niet bij de aankoopfactuur''; END IF; RETURN public.fin_split_bank_payment(t.id,jsonb_build_array(jsonb_build_object(''type'',''purchase'',''id'',p.id,''amount'',least(abs(t.amount),greatest(p.total-paid,0))))); END IF; IF EXISTS(SELECT 1 FROM public.fin_bank_allocations WHERE transaction_id=t.id) THEN RAISE EXCEPTION ''Letter het resterende bankbedrag via de verdeling af''; END IF; IF _mode IN (''overpayment'',''refund'') THEN');
+ EXECUTE def;
+END $$;
