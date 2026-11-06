@@ -1,6 +1,7 @@
 # Roadmap
 
 - [ ] Alleen toegewezen bankbedragen verwerken; restant openhouden en verder in delen afletteren, met controles en tests.
+- [ ] Laatst afgeletterde Lovable-betaling controleren op een onterecht verwerkt restbedrag.
 
 - [x] Fout bij afletteren hersteld: actieve centralisatierekeningen van het bedrijf gebruiken bij verdelen, handmatig koppelen en aankoopkoppeling; geen betalingen of boekingen uitgevoerd.
 
