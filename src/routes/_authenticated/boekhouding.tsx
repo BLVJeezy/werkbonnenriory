@@ -527,7 +527,9 @@ function SavingsDropZone({ onFile }: { onFile: (f: File) => Promise<void> }) {
 function Bank({ c }: { c: string }) {
   const qc = useQueryClient();
   const { data: accounts = [] } = useAccounts(c);
-  const { data: tx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).range(a, b))) as any[], refetchInterval: 30_000 });
+  const { data: paymentAllocations = [] } = useQuery({ queryKey: ['fin', 'bank-allocations', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_bank_allocations').select('*').eq('company_id', c).order('id').range(a, b)) });
+  const { data: rawTx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).order("id").range(a, b))) as any[], refetchInterval: 30_000 });
+  const tx = rawTx.map((t) => { const allocated = r2(paymentAllocations.filter((a) => a.transaction_id === t.id).reduce((sum, a) => sum + Number(a.amount), 0)); return { ...t, original_amount: Number(t.amount), allocated_amount: allocated, amount: !t.entry_id && allocated > 0 ? Math.sign(Number(t.amount)) * r2(Math.abs(Number(t.amount)) - allocated) : Number(t.amount) }; });
   const { data: open = [] } = useQuery({ queryKey: ["fin", "open-inv", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).neq("status", "betaald")).data ?? [] });
   const { data: paidNoTx = [] } = useQuery({ queryKey: ["fin", "paid-unlinked", c], queryFn: async () => {
     const paid = (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("status", "betaald").eq("doc_type", "factuur").order("id").range(a, b))) as any[];
@@ -570,6 +572,13 @@ function Bank({ c }: { c: string }) {
   // Eén betaling kan meerdere facturen afletteren; afrondingsverschil tot 2 cent gaat naar 653000.
   const reconcile = async (t: any, inv: any | any[]) => {
     const list = Array.isArray(inv) ? inv : [inv];
+    if (grossOf(t) == null && list.every((i) => i.status !== 'betaald')) {
+      let available = Math.abs(Number(t.amount));
+      const allocations = [...list].sort((a, b) => String(a.id).localeCompare(String(b.id))).map((i) => { const amount = r2(Math.min(available, remaining(i))); available = r2(available - amount); return { type: 'finance', id: i.id, amount }; }).filter((a) => a.amount > 0);
+      const { data, error } = await db.rpc('fin_split_bank_payment', { _transaction: t.id, _allocations: allocations });
+      if (error) throw new Error(error.message);
+      return data;
+    }
     const { data, error } = await db.rpc("fin_reconcile_bank_multi" as any, { _transaction: t.id, _invoices: list.map((i) => i.id), _bank_account: t.bank_account ?? bankAcc, _counter_account: list[0].direction === "aankoop" ? ctl.leveranciers : ctl.klanten, _gross: grossOf(t) ?? undefined } as any);
     if (error) throw new Error(error.message);
     return data;
@@ -611,12 +620,14 @@ function Bank({ c }: { c: string }) {
     if (error) { await undoEntry(c, entryId).catch(() => {}); throw new Error(error.message); }
   };
   const book = async (t: any, account: string) => {
+    if (t.allocated_amount > 0) return void toast.error('Letter het resterende bedrag verder af via Factuur kiezen.');
     try { const id = await post(c, "bank", t.tx_date, t.description || t.counterparty || "Bankverrichting", null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, account)); await linkEntry(t.id, id); refresh(); }
     catch (e: any) { toast.error(e.message); }
   };
   const [sel, setSel] = useState<Set<string>>(new Set());
   const bulkBook = async (account: string, label?: string) => {
     const lijst = tx.filter((t) => sel.has(t.id) && !t.entry_id);
+    if (lijst.some((t) => t.allocated_amount > 0)) return void toast.error('Letter gedeeltelijk verwerkte betalingen verder af via Factuur kiezen.');
     if (!confirm(label ? `${lijst.length} verrichtingen tegen elkaar verrekenen via rekening ${account}?` : `${lijst.length} verrichting(en) boeken op rekening ${account}?`)) return;
     let ok = 0, fout = 0;
     for (const t of lijst) {
@@ -646,7 +657,7 @@ function Bank({ c }: { c: string }) {
   useEffect(() => {
     if (autoBusy.current || !accounts.length || !tx.length) return;
     // Overboekingen tussen eigen rekeningen (bv. 550200 → 550700) altijd meteen intern verrekenen.
-    const transfers = tx.filter((t) => !t.entry_id && !autoTried.current.has(t.id) && ownTransfer(t));
+    const transfers = tx.filter((t) => !t.entry_id && !t.allocated_amount && !autoTried.current.has(t.id) && ownTransfer(t));
     if (transfers.length) {
       transfers.forEach((t) => autoTried.current.add(t.id));
       autoBusy.current = true;
@@ -662,7 +673,7 @@ function Bank({ c }: { c: string }) {
       return;
     }
     if (!open.length && !paidNoTx.length) return;
-    const todo = tx.filter((t) => !t.entry_id && !ownTransfer(t));
+    const todo = tx.filter((t) => !t.entry_id && !t.allocated_amount && !ownTransfer(t));
     const fresh = (t: any) => !autoTried.current.has(t.id);
     const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025); };
     const pairs = todo.map((t) => [t, candOf(t)] as const).filter(([, cs]) => cs.length === 1);
@@ -717,7 +728,6 @@ function Bank({ c }: { c: string }) {
     return purchaseBankChoices(rows, [...claims, ...allocations.map((a) => ({ ...a, amount: -Number(a.amount) }))]);
   } });
   const invoiceChoices = [...appPurchases, ...allInv];
-  const { data: paymentAllocations = [] } = useQuery({ queryKey: ['fin', 'bank-allocations', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_bank_allocations').select('*').eq('company_id', c).order('id').range(a, b)) });
   const { data: bankReferences = [] } = useQuery({ queryKey: ['fin', 'bank-invoice-references', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_journal_entries').select('reference').eq('company_id', c).eq('source', 'bank').not('reference', 'is', null).order('id').range(a, b)) });
   const reconciledNumbers = new Set(bankReferences.flatMap((r) => String(r.reference).split(',').map((number) => number.trim())));
   const reconciled = (i: any) => isInvoiceReconciled(i, total(i), tx.some((t) => i.purchase_id ? t.matched_purchase_invoice_id === i.purchase_id : t.matched_invoice_id === i.id) || (!i.purchase_id && !!i.number && reconciledNumbers.has(i.number)));
@@ -731,12 +741,12 @@ function Bank({ c }: { c: string }) {
   const splitError = splitInvoices.some((i) => (Number(manualTx?.amount) < 0) !== (i.direction === 'aankoop') || (i.purchase_id && !['goedgekeurd','betaling_klaargezet'].includes(i.status)) || (parseAmount(splitAmounts[i.id]) ?? 0) > Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
   const linkSplit = async () => {
     if (!manualTx || !splitSummary.valid || splitError || manualBusy) return;
-    if (!confirm(`${eur(Math.abs(Number(manualTx.amount)))} verdelen over ${splitInvoices.length} facturen?\n${splitInvoices.map((i) => `${i.counterparty} ${i.number}: ${eur(parseAmount(splitAmounts[i.id]) ?? 0)}`).join('\n')}`)) return;
+    if (!confirm(`${eur(splitSummary.sum)} afletteren over ${splitInvoices.length} facturen; ${eur(splitSummary.difference)} blijft open.\n${splitInvoices.map((i) => `${i.counterparty} ${i.number}: ${eur(parseAmount(splitAmounts[i.id]) ?? 0)}`).join('\n')}`)) return;
     setManualBusy(true);
     try {
       const { error } = await db.rpc('fin_split_bank_payment', { _transaction: manualTx.id, _allocations: splitInvoices.map((i) => ({ type: i.purchase_id ? 'purchase' : 'finance', id: i.purchase_id ?? i.id, amount: parseAmount(splitAmounts[i.id]) })) });
       if (error) throw new Error(error.message);
-      toast.success(`${splitInvoices.length} facturen afgeletterd met één betaling`);
+      toast.success(`${eur(splitSummary.sum)} afgeletterd; ${eur(splitSummary.difference)} blijft open`);
       setManualTx(null); setSplitAmounts({}); await refresh();
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Verdelen mislukt'); }
     finally { setManualBusy(false); }
@@ -786,18 +796,18 @@ function Bank({ c }: { c: string }) {
           <Input aria-label="Zoek te koppelen factuur" placeholder="Zoek op factuurnummer, klant of leverancier…" value={invoiceSearch} onChange={(e) => setInvoiceSearch(e.target.value)} />
           <div className="max-h-72 space-y-1 overflow-y-auto">
             {invoiceChoices.filter((i) => i.doc_type === 'factuur' && `${i.number ?? ''} ${i.counterparty ?? ''}`.toLowerCase().includes(invoiceSearch.trim().toLowerCase())).sort((a, b) => String(b.invoice_date).localeCompare(String(a.invoice_date))).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
-              <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) next[i.id] = String(Math.max(0, r2(total(i) - Number(i.paid_amount ?? 0)))); else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
+              <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) { const available = Math.max(0, r2(Math.abs(Number(manualTx?.amount ?? 0)) - Object.values(current).reduce((sum, value) => sum + (parseAmount(value) ?? 0), 0))); next[i.id] = String(Math.min(available, Math.max(0, r2(total(i) - Number(i.paid_amount ?? 0))))); } else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
               <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
               <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))}</span></span>
             </label>)}
           </div>
-          {splitInvoices.length >= 2 && <div className="space-y-2 border-t border-border pt-3">
+          {splitInvoices.length >= 1 && manualPreview?.mode !== 'refund' && <div className="space-y-2 border-t border-border pt-3">
             {splitInvoices.map((i) => <div key={i.id} className="flex items-center justify-between gap-2 text-sm"><span className="min-w-0 break-words">{i.counterparty} · {i.number}</span><Input className="w-28 shrink-0" aria-label={`Bedrag voor ${i.counterparty} ${i.number}`} inputMode="decimal" value={splitAmounts[i.id]} onChange={(e) => setSplitAmounts((current) => ({ ...current, [i.id]: e.target.value }))} /></div>)}
-            <p className="text-sm">Verdeeld {eur(splitSummary.sum)} · verschil {eur(splitSummary.difference)}</p>
+            <p className="text-sm">Toegekend {eur(splitSummary.sum)} · nog af te letteren {eur(splitSummary.difference)}</p>
             {splitError && <p className="text-sm text-destructive">Kies passende facturen en overschrijd het openstaande bedrag niet.</p>}
           </div>}
-          {manualPreview && <div className="text-sm" aria-live="polite">{manualPreview.error ? <p className="text-destructive">{manualPreview.error}</p> : <><p>{manualPreview.mode === 'refund' ? 'Terugstorting — factuur blijft betaald' : manualPreview.mode === 'overpayment' ? 'Betaling met teveel betaald bedrag' : 'Betaling'}</p><p>Na koppeling: nog te betalen {eur(manualPreview.remaining)} · teveel betaald {eur(manualPreview.overpaid)}</p></>}</div>}
-          <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{splitInvoices.length >= 2 ? <Button disabled={!splitSummary.valid || splitError || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : `${splitInvoices.length} facturen afletteren`}</Button> : <Button disabled={!manualPreview || !!manualPreview.error || manualBusy} onClick={linkManual}>{manualBusy ? 'Koppelen…' : manualPreview?.mode === 'refund' ? 'Terugstorting koppelen' : 'Betaling koppelen'}</Button>}</div>
+          {manualPreview?.mode === 'refund' && <div className="text-sm" aria-live="polite">{manualPreview.error ? <p className="text-destructive">{manualPreview.error}</p> : <p>Terugstorting — factuur blijft betaald</p>}</div>}
+          <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{manualPreview?.mode !== 'refund' ? <Button disabled={!splitSummary.valid || splitError || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : 'Toegekend bedrag afletteren'}</Button> : <Button disabled={!!manualPreview.error || manualBusy || manualTx?.allocated_amount > 0} onClick={linkManual}>{manualBusy ? 'Koppelen…' : 'Terugstorting koppelen'}</Button>}</div>
         </DialogContent>
       </Dialog>
       <AccountList accounts={accounts} />
@@ -880,7 +890,8 @@ function Bank({ c }: { c: string }) {
                 <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {cands.map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => match(t, i)}>Afletteren: {i.counterparty} {i.number}</Button>)}
-                  {!cands.length && paidCands(t).slice(0, 3).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren (al betaald): {i.counterparty} {i.number}</Button>)}
+                  {!!t.allocated_amount && <span className="w-full text-xs text-muted-foreground">Oorspronkelijk {eur(t.original_amount)} · afgeletterd {eur(t.allocated_amount)} · nog open {eur(Math.abs(amt))}</span>}
+                  {!t.allocated_amount && !cands.length && paidCands(t).slice(0, 3).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren (al betaald): {i.counterparty} {i.number}</Button>)}
                   <Button size="sm" variant="outline" onClick={() => { setManualTx(t); setInvoiceSearch(''); setManualInvoiceId(''); setSplitAmounts({}); }}>Factuur kiezen</Button>
                   <AccountPicker accounts={accounts} onPick={(nr) => book(t, nr)} />
                   {!cands.length && <Button size="sm" variant="ghost" onClick={() => book(t, WACHT)}>Naar wachtrekening</Button>}
