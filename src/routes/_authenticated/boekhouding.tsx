@@ -493,6 +493,7 @@ function Balans({ c, companyName }: { c: string; companyName: string }) {
           ], "Resultatenrekening");
           add(tb.map((r) => ({ rekening: r.account, naam: name(r.account), debet: r2(r.debit), credit: r2(r.credit), saldo: r2(r.saldo) })), "Saldibalans");
           add(posted.filter((l) => l.entry_date <= to).sort((a, b) => a.entry_date.localeCompare(b.entry_date) || a.account.localeCompare(b.account)).map((l) => ({ datum: l.entry_date, dagboek: l.journal, rekening: l.account, naam: name(l.account), omschrijving: l.description ?? "", debet: r2(l.debit), credit: r2(l.credit) })), "Boekingen");
+          add(invRows, "Facturen per rekening");
           XLSX.writeFile(wb, `volledige_balans_${companyName}_${to}.xlsx`);
         }}>Volledige balans (Excel)</Button>
       </div>
