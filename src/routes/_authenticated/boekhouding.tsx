@@ -452,7 +452,23 @@ function Balans({ c, companyName }: { c: string; companyName: string }) {
           ];
           exportXlsx(`balans_${companyName}_${to}.xlsx`, rows);
         }}>Exporteer Excel</Button>
-        <Button size="sm" variant="outline" onClick={() => {
+        <Button size="sm" variant="outline" onClick={async () => {
+          const page = async (table: "fin_invoices" | "fin_invoice_lines", cols: string, filter: (q: any) => any) => {
+            const out: any[] = [];
+            for (let i = 0; ; i += 1000) {
+              const { data, error } = await filter((supabase.from(table) as any).select(cols).eq("company_id", c)).order("id").range(i, i + 999);
+              if (error) throw error; out.push(...(data ?? [])); if (!data || data.length < 1000) return out;
+            }
+          };
+          let invRows: Record<string, unknown>[] = [];
+          try {
+            const invs = await page("fin_invoices", "id,direction,doc_type,number,counterparty,invoice_date,status", (q) => q.gte("invoice_date", from).lte("invoice_date", to));
+            const ids = new Set(invs.map((i) => i.id));
+            const lines = (await page("fin_invoice_lines", "id,invoice_id,description,ex_vat,vat,vat_rate,account", (q) => q)).filter((l) => ids.has(l.invoice_id));
+            const byId = new Map(invs.map((i) => [i.id, i]));
+            invRows = lines.map((l) => { const i: any = byId.get(l.invoice_id); return { datum: i.invoice_date, soort: i.direction === "in" || i.direction === "purchase" ? "Aankoop" : i.direction === "out" || i.direction === "sale" ? "Verkoop" : i.direction, type: i.doc_type, nummer: i.number, relatie: i.counterparty, status: i.status, omschrijving: l.description ?? "", grootboekrekening: l.account ?? "", rekeningnaam: l.account ? name(l.account) : "", "excl. btw": r2(Number(l.ex_vat) || 0), "btw %": l.vat_rate, btw: r2(Number(l.vat) || 0) }; })
+              .sort((a, b) => String(a.datum).localeCompare(String(b.datum)) || String(a.nummer).localeCompare(String(b.nummer)));
+          } catch (e) { toast.error("Facturenlijst kon niet geladen worden"); }
           const cl = (r: { account: string }) => accountClass(r.account);
           const isAct = (r: { account: string; saldo: number }) => [2, 3].includes(cl(r)) || (cl(r) >= 4 && cl(r) <= 5 && r.saldo > 0);
           const isPas = (r: { account: string; saldo: number }) => cl(r) === 1 || (cl(r) >= 4 && cl(r) <= 5 && r.saldo < 0);
@@ -477,6 +493,7 @@ function Balans({ c, companyName }: { c: string; companyName: string }) {
           ], "Resultatenrekening");
           add(tb.map((r) => ({ rekening: r.account, naam: name(r.account), debet: r2(r.debit), credit: r2(r.credit), saldo: r2(r.saldo) })), "Saldibalans");
           add(posted.filter((l) => l.entry_date <= to).sort((a, b) => a.entry_date.localeCompare(b.entry_date) || a.account.localeCompare(b.account)).map((l) => ({ datum: l.entry_date, dagboek: l.journal, rekening: l.account, naam: name(l.account), omschrijving: l.description ?? "", debet: r2(l.debit), credit: r2(l.credit) })), "Boekingen");
+          add(invRows, "Facturen per rekening");
           XLSX.writeFile(wb, `volledige_balans_${companyName}_${to}.xlsx`);
         }}>Volledige balans (Excel)</Button>
       </div>
