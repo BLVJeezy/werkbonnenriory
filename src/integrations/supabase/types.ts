@@ -818,6 +818,7 @@ export type Database = {
         Row: {
           amount: number
           company_id: string
+          entry_id: string | null
           id: string
           invoice_id: string | null
           purchase_invoice_id: string | null
@@ -827,6 +828,7 @@ export type Database = {
         Insert: {
           amount: number
           company_id: string
+          entry_id?: string | null
           id?: string
           invoice_id?: string | null
           purchase_invoice_id?: string | null
@@ -836,6 +838,7 @@ export type Database = {
         Update: {
           amount?: number
           company_id?: string
+          entry_id?: string | null
           id?: string
           invoice_id?: string | null
           purchase_invoice_id?: string | null
@@ -848,6 +851,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_bank_allocations_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "fin_journal_entries"
             referencedColumns: ["id"]
           },
           {
