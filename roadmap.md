@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Alleen toegewezen bankbedragen verwerken; restant openhouden en verder in delen afletteren, met controles en tests.
+
 - [x] Fout bij afletteren hersteld: actieve centralisatierekeningen van het bedrijf gebruiken bij verdelen, handmatig koppelen en aankoopkoppeling; geen betalingen of boekingen uitgevoerd.
 
 - [x] Eén betaling over meerdere facturen verdelen; €75,91 = Lovable €75 + BNP €0,91 zichtbaar gecontroleerd, elf tests geslaagd. Geen echte aflettering uitgevoerd.
