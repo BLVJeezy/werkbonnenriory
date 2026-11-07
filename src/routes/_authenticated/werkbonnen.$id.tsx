@@ -1,3 +1,4 @@
+import { parseContacts, upsertContact } from "@/lib/customer-contacts";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -60,7 +61,7 @@ function Detail() {
       ]);
       // Vrij beroep van de gekoppelde klant: die klant krijgt altijd 21% btw, ook met een btw-nummer.
       const cid = (w.data as { customer_id?: string | null } | null)?.customer_id;
-      const cust = cid ? await supabase.from("customers").select("vrij_beroep").eq("id", cid).maybeSingle() : { data: null };
+      const cust = cid ? await supabase.from("customers").select("vrij_beroep, contacts").eq("id", cid).maybeSingle() : { data: null };
       return {
         wo: w.data,
         times: t.data ?? [],
@@ -70,6 +71,7 @@ function Detail() {
         acts: acts.data ?? [],
         settings: st.data,
         vrijBeroep: !!cust.data?.vrij_beroep,
+        contacts: parseContacts(cust.data?.contacts),
       };
     },
   });
@@ -343,6 +345,11 @@ function Detail() {
             <SiteAddressFields
               value={wo}
               saveOnBlur
+              contacts={data?.contacts}
+              onSaveContact={wo.customer_id ? async (c) => {
+                const { error } = await supabase.from("customers").update({ contacts: upsertContact(data?.contacts ?? [], c) }).eq("id", wo.customer_id!);
+                if (error) toast.error(error.message); else { toast.success(`${c.name || c.phone} bewaard bij de klant`); qc.invalidateQueries(); }
+              } : undefined}
               onChange={(patch) => update("site_contact_name" in patch || "site_contact_phone" in patch ? patch : { ...patch, distance_km: null })}
             />
           </>
@@ -730,9 +737,9 @@ function ReadOnlyAddress({ wo }: { wo: AddressParts & SiteAddressParts & { addre
       ) : (
         <div className="text-lg font-bold text-muted-foreground">Geen adres ingevuld</div>
       )}
-      {wo.use_site_address && !!wo.site_contact_name?.trim() && (
+      {!!wo.site_contact_name?.trim() && (
         <div className="mt-2 text-sm">
-          Contactpersoon werf: <span className="font-semibold">{wo.site_contact_name}</span>
+          Contactpersoon: <span className="font-semibold">{wo.site_contact_name}</span>
           {!!wo.site_contact_phone?.trim() && ` · ${wo.site_contact_phone}`}
         </div>
       )}
