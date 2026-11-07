@@ -41,6 +41,16 @@ type Extracted = {
   project_name: string | null;
   syndicus: string | null;
   vme_name: string | null;
+  syndicus_company: string | null;
+  syndicus_contact: string | null;
+  syndicus_vat_number: string | null;
+  syndicus_street: string | null;
+  syndicus_house_number: string | null;
+  syndicus_postal_code: string | null;
+  syndicus_city: string | null;
+  syndicus_phone: string | null;
+  syndicus_email: string | null;
+  syndicus_billing_email: string | null;
   description: string | null;
   urgent: boolean;
 };
@@ -48,7 +58,7 @@ type Extracted = {
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "site_contact_name", "site_contact_phone", "phone", "email", "billing_email", "vat_number", "customer_type", "home_older_than_ten_years", "project_name", "syndicus", "vme_name", "description", "urgent"],
+  required: ["customer_name", "street", "house_number", "postal_code", "city", "site_street", "site_house_number", "site_postal_code", "site_city", "site_contact_name", "site_contact_phone", "phone", "email", "billing_email", "vat_number", "customer_type", "home_older_than_ten_years", "project_name", "syndicus", "vme_name", "syndicus_company", "syndicus_contact", "syndicus_vat_number", "syndicus_street", "syndicus_house_number", "syndicus_postal_code", "syndicus_city", "syndicus_phone", "syndicus_email", "syndicus_billing_email", "description", "urgent"],
   properties: {
     customer_name: { type: "string" },
     street: { type: ["string", "null"] },
@@ -70,6 +80,16 @@ const schema = {
     project_name: { type: ["string", "null"] },
     syndicus: { type: ["string", "null"] },
     vme_name: { type: ["string", "null"] },
+    syndicus_company: { type: ["string", "null"] },
+    syndicus_contact: { type: ["string", "null"] },
+    syndicus_vat_number: { type: ["string", "null"] },
+    syndicus_street: { type: ["string", "null"] },
+    syndicus_house_number: { type: ["string", "null"] },
+    syndicus_postal_code: { type: ["string", "null"] },
+    syndicus_city: { type: ["string", "null"] },
+    syndicus_phone: { type: ["string", "null"] },
+    syndicus_email: { type: ["string", "null"] },
+    syndicus_billing_email: { type: ["string", "null"] },
     description: { type: ["string", "null"] },
     urgent: { type: "boolean" },
   },
