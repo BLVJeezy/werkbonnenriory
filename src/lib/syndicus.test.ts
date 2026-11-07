@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applySyndicus, syndicusDetailsPatch, syndicusLabel, syndicusSuggestions } from "./syndicus";
+import { applySyndicus, syndicusDetailsFromMail, syndicusDetailsPatch, syndicusLabel, syndicusSuggestions } from "./syndicus";
 
 const base = {
   customer_name: "Immo Schrijnemakers BV (Olivier Schrijnemakers)",
@@ -56,6 +56,42 @@ describe("syndicusDetailsPatch", () => {
     expect(p.syndicus_email).toBeNull();
     expect(p.syndicus_phone).toBeNull();
     expect(p.syndicus_billing_email).toBeNull();
+  });
+});
+
+describe("syndicusDetailsFromMail", () => {
+  it("neemt alle ingelezen syndicusgegevens mee", () => {
+    const d = syndicusDetailsFromMail({
+      syndicus: "Immo Schrijnemakers BV – Olivier Schrijnemakers",
+      syndicus_company: "Immo Schrijnemakers BV", syndicus_contact: "Olivier Schrijnemakers",
+      syndicus_vat_number: "BE 0123.456.789", syndicus_street: "Wasserijstraat", syndicus_house_number: "1",
+      syndicus_postal_code: "3590", syndicus_city: "Diepenbeek", syndicus_phone: "089 00 00 00",
+      syndicus_email: "info@beheerlimburg.be", syndicus_billing_email: "boekhouding@beheerlimburg.be",
+    });
+    expect(d.syndicus_company).toBe("Immo Schrijnemakers BV");
+    expect(d.syndicus_contact).toBe("Olivier Schrijnemakers");
+    expect(d.syndicus_vat_number).toBe("BE 0123.456.789");
+    expect(d.syndicus_billing_email).toBe("boekhouding@beheerlimburg.be");
+  });
+  it("laat lege velden weg zodat bestaande gegevens behouden blijven", () => {
+    const d = syndicusDetailsFromMail({
+      syndicus: "Immo Schrijnemakers BV – Olivier Schrijnemakers",
+      syndicus_company: "Immo Schrijnemakers BV", syndicus_contact: "Olivier Schrijnemakers",
+      syndicus_vat_number: null, syndicus_street: null, syndicus_house_number: null,
+      syndicus_postal_code: null, syndicus_city: null, syndicus_phone: "  ",
+      syndicus_email: null, syndicus_billing_email: null,
+    });
+    expect(d.syndicus_vat_number).toBeUndefined();
+    expect(d.syndicus_phone).toBeUndefined();
+    expect(d.syndicus_email).toBeUndefined();
+  });
+  it("splitst de weergavenaam als bedrijf en contact ontbreken", () => {
+    const d = syndicusDetailsFromMail({ syndicus: "Immo Schrijnemakers BV – Olivier Schrijnemakers" });
+    expect(d.syndicus_company).toBe("Immo Schrijnemakers BV");
+    expect(d.syndicus_contact).toBe("Olivier Schrijnemakers");
+  });
+  it("geeft niets terug zonder syndicus", () => {
+    expect(syndicusDetailsFromMail({ syndicus: null })).toEqual({});
   });
 });
 
