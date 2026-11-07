@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { fillMissingVatRates, lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings, setPurchaseLineDiscount, setPurchaseDocumentDiscount, purchaseDiscountTotals } from "./purchase-invoice";
 
 describe("normalizePurchaseInvoice", () => {
+  it("trekt de apart uitgelezen korting van het documenttotaal af met behoud van bron-btw", () => {
+    const raw = { lines: [
+      { description: "Handschoenen", amount: 6.75, vat: 1.42, vatRate: 21 },
+      { description: "Kniebeschermers", amount: 79.81, vat: 16.76, vatRate: 21 },
+      { description: "Korting: Korting Kontant", amount: -2.6, vat: -0.55, vatRate: 21 },
+    ], net: 86.56, vat: 17.63, total: 104.19 };
+    const invoice = normalizePurchaseInvoice(raw);
+    expect(invoice.net).toBe(83.96);
+    expect(invoice.vat).toBe(17.63);
+    expect(invoice.total).toBe(101.59);
+    expect(normalizePurchaseInvoice(invoice).total).toBe(101.59);
+  });
   it("normaliseert het uitgelezen IBAN van de leverancier", () => {
     expect(normalizePurchaseInvoice({ supplierIban: " be68 5390 0754 7034 " }).supplierIban).toBe("BE68539007547034");
   });
