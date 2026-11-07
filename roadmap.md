@@ -1,7 +1,8 @@
 # Roadmap
 
-- [ ] Kortingen automatisch uitlezen en invoer als eurobedrag of percentage mogelijk maken; rekenen en aankoopcontrole testen.
-- [ ] Opnieuw verschenen oude aankoopfacturen onderzoeken en ongewenste mailimport herstellen zonder gecontroleerde of betaalde documenten te raken.
+- [x] Eurokorting automatisch uit testbon gelezen; bedrag aangepast, opgeslagen en teruggelezen; percentage en mobiel gecontroleerd. Testdocument verwijderd.
+- [x] 23 ongecontroleerde oude mailfacturen verwijderd; scans, Peppol en boekingen behouden. Oude gepubliceerde mailcontrole stopgezet.
+- [ ] Automatische mailcontrole opnieuw instellen na publicatie van de vaste startdatum; wacht op publicatie. Handmatige previewimport blijft beschikbaar, Peppol-controle actief.
 
 - [x] Zeven oude mailfacturen verwijderd; mailstart vast op 7 november 2026 Belgische middernacht. Factuurdatums zichtbaar; negen tests geslaagd en ingelogde herimport haalt geen oude berichten op.
 
