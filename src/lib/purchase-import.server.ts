@@ -79,7 +79,7 @@ async function extractWithAI(apiKey: string, pdfText: string, subject: string): 
 
 async function pdfText(bytes: Uint8Array): Promise<string> {
   const { extractText } = await import("unpdf");
-  const { text } = await extractText(bytes, { mergePages: true });
+  const { text } = await extractText(bytes.slice(), { mergePages: true });
   return text;
 }
 
@@ -116,15 +116,16 @@ async function readPurchaseMail(supabase: any, connectionKey: string, lovableKey
   const errors: string[] = [];
   let attempted = 0;
   for (const folder of ['inbox', folderId]) {
-  let next: string | null = `/me/mailFolders/${folder}/messages?$top=50&$filter=hasAttachments eq true&$select=id,subject,receivedDateTime`;
+  let next: string | null = `/me/mailFolders/${folder}/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,receivedDateTime,hasAttachments`;
   while (next && attempted < 15) {
   const msgs = await graph(next);
   if (!msgs.ok) throw new Error(`Mailbox fout [${msgs.status}]: ${await msgs.text()}`);
   const page = await msgs.json();
-  const messages = (page.value ?? []) as { id: string; subject?: string }[];
+  const messages = (page.value ?? []) as { id: string; subject?: string; hasAttachments?: boolean }[];
   const nextLink = page['@odata.nextLink'] as string | undefined;
   next = nextLink ? nextLink.replace('https://graph.microsoft.com/v1.0', '') : null;
   for (const m of messages) {
+    if (!m.hasAttachments) continue;
     const atts = await graph(`/me/messages/${encodeURIComponent(m.id)}/attachments?$select=id,name,contentType,size,isInline`);
     if (!atts.ok) { errors.push(`${m.subject ?? m.id}: bijlagen lezen mislukt`); continue; }
     const pdfs = ((await atts.json()).value ?? []).filter(purchaseAttachment);
