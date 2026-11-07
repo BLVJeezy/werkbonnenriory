@@ -649,7 +649,7 @@ function Bank({ c }: { c: string }) {
   // Kaartuitbetalingen (Europabank): koppelen op het bruto bedrag uit de mededeling; commissie gaat naar 653000.
   const grossOf = (t: any) => cardGross(t.description, Number(t.amount));
   const effAmt = (t: any) => grossOf(t) ?? Math.abs(Number(t.amount));
-  const paidCands = (t: any) => { const amt = Number(t.amount); return paidNoTx.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(total(i) - effAmt(t)) < 0.025); };
+  const paidCands = (t: any) => { const amt = Number(t.amount); return paidNoTx.filter((i: any) => !paymentAllocations.some((a) => a.invoice_id === i.id) && (amt < 0) === (i.direction === "aankoop") && Math.abs(total(i) - effAmt(t)) < 0.025); };
   const settleClick = async (t: any, inv: any) => { try { await settle(t, inv); toast.success("Afgeletterd met betaalde factuur"); refresh(); } catch (e: any) { toast.error(e.message); } };
   // Betaald gemarkeerde factuur afletteren met (een deel van) een willekeurige openstaande betaling.
   const paidBankDone = (i: any) => r2(paymentAllocations.filter((a) => a.invoice_id === i.id).reduce((s, a) => s + Number(a.amount), 0));
