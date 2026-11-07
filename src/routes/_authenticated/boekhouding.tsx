@@ -573,7 +573,8 @@ function Bank({ c }: { c: string }) {
   const { data: accounts = [] } = useAccounts(c);
   const { data: paymentAllocations = [] } = useQuery({ queryKey: ['fin', 'bank-allocations', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_bank_allocations').select('*').eq('company_id', c).order('id').range(a, b)) });
   const { data: rawTx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).order("id").range(a, b))) as any[], refetchInterval: 30_000 });
-  const tx = rawTx.map((t) => { const allocated = r2(paymentAllocations.filter((a) => a.transaction_id === t.id).reduce((sum, a) => sum + Number(a.amount), 0)); return { ...t, original_amount: Number(t.amount), allocated_amount: allocated, amount: !t.entry_id && allocated > 0 ? Math.sign(Number(t.amount)) * r2(Math.abs(Number(t.amount)) - allocated) : Number(t.amount) }; });
+  // Verrichtingen van 0,00 zijn bankmeldingen (bv. nieuw domiciliëringsmandaat), geen betalingen.
+  const tx = rawTx.filter((t) => Math.abs(Number(t.amount)) >= 0.005).map((t) => { const allocated = r2(paymentAllocations.filter((a) => a.transaction_id === t.id).reduce((sum, a) => sum + Number(a.amount), 0)); return { ...t, original_amount: Number(t.amount), allocated_amount: allocated, amount: !t.entry_id && allocated > 0 ? Math.sign(Number(t.amount)) * r2(Math.abs(Number(t.amount)) - allocated) : Number(t.amount) }; });
   const { data: open = [] } = useQuery({ queryKey: ["fin", "open-inv", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).neq("status", "betaald")).data ?? [] });
   const { data: paidNoTx = [] } = useQuery({ queryKey: ["fin", "paid-unlinked", c], queryFn: async () => {
     const paid = (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("status", "betaald").eq("doc_type", "factuur").order("id").range(a, b))) as any[];
@@ -648,8 +649,21 @@ function Bank({ c }: { c: string }) {
   // Kaartuitbetalingen (Europabank): koppelen op het bruto bedrag uit de mededeling; commissie gaat naar 653000.
   const grossOf = (t: any) => cardGross(t.description, Number(t.amount));
   const effAmt = (t: any) => grossOf(t) ?? Math.abs(Number(t.amount));
-  const paidCands = (t: any) => { const amt = Number(t.amount); return paidNoTx.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(total(i) - effAmt(t)) < 0.025); };
+  const paidCands = (t: any) => { const amt = Number(t.amount); return paidNoTx.filter((i: any) => !paymentAllocations.some((a) => a.invoice_id === i.id) && (amt < 0) === (i.direction === "aankoop") && Math.abs(total(i) - effAmt(t)) < 0.025); };
   const settleClick = async (t: any, inv: any) => { try { await settle(t, inv); toast.success("Afgeletterd met betaalde factuur"); refresh(); } catch (e: any) { toast.error(e.message); } };
+  // Betaald gemarkeerde factuur afletteren met (een deel van) een willekeurige openstaande betaling.
+  const paidBankDone = (i: any) => r2(paymentAllocations.filter((a) => a.invoice_id === i.id).reduce((s, a) => s + Number(a.amount), 0));
+  const paidRest = (i: any) => r2(Math.max(0, total(i) - paidBankDone(i)));
+  const settlePaidWith = async (t: any, inv: any) => {
+    const rest = paidRest(inv);
+    if (!t.allocated_amount && !paidBankDone(inv) && Math.abs(effAmt(t) - rest) < 0.025) return settleClick(t, inv);
+    const deel = r2(Math.min(Math.abs(Number(t.amount)), rest));
+    if (deel <= 0) return void toast.error("Niets meer af te letteren");
+    if (!confirm(`${inv.number} afletteren met ${eur(deel)} van de betaling van ${t.tx_date} (${t.counterparty ?? ""}, nog open ${eur(Math.abs(Number(t.amount)))})?${Math.abs(Number(t.amount)) > deel + 0.005 ? `\nDe rest van de betaling (${eur(r2(Math.abs(Number(t.amount)) - deel))}) blijft open voor andere facturen.` : ""}${rest > deel + 0.005 ? `\nVan de factuur blijft ${eur(r2(rest - deel))} nog af te letteren.` : ""}`)) return;
+    const { error } = await db.rpc("fin_split_bank_payment", { _transaction: t.id, _allocations: [{ type: "paid", id: inv.id, amount: deel }] });
+    if (error) return void toast.error(error.message);
+    toast.success("Afgeletterd met betaalde factuur"); refresh();
+  };
   const remaining = (i: any) => r2(Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
   const match = async (t: any, inv: any) => {
     const counter = inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten;
@@ -831,6 +845,9 @@ function Bank({ c }: { c: string }) {
   };
   const [zoekOpen, setZoekOpen] = useState("");
   const [zoekPaid, setZoekPaid] = useState("");
+  const [betaalOpen, setBetaalOpen] = useState<string | null>(null);
+  const [betaalZoek, setBetaalZoek] = useState<Record<string, string>>({});
+  const paidOpen = paidNoTx.filter((i: any) => paidRest(i) > 0.005);
   const [zoekVerwerkt, setZoekVerwerkt] = useState("");
   const zo = zoekOpen.trim().toLowerCase();
   const openVis = open.filter((i: any) => !zo || `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zo)).slice(0, 300);
@@ -961,21 +978,32 @@ function Bank({ c }: { c: string }) {
           </div>
         )}
       </Card>
-      {paidNoTx.length > 0 && <Card title={`Betaald gemarkeerd, nog niet afgeletterd (${paidNoTx.length})`}>
+      {paidOpen.length > 0 && <Card title={`Betaald gemarkeerd, nog niet afgeletterd (${paidOpen.length})`}>
         <Input className="mb-2 max-w-sm" aria-label="Zoek betaald gemarkeerde factuur" placeholder="Zoek factuur (naam, nummer of bedrag)…" value={zoekPaid} onChange={(e) => setZoekPaid(e.target.value)} />
         <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
-          {paidNoTx.filter((i: any) => !zoekPaid.trim() || `${i.counterparty ?? ""} ${i.number ?? ""} ${total(i)}`.toLowerCase().includes(zoekPaid.trim().toLowerCase())).slice(0, 300).map((i: any) => {
-            const kandidaten = tx.filter((t) => !t.entry_id && !t.allocated_amount && (Number(t.amount) < 0) === (i.direction === "aankoop"));
-            const exact = kandidaten.filter((t) => Math.abs(effAmt(t) - total(i)) < 0.025);
+          {paidOpen.filter((i: any) => !zoekPaid.trim() || `${i.counterparty ?? ""} ${i.number ?? ""} ${total(i)}`.toLowerCase().includes(zoekPaid.trim().toLowerCase())).slice(0, 300).map((i: any) => {
+            const rest = paidRest(i);
+            const kandidaten = tx.filter((t) => !t.entry_id && (Number(t.amount) < 0) === (i.direction === "aankoop"));
+            const exact = kandidaten.filter((t) => Math.abs(effAmt(t) - rest) < 0.025);
+            const q = (betaalZoek[i.id] ?? "").trim().toLowerCase();
+            const gefilterd = q ? kandidaten.filter((t) => `${t.tx_date} ${t.counterparty ?? ""} ${t.description ?? ""} ${Math.abs(Number(t.amount)).toFixed(2)} ${eur(Number(t.amount))}`.toLowerCase().includes(q)) : kandidaten;
             return <div key={i.id} className="rounded border border-border p-2">
-              <div className="flex items-center justify-between gap-2"><span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span></span><span>{eur(total(i))}</span></div>
+              <div className="flex items-center justify-between gap-2"><span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span></span><span>{eur(total(i))}{rest < total(i) - 0.005 ? <span className="text-xs text-muted-foreground"> · nog {eur(rest)}</span> : null}</span></div>
               <div className="mt-1 flex flex-wrap items-center gap-1">
-                {exact.slice(0, 3).map((t) => <Button key={t.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren met {t.tx_date} · {t.counterparty ?? ""} {eur(Number(t.amount))}</Button>)}
-                <select aria-label={`Betaling kiezen voor ${i.number}`} className="h-8 max-w-full rounded-md border border-input bg-background px-2 text-xs" value="" onChange={(e) => { const t = kandidaten.find((x) => x.id === e.target.value); if (t && confirm(`${i.number} afletteren met betaling van ${t.tx_date} (${eur(Number(t.amount))})?`)) settleClick(t, i); }}>
-                  <option value="">Andere betaling kiezen…</option>
-                  {kandidaten.map((t) => <option key={t.id} value={t.id}>{t.tx_date} · {t.counterparty ?? ""} · {eur(Number(t.amount))}</option>)}
-                </select>
+                {exact.slice(0, 3).map((t) => <Button key={t.id} size="sm" variant="outline" onClick={() => settlePaidWith(t, i)}>Afletteren met {t.tx_date} · {t.counterparty ?? ""} {eur(Number(t.amount))}</Button>)}
+                <Button size="sm" variant="outline" onClick={() => setBetaalOpen((o) => o === i.id ? null : i.id)}>{betaalOpen === i.id ? "Sluiten" : `Andere betaling kiezen (${kandidaten.length})`}</Button>
               </div>
+              {betaalOpen === i.id && <div className="mt-2 rounded border border-border p-2">
+                <Input className="mb-2" aria-label={`Zoek betaling voor ${i.number}`} placeholder="Zoek betaling (naam, mededeling, bedrag, datum)…" value={betaalZoek[i.id] ?? ""} onChange={(e) => setBetaalZoek((z) => ({ ...z, [i.id]: e.target.value }))} />
+                {gefilterd.length === 0 ? <p className="text-xs text-muted-foreground">Geen openstaande {i.direction === "aankoop" ? "uitgaande" : "inkomende"} betaling gevonden. Staat de betaling al bij Verwerkt, maak die koppeling dan eerst ongedaan; is ze nog niet binnen, synchroniseer of lees de bank in.</p> : (
+                  <div className="max-h-64 space-y-1 overflow-y-auto">
+                    {gefilterd.slice(0, 100).map((t) => <button key={t.id} type="button" className="flex w-full items-center justify-between gap-2 rounded border border-border px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => settlePaidWith(t, i)}>
+                      <span>{t.tx_date} · {t.counterparty ?? ""} <span className="text-muted-foreground">{t.description}</span></span>
+                      <span className="shrink-0">{eur(Number(t.amount))}{t.allocated_amount ? <span className="text-muted-foreground"> (nog open)</span> : null}</span>
+                    </button>)}
+                  </div>
+                )}
+              </div>}
             </div>;
           })}
         </div>
