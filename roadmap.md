@@ -1,7 +1,8 @@
 # Roadmap
 
 - [x] DKV: 17 bewezen dubbele deelstukken verwijderd met auditkopieën; 12 dubbele kostenboekingen tegengeboekt en vier uitleesbedragen gecorrigeerd. Kostenverlaging €4.301,45; alle correctieboekingen in evenwicht, bankbetalingen ongewijzigd.
-- [ ] DKV volledig terugbrengen tot 16 onderbouwde totaaldocumenten: wacht op ontbrekende originele totaalfacturen, met name 15 april en 15 juli; beschikbare bron bevat slechts acht expliciete samenvattingen en onvolledige deelstukken.
+- [x] Zeven aangeleverde DKV-afrekeningen gecontroleerd: april €499,18 (waarborg €135 op 288000), eind april €87,43, 26 mei €0,01, eind mei €77,90, 15 juni €280,60, eind juni €233,29, 15 juli €204,95. Deelstukken samengevoegd; bestaande bankboekingen behouden en koppelingen bevestigd.
+- [ ] DKV volledig terugbrengen tot 16 onderbouwde totaaldocumenten: wacht nog op volledige /000-documenten van 31 maart en 15 september. September heeft drie deelstukken; ontbrekende totaalsommen worden niet geschat. Overige beschikbare samenvattingen verder consolidëren zonder aankoop- of btw-dubbeltelling.
 
 - [x] Facturen kiezen bij wachtrekening, met atomische herclassificatie en behoud van open restbedragen; oorspronkelijke bankboeking blijft behouden.
 
