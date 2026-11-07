@@ -79,7 +79,7 @@ function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<st
   // de VME blijven onaangeroerd.
   function changeSyndicusCompany(value: string) {
     setForm((prev) => {
-      const next = { ...prev, syndicus_company: value };
+      const next: Record<string, string> = { ...prev, syndicus_company: value };
       const t = templates.find((x) => x.name.trim().toLowerCase() === value.trim().toLowerCase());
       if (t) for (const f of SYNDICUS_FIELDS) next[f.key] = (t.details[f.key as SyndicusDetailField] as string | null) ?? "";
       return next;
