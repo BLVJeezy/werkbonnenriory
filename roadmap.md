@@ -1,6 +1,7 @@
 # Roadmap
 
 - [ ] Kortingen automatisch uitlezen en invoer als eurobedrag of percentage mogelijk maken; rekenen en aankoopcontrole testen.
+- [ ] Opnieuw verschenen oude aankoopfacturen onderzoeken en ongewenste mailimport herstellen zonder gecontroleerde of betaalde documenten te raken.
 
 - [x] Zeven oude mailfacturen verwijderd; mailstart vast op 7 november 2026 Belgische middernacht. Factuurdatums zichtbaar; negen tests geslaagd en ingelogde herimport haalt geen oude berichten op.
 
