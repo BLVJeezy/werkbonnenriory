@@ -12,6 +12,7 @@ import { filterChoices } from "@/lib/choice-search";
 import { syndicusDetailsPatch, syndicusLabel, type SyndicusDetailField, type SyndicusDetails } from "@/lib/syndicus";
 import { customerDetailsFromDir, dirFromCustomer, syndicusKey, type SyndicusDir } from "@/lib/syndici";
 import { syncSyndicusFromCustomer } from "@/lib/syndici.functions";
+import { parseContacts, type CustomerContact } from "@/lib/customer-contacts";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search["q"] === "string" && search["q"] ? { q: search["q"] } : {}),
@@ -44,6 +45,32 @@ const SYNDICUS_FIELDS: { key: SyndicusDetailField; label: string; className: str
   { key: "syndicus_email", label: "E-mail", className: "min-w-44 flex-1" },
   { key: "syndicus_billing_email", label: "E-mail boekhouding", className: "min-w-44 flex-1" },
 ];
+
+function ContactsEditor({ form, setForm }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>> }) {
+  const list: CustomerContact[] = (() => { try { return JSON.parse(form["contacts"] || "[]"); } catch { return []; } })();
+  const set = (next: CustomerContact[]) => setForm((prev) => ({ ...prev, contacts: JSON.stringify(next) }));
+  const patch = (i: number, p: Partial<CustomerContact>) => set(list.map((c, j) => (j === i ? { ...c, ...p } : c)));
+  return (
+    <div className="rounded-md border p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-xs font-black uppercase tracking-wide text-primary">Contactpersonen</span>
+        <span className="text-xs text-muted-foreground">Bv. conciërge of bewoners van het gebouw — kies je later bij een taak, zodat de ploeg de juiste persoon belt.</span>
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => set([...list, { name: "", phone: "", role: "" }])}>Contactpersoon toevoegen</Button>
+      </div>
+      {list.length === 0 && <div className="text-xs text-muted-foreground">Nog geen contactpersonen.</div>}
+      <div className="space-y-2">
+        {list.map((c, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2">
+            <Input className="min-w-40 flex-1" placeholder="Naam" aria-label="Naam contactpersoon" value={c.name} onChange={(e) => patch(i, { name: e.target.value })} />
+            <Input className="w-44" placeholder="Telefoon" aria-label="Telefoon contactpersoon" value={c.phone} onChange={(e) => patch(i, { phone: e.target.value })} />
+            <Input className="w-44" placeholder="Rol (bv. conciërge, app. 2B)" aria-label="Rol contactpersoon" value={c.role ?? ""} onChange={(e) => patch(i, { role: e.target.value })} />
+            <Button size="sm" variant="ghost" onClick={() => set(list.filter((_, j) => j !== i))}>Verwijderen</Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** De volledige klantfiche: eigen gegevens, syndicusblok en btw-keuzes. Gedeeld tussen bewerken en nieuw aanmaken. */
 function CustomerFormFields({ form, setForm }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>> }) {
@@ -80,6 +107,7 @@ function CustomerFormFields({ form, setForm }: { form: Record<string, string>; s
         </div>
         {syndicusLabel(form) && <div className="mt-2 text-xs text-muted-foreground">Weergave in de lijst: <strong className="font-semibold text-foreground">{syndicusLabel(form)}</strong></div>}
       </div>
+      <ContactsEditor form={form} setForm={setForm} />
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
         Vrij beroep — altijd 21% btw, ook met een btw-nummer
@@ -214,7 +242,7 @@ function Klanten() {
   }
 
   async function createCustomer() {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : null };
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), contacts: parseContacts(JSON.parse(form["contacts"] || "[]")), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : null };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -243,11 +271,12 @@ function Klanten() {
       syndicus_company: (c.syndicus_company as string | null) ?? c.syndicus ?? "",
       vrij_beroep: c.vrij_beroep ? "1" : "",
       oud6: Number(c.default_vat_rate) === 6 ? "1" : "",
+      contacts: JSON.stringify(parseContacts((c as { contacts?: unknown }).contacts)),
     });
   }
 
   async function save(c: (typeof data)[number]) {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
+    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), contacts: parseContacts(JSON.parse(form["contacts"] || "[]")), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
