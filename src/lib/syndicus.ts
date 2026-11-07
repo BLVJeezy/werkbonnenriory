@@ -72,6 +72,30 @@ export function syndicusDetailsPatch(input: SyndicusDetails): Record<SyndicusDet
 }
 
 /**
+ * Syndicusgegevens uit een afspraakmail klaarzetten voor de klantfiche:
+ * alleen ingevulde velden komen in de patch, zodat bestaande (handmatig
+ * ingevulde) gegevens nooit overschreven worden. Ontbreken bedrijfsnaam of
+ * contactpersoon, dan worden ze uit de weergavenaam ("Kantoor – Contact") gehaald.
+ */
+export function syndicusDetailsFromMail(input: SyndicusDetails & { syndicus?: string | null }): Partial<Record<SyndicusDetailField, string>> {
+  const out: Partial<Record<SyndicusDetailField, string>> = {};
+  for (const f of SYNDICUS_DETAIL_FIELDS) {
+    const v = input[f]?.trim();
+    if (v) out[f] = v;
+  }
+  if (!out.syndicus_company && !out.syndicus_contact) {
+    const label = input.syndicus?.trim();
+    if (label) {
+      const [company, ...rest] = label.split(/\s+[–-]\s+/);
+      out.syndicus_company = company.trim();
+      const contact = rest.join(" – ").trim();
+      if (contact) out.syndicus_contact = contact;
+    }
+  }
+  return out;
+}
+
+/**
  * De syndicusnamen die al bij klanten horen: zonder duplicaten, zonder lege namen,
  * alfabetisch gesorteerd. Gebruikt als suggestielijst in het bewerkingsvak.
  */
