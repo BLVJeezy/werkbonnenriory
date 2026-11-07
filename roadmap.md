@@ -2,7 +2,8 @@
 
 - [x] DKV: 17 bewezen dubbele deelstukken verwijderd met auditkopieën; 12 dubbele kostenboekingen tegengeboekt en vier uitleesbedragen gecorrigeerd. Kostenverlaging €4.301,45; alle correctieboekingen in evenwicht, bankbetalingen ongewijzigd.
 - [x] Zeven aangeleverde DKV-afrekeningen gecontroleerd: april €499,18 (waarborg €135 op 288000), eind april €87,43, 26 mei €0,01, eind mei €77,90, 15 juni €280,60, eind juni €233,29, 15 juli €204,95. Deelstukken samengevoegd; bestaande bankboekingen behouden en koppelingen bevestigd.
-- [ ] DKV volledig terugbrengen tot 16 onderbouwde totaaldocumenten: wacht nog op volledige /000-documenten van 31 maart en 15 september. September heeft drie deelstukken; ontbrekende totaalsommen worden niet geschat. Overige beschikbare samenvattingen verder consolidëren zonder aankoop- of btw-dubbeltelling.
+- [x] DKV geconsolideerd tot 16 afrekeningen voor €6.769,00; €135 waarborg apart, kosten €6.634,00. Vijftien bestaande betalingen bevestigd; september/oktober van wachtrekening naar leveranciers, laatste afrekening €807,69 open. Twee uploads 15 oktober tellen één keer; Peppol-deelfactuur ongewijzigd zonder dubbele kostenboeking.
+- [ ] DKV origineel totaalbestand van 31 maart nog niet aangeleverd; bestaand bedrag €302,58 is gelijk aan bankbetaling en behouden. Peppol-deelfactuur €716,93 blijft zichtbaar als los betalingskeuze-item naast afrekening €807,69; geen tweede boeking, maar structurele documentgroepering ontbreekt.
 
 - [x] Facturen kiezen bij wachtrekening, met atomische herclassificatie en behoud van open restbedragen; oorspronkelijke bankboeking blijft behouden.
 
