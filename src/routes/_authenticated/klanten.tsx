@@ -110,7 +110,7 @@ function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<st
               <Input
                 list={f.key === "syndicus_company" ? "syndicus-suggesties" : undefined}
                 value={form[f.key] ?? ""}
-                onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                onChange={(e) => (f.key === "syndicus_company" ? changeSyndicusCompany(e.target.value) : setForm((prev) => ({ ...prev, [f.key]: e.target.value })))}
                 placeholder={f.label}
               />
             </label>
