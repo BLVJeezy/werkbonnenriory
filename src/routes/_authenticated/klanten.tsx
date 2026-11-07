@@ -73,7 +73,18 @@ function ContactsEditor({ form, setForm }: { form: Record<string, string>; setFo
 }
 
 /** De volledige klantfiche: eigen gegevens, syndicusblok en btw-keuzes. Gedeeld tussen bewerken en nieuw aanmaken. */
-function CustomerFormFields({ form, setForm }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>> }) {
+function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>; templates?: { name: string; details: SyndicusDetails }[] }) {
+  // Kiest de gebruiker een bekende syndicus, dan gaan alle gegevens van die
+  // syndicus mee (adres, btw-nummer, telefoon, e-mails). De eigen gegevens van
+  // de VME blijven onaangeroerd.
+  function changeSyndicusCompany(value: string) {
+    setForm((prev) => {
+      const next = { ...prev, syndicus_company: value };
+      const t = templates.find((x) => x.name.trim().toLowerCase() === value.trim().toLowerCase());
+      if (t) for (const f of SYNDICUS_FIELDS) next[f.key] = (t.details[f.key as SyndicusDetailField] as string | null) ?? "";
+      return next;
+    });
+  }
   return (
     <>
       <div className="flex flex-wrap gap-2">
