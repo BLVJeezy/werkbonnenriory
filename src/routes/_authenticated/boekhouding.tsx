@@ -845,6 +845,9 @@ function Bank({ c }: { c: string }) {
   };
   const [zoekOpen, setZoekOpen] = useState("");
   const [zoekPaid, setZoekPaid] = useState("");
+  const [betaalOpen, setBetaalOpen] = useState<string | null>(null);
+  const [betaalZoek, setBetaalZoek] = useState<Record<string, string>>({});
+  const paidOpen = paidNoTx.filter((i: any) => paidRest(i) > 0.005);
   const [zoekVerwerkt, setZoekVerwerkt] = useState("");
   const zo = zoekOpen.trim().toLowerCase();
   const openVis = open.filter((i: any) => !zo || `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zo)).slice(0, 300);
