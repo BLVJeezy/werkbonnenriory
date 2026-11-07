@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Syncro19 beschikbaar maken als afzonderlijk bedrijf in Boekhouding en Finance, met behoud van bedrijfskeuze tussen beide pagina’s.
+- [x] Bestaand Syncro19-bedrijf beschikbaar in Boekhouding en Finance; gedeelde bedrijfskeuze en knop Koppelingen ingelogd gecontroleerd, twee tests geslaagd. OkiOki toont eerlijk dat ophalen nog niet gekoppeld is.
 - [ ] OkiOki-gegevens ophalen: wacht op een ondersteunde export- of ontvangstmethode; geen publieke API bevestigd, factuurverzending via Peppyrus behouden.
 
 - [x] DKV: 17 bewezen dubbele deelstukken verwijderd met auditkopieën; 12 dubbele kostenboekingen tegengeboekt en vier uitleesbedragen gecorrigeerd. Kostenverlaging €4.301,45; alle correctieboekingen in evenwicht, bankbetalingen ongewijzigd.
