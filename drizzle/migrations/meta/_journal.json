@@ -890,6 +890,13 @@
       "when": 1793945557225,
       "tag": "0126_cap_legacy_manual_payment_to_invoice_balance",
       "breakpoints": true
+    },
+    {
+      "idx": 127,
+      "version": "7",
+      "when": 1794047066664,
+      "tag": "0127_purchase_mail_peppol_priority",
+      "breakpoints": true
     }
   ]
 }

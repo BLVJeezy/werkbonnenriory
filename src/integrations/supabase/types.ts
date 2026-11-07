@@ -2311,6 +2311,7 @@ export type Database = {
           kind: string
           lines: Json
           net: number
+          original_ubl_path: string | null
           paid_at: string | null
           payment_file_at: string | null
           payment_method: string
@@ -2347,6 +2348,7 @@ export type Database = {
           kind?: string
           lines?: Json
           net?: number
+          original_ubl_path?: string | null
           paid_at?: string | null
           payment_file_at?: string | null
           payment_method?: string
@@ -2383,6 +2385,7 @@ export type Database = {
           kind?: string
           lines?: Json
           net?: number
+          original_ubl_path?: string | null
           paid_at?: string | null
           payment_file_at?: string | null
           payment_method?: string
@@ -2409,6 +2412,32 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_mail_imports: {
+        Row: {
+          attachment_key: string
+          created_at: string
+          purchase_invoice_id: string | null
+        }
+        Insert: {
+          attachment_key: string
+          created_at?: string
+          purchase_invoice_id?: string | null
+        }
+        Update: {
+          attachment_key?: string
+          created_at?: string
+          purchase_invoice_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_mail_imports_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -3306,6 +3335,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      ingest_purchase_document: {
+        Args: { p_attachment_key?: string; p_document: Json }
+        Returns: Json
       }
       invite_customer_appointment: {
         Args: { p_id: string; p_instruction: string; p_slots: Json }
