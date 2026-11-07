@@ -86,9 +86,9 @@ export function syndicusDetailsFromMail(input: SyndicusDetails & { syndicus?: st
   if (!out.syndicus_company && !out.syndicus_contact) {
     const label = input.syndicus?.trim();
     if (label) {
-      const [company, ...rest] = label.split(/\s+[–-]\s+/);
-      out.syndicus_company = company.trim();
-      const contact = rest.join(" – ").trim();
+      const parts = label.split(/\s+[–-]\s+/);
+      out.syndicus_company = (parts[0] ?? "").trim();
+      const contact = parts.slice(1).join(" – ").trim();
       if (contact) out.syndicus_contact = contact;
     }
   }
