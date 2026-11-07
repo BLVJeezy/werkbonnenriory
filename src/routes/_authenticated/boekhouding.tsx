@@ -573,7 +573,8 @@ function Bank({ c }: { c: string }) {
   const { data: accounts = [] } = useAccounts(c);
   const { data: paymentAllocations = [] } = useQuery({ queryKey: ['fin', 'bank-allocations', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_bank_allocations').select('*').eq('company_id', c).order('id').range(a, b)) });
   const { data: rawTx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).order("id").range(a, b))) as any[], refetchInterval: 30_000 });
-  const tx = rawTx.map((t) => { const allocated = r2(paymentAllocations.filter((a) => a.transaction_id === t.id).reduce((sum, a) => sum + Number(a.amount), 0)); return { ...t, original_amount: Number(t.amount), allocated_amount: allocated, amount: !t.entry_id && allocated > 0 ? Math.sign(Number(t.amount)) * r2(Math.abs(Number(t.amount)) - allocated) : Number(t.amount) }; });
+  // Verrichtingen van 0,00 zijn bankmeldingen (bv. nieuw domiciliëringsmandaat), geen betalingen.
+  const tx = rawTx.filter((t) => Math.abs(Number(t.amount)) >= 0.005).map((t) => { const allocated = r2(paymentAllocations.filter((a) => a.transaction_id === t.id).reduce((sum, a) => sum + Number(a.amount), 0)); return { ...t, original_amount: Number(t.amount), allocated_amount: allocated, amount: !t.entry_id && allocated > 0 ? Math.sign(Number(t.amount)) * r2(Math.abs(Number(t.amount)) - allocated) : Number(t.amount) }; });
   const { data: open = [] } = useQuery({ queryKey: ["fin", "open-inv", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).neq("status", "betaald")).data ?? [] });
   const { data: paidNoTx = [] } = useQuery({ queryKey: ["fin", "paid-unlinked", c], queryFn: async () => {
     const paid = (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("status", "betaald").eq("doc_type", "factuur").order("id").range(a, b))) as any[];
@@ -650,6 +651,19 @@ function Bank({ c }: { c: string }) {
   const effAmt = (t: any) => grossOf(t) ?? Math.abs(Number(t.amount));
   const paidCands = (t: any) => { const amt = Number(t.amount); return paidNoTx.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(total(i) - effAmt(t)) < 0.025); };
   const settleClick = async (t: any, inv: any) => { try { await settle(t, inv); toast.success("Afgeletterd met betaalde factuur"); refresh(); } catch (e: any) { toast.error(e.message); } };
+  // Betaald gemarkeerde factuur afletteren met (een deel van) een willekeurige openstaande betaling.
+  const paidBankDone = (i: any) => r2(paymentAllocations.filter((a) => a.invoice_id === i.id).reduce((s, a) => s + Number(a.amount), 0));
+  const paidRest = (i: any) => r2(Math.max(0, total(i) - paidBankDone(i)));
+  const settlePaidWith = async (t: any, inv: any) => {
+    const rest = paidRest(inv);
+    if (!t.allocated_amount && !paidBankDone(inv) && Math.abs(effAmt(t) - rest) < 0.025) return settleClick(t, inv);
+    const deel = r2(Math.min(Math.abs(Number(t.amount)), rest));
+    if (deel <= 0) return void toast.error("Niets meer af te letteren");
+    if (!confirm(`${inv.number} afletteren met ${eur(deel)} van de betaling van ${t.tx_date} (${t.counterparty ?? ""}, nog open ${eur(Math.abs(Number(t.amount)))})?${Math.abs(Number(t.amount)) > deel + 0.005 ? `\nDe rest van de betaling (${eur(r2(Math.abs(Number(t.amount)) - deel))}) blijft open voor andere facturen.` : ""}${rest > deel + 0.005 ? `\nVan de factuur blijft ${eur(r2(rest - deel))} nog af te letteren.` : ""}`)) return;
+    const { error } = await db.rpc("fin_split_bank_payment", { _transaction: t.id, _allocations: [{ type: "paid", id: inv.id, amount: deel }] });
+    if (error) return void toast.error(error.message);
+    toast.success("Afgeletterd met betaalde factuur"); refresh();
+  };
   const remaining = (i: any) => r2(Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
   const match = async (t: any, inv: any) => {
     const counter = inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten;
