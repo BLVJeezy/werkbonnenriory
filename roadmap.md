@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Klantnaam en opgesplitst adres opzoeken bij ondernemings-/btw-nummer; bestaande gegevens en syndicus gescheiden behouden, fouten zichtbaar melden en ingelogd controleren.
+
 - [x] Alleen Riory in Dashboard, Boekhouding en Finance; Syncro19-import/pagina geannuleerd, bedrijf toevoegen verwijderd, nieuw opgeslagen exportbestanden verwijderd. Vijf tests en drie ingelogde schermcontroles geslaagd. Bestaande Syncro19-boekhoudgegevens behouden buiten de schermen; geen factuurimport uitgevoerd.
 - [ ] OkiOki-gegevens ophalen: wacht op een ondersteunde export- of ontvangstmethode; geen publieke API bevestigd, factuurverzending via Peppyrus behouden.
 
