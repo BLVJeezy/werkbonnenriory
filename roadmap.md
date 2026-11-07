@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Oude mailimport ongedaan maken; vaste mailstart vanaf vandaag en factuurdatums in aankooplijst controleren.
+
 - [x] Dubbele boekingsreferentie bij verdere deelaflettering hersteld; oude botsing en nieuwe unieke referenties ingelogd gecontroleerd, zes verdeeltests geslaagd. Geen echte aflettering uitgevoerd.
 
 - [x] Aankoopmails via boekhouding@riory.be met Peppol-voorrang, atomische deduplicatie en kwartiercontrole; negen tests en ingelogde ontvangst gecontroleerd. Publicatie nodig voor automatische nieuwe verwerking.

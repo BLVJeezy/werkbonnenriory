@@ -1,4 +1,12 @@
 export const PURCHASE_MAILBOX_ADDRESS = 'boekhouding@riory.be';
+// Fixed activation date, not a rolling "today": delayed imports remain eligible.
+export const PURCHASE_MAIL_START = '2026-11-06T23:00:00Z';
+
+export function eligiblePurchaseMail(receivedDateTime?: string) {
+  if (!receivedDateTime) return false;
+  const received = Date.parse(receivedDateTime);
+  return Number.isFinite(received) && received >= Date.parse(PURCHASE_MAIL_START);
+}
 
 export async function peppolBeforeMail<T>(receive: () => Promise<{ errors: string[] }>, readMail: () => Promise<T>): Promise<T> {
   const result = await receive();
