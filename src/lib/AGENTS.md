@@ -4,6 +4,7 @@
 - PDF/mail/receipt extraction requests and persists supplier IBAN and printed BIC; the shared purchase normalizer supplies missing BIC from known bank codes, so import paths cannot drift.
 - Manual and managed scheduled Peppol receipt share `peppol-receive.server.ts`; cron authentication precedes admin access, and message IDs deduplicate imports so background receipt never books or sends invoices.
 - Mail and Peppol purchase ingestion share serialized `ingest_purchase_document` and a per-attachment ledger; Peppol upgrades preserve IDs and reviewed/payment state to prevent cross-source duplicates.
+- Mail receipt eligibility uses the fixed activation cutoff in `purchase-mail-policy` both in Graph and before attachments; invoice dates come only from source documents, not mailbox timestamps.
 - Bank selection reads app purchases directly; `fin_link_purchase_bank` scopes them to owned Riory BV transactions and atomically claims the payment ledger and posts only the bank leg, never a duplicate purchase document. Linked payment entries cannot be undone as loose entries.
 - Split payments use `fin_split_bank_payment` and explicit per-invoice allocations capped by the unallocated bank balance; invoice updates and each balanced partial bank posting are atomic, and only a fully allocated transaction gets its completion entry.
 - Partial bank journal references include cumulative allocated cents via `fin_bank_part_reference`, so each later allocation is unique while the transaction lock and existing ledger prevent reuse.

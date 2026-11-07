@@ -303,6 +303,7 @@ function Aankoopfacturen() {
             <span className="font-bold">{r.supplier_name}</span>
             <span className="font-mono text-sm">{r.invoice_number ?? "—"}</span>
             {r.kind === 'creditnota' && <span className="text-sm font-bold text-destructive">Creditnota</span>}
+            <span className="text-sm text-muted-foreground">Factuurdatum {d(r.invoice_date)}</span>
             <span className="text-sm text-muted-foreground">vervaldag {d(r.due_date)}</span>
             {!paid && <span className={`rounded px-2 py-0.5 text-xs font-bold ${due.overdue ? 'bg-destructive text-destructive-foreground' : due.soon ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>{due.text}</span>}
             {lock && <span className="rounded border border-destructive px-2 py-0.5 text-xs font-bold text-destructive">{lock}</span>}
