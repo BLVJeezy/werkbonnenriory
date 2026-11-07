@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { LoaderCircle, Search } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
@@ -13,6 +15,8 @@ import { syndicusDetailsPatch, syndicusLabel, type SyndicusDetailField, type Syn
 import { customerDetailsFromDir, dirFromCustomer, syndicusKey, type SyndicusDir } from "@/lib/syndici";
 import { syncSyndicusFromCustomer } from "@/lib/syndici.functions";
 import { parseContacts, type CustomerContact } from "@/lib/customer-contacts";
+import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
+import { lookupCompany } from "@/lib/company-lookup.functions";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search["q"] === "string" && search["q"] ? { q: search["q"] } : {}),
@@ -29,7 +33,7 @@ const FIELDS: { key: keyof CustomerRow; label: string; className: string }[] = [
   { key: "phone", label: "Telefoon", className: "w-40" },
   { key: "email", label: "E-mail", className: "min-w-44 flex-1" },
   { key: "billing_email", label: "E-mail facturatie", className: "min-w-44 flex-1" },
-  { key: "vat_number", label: "Btw-nummer", className: "w-44" },
+  { key: "vat_number", label: "Ondernemings-/btw-nummer", className: "w-60" },
   { key: "project_name", label: "Projectnaam", className: "min-w-36 flex-1" },
 ];
 
@@ -74,6 +78,33 @@ function ContactsEditor({ form, setForm }: { form: Record<string, string>; setFo
 
 /** De volledige klantfiche: eigen gegevens, syndicusblok en btw-keuzes. Gedeeld tussen bewerken en nieuw aanmaken. */
 function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>; templates?: { name: string; details: SyndicusDetails }[] }) {
+  const lookup = useServerFn(lookupCompany);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupMessage, setLookupMessage] = useState("");
+  const [retry, setRetry] = useState(0);
+  const number = form["vat_number"] ?? "";
+  useEffect(() => {
+    let active = true;
+    setLookupMessage("");
+    setLookingUp(false);
+    if (!companyNumber(number)) return;
+    const timer = setTimeout(async () => {
+      setLookingUp(true);
+      try {
+        const result = await lookup({ data: { number } });
+        if (!active) return;
+        if (result.ok) {
+          setForm(prev => prev["vat_number"] === number ? fillCompanyDetails(prev, result.details) : prev);
+          setLookupMessage(`Gevonden: ${result.details.name || "bedrijfsadres"}`);
+        } else setLookupMessage(result.message);
+      } catch {
+        if (active) setLookupMessage("Opzoeken mislukt. Probeer opnieuw.");
+      } finally {
+        if (active) setLookingUp(false);
+      }
+    }, 700);
+    return () => { active = false; clearTimeout(timer); };
+  }, [number, retry, lookup, setForm]);
   // Kiest de gebruiker een bekende syndicus, dan gaan alle gegevens van die
   // syndicus mee (adres, btw-nummer, telefoon, e-mails). De eigen gegevens van
   // de VME blijven onaangeroerd.
@@ -97,10 +128,14 @@ function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<st
         {FIELDS.map((f) => (
           <label key={f.key} className={`space-y-1 ${f.className}`}>
             <span className="block text-xs font-bold uppercase text-muted-foreground">{f.label}</span>
-            <Input value={form[f.key] ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.label} />
+            <div className="flex items-center gap-1">
+              <Input value={form[f.key] ?? ""} onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.label} />
+              {f.key === "vat_number" && <Button type="button" size="icon" variant="outline" className="shrink-0" disabled={lookingUp || !companyNumber(number)} aria-label="Bedrijfsgegevens opzoeken" title="Bedrijfsgegevens opzoeken" onClick={() => setRetry(value => value + 1)}>{lookingUp ? <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" /> : <Search className="size-4" />}</Button>}
+            </div>
           </label>
         ))}
       </div>
+      {(lookingUp || lookupMessage) && <p role="status" className="text-sm text-muted-foreground">{lookingUp ? "Bedrijfsgegevens opzoeken…" : lookupMessage}</p>}
       <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-xs font-black uppercase tracking-wide text-primary">Syndicus</span>
