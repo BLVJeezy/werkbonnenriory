@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 
-/** Hourly cron: import scanned/emailed purchase invoices from the info mailbox. */
+/** Scheduled receipt: Peppol first, then missing accounting-mail attachments. */
 export const Route = createFileRoute("/api/public/aankoopfacturen/import")({
   server: {
     handlers: {
@@ -13,10 +13,10 @@ export const Route = createFileRoute("/api/public/aankoopfacturen/import")({
           if (!lovableKey) throw new Error("LOVABLE_API_KEY ontbreekt");
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { getConnectionKeyForUser } = await import("@/lib/appUserConnections.server");
-          const { WERKBON_MAILBOX_KEY } = await import("@/lib/werkbon-mailbox.functions");
+          const { INVOICE_MAILBOX_KEY } = await import("@/lib/mail-senders");
           const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
           let key: string | null = null;
-          for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, WERKBON_MAILBOX_KEY); if (key) break; }
+          for (const a of admins ?? []) { key = await getConnectionKeyForUser(a.user_id, INVOICE_MAILBOX_KEY); if (key) break; }
           if (!key) return Response.json({ skipped: "mailbox niet gekoppeld" });
           const { importPurchaseInvoicesFromMail } = await import("@/lib/purchase-import.server");
           return Response.json(await importPurchaseInvoicesFromMail(supabaseAdmin, key, lovableKey));
