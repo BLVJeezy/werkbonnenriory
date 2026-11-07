@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Fout dubbele boekingsreferentie bij verdere deelaflettering herstellen en veilig testen zonder echte aflettering.
+
 - [x] Aankoopmails via boekhouding@riory.be met Peppol-voorrang, atomische deduplicatie en kwartiercontrole; negen tests en ingelogde ontvangst gecontroleerd. Publicatie nodig voor automatische nieuwe verwerking.
 - [ ] BNP-factuur van €1,45: niet gevonden in app, bankverrichtingen of Simpla; wacht op factuurnummer, datum of origineel document. Geen betaling uitgevoerd.
 
