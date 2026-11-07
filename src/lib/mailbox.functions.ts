@@ -226,7 +226,7 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           const details = syndicusDetailsFromMail(x);
           if (Object.keys(details).length > 0) {
             const { data: cust } = await context.supabase.from("customers").select(SYNDICUS_DETAIL_FIELDS.join(",")).eq("id", created.customer_id).maybeSingle();
-            const patch: Record<string, string> = {};
+            const patch: Partial<Record<(typeof SYNDICUS_DETAIL_FIELDS)[number], string>> = {};
             for (const f of SYNDICUS_DETAIL_FIELDS) {
               const existing = (cust as Record<string, string | null> | null)?.[f];
               if (!existing?.trim() && details[f]) patch[f] = details[f];
