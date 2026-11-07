@@ -153,6 +153,22 @@ export function setPurchaseLineDiscount(line: PurchaseLine, value: number, mode:
 }
 
 /** Adjust document totals by the edited lines' delta; keep unrelated source differences intact. */
+export function setPurchaseDocumentDiscount(lines: PurchaseLine[], value: number, mode: "percent" | "amount"): PurchaseLine[] {
+  const targets = lines.filter(l => l.amount >= 0);
+  if (mode === "percent") return lines.map(l => l.amount >= 0 ? setPurchaseLineDiscount(l, value, mode) : l);
+  const base = r2(targets.reduce((s, l) => s + (l.discountBase ?? l.amount + (l.discountAmount ?? 0)), 0));
+  if (!Number.isFinite(value) || value < 0 || r2(value) > base) throw new Error("Korting mag niet groter zijn dan het lijnbedrag");
+  let remaining = Math.round(value * 100), remainingBase = Math.round(base * 100);
+  return lines.map(l => {
+    if (l.amount < 0) return l;
+    const lineBase = Math.round((l.discountBase ?? l.amount + (l.discountAmount ?? 0)) * 100);
+    const cents = remainingBase > 0 ? Math.round(remaining * lineBase / remainingBase) : 0;
+    remaining -= cents; remainingBase -= lineBase;
+    return setPurchaseLineDiscount(l, cents / 100, "amount");
+  });
+}
+
+/** Adjust document totals by the edited lines' delta; keep unrelated source differences intact. */
 export function purchaseDiscountTotals(before: PurchaseLine[], after: PurchaseLine[], totals: { net: number; vat: number; total: number }) {
   const sum = (lines: PurchaseLine[]) => lines.reduce((s, l) => { const t = lineTotals(l); return { net: s.net + t.net, vat: s.vat + t.vat }; }, { net: 0, vat: 0 });
   const a = sum(before), b = sum(after);

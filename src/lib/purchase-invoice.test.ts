@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fillMissingVatRates, lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals } from "./purchase-invoice";
+import { fillMissingVatRates, lineTotals, normalizePurchaseInvoice, purchaseInvoiceWarnings, setPurchaseLineDiscount, setPurchaseDocumentDiscount, purchaseDiscountTotals } from "./purchase-invoice";
 
 describe("normalizePurchaseInvoice", () => {
   it("normaliseert het uitgelezen IBAN van de leverancier", () => {
@@ -23,6 +23,22 @@ describe("normalizePurchaseInvoice", () => {
   });
   it("leidt ontbrekend netto af na korting", () => {
     expect(normalizePurchaseInvoice({ lines: [{ quantity: 2, unitPrice: 50, discountPercent: 10, vatRate: 21 }] }).lines[0]).toMatchObject({ amount: 90, vat: 18.9, total: 108.9 });
+  });
+  it("leest een eurokorting zonder percentage en behoudt netto na korting", () => {
+    const inv = normalizePurchaseInvoice({ lines: [{ quantity: 2, unitPrice: 50, net: 85, vatRate: 21, discountAmount: 15, discountPercent: null }], net: 85, vat: 17.85, total: 102.85 });
+    expect(inv.lines[0]).toMatchObject({ amount: 85, discountAmount: 15, discountPercent: null, discountBase: 100 });
+    expect(inv.total).toBe(102.85);
+  });
+  it("verdeelt een totaal eurokorting eenmalig over lijnen met verschillende btw", () => {
+    const lines = [6, 21].map(vatRate => ({ description: 'Lijn', quantity: 1, unit: 'st', unitPrice: 100, amount: 100, vatRate }));
+    const after = setPurchaseDocumentDiscount(lines, 15, 'amount');
+    expect(after.map(l => l.discountAmount)).toEqual([7.5, 7.5]);
+    expect(purchaseDiscountTotals(lines, after, { net: 200, vat: 27, total: 227 })).toEqual({ net: 185, vat: 24.98, total: 209.98 });
+    expect(() => setPurchaseDocumentDiscount(lines, 201, 'amount')).toThrow();
+  });
+  it("behoudt exact de kortingcenten bij verdeling", () => {
+    const lines = [1, 1, 1].map(amount => ({ description: 'Lijn', quantity: 1, unit: 'st', unitPrice: amount, amount, vatRate: 21 }));
+    expect(setPurchaseDocumentDiscount(lines, 0.01, 'amount').reduce((s, l) => s + (l.discountAmount ?? 0), 0)).toBe(0.01);
   });
   it("behoudt expliciet nul netto bij volledige korting", () => {
     expect(normalizePurchaseInvoice({ lines: [{ quantity: 1, unitPrice: 100, net: 0, vat: 0, total: 0, discountPercent: 100 }] }).lines[0]).toMatchObject({ amount: 0, vat: 0, total: 0 });
