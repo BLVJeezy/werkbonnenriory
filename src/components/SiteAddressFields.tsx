@@ -11,9 +11,9 @@ export function SiteAddressFields({ value, disabled = false, onChange, saveOnBlu
   onChange: (patch: SiteAddressParts) => void;
   saveOnBlur?: boolean;
   /** Bewaarde contactpersonen van de klant (bv. VME-gebouw). */
-  contacts?: CustomerContact[];
+  contacts?: CustomerContact[] | undefined;
   /** Ingevulde contactpersoon bewaren bij de klant voor de volgende keer. */
-  onSaveContact?: (c: CustomerContact) => void;
+  onSaveContact?: ((c: CustomerContact) => void) | undefined;
 }) {
   const address = [
     ["site_street", "Straat werf"], ["site_house_number", "Nr. werf"],

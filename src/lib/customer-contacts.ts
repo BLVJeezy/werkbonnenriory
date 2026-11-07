@@ -1,4 +1,4 @@
-export type CustomerContact = { name: string; phone: string; role?: string };
+export type CustomerContact = { name: string; phone: string; role?: string | undefined };
 
 /** Leest de opgeslagen contactpersonen van een klant (jsonb) veilig uit. */
 export function parseContacts(raw: unknown): CustomerContact[] {
