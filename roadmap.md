@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Klantnaam en opgesplitst adres automatisch via VIES bij BE-/NL-btw-nummer (Belgisch nummer ook zonder BE); bestaande gegevens en syndicus gescheiden behouden. Zeven tests en ingelogde Nederlandse aanvulling geslaagd; Belgische dienst tijdelijk bezet, foutmelding gecontroleerd. Niet-btw-plichtige ondernemingen/VME’s blijven handmatig.
+
 - [x] Alleen Riory in Dashboard, Boekhouding en Finance; Syncro19-import/pagina geannuleerd, bedrijf toevoegen verwijderd, nieuw opgeslagen exportbestanden verwijderd. Vijf tests en drie ingelogde schermcontroles geslaagd. Bestaande Syncro19-boekhoudgegevens behouden buiten de schermen; geen factuurimport uitgevoerd.
 - [ ] OkiOki-gegevens ophalen: wacht op een ondersteunde export- of ontvangstmethode; geen publieke API bevestigd, factuurverzending via Peppyrus behouden.
 
