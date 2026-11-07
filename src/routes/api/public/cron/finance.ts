@@ -6,7 +6,7 @@ export const Route = createFileRoute("/api/public/cron/finance")({ server: { han
   if (denied) return denied;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { evaluateFinance } = await import("@/lib/finance-eval");
-  const { data: companies, error } = await supabaseAdmin.from("companies").select("id,user_id");
+  const { data: companies, error } = await supabaseAdmin.from("companies").select("id,user_id").ilike("name", "Riory BV");
   if (error) return new Response("read failed", { status: 500 });
   let ok = 0, failed = 0;
   for (const company of companies ?? []) {

@@ -30,8 +30,8 @@ async function fetchAll(q: (from: number, to: number) => any) {
 /** Everything the accountant mails need for one chosen period. onlyNew limits the UBL mail to documents never sent to the accountant before. */
 async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) {
   const { supabase, userId } = ctx;
-  const { data: companies } = await supabase.from("companies").select("id,name").eq("user_id", userId);
-  const company = (companies ?? []).find((c: any) => /riory/i.test(c.name)) ?? companies?.[0] ?? null;
+  const { data: companies } = await supabase.from("companies").select("id,name").eq("user_id", userId).ilike("name", "Riory BV");
+  const company = companies?.[0] ?? null;
   const c = company?.id;
   const docQ = (table: string, dateCol: string) => (a: number, b: number) => {
     let q = supabase.from(table).select("*").gte(dateCol, from).lte(dateCol, to).order("id").range(a, b);

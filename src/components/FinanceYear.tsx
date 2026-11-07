@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { isPrivateCompany, r2 } from "@/lib/finance";
+import { rioryCompanies } from "@/lib/finance-company-scope";
 import { monthNames, MonthlyBars, MonthlyProfit } from "@/components/FinanceCharts";
 import { fetchAll } from "@/lib/fetch-all";
 import { statements, trialBalance, type PostedLine } from "@/lib/boekhouding";
@@ -69,7 +70,7 @@ export function FinanceYear() {
   const [companyId, setCompanyId] = useState("");
   const companies = useQuery({
     queryKey: ["fin-companies"],
-    queryFn: async () => ((await supabase.from("companies").select("*").order("name")).data ?? []).filter((x) => !isPrivateCompany(x.name)),
+    queryFn: async () => rioryCompanies((await supabase.from("companies").select("*").ilike("name", "Riory BV").order("name")).data ?? []),
   });
   useEffect(() => {
     const list = companies.data ?? [];
