@@ -118,10 +118,22 @@ export function normalizePurchaseInvoice(raw: unknown): ParsedPurchaseInvoice {
     };
   });
   const linesNet = r2(lines.reduce((s, l) => s + l.amount, 0));
-  const total = r2(num(o["total"]));
-  const vat = r2(num(o["vat"]));
+  let total = r2(num(o["total"]));
+  let vat = r2(num(o["vat"]));
   // Prefer the invoice's own total; fall back to the sum of the lines.
-  const net = r2(num(o["net"])) || (total ? r2(total - vat) : linesNet);
+  let net = r2(num(o["net"])) || (total ? r2(total - vat) : linesNet);
+  // Some sources state the pre-discount net while already reducing tax. Only
+  // repair an exact, identifiable discount omission; preserve other differences.
+  const discounts = lines.filter(l => l.amount < 0 && /korting|discount|allowance/i.test(l.description));
+  const discountNet = r2(discounts.reduce((s, l) => s + l.amount, 0));
+  if (discountNet < 0 && Math.abs(r2(net + discountNet) - linesNet) <= 0.02) {
+    const linesVat = r2(lines.reduce((s, l) => s + lineTotals(l).vat, 0));
+    const discountVat = r2(discounts.reduce((s, l) => s + lineTotals(l).vat, 0));
+    const vatDelta = Math.abs(r2(vat + discountVat) - linesVat) <= 0.02 ? discountVat : 0;
+    net = r2(net + discountNet);
+    vat = r2(vat + vatDelta);
+    if (total) total = r2(total + discountNet + vatDelta);
+  }
   const supplierIban = str(o["supplierIban"])?.toUpperCase().replace(/\s/g, "") || null;
   const derivedBic = supplierIban && /^(BE\d{14}|NL\d{2}[A-Z]{4}\d{10})$/.test(supplierIban) ? bicFromIban(supplierIban) : null;
   return {
