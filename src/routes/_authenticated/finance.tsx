@@ -54,7 +54,7 @@ function Finance() {
   const nav = useNavigate();
   const search = Route.useSearch();
   const qc = useQueryClient();
-  const { companies, companyId, selectCompany: setCompanyId } = useFinanceCompany(!!user);
+  const { companies, companyId } = useFinanceCompany(!!user);
   const [month, setMonth] = useState(search.maand ?? addMonths(monthKey(new Date()), -1));
   const [year, setYear] = useState(Number((search.maand ?? monthKey(new Date())).slice(0, 4)));
   useEffect(() => { if (!loading && !user) nav({ to: "/werkbonnen" }); }, [loading, user, nav]);
@@ -95,13 +95,7 @@ function Finance() {
           <Link to="/werkbonnen"><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Taken</Button></Link>
           <Link to="/boekhouding" search={{ tab: "rekeningen" }}><Button variant="outline" size="sm">Boekhouding</Button></Link>
           <h1 className="text-xl font-bold">Finance</h1>
-          <select aria-label="Bedrijf" className="max-w-full rounded-md border border-border bg-card px-2 py-1 text-sm" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-            {companies.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <Button size="sm" variant="ghost" onClick={async () => {
-            const n = prompt("Naam nieuw bedrijf"); if (!n) return;
-            await supabase.from("companies").insert({ name: n }); qc.invalidateQueries({ queryKey: ["fin-companies"] });
-          }}>+ bedrijf</Button>
+          <span className="text-sm text-muted-foreground">Riory BV</span>
           {search.tab === "overzicht" ? <select aria-label="Jaar" className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {Array.from({ length: Math.max(5, new Date().getFullYear() - 2025 + 2) }, (_, i) => new Date().getFullYear() + 1 - i).map((y) => <option key={y} value={y}>{y}</option>)}
           </select> : <Input type="month" aria-label="Maand" className="w-40" value={month.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value + "-01")} />}

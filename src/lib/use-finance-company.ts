@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { isPrivateCompany } from "@/lib/finance";
+import { rioryCompanies } from "@/lib/finance-company-scope";
 
 const selectionKey = ["fin-selected-company"];
 
@@ -16,9 +16,9 @@ export function useFinanceCompany(enabled: boolean) {
   const companies = useQuery({
     queryKey: ["fin-companies"], enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("*").order("name");
+      const { data, error } = await supabase.from("companies").select("*").ilike("name", "Riory BV").order("name");
       if (error) throw error;
-      return (data ?? []).filter((company) => !isPrivateCompany(company.name));
+      return rioryCompanies(data ?? []);
     },
   });
   useEffect(() => {

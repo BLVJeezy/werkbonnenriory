@@ -63,7 +63,7 @@ function Boekhouding() {
   const { user, loading } = useAuth();
   const nav = useNavigate();
   const search = Route.useSearch();
-  const { companies, companyId: c, selectCompany: setC } = useFinanceCompany(!!user);
+  const { companies, companyId: c } = useFinanceCompany(!!user);
   useEffect(() => { if (!loading && !user) nav({ to: "/werkbonnen" }); }, [loading, user, nav]);
   const qcRoot = useQueryClient();
   useEffect(() => { if (c) postDueRecurring(c).then((n) => { if (n) { toast.success(`${n} vaste boeking(en) automatisch geboekt`); qcRoot.invalidateQueries({ queryKey: ["fin"] }); } }).catch(() => {}); }, [c, qcRoot]);
@@ -77,9 +77,7 @@ function Boekhouding() {
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }}><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Finance</Button></Link>
           <h1 className="text-xl font-bold">Boekhouding</h1>
-          <select aria-label="Bedrijf" className="max-w-full rounded-md border border-border bg-card px-2 py-1 text-sm" value={c} onChange={(e) => setC(e.target.value)}>
-            {companies.data?.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-          </select>
+          <span className="text-sm text-muted-foreground">Riory BV</span>
           <Link to="/finance" search={{ tab: "koppelingen", id: undefined, maand: undefined }}><Button variant="outline" size="sm">Koppelingen</Button></Link>
         </div>
         <p className="text-xs text-muted-foreground print:hidden">Opvolgboekhouding: houdt je cijfers bij en is exporteerbaar voor je boekhouder. De officiële boekhouding en btw-aangifte blijven bij je boekhouder.</p>
