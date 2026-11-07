@@ -346,7 +346,7 @@ function Klanten() {
       {creating && (
         <div className="space-y-3 rounded-md border border-primary/40 bg-card p-4">
           <div className="text-sm font-black uppercase tracking-wide">Nieuwe klant</div>
-          <CustomerFormFields form={form} setForm={setForm} />
+          <CustomerFormFields form={form} setForm={setForm} templates={templates} />
           <div className="flex gap-2">
             <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>
             <Button size="sm" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>Annuleren</Button>
@@ -428,7 +428,7 @@ function Klanten() {
                       <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-                        <CustomerFormFields form={form} setForm={setForm} />
+                        <CustomerFormFields form={form} setForm={setForm} templates={templates} />
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
