@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] OkiOki-export Syncro19 controleren en ontbrekende facturen uitsluitend bij Syncro19 importeren ter beoordeling; originelen behouden, geen betalingen of dagboekboekingen.
+
 - [x] Bestaand Syncro19-bedrijf beschikbaar in Boekhouding en Finance; gedeelde bedrijfskeuze en knop Koppelingen ingelogd gecontroleerd, twee tests geslaagd. OkiOki toont eerlijk dat ophalen nog niet gekoppeld is.
 - [ ] OkiOki-gegevens ophalen: wacht op een ondersteunde export- of ontvangstmethode; geen publieke API bevestigd, factuurverzending via Peppyrus behouden.
 
