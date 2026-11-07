@@ -81,7 +81,13 @@ function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<st
     setForm((prev) => {
       const next: Record<string, string> = { ...prev, syndicus_company: value };
       const t = templates.find((x) => x.name.trim().toLowerCase() === value.trim().toLowerCase());
-      if (t) for (const f of SYNDICUS_FIELDS) next[f.key] = (t.details[f.key as SyndicusDetailField] as string | null) ?? "";
+      if (t) {
+        for (const f of SYNDICUS_FIELDS) next[f.key] = (t.details[f.key as SyndicusDetailField] as string | null) ?? "";
+        // Heeft de VME zelf nog geen e-mailadres, dan gelden de mailadressen van
+        // de syndicus als contactadres — daar loopt de opdracht immers binnen.
+        if (!next["email"]?.trim()) next["email"] = (t.details.syndicus_email as string | null) ?? "";
+        if (!next["billing_email"]?.trim()) next["billing_email"] = (t.details.syndicus_billing_email as string | null) ?? (t.details.syndicus_email as string | null) ?? "";
+      }
       return next;
     });
   }
