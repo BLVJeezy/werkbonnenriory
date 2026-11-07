@@ -249,7 +249,7 @@ function Aankoopfacturen() {
           <Button asChild variant="outline"><Link to="/leveranciers">Leveranciers</Link></Button>
           <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>
           {peppyrus && canSendPeppolTest(peppyrus) ? <Button variant="outline" disabled={busy} title={peppyrus.live ? 'Stuurt een proeffactuur via Peppol naar je eigen adres in de live-omgeving en haalt hem daarna op' : 'Stuurt een proeffactuur naar je eigen Peppol-adres in de testomgeving'} onClick={stuurTest}>Testfactuur ontvangen{peppyrus.live ? ' (live)' : ''}</Button> : null}
-          <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Inlezen vanuit mail"}</Button>
+          <Button variant="outline" disabled={busy} onClick={importeer}>{busy ? "Bezig…" : "Inlezen uit boekhouding@riory.be"}</Button>
         </div>
       </div>
 

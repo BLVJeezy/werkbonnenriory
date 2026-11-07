@@ -11,7 +11,7 @@ async function assertAdmin({ supabase, userId }: Ctx) {
   if (!data) throw new Error("Alleen voor beheerder");
 }
 
-/** Manual trigger: read the "Aankoopfacturen" folder of the info mailbox now. */
+/** Manual trigger: Peppol first, then the accounting mailbox. */
 export const importPurchaseInvoices = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -19,11 +19,12 @@ export const importPurchaseInvoices = createServerFn({ method: "POST" })
     const lovableKey = process.env['LOVABLE_API_KEY'];
     if (!lovableKey) throw new Error("AI-koppeling ontbreekt");
     const { getConnectionKeyForUser } = await import("@/lib/appUserConnections.server");
-    const { WERKBON_MAILBOX_KEY } = await import("@/lib/werkbon-mailbox.functions");
-    const key = await getConnectionKeyForUser(context.userId, WERKBON_MAILBOX_KEY);
-    if (!key) throw new Error("Koppel eerst de mailbox info@riory.be op de Werkbonnen-pagina");
+    const { INVOICE_MAILBOX_KEY } = await import("@/lib/mail-senders");
+    const key = await getConnectionKeyForUser(context.userId, INVOICE_MAILBOX_KEY);
+    if (!key) throw new Error("Koppel eerst de mailbox boekhouding@riory.be bij Facturen");
     const { importPurchaseInvoicesFromMail } = await import("@/lib/purchase-import.server");
-    return importPurchaseInvoicesFromMail(context.supabase, key, lovableKey);
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    return importPurchaseInvoicesFromMail(supabaseAdmin, key, lovableKey);
   });
 
 /** Admin corrects the parsed values before approving. */

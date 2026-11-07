@@ -32,16 +32,21 @@ export async function receivePeppolInvoices(supabase: SupabaseClient<Database>, 
           const { error } = await supabase.storage.from('aankoopfacturen').upload(path, Uint8Array.from(atob(pdf), c => c.charCodeAt(0)), { contentType: 'application/pdf' });
           if (error) path = null;
         }
-        const { data: row, error } = await supabase.from('purchase_invoices').insert({
+        const ublPath = `peppol/${crypto.randomUUID()}.xml`;
+        const { error: ublError } = await supabase.storage.from('aankoopfacturen').upload(ublPath, new TextEncoder().encode(xml), { contentType: 'application/xml' });
+        if (ublError) throw new Error(`Originele UBL opslaan mislukt: ${ublError.message}`);
+        const { data: result, error } = await supabase.rpc('ingest_purchase_document', { p_document: {
           supplier_name: p.supplierName, supplier_vat: p.supplierVat, supplier_iban: p.supplierIban, supplier_bic: p.supplierBic ?? null, kind: p.kind,
           invoice_number: p.invoiceNumber, invoice_date: p.invoiceDate, due_date: p.dueDate, lines: p.lines,
           net: p.net, vat: p.vat, total: p.total, payment_ref: p.paymentRef, source: 'peppol', status: 'te_controleren',
-          pdf_path: path, peppyrus_message_id: id,
-        }).select('supplier_id').single();
+          pdf_path: path, peppyrus_message_id: id, original_ubl_path: ublPath,
+        } });
+        const row = result as { action?: string; supplier_id?: string } | null;
+        if (error || row?.action === 'skipped') await supabase.storage.from('aankoopfacturen').remove([ublPath, ...(path ? [path] : [])]);
         if (error) throw new Error(error.message);
         if (p.supplierBic && row?.supplier_id) await supabase.from('suppliers').update({ bic: p.supplierBic }).eq('id', row.supplier_id).is('bic', null);
         await call(`/message/${id}/confirm`, { method: 'PATCH' });
-        imported++;
+        if (row?.action === 'skipped') skipped++; else imported++;
       } catch (e) { errors.push(e instanceof Error ? e.message : String(e)); }
     }
     return { imported, skipped, errors };

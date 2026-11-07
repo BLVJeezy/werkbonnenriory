@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Aankoopmails via boekhouding@riory.be met Peppol-voorrang, atomische deduplicatie en kwartiercontrole; negen tests en ingelogde ontvangst gecontroleerd. Publicatie nodig voor automatische nieuwe verwerking.
+- [ ] BNP-factuur van €1,45: niet gevonden in app, bankverrichtingen of Simpla; wacht op factuurnummer, datum of origineel document. Geen betaling uitgevoerd.
+
 - [x] Alleen toegewezen bankbedragen verwerken; restant openhouden en verder in delen afletteren. Twintig tests geslaagd; ingelogde keuze toont verdere deelbedragen zonder nieuwe echte aflettering.
 - [x] Laatst afgeletterde Lovable-betaling gecorrigeerd: BNP €1,09 betaald, €90 open; oorspronkelijke €91,09 behouden en deelboeking in evenwicht.
 
