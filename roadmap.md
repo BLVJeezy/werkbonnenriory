@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Facturen kiezen bij wachtrekening, met atomische herclassificatie en behoud van open restbedragen; oorspronkelijke bankboeking blijft behouden.
+
 - [x] Eurokorting automatisch uit testbon gelezen; bedrag aangepast, opgeslagen en teruggelezen; percentage en mobiel gecontroleerd. Testdocument verwijderd.
 - [x] 23 ongecontroleerde oude mailfacturen verwijderd; scans, Peppol en boekingen behouden. Oude gepubliceerde mailcontrole stopgezet.
 - [ ] Automatische mailcontrole opnieuw instellen na publicatie van de vaste startdatum; wacht op publicatie. Handmatige previewimport blijft beschikbaar, Peppol-controle actief.

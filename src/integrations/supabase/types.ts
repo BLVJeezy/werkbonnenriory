@@ -3238,6 +3238,10 @@ export type Database = {
         Args: { _company: string; _direction: string }
         Returns: string
       }
+      fin_allocate_waiting_bank: {
+        Args: { _allocations: Json; _transaction: string }
+        Returns: Json
+      }
       fin_bank_part_reference: {
         Args: { _allocated: number; _parts: number; _transaction: string }
         Returns: string

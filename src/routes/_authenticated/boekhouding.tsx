@@ -802,7 +802,7 @@ function Bank({ c }: { c: string }) {
     if (!confirm(`${eur(splitSummary.sum)} afletteren over ${splitInvoices.length} facturen; ${eur(splitSummary.difference)} blijft open.\n${splitInvoices.map((i) => `${i.counterparty} ${i.number}: ${eur(parseAmount(splitAmounts[i.id]) ?? 0)}`).join('\n')}`)) return;
     setManualBusy(true);
     try {
-      const { error } = await db.rpc('fin_split_bank_payment', { _transaction: manualTx.id, _allocations: splitInvoices.map((i) => ({ type: i.purchase_id ? 'purchase' : 'finance', id: i.purchase_id ?? i.id, amount: parseAmount(splitAmounts[i.id]) })) });
+      const { error } = await db.rpc(manualTx.waiting ? 'fin_allocate_waiting_bank' : 'fin_split_bank_payment', { _transaction: manualTx.id, _allocations: splitInvoices.map((i) => ({ type: i.purchase_id ? 'purchase' : 'finance', id: i.purchase_id ?? i.id, amount: parseAmount(splitAmounts[i.id]) })) });
       if (error) throw new Error(error.message);
       toast.success(`${eur(splitSummary.sum)} afgeletterd; ${eur(splitSummary.difference)} blijft open`);
       setManualTx(null); setSplitAmounts({}); await refresh();
@@ -811,7 +811,7 @@ function Bank({ c }: { c: string }) {
   };
   const manualInvoice = invoiceChoices.find((i) => i.id === manualInvoiceId);
   const rawManualPreview = manualInvoice && manualTx ? manualBankPreview(manualInvoice.direction, total(manualInvoice), Number(manualInvoice.paid_amount ?? 0), Number(manualTx.amount)) : null;
-  const manualPreview = rawManualPreview && manualInvoice?.purchase_id && !['goedgekeurd', 'betaling_klaargezet', 'betaald'].includes(manualInvoice.status) ? { ...rawManualPreview, error: 'Controleer en keur de aankoopfactuur eerst goed.' } : rawManualPreview;
+  const manualPreview = manualTx?.waiting ? null : rawManualPreview && manualInvoice?.purchase_id && !['goedgekeurd', 'betaling_klaargezet', 'betaald'].includes(manualInvoice.status) ? { ...rawManualPreview, error: 'Controleer en keur de aankoopfactuur eerst goed.' } : rawManualPreview;
   const linkManual = async () => {
     if (!manualTx || !manualInvoice || !manualPreview || manualPreview.error || manualBusy) return;
     if (!confirm(`${manualPreview.mode === 'refund' ? 'Terugstorting' : 'Betaling'} ${eur(Number(manualTx.amount))} koppelen aan ${manualInvoice.counterparty} ${manualInvoice.number}?${manualPreview.mode === 'overpayment' ? ` Teveel betaald: ${eur(manualPreview.overpaid)}.` : ''}`)) return;
@@ -836,9 +836,10 @@ function Bank({ c }: { c: string }) {
   const wachtEntry = useMemo(() => new Set(wachtLines.map((l: any) => l.entry_id)), [wachtLines]);
   const herDone = useMemo(() => new Set(herEntries.map((e: any) => e.source_ref)), [herEntries]);
   const wachtIds = useMemo(() => new Set(tx.filter((t) => t.entry_id && !t.matched_invoice_id && wachtEntry.has(t.entry_id) && !herDone.has(t.id)).map((t) => t.id)), [tx, wachtEntry, herDone]);
-  const wachtTx = tx.filter((t) => wachtIds.has(t.id));
+  const wachtTx = tx.filter((t) => wachtIds.has(t.id) && Math.abs(t.original_amount) - t.allocated_amount > 0.005).map((t) => ({ ...t, amount: Math.sign(t.original_amount) * r2(Math.abs(t.original_amount) - t.allocated_amount) }));
   const herboek = async (t: any, account: string) => {
     if (account === WACHT) return;
+    if (t.allocated_amount > 0) return void toast.error('Letter het resterende bedrag verder af via Factuur kiezen.');
     if (!confirm(`${eur(Number(t.amount))} van wachtrekening doorboeken naar ${account}?`)) return;
     try { await post(c, "divers", t.tx_date, `Uit wachtrekening · ${t.counterparty ?? t.description ?? ""}`.trim(), null, "wacht", t.id, paymentEntry(Number(t.amount), WACHT, account)); toast.success(`Doorgeboekt naar ${account}`); refresh(); }
     catch (e: any) { toast.error(e.message); }
@@ -971,8 +972,10 @@ function Bank({ c }: { c: string }) {
             {wachtTx.map((t) => (
               <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
                 <span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span>
-                <span className="flex items-center gap-2"><span className={Number(t.amount) < 0 ? "text-destructive" : ""}>{eur(Number(t.amount))}</span>
-                  <span className="text-xs">Doorboeken naar:</span><AccountPicker accounts={accounts} onPick={(nr) => herboek(t, nr)} /></span>
+                <span className="flex flex-wrap items-center gap-2"><span className={Number(t.amount) < 0 ? "text-destructive" : ""}>{eur(Number(t.amount))}</span>
+                  <Button size="sm" variant="outline" onClick={() => { setManualTx({ ...t, waiting: true }); setInvoiceSearch(t.counterparty ?? ''); setManualInvoiceId(''); setSplitAmounts({}); }}>Factuur kiezen</Button>
+                  {!t.allocated_amount && <><span className="text-xs">Doorboeken naar:</span><AccountPicker accounts={accounts} onPick={(nr) => herboek(t, nr)} /></>}
+                  {!!t.allocated_amount && <span className="text-xs text-muted-foreground">Afgeletterd {eur(t.allocated_amount)} · resterend {eur(Math.abs(Number(t.amount)))}</span>}</span>
               </div>
             ))}
           </div>
@@ -1037,7 +1040,7 @@ function Bank({ c }: { c: string }) {
                   : <span className="text-xs text-muted-foreground">geboekt zonder factuur</span>}
               </span>
               <span className="flex items-center gap-2"><span className={Number(t.amount) < 0 ? "text-destructive" : ""}>{eur(Number(t.amount))}</span>
-                <Button size="sm" variant="outline" onClick={async () => { if (!confirm("Koppeling en boeking van deze betaling ongedaan maken?")) return; try { await undoEntry(c, t.entry_id); toast.success("Losgekoppeld"); refresh(); } catch (e: any) { toast.error(e.message); } }}>Ongedaan maken</Button></span>
+                <Button size="sm" variant="outline" disabled={wachtIds.has(t.id) && t.allocated_amount > 0} onClick={async () => { if (!confirm("Koppeling en boeking van deze betaling ongedaan maken?")) return; try { await undoEntry(c, t.entry_id); toast.success("Losgekoppeld"); refresh(); } catch (e: any) { toast.error(e.message); } }}>Ongedaan maken</Button></span>
             </div>
             );
           })}
