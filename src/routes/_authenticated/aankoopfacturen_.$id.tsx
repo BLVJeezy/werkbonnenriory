@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from "@/lib/supplier-rules";
 import { euro } from "@/lib/billing";
-import { fillMissingVatRates, lineTotals, purchaseInvoiceWarnings, setPurchaseLineDiscount, setPurchaseDocumentDiscount, purchaseDiscountTotals, type PurchaseLine } from "@/lib/purchase-invoice";
+import { normalizePurchaseInvoice, fillMissingVatRates, lineTotals, purchaseInvoiceWarnings, setPurchaseLineDiscount, setPurchaseDocumentDiscount, purchaseDiscountTotals, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
 import { bankOfIban, nextBic } from "@/lib/iban-bic";
@@ -60,6 +60,10 @@ function Controle() {
     const { data: r } = await supabase.from("purchase_invoices").select("*").eq("id", id).single();
     if (!r) { toast.error("Factuur niet gevonden"); return; }
     const row = { ...r, kind: r.kind === "creditnota" ? "creditnota" : "factuur", lines: fillMissingVatRates((r.lines ?? []) as PurchaseLine[], Number(r.net), Number(r.vat)) } as Row;
+    if (row.status === "te_controleren") {
+      const corrected = normalizePurchaseInvoice({ lines: row.lines, net: row.net, vat: row.vat, total: row.total });
+      row.net = corrected.net; row.vat = corrected.vat; row.total = corrected.total;
+    }
     row.supplier_bic = nextBic(row.supplier_iban, row.supplier_bic, row.supplier_iban);
     setEdit(row); setSources({}); setDiscountModes({}); setAllDiscount(0);
     setPdfUrl((old) => { if (old) URL.revokeObjectURL(old); return null; });
