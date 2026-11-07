@@ -28,4 +28,12 @@ describe("company lookup", () => {
   it("does not interpret withheld names or unparseable addresses as real data", () => {
     expect(companyDetails({ name: "---", address: "---" })).toEqual({ name: "", street: "", house_number: "", postal_code: "", city: "" });
   });
+  it("fills the syndicus company and address without changing VME or contact data", () => {
+    const details = companyDetails({ name: "Immo Schrijnemakers", address: "Kantoorstraat 12\n3740 Bilzen" });
+    expect(fillCompanyDetails({ company: "", name: "VME Parkzicht", email: "info@kantoor.be", vat_number: "0840931404" }, details, "company")).toEqual({ company: "Immo Schrijnemakers", name: "VME Parkzicht", email: "info@kantoor.be", vat_number: "0840931404", street: "Kantoorstraat", house_number: "12", postal_code: "3740", city: "Bilzen" });
+  });
+  it("preserves an existing syndicus company and coherent address", () => {
+    const form = { company: "Eigen kantoor", street: "Eigen straat", house_number: null };
+    expect(fillCompanyDetails(form, companyDetails({ name: "Ander kantoor", address: "Kantoorstraat 12\n3740 Bilzen" }), "company")).toEqual(form);
+  });
 });

@@ -35,12 +35,13 @@ export function companyDetails(payload: Record<string, unknown>): CompanyDetails
 }
 
 /** Only fill blank fields. An existing address is kept as one coherent unit. */
-export function fillCompanyDetails(form: Record<string, string>, details: CompanyDetails): Record<string, string> {
+export function fillCompanyDetails<T extends Partial<Record<string, string | null | undefined>>>(form: T, details: CompanyDetails, nameField: "name" | "company" = "name"): T {
   const next = { ...form };
-  if (!next["name"]?.trim() && details.name) next["name"] = details.name;
+  const patch: Record<string, string> = {};
+  if (!next[nameField]?.trim() && details.name) patch[nameField] = details.name;
   const address = ["street", "house_number", "postal_code", "city"] as const;
   if (!address.some(key => next[key]?.trim())) {
-    for (const key of address) if (details[key]) next[key] = details[key];
+    for (const key of address) if (details[key]) patch[key] = details[key];
   }
-  return next;
+  return { ...next, ...patch };
 }
