@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PAYMENT_METHODS, deductibleVat, supplierVatWarning } from "@/lib/supplier-rules";
 import { euro } from "@/lib/billing";
-import { fillMissingVatRates, lineTotals, purchaseInvoiceWarnings, setPurchaseLineDiscount, purchaseDiscountTotals, type PurchaseLine } from "@/lib/purchase-invoice";
+import { fillMissingVatRates, lineTotals, purchaseInvoiceWarnings, setPurchaseLineDiscount, setPurchaseDocumentDiscount, purchaseDiscountTotals, type PurchaseLine } from "@/lib/purchase-invoice";
 import { bookPurchaseInvoice, listExpenseAccounts, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditorBank } from "@/lib/purchase-booking";
 import { bankOfIban, nextBic } from "@/lib/iban-bic";
@@ -52,13 +53,15 @@ function Controle() {
   const [sources, setSources] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [allDiscount, setAllDiscount] = useState(0);
+  const [allDiscountMode, setAllDiscountMode] = useState<"percent" | "amount">("percent");
+  const [discountModes, setDiscountModes] = useState<Record<number, "percent" | "amount">>({});
 
   async function load() {
     const { data: r } = await supabase.from("purchase_invoices").select("*").eq("id", id).single();
     if (!r) { toast.error("Factuur niet gevonden"); return; }
     const row = { ...r, kind: r.kind === "creditnota" ? "creditnota" : "factuur", lines: fillMissingVatRates((r.lines ?? []) as PurchaseLine[], Number(r.net), Number(r.vat)) } as Row;
     row.supplier_bic = nextBic(row.supplier_iban, row.supplier_bic, row.supplier_iban);
-    setEdit(row); setSources({});
+    setEdit(row); setSources({}); setDiscountModes({}); setAllDiscount(0);
     setPdfUrl((old) => { if (old) URL.revokeObjectURL(old); return null; });
     setPdfBase64(null);
     if (row.pdf_path) {
@@ -146,7 +149,7 @@ function Controle() {
     const targets = edit.lines.filter((l, i) => (index === null ? l.amount >= 0 : i === index));
     if (targets.some((l) => l.vatRate == null)) { toast.error("Vul eerst het btw-tarief in voor de lijnen met korting"); return; }
     try {
-      const lines = edit.lines.map((l, i) => (index === null ? l.amount >= 0 : i === index) ? setPurchaseLineDiscount(l, value, mode) : l);
+      const lines = index === null ? setPurchaseDocumentDiscount(edit.lines, value, mode) : edit.lines.map((l, i) => i === index ? setPurchaseLineDiscount(l, value, mode) : l);
       setEdit({ ...edit, lines, ...purchaseDiscountTotals(edit.lines, lines, edit) });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Korting niet toegepast"); }
   }
@@ -216,11 +219,13 @@ function Controle() {
             <div className="space-y-2">
               <Label>Lijnen en boeking</Label>
               <div className="flex flex-wrap items-end gap-2">
-                <Field label="Korting alle lijnen %"><Input type="number" min="0" max="100" step="0.01" className="h-8 w-24" aria-label="Korting alle lijnen" value={allDiscount} onChange={(e) => setAllDiscount(Number(e.target.value))} /></Field>
-                <Button type="button" variant="outline" size="sm" onClick={() => discountLines(null, allDiscount, "percent")}>Korting toepassen</Button>
+                <Field label={allDiscountMode === "percent" ? "Korting alle lijnen %" : "Korting totaal € ex btw"}><Input type="number" min="0" max={allDiscountMode === "percent" ? 100 : undefined} step="0.01" className="h-8 w-24" aria-label="Korting alle lijnen" value={allDiscount} onChange={(e) => setAllDiscount(Number(e.target.value))} /></Field>
+                <DiscountMode value={allDiscountMode} onChange={setAllDiscountMode} label="Soort korting alle lijnen" />
+                <Button type="button" variant="outline" size="sm" onClick={() => discountLines(null, allDiscount, allDiscountMode)}>Korting toepassen</Button>
               </div>
               {edit.lines.map((l, i) => {
                 const t = lineTotals(l);
+                const mode = discountModes[i] ?? (l.discountPercent != null ? "percent" : l.discountAmount != null ? "amount" : "percent");
                 return (
                 <div key={i} className="space-y-1 rounded-md border p-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -230,7 +235,8 @@ function Controle() {
                   <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
                     <Field label="Aantal"><Input type="number" step="any" className="h-8 w-16" aria-label="Aantal" value={l.quantity} onChange={(e) => upd(i, { quantity: Number(e.target.value) })} /></Field>
                     <Field label="Prijs/st"><Input type="number" step="0.01" className="h-8 w-24" aria-label="Prijs per stuk" value={l.unitPrice} onChange={(e) => upd(i, { unitPrice: Number(e.target.value) })} /></Field>
-                    <Field label="Korting %"><Input type="number" min="0" max="100" step="0.01" className="h-8 w-20" aria-label="Korting procent" value={l.discountPercent ?? ""} onChange={(e) => discountLines(i, Number(e.target.value), "percent")} /></Field>
+                    <Field label={mode === "percent" ? "Korting %" : "Korting € ex btw"}><Input type="number" min="0" max={mode === "percent" ? 100 : undefined} step="0.01" className="h-8 w-24" aria-label={mode === "percent" ? "Korting procent" : "Korting bedrag"} value={mode === "percent" ? l.discountPercent ?? (l.discountAmount != null && (l.discountBase ?? 0) > 0 ? Math.round(l.discountAmount / Number(l.discountBase) * 10000) / 100 : "") : l.discountAmount ?? ""} onChange={(e) => discountLines(i, Number(e.target.value), mode)} /></Field>
+                    <DiscountMode value={mode} onChange={(v) => setDiscountModes(s => ({ ...s, [i]: v }))} label={`Soort korting lijn ${i + 1}`} />
                     <Field label="Btw %"><Input type="number" step="0.1" className="h-8 w-16" aria-label="Btw-tarief" placeholder="—" value={l.vatRate ?? ""} onChange={(e) => upd(i, { vatRate: e.target.value === "" ? null : Number(e.target.value), vat: null, total: null })} /></Field>
                     <Field label="Ex btw"><Input type="number" step="0.01" className="h-8 w-24" aria-label="Bedrag exclusief btw" value={l.amount} onChange={(e) => upd(i, { amount: Number(e.target.value), vat: null, total: null })} /></Field>
                     <Field label="Btw"><p className="h-8 px-1 font-mono text-sm leading-8">{euro(t.vat)}</p></Field>
@@ -274,6 +280,14 @@ function Controle() {
       </div>
     </div>
   );
+}
+
+/** Tiny labelled box so one purchase line reads like the document it came from. */
+function DiscountMode({ value, onChange, label }: { value: "percent" | "amount"; onChange: (v: "percent" | "amount") => void; label: string }) {
+  return <ToggleGroup type="single" variant="outline" size="sm" value={value} aria-label={label} onValueChange={v => { if (v === "percent" || v === "amount") onChange(v); }}>
+    <ToggleGroupItem value="percent" aria-label={`${label} percentage`} title="Percentage">%</ToggleGroupItem>
+    <ToggleGroupItem value="amount" aria-label={`${label} bedrag`} title="Bedrag exclusief btw">€</ToggleGroupItem>
+  </ToggleGroup>;
 }
 
 /** Tiny labelled box so one purchase line reads like the document it came from. */
