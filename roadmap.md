@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] DKV: 17 bewezen dubbele deelstukken verwijderd met auditkopieën; 12 dubbele kostenboekingen tegengeboekt en vier uitleesbedragen gecorrigeerd. Kostenverlaging €4.301,45; alle correctieboekingen in evenwicht, bankbetalingen ongewijzigd.
+- [ ] DKV volledig terugbrengen tot 16 onderbouwde totaaldocumenten: wacht op ontbrekende originele totaalfacturen, met name 15 april en 15 juli; beschikbare bron bevat slechts acht expliciete samenvattingen en onvolledige deelstukken.
+
 - [x] Facturen kiezen bij wachtrekening, met atomische herclassificatie en behoud van open restbedragen; oorspronkelijke bankboeking blijft behouden.
 
 - [x] Eurokorting automatisch uit testbon gelezen; bedrag aangepast, opgeslagen en teruggelezen; percentage en mobiel gecontroleerd. Testdocument verwijderd.
