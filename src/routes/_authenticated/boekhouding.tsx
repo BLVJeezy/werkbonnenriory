@@ -26,6 +26,7 @@ import { MAR } from "@/lib/mar";
 import { undoEntry } from "@/lib/undo";
 import { pontoAccounts, pontoSync } from "@/lib/finance-ponto.functions";
 import { useFinanceSales } from "@/lib/use-finance-sales";
+import { useFinanceCompany } from "@/lib/use-finance-company";
 import { useServerFn } from "@tanstack/react-start";
 import {
   accountClass, controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, r2, statements, trialBalance, vatReport,
@@ -62,10 +63,8 @@ function Boekhouding() {
   const { user, loading } = useAuth();
   const nav = useNavigate();
   const search = Route.useSearch();
-  const [c, setC] = useState("");
+  const { companies, companyId: c, selectCompany: setC } = useFinanceCompany(!!user);
   useEffect(() => { if (!loading && !user) nav({ to: "/werkbonnen" }); }, [loading, user, nav]);
-  const companies = useQuery({ queryKey: ["fin-companies"], enabled: !!user, queryFn: async () => ((await supabase.from("companies").select("*").order("name")).data ?? []).filter((x) => !isPrivateCompany(x.name)) });
-  useEffect(() => { if (!c && companies.data?.length) setC(companies.data[0]?.id ?? ""); }, [companies.data, c]);
   const qcRoot = useQueryClient();
   useEffect(() => { if (c) postDueRecurring(c).then((n) => { if (n) { toast.success(`${n} vaste boeking(en) automatisch geboekt`); qcRoot.invalidateQueries({ queryKey: ["fin"] }); } }).catch(() => {}); }, [c, qcRoot]);
   useEffect(() => { if (c) postDueLoans(c).then((n) => { if (n) { toast.success(`${n} kredietboeking(en) automatisch geboekt`); qcRoot.invalidateQueries({ queryKey: ["fin"] }); } }).catch(() => {}); }, [c, qcRoot]);
@@ -78,9 +77,10 @@ function Boekhouding() {
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }}><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Finance</Button></Link>
           <h1 className="text-xl font-bold">Boekhouding</h1>
-          <select className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={c} onChange={(e) => setC(e.target.value)}>
+          <select aria-label="Bedrijf" className="max-w-full rounded-md border border-border bg-card px-2 py-1 text-sm" value={c} onChange={(e) => setC(e.target.value)}>
             {companies.data?.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>
+          <Link to="/finance" search={{ tab: "koppelingen", id: undefined, maand: undefined }}><Button variant="outline" size="sm">Koppelingen</Button></Link>
         </div>
         <p className="text-xs text-muted-foreground print:hidden">Opvolgboekhouding: houdt je cijfers bij en is exporteerbaar voor je boekhouder. De officiële boekhouding en btw-aangifte blijven bij je boekhouder.</p>
         <div className="flex gap-1 overflow-x-auto pb-1 print:hidden">

@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Bestaand Syncro19-bedrijf beschikbaar in Boekhouding en Finance; gedeelde bedrijfskeuze en knop Koppelingen ingelogd gecontroleerd, twee tests geslaagd. OkiOki toont eerlijk dat ophalen nog niet gekoppeld is.
+- [ ] OkiOki-gegevens ophalen: wacht op een ondersteunde export- of ontvangstmethode; geen publieke API bevestigd, factuurverzending via Peppyrus behouden.
+
 - [x] DKV: 17 bewezen dubbele deelstukken verwijderd met auditkopieën; 12 dubbele kostenboekingen tegengeboekt en vier uitleesbedragen gecorrigeerd. Kostenverlaging €4.301,45; alle correctieboekingen in evenwicht, bankbetalingen ongewijzigd.
 - [x] Zeven aangeleverde DKV-afrekeningen gecontroleerd: april €499,18 (waarborg €135 op 288000), eind april €87,43, 26 mei €0,01, eind mei €77,90, 15 juni €280,60, eind juni €233,29, 15 juli €204,95. Deelstukken samengevoegd; bestaande bankboekingen behouden en koppelingen bevestigd.
 - [x] DKV geconsolideerd tot 16 afrekeningen voor €6.769,00; €135 waarborg apart, kosten €6.634,00. Vijftien bestaande betalingen bevestigd; september/oktober van wachtrekening naar leveranciers, laatste afrekening €807,69 open. Twee uploads 15 oktober tellen één keer; Peppol-deelfactuur ongewijzigd zonder dubbele kostenboeking.
