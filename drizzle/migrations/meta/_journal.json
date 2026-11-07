@@ -904,6 +904,13 @@
       "when": 1794048068538,
       "tag": "0128_unique_incremental_bank_posting_reference",
       "breakpoints": true
+    },
+    {
+      "idx": 129,
+      "version": "7",
+      "when": 1794053453465,
+      "tag": "0129_skip_zero_bank_tx_and_paid_allocations",
+      "breakpoints": true
     }
   ]
 }
