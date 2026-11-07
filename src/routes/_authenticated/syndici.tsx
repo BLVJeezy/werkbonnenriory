@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, LoaderCircle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { allCustomers } from "@/lib/customers";
@@ -9,6 +10,8 @@ import { formatAddress } from "@/lib/address";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteSyndicus, saveSyndicus } from "@/lib/syndici.functions";
+import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
+import { lookupCompany } from "@/lib/company-lookup.functions";
 import {
   SYNDICUS_DIR_FIELDS,
   dirFromCustomer,
@@ -26,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/syndici")({
 const DIR_FIELDS: { key: SyndicusDirField; label: string; className: string; hint?: string }[] = [
   { key: "company", label: "Bedrijfsnaam", className: "min-w-48 flex-[2]", hint: "Bijv. Immo Schrijnemakers BV" },
   { key: "contact", label: "Contactpersoon", className: "min-w-40 flex-1", hint: "Bijv. Olivier Schrijnemakers" },
-  { key: "vat_number", label: "Btw-nummer", className: "w-44", hint: "BE0…" },
+  { key: "vat_number", label: "Ondernemings-/btw-nummer", className: "w-60", hint: "BE0…" },
   { key: "street", label: "Straat", className: "min-w-40 flex-[2]" },
   { key: "house_number", label: "Nr.", className: "w-24" },
   { key: "postal_code", label: "Postcode", className: "w-32" },
@@ -63,6 +66,34 @@ function Fiche({
 }) {
   const [form, setForm] = useState<SyndicusDirInput>(initial);
   const [busy, setBusy] = useState(false);
+  const lookup = useServerFn(lookupCompany);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupMessage, setLookupMessage] = useState("");
+  const [retry, setRetry] = useState(0);
+  const number = form.vat_number ?? "";
+
+  useEffect(() => {
+    let active = true;
+    setLookupMessage("");
+    setLookingUp(false);
+    if (!companyNumber(number)) return;
+    const timer = setTimeout(async () => {
+      setLookingUp(true);
+      try {
+        const result = await lookup({ data: { number } });
+        if (!active) return;
+        if (result.ok) {
+          setForm(prev => prev.vat_number === number ? fillCompanyDetails(prev, result.details, "company") : prev);
+          setLookupMessage(`Gevonden: ${result.details.name || "bedrijfsadres"}`);
+        } else setLookupMessage(result.message);
+      } catch {
+        if (active) setLookupMessage("Opzoeken mislukt. Probeer opnieuw.");
+      } finally {
+        if (active) setLookingUp(false);
+      }
+    }, 700);
+    return () => { active = false; clearTimeout(timer); };
+  }, [number, retry, lookup]);
 
   async function bewaar() {
     if (!form.company?.trim()) {
@@ -101,14 +132,18 @@ function Fiche({
               {f.label}
               {f.key === "company" && " *"}
             </span>
-            <Input
-              value={(form[f.key] as string | null) ?? ""}
-              placeholder={f.hint}
-              onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
-            />
+            <div className="flex items-center gap-1">
+              <Input
+                value={(form[f.key] as string | null) ?? ""}
+                placeholder={f.hint}
+                onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
+              />
+              {f.key === "vat_number" && <Button type="button" size="icon" variant="outline" className="shrink-0" disabled={lookingUp || !companyNumber(number)} aria-label="Bedrijfsgegevens opzoeken" title="Bedrijfsgegevens opzoeken" onClick={() => setRetry(value => value + 1)}>{lookingUp ? <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" /> : <Search className="size-4" />}</Button>}
+            </div>
           </label>
         ))}
       </div>
+      {(lookingUp || lookupMessage) && <p role="status" className="text-sm text-muted-foreground">{lookingUp ? "Bedrijfsgegevens opzoeken…" : lookupMessage}</p>}
       <p className="text-xs text-muted-foreground">
         Het btw-nummer van de syndicus staat apart en komt nooit op de factuur van de VME.
       </p>
