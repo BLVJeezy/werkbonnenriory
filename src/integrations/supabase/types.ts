@@ -565,6 +565,7 @@ export type Database = {
           branch_id: string | null
           branch_manual: boolean
           city: string | null
+          contacts: Json
           created_at: string
           customer_number: string | null
           customer_numbers: string[]
@@ -598,6 +599,7 @@ export type Database = {
           branch_id?: string | null
           branch_manual?: boolean
           city?: string | null
+          contacts?: Json
           created_at?: string
           customer_number?: string | null
           customer_numbers?: string[]
@@ -631,6 +633,7 @@ export type Database = {
           branch_id?: string | null
           branch_manual?: boolean
           city?: string | null
+          contacts?: Json
           created_at?: string
           customer_number?: string | null
           customer_numbers?: string[]

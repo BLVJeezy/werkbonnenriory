@@ -1,3 +1,4 @@
+import { parseContacts, upsertContact } from "@/lib/customer-contacts";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -256,7 +257,7 @@ function Lijst() {
                   <Input id="nb-city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
                 </div>
               </div>
-              <SiteAddressFields value={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch, site_street: patch.site_street ?? current.site_street, site_house_number: patch.site_house_number ?? current.site_house_number, site_postal_code: patch.site_postal_code ?? current.site_postal_code, site_city: patch.site_city ?? current.site_city, site_contact_name: patch.site_contact_name ?? current.site_contact_name, site_contact_phone: patch.site_contact_phone ?? current.site_contact_phone }))} />
+              <SiteAddressFields value={form} contacts={parseContacts((selectedCustomer as { contacts?: unknown } | undefined)?.contacts)} onSaveContact={selectedCustomer ? async (c) => { const { error } = await supabase.from("customers").update({ contacts: upsertContact(parseContacts((selectedCustomer as { contacts?: unknown }).contacts), c) }).eq("id", selectedCustomer.id); if (error) toast.error(error.message); else { toast.success("Contactpersoon bewaard bij de klant"); qc.invalidateQueries({ queryKey: ["customers"] }); } } : undefined} onChange={(patch) => setForm((current) => ({ ...current, ...patch, site_street: patch.site_street ?? current.site_street, site_house_number: patch.site_house_number ?? current.site_house_number, site_postal_code: patch.site_postal_code ?? current.site_postal_code, site_city: patch.site_city ?? current.site_city, site_contact_name: patch.site_contact_name ?? current.site_contact_name, site_contact_phone: patch.site_contact_phone ?? current.site_contact_phone }))} />
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1">
                   <Label htmlFor="nb-phone">Telefoon</Label>
