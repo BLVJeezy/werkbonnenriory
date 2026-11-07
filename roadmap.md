@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Alleen Riory tonen in Boekhouding en Finance; Syncro19-import/pagina geannuleerd, deze beurt opgeslagen exportbestanden verwijderen. Bestaande boekhoudgegevens niet destructief verwijderen zonder bevestiging.
+- [x] Alleen Riory in Dashboard, Boekhouding en Finance; Syncro19-import/pagina geannuleerd, bedrijf toevoegen verwijderd, nieuw opgeslagen exportbestanden verwijderd. Vijf tests en drie ingelogde schermcontroles geslaagd. Bestaande Syncro19-boekhoudgegevens behouden buiten de schermen; geen factuurimport uitgevoerd.
 - [ ] OkiOki-gegevens ophalen: wacht op een ondersteunde export- of ontvangstmethode; geen publieke API bevestigd, factuurverzending via Peppyrus behouden.
 
 - [x] DKV: 17 bewezen dubbele deelstukken verwijderd met auditkopieën; 12 dubbele kostenboekingen tegengeboekt en vier uitleesbedragen gecorrigeerd. Kostenverlaging €4.301,45; alle correctieboekingen in evenwicht, bankbetalingen ongewijzigd.
