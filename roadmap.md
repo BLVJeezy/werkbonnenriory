@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Aankoopmails via boekhouding@riory.be verwerken, ontbrekende documenten herkennen en Peppol voorrang geven; automatische verwerking en tests controleren.
+
 - [x] Alleen toegewezen bankbedragen verwerken; restant openhouden en verder in delen afletteren. Twintig tests geslaagd; ingelogde keuze toont verdere deelbedragen zonder nieuwe echte aflettering.
 - [x] Laatst afgeletterde Lovable-betaling gecorrigeerd: BNP €1,09 betaald, €90 open; oorspronkelijke €91,09 behouden en deelboeking in evenwicht.
 
