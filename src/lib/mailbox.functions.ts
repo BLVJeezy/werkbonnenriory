@@ -220,6 +220,22 @@ export const importFromMailbox = createServerFn({ method: "POST" })
           received_at: m.receivedDateTime ?? null,
         }).select("customer_id").single();
         if (error) throw new Error(error.message);
+        // Syndicusgegevens uit de mail bewaren bij de klant; enkel lege velden
+        // aanvullen zodat handmatig ingevulde gegevens behouden blijven.
+        if (created?.customer_id && x.syndicus) {
+          const details = syndicusDetailsFromMail(x);
+          if (Object.keys(details).length > 0) {
+            const { data: cust } = await context.supabase.from("customers").select(SYNDICUS_DETAIL_FIELDS.join(",")).eq("id", created.customer_id).maybeSingle();
+            const patch: Record<string, string> = {};
+            for (const f of SYNDICUS_DETAIL_FIELDS) {
+              const existing = (cust as Record<string, string | null> | null)?.[f];
+              if (!existing?.trim() && details[f]) patch[f] = details[f];
+            }
+            if (Object.keys(patch).length > 0) {
+              await context.supabase.from("customers").update(patch).eq("id", created.customer_id);
+            }
+          }
+        }
         // Een mail die "vrij beroep" zegt, maakt de klant duurzaam vrij beroep; de beheerder kan het later nog corrigeren.
         // Klantgegevens meenemen: 6% (oude particuliere woning) bewaren bij de klant, of het bewaarde tarief toepassen.
         if (created?.customer_id && !vrij) {
