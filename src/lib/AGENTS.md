@@ -6,3 +6,4 @@
 - Mail and Peppol purchase ingestion share serialized `ingest_purchase_document` and a per-attachment ledger; Peppol upgrades preserve IDs and reviewed/payment state to prevent cross-source duplicates.
 - Bank selection reads app purchases directly; `fin_link_purchase_bank` scopes them to owned Riory BV transactions and atomically claims the payment ledger and posts only the bank leg, never a duplicate purchase document. Linked payment entries cannot be undone as loose entries.
 - Split payments use `fin_split_bank_payment` and explicit per-invoice allocations capped by the unallocated bank balance; invoice updates and each balanced partial bank posting are atomic, and only a fully allocated transaction gets its completion entry.
+- Partial bank journal references include cumulative allocated cents via `fin_bank_part_reference`, so each later allocation is unique while the transaction lock and existing ledger prevent reuse.

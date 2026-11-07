@@ -897,6 +897,13 @@
       "when": 1794047066664,
       "tag": "0127_purchase_mail_peppol_priority",
       "breakpoints": true
+    },
+    {
+      "idx": 128,
+      "version": "7",
+      "when": 1794048068538,
+      "tag": "0128_unique_incremental_bank_posting_reference",
+      "breakpoints": true
     }
   ]
 }
