@@ -1,6 +1,7 @@
 import { VAT_RATES, detectVatRate, vatFor, vatSide, type VatRate } from "@/lib/vat-rate";
 import { FinanceTasks } from "@/components/FinanceTasks";
 import { useFinanceSales } from "@/lib/use-finance-sales";
+import { useFinanceCompany } from "@/lib/use-finance-company";
 import { syncFinancePurchases } from "@/lib/finance-purchases.functions";
 import { pontoStatus } from "@/lib/ponto.functions";
 import { unapproveInvoice } from "@/lib/undo";
@@ -53,13 +54,11 @@ function Finance() {
   const nav = useNavigate();
   const search = Route.useSearch();
   const qc = useQueryClient();
-  const [companyId, setCompanyId] = useState<string>("");
+  const { companies, companyId, selectCompany: setCompanyId } = useFinanceCompany(!!user);
   const [month, setMonth] = useState(search.maand ?? addMonths(monthKey(new Date()), -1));
   const [year, setYear] = useState(Number((search.maand ?? monthKey(new Date())).slice(0, 4)));
   useEffect(() => { if (!loading && !user) nav({ to: "/werkbonnen" }); }, [loading, user, nav]);
 
-  const companies = useQuery({ queryKey: ["fin-companies"], enabled: !!user, queryFn: async () => ((await supabase.from("companies").select("*").order("name")).data ?? []).filter((x) => !isPrivateCompany(x.name)) });
-  useEffect(() => { if (!companyId && companies.data?.length) setCompanyId(companies.data[0]?.id ?? ""); }, [companies.data, companyId]);
   const company = companies.data?.find((c) => c.id === companyId);
   useFinanceSales(!!user && company?.name.trim().toLowerCase() === "riory bv");
 
@@ -96,7 +95,7 @@ function Finance() {
           <Link to="/werkbonnen"><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Taken</Button></Link>
           <Link to="/boekhouding" search={{ tab: "rekeningen" }}><Button variant="outline" size="sm">Boekhouding</Button></Link>
           <h1 className="text-xl font-bold">Finance</h1>
-          <select className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+          <select aria-label="Bedrijf" className="max-w-full rounded-md border border-border bg-card px-2 py-1 text-sm" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
             {companies.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <Button size="sm" variant="ghost" onClick={async () => {
@@ -1051,6 +1050,10 @@ function Koppelingen({ c, bound, onDone }: { c: string; bound: boolean; onDone: 
   };
   return (
     <div className="grid gap-3 lg:grid-cols-2">
+      <Card title="OkiOki — niet gekoppeld voor ophalen">
+        <p className="text-sm">Er is nog geen ontvangstmethode ingesteld voor dit bedrijf. Ophalen wacht op een ondersteunde documentexport of doorstuurmethode vanuit OkiOki.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Verkoopfacturen van Riory blijven via Peppyrus en klantmail verzonden; geen kopieën naar OkiOki.</p>
+      </Card>
       <Card title="Simpla — aankoopfacturen">
         <p className="text-sm">Losgekoppeld: aankoopfacturen komen niet meer uit Simpla, maar via Peppol, mail, scans en uploads. Eerder ingelezen facturen blijven bewaard.</p>
       </Card>
