@@ -975,21 +975,32 @@ function Bank({ c }: { c: string }) {
           </div>
         )}
       </Card>
-      {paidNoTx.length > 0 && <Card title={`Betaald gemarkeerd, nog niet afgeletterd (${paidNoTx.length})`}>
+      {paidOpen.length > 0 && <Card title={`Betaald gemarkeerd, nog niet afgeletterd (${paidOpen.length})`}>
         <Input className="mb-2 max-w-sm" aria-label="Zoek betaald gemarkeerde factuur" placeholder="Zoek factuur (naam, nummer of bedrag)…" value={zoekPaid} onChange={(e) => setZoekPaid(e.target.value)} />
         <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
-          {paidNoTx.filter((i: any) => !zoekPaid.trim() || `${i.counterparty ?? ""} ${i.number ?? ""} ${total(i)}`.toLowerCase().includes(zoekPaid.trim().toLowerCase())).slice(0, 300).map((i: any) => {
-            const kandidaten = tx.filter((t) => !t.entry_id && !t.allocated_amount && (Number(t.amount) < 0) === (i.direction === "aankoop"));
-            const exact = kandidaten.filter((t) => Math.abs(effAmt(t) - total(i)) < 0.025);
+          {paidOpen.filter((i: any) => !zoekPaid.trim() || `${i.counterparty ?? ""} ${i.number ?? ""} ${total(i)}`.toLowerCase().includes(zoekPaid.trim().toLowerCase())).slice(0, 300).map((i: any) => {
+            const rest = paidRest(i);
+            const kandidaten = tx.filter((t) => !t.entry_id && (Number(t.amount) < 0) === (i.direction === "aankoop"));
+            const exact = kandidaten.filter((t) => Math.abs(effAmt(t) - rest) < 0.025);
+            const q = (betaalZoek[i.id] ?? "").trim().toLowerCase();
+            const gefilterd = q ? kandidaten.filter((t) => `${t.tx_date} ${t.counterparty ?? ""} ${t.description ?? ""} ${Math.abs(Number(t.amount)).toFixed(2)} ${eur(Number(t.amount))}`.toLowerCase().includes(q)) : kandidaten;
             return <div key={i.id} className="rounded border border-border p-2">
-              <div className="flex items-center justify-between gap-2"><span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span></span><span>{eur(total(i))}</span></div>
+              <div className="flex items-center justify-between gap-2"><span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span></span><span>{eur(total(i))}{rest < total(i) - 0.005 ? <span className="text-xs text-muted-foreground"> · nog {eur(rest)}</span> : null}</span></div>
               <div className="mt-1 flex flex-wrap items-center gap-1">
-                {exact.slice(0, 3).map((t) => <Button key={t.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren met {t.tx_date} · {t.counterparty ?? ""} {eur(Number(t.amount))}</Button>)}
-                <select aria-label={`Betaling kiezen voor ${i.number}`} className="h-8 max-w-full rounded-md border border-input bg-background px-2 text-xs" value="" onChange={(e) => { const t = kandidaten.find((x) => x.id === e.target.value); if (t && confirm(`${i.number} afletteren met betaling van ${t.tx_date} (${eur(Number(t.amount))})?`)) settleClick(t, i); }}>
-                  <option value="">Andere betaling kiezen…</option>
-                  {kandidaten.map((t) => <option key={t.id} value={t.id}>{t.tx_date} · {t.counterparty ?? ""} · {eur(Number(t.amount))}</option>)}
-                </select>
+                {exact.slice(0, 3).map((t) => <Button key={t.id} size="sm" variant="outline" onClick={() => settlePaidWith(t, i)}>Afletteren met {t.tx_date} · {t.counterparty ?? ""} {eur(Number(t.amount))}</Button>)}
+                <Button size="sm" variant="outline" onClick={() => setBetaalOpen((o) => o === i.id ? null : i.id)}>{betaalOpen === i.id ? "Sluiten" : `Andere betaling kiezen (${kandidaten.length})`}</Button>
               </div>
+              {betaalOpen === i.id && <div className="mt-2 rounded border border-border p-2">
+                <Input className="mb-2" aria-label={`Zoek betaling voor ${i.number}`} placeholder="Zoek betaling (naam, mededeling, bedrag, datum)…" value={betaalZoek[i.id] ?? ""} onChange={(e) => setBetaalZoek((z) => ({ ...z, [i.id]: e.target.value }))} />
+                {gefilterd.length === 0 ? <p className="text-xs text-muted-foreground">Geen openstaande {i.direction === "aankoop" ? "uitgaande" : "inkomende"} betaling gevonden. Staat de betaling al bij Verwerkt, maak die koppeling dan eerst ongedaan; is ze nog niet binnen, synchroniseer of lees de bank in.</p> : (
+                  <div className="max-h-64 space-y-1 overflow-y-auto">
+                    {gefilterd.slice(0, 100).map((t) => <button key={t.id} type="button" className="flex w-full items-center justify-between gap-2 rounded border border-border px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => settlePaidWith(t, i)}>
+                      <span>{t.tx_date} · {t.counterparty ?? ""} <span className="text-muted-foreground">{t.description}</span></span>
+                      <span className="shrink-0">{eur(Number(t.amount))}{t.allocated_amount ? <span className="text-muted-foreground"> (nog open)</span> : null}</span>
+                    </button>)}
+                  </div>
+                )}
+              </div>}
             </div>;
           })}
         </div>
