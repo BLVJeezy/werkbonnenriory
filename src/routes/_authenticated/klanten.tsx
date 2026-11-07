@@ -73,7 +73,18 @@ function ContactsEditor({ form, setForm }: { form: Record<string, string>; setFo
 }
 
 /** De volledige klantfiche: eigen gegevens, syndicusblok en btw-keuzes. Gedeeld tussen bewerken en nieuw aanmaken. */
-function CustomerFormFields({ form, setForm }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>> }) {
+function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>; templates?: { name: string; details: SyndicusDetails }[] }) {
+  // Kiest de gebruiker een bekende syndicus, dan gaan alle gegevens van die
+  // syndicus mee (adres, btw-nummer, telefoon, e-mails). De eigen gegevens van
+  // de VME blijven onaangeroerd.
+  function changeSyndicusCompany(value: string) {
+    setForm((prev) => {
+      const next: Record<string, string> = { ...prev, syndicus_company: value };
+      const t = templates.find((x) => x.name.trim().toLowerCase() === value.trim().toLowerCase());
+      if (t) for (const f of SYNDICUS_FIELDS) next[f.key] = (t.details[f.key as SyndicusDetailField] as string | null) ?? "";
+      return next;
+    });
+  }
   return (
     <>
       <div className="flex flex-wrap gap-2">
@@ -99,7 +110,7 @@ function CustomerFormFields({ form, setForm }: { form: Record<string, string>; s
               <Input
                 list={f.key === "syndicus_company" ? "syndicus-suggesties" : undefined}
                 value={form[f.key] ?? ""}
-                onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                onChange={(e) => (f.key === "syndicus_company" ? changeSyndicusCompany(e.target.value) : setForm((prev) => ({ ...prev, [f.key]: e.target.value })))}
                 placeholder={f.label}
               />
             </label>
@@ -335,7 +346,7 @@ function Klanten() {
       {creating && (
         <div className="space-y-3 rounded-md border border-primary/40 bg-card p-4">
           <div className="text-sm font-black uppercase tracking-wide">Nieuwe klant</div>
-          <CustomerFormFields form={form} setForm={setForm} />
+          <CustomerFormFields form={form} setForm={setForm} templates={templates} />
           <div className="flex gap-2">
             <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>
             <Button size="sm" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>Annuleren</Button>
@@ -417,7 +428,7 @@ function Klanten() {
                       <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-                        <CustomerFormFields form={form} setForm={setForm} />
+                        <CustomerFormFields form={form} setForm={setForm} templates={templates} />
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
