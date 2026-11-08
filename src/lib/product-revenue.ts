@@ -10,7 +10,7 @@ export const PRODUCT_GROUPS: ProductGroup[] = [
   { key: "cam125", label: "Camera-inspectie 125-250", match: (s) => n(s).includes("camera-inspectie 125-250") },
   { key: "septisch", label: "Ledigen septische put", match: (s) => n(s).includes("septische") },
   { key: "regenput", label: "Reiniging regenputten", match: (s) => /regen(water)?put/.test(n(s)) && n(s).includes("reiniging") },
-  { key: "riostop", label: "Riostoppen", match: (s) => n(s).includes("riostop") },
+  { key: "riostop", label: "Riostoppen / inspectiepunten", match: (s) => n(s).includes("riostop") || n(s).includes("inspectiepunt") },
 ];
 
 export function productRevenue(lines: ProductLine[], groups = PRODUCT_GROUPS) {
