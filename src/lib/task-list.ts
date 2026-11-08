@@ -18,3 +18,8 @@ export function newTaskRows<T extends { status: string; scheduled_date: string |
 export function plannedTaskRows<T extends { status: string; scheduled_date: string | null; quote_pending?: boolean }>(rows: T[]): T[] {
   return taskListRows(rows).filter(row => row.status !== 'afgetekend' && Boolean(row.scheduled_date));
 }
+
+/** Tasks labelled "Eerste klant" stay pinned to the top; the rest keeps its existing order. */
+export function pinFirstCustomer<T extends { first_customer?: boolean | null }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => Number(b.first_customer ?? false) - Number(a.first_customer ?? false));
+}
