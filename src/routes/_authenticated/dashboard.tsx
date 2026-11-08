@@ -10,6 +10,7 @@ import { FinanceYear } from "@/components/FinanceYear";
 import { computeTotals } from "@/lib/billing";
 import { totalSeconds } from "@/lib/time";
 import { productRevenue, type ProductLine } from "@/lib/product-revenue";
+import { simplaDashboardProducts } from "@/lib/simpla-product-revenue.functions";
 import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
 import {
   ResponsiveContainer,
@@ -93,7 +94,8 @@ function Dashboard() {
     },
   });
 
-  // Omzet per product: materialen op werkbonnen (werkdag) + lijnen van zelf gemaakte facturen.
+  const [simplaError, setSimplaError] = useState<string | null>(null);
+  // Omzet per product: Simpla-facturen vóór de app (alleen lezen) + materialen op werkbonnen (werkdag) + lijnen van zelf gemaakte facturen.
   const { data: prodLines = [] } = useQuery({
     queryKey: ["dashboard-producten", from, to],
     enabled: role === "admin" && !!from && !!to && from <= to,
@@ -104,7 +106,9 @@ function Dashboard() {
         supabase.from("invoices").select("kind, lines, work_order_id").is("work_order_id", null).gte("issue_date", from).lte("issue_date", to),
       ]);
       if (w.error) throw w.error;
-      const out: ProductLine[] = [];
+      const sim = await simplaDashboardProducts({ data: { from, to } }).catch(() => ({ lines: [] as ProductLine[], error: "Simpla niet bereikbaar" }));
+      setSimplaError(sim.error);
+      const out: ProductLine[] = [...sim.lines];
       for (const o of w.data ?? []) {
         const day = (o.scheduled_date ?? o.signed_at ?? "").slice(0, 10);
         if (!day || day < from || day > to) continue;
@@ -180,6 +184,7 @@ function Dashboard() {
           </div>
         ))}
       </div>
+      <p className="text-xs opacity-70">Inclusief Simpla-facturen van vóór de eerste werkbon in deze app.{simplaError ? ` Simpla kon niet gelezen worden: ${simplaError}` : ""}</p>
 
       <div className="rounded-md border bg-card p-3 sm:p-4">
         <p className="mb-3 text-sm font-bold uppercase opacity-70">
