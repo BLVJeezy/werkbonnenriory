@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { HANDLEIDING_VERSIE, processenVoor, type Doelgroep } from "@/lib/processen";
 import { ProcessFlow } from "@/components/ProcessFlow";
 import { useRole } from "@/lib/use-role";
+import { toast } from "sonner";
 import logo from "@/assets/riory-mail-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated/handleiding")({
