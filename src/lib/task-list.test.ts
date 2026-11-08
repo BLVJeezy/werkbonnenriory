@@ -68,3 +68,8 @@ it('returns approved quote output tasks to unplanned while retaining their assig
   ])).toEqual([approved]);
   expect(newTaskRows([approved])[0]?.technician_id).toBe('assigned-crew');
 });
+import { taskListRows as rowsForNotNeeded } from './task-list';
+import { test as t2, expect as e2 } from 'vitest';
+t2('niet meer nodige taken verdwijnen uit de takenlijst', () => {
+  e2(rowsForNotNeeded([{ id: 'a', status: 'nieuw', not_needed: true }, { id: 'b', status: 'nieuw', not_needed: false }]).map(r => r.id)).toEqual(['b']);
+});
