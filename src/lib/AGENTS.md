@@ -1,4 +1,5 @@
 - Billing math lives in `src/lib/billing.ts` and document line math (travel kilometres, per-line totals) in pure tested helpers in `src/lib/invoice.ts`, so quotes and invoices cannot drift; the UI computes totals live and stores only the paid amount when payment is recorded.
+- External appointment proposals use splitAppointmentDays before persistence; confirmation indexes the persisted options, never a display-only transformation, so customer choice and crew notification keep identical hours.
 - Every customer-driven VAT default goes through the single pure helper `vatRateForCustomer` in `src/lib/vat-number.ts`, and mail-text rules through tested helpers (urgency in `src/lib/urgent-mail.ts`, professional status in `src/lib/vat-number.ts`); screens never compute their own rate, so a new rule only has to be added once.
 - Km origin = nearest active `branches` row (distance.functions.ts), else settings.base_address; one rule for all documents.
 - PDF/mail/receipt extraction requests and persists supplier IBAN and printed BIC; the shared purchase normalizer supplies missing BIC from known bank codes, so import paths cannot drift.

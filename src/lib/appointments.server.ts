@@ -2,7 +2,7 @@ import { brandedBody } from './mail-html';
 import type { Database } from '@/integrations/supabase/types';
 import { getConnectionKeyForUser } from '@/lib/appUserConnections.server';
 import { WERKBON_MAIL_SCOPES } from '@/lib/outlook-scopes';
-import { appointmentSlots,slotLabel } from './appointments';
+import { appointmentSlots,slotLabel,confirmedAppointmentLabel } from './appointments';
 type RequestRow=Database['public']['Tables']['appointment_requests']['Row'];
 export async function deliverAppointment(r:RequestRow){
  const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
@@ -21,7 +21,7 @@ export async function deliverAppointment(r:RequestRow){
   const base='https://werkbonnenriory.lovable.app';
   const {destinationAddress}=await import('@/lib/address');
   const address=destinationAddress(w)??'Adres niet ingevuld';
-  const slot=`${r.proposed_date??''} tussen ${r.time_from?.slice(0,5)??''} en ${r.time_until?.slice(0,5)??''}`;
+  const slot=r.proposed_date && r.time_from && r.time_until ? confirmedAppointmentLabel({date:r.proposed_date,from:r.time_from.slice(0,5),until:r.time_until.slice(0,5)}) : 'Tijdsblok nog niet gekozen';
   const customer=r.mail_pending==='customer';
   const proposed=appointmentSlots(r.crew_slots).map(slotLabel).join('\n')||slot;
   const alternatives=appointmentSlots(r.customer_slots).map(slotLabel).join('\n');

@@ -9,6 +9,17 @@ it('geeft nooit prijzen of offertes mee aan externe ploeg',()=>{const r={status:
 it('klantpagina bevat geen interne werkomschrijving',()=>{expect(appointmentView({status:'customer_pending',proposed_date:'2026-10-30',time_from:'09:00:00',time_until:'12:00:00',instruction:'Intern'},{customer_name:'Klant',address:'Straat 1'},false)).not.toHaveProperty('instruction');});
 import { describe } from 'vitest';
 import { normalizeSlot } from './appointments';
+import { splitAppointmentDays,confirmedAppointmentLabel } from './appointments';
+it('splitst 08:00–16:00 in 08:00–12:00 en 13:00–16:00 zonder aangeboden einduur te verlengen',()=>{
+ expect(splitAppointmentDays([{date:'2026-11-10',from:'08:00',until:'16:00'}])).toEqual([{date:'2026-11-10',from:'08:00',until:'12:00'},{date:'2026-11-10',from:'13:00',until:'16:00'}]);
+});
+it('behoudt een reeds aangeboden namiddagblok',()=>{
+ expect(splitAppointmentDays([{date:'2026-11-13',from:'12:00',until:'16:00'}])).toEqual([{date:'2026-11-13',from:'12:00',until:'16:00'}]);
+});
+it('bevestigingsgegevens bevatten het exacte gekozen namiddagblok',()=>{
+ const label=confirmedAppointmentLabel({date:'2026-11-10',from:'13:00',until:'16:00'});
+ expect(label).toContain('10/11/2026 · 13:00–16:00'); expect(label).not.toContain('08:00');
+});
 describe('normalizeSlot', () => {
   it('zet een Belgische datum 28-10-2026 om naar 2026-10-28', () => {
     expect(normalizeSlot({ date: '28-10-2026', from: '12:30', until: '14:30' }).date).toBe('2026-10-28');
