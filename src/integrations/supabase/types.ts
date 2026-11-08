@@ -4735,6 +4735,7 @@ export type Database = {
         Returns: number
       }
       tech_reopen_work_order: { Args: { _id: string }; Returns: undefined }
+      tk_import_snapshot: { Args: { p_data: Json }; Returns: Json }
       tk_record_employee_incident: {
         Args: {
           p_admin: string

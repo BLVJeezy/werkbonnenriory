@@ -471,7 +471,7 @@ function EmployeeRow({
         <EmployeeDossierDialog employee={emp} />
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
           <DialogTrigger asChild>
-            <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" aria-label="Personeelslid bewerken"><Pencil className="h-4 w-4" /></Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Bewerken</DialogTitle></DialogHeader>
@@ -503,7 +503,7 @@ function EmployeeRow({
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button size="icon" variant="ghost"><Trash2 className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" aria-label="Personeelslid verwijderen"><Trash2 className="h-4 w-4" /></Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
