@@ -87,7 +87,8 @@ async function publicNotices(client: Awaited<ReturnType<typeof findEmployeeByPin
   return noticesForDay(events.data ?? [], (people.data ?? []).map(e => ({ ...e, birth_date: profiles.data?.find(p => p.employee_id === e.id)?.birth_date ?? null })), '', today, all).filter(n => n.forAll);
 }
 
-export const getPublicNotices = createServerFn({ method: 'GET' }).handler(async () => {
+export const getPublicNotices = createServerFn({ method: 'POST' }).inputValidator((data: { deviceToken: string }) => z.object({ deviceToken: z.string().min(40).max(100) }).parse(data)).handler(async ({ data }) => {
+  await requireApprovedDevice(data.deviceToken);
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
   return { notices: await publicNotices(supabaseAdmin) };
 });

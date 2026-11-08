@@ -204,7 +204,7 @@ function ClockTerminal() {
 
   useEffect(() => {
     let active = true;
-    fetchPublicNotices()
+    fetchPublicNotices({ data: { deviceToken: device.token } })
       .then((result) => { if (active && result.notices.length) setPublicNotices(result.notices); })
       .catch(() => { /* meldingen bij het openen mogen de app niet blokkeren */ });
     return () => { active = false; };

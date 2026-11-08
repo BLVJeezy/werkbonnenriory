@@ -14,15 +14,11 @@ export function birthdayRecipients(
   const activeNames = new Map(
     employees.filter((e) => e.active).map((e) => [e.id, e.name]),
   );
-  return profiles
-    .filter(
-      (p) =>
-        Boolean(p.email) &&
-        Boolean(p.birth_date) &&
-        p.birth_date!.slice(5) === today.slice(5) &&
-        activeNames.has(p.employee_id),
-    )
-    .map((p) => ({ employee_id: p.employee_id, name: activeNames.get(p.employee_id)!, email: p.email! }));
+  return profiles.flatMap(p => {
+    const name = activeNames.get(p.employee_id);
+    if (!p.email || !p.birth_date || !name || p.birth_date.slice(5) !== today.slice(5)) return [];
+    return [{ employee_id: p.employee_id, name, email: p.email }];
+  });
 }
 
 export function birthdayEmailContent(name: string) {
