@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePayroll } from "./payroll-engine.server";
+import { computePayroll } from "./payroll-engine";
 import { monthlyOvertimeMinutes, normalizeSimulation, overtimeValue } from "./payroll-simulation";
 
 const settings = { employee_rsz_pct: 0.1307, employer_rsz_pct: 0.2467, student_employee_pct: 0.0271, student_employer_pct: 0.0542, student_yearly_hours_limit: 650, holiday_pay_reserve_pct: 0.1538, year_end_bonus_reserve_pct: 0.0833, bv_brackets: [], dependent_reduction_per_person: 0 };

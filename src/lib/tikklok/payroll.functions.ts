@@ -43,7 +43,7 @@ async function loadSettings(): Promise<PayrollSettings & { id: string; disclaime
 
 function monthRange(period: string) {
   // period = "YYYY-MM"
-  const [y, m] = period.split("-").map(Number);
+  const [y = 0, m = 0] = period.split("-").map(Number);
   if (!y || !m) throw new Error("Ongeldige periode");
   const from = new Date(Date.UTC(y, m - 1, 1));
   const to = new Date(Date.UTC(y, m, 1));
@@ -162,7 +162,7 @@ export const savePayrollProfile = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("tk_payroll_profiles")
-      .upsert({ ...data }, { onConflict: "employee_id" });
+      .upsert({ employee_id: data.employee_id, status: data.status, wage_mode: data.wage_mode, bv_scale: data.bv_scale, dependents: data.dependents, holiday_pay_enabled: data.holiday_pay_enabled, year_end_bonus_enabled: data.year_end_bonus_enabled, barema: data.barema ?? null, monthly_wage: data.monthly_wage ?? null, hourly_wage: data.hourly_wage ?? null, weekly_hours: data.weekly_hours ?? null, fixed_bv_monthly: data.fixed_bv_monthly ?? null, notes: data.notes ?? null, simulation_parameters: data.simulation_parameters ?? {} }, { onConflict: "employee_id" });
     if (error) throw new Error("Loonprofiel opslaan mislukt");
     return { ok: true };
   });

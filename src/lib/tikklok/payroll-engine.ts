@@ -39,7 +39,7 @@ export type PayrollComputationInput = {
   bankedOvertimeMinutes?: number;
   advances?: number;
   simulation?: SimulationParameters;
-  studentYearHoursSoFar?: number; // hours worked in same calendar year (student quota)
+  studentYearHoursSoFar?: number | undefined; // hours worked in same calendar year (student quota)
 };
 
 export type PayrollComputationResult = {

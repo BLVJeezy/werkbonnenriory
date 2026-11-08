@@ -198,7 +198,7 @@ const BRUSSELS_DATE = new Intl.DateTimeFormat("en-CA", {
 /** Monday (yyyy-mm-dd) of the Brussels week the instant falls in. */
 function weekStartKey(instant: string) {
   const dayKey = BRUSSELS_DATE.format(new Date(instant));
-  const [y, m, d] = dayKey.split("-").map(Number);
+  const [y = 0, m = 0, d = 1] = dayKey.split("-").map(Number);
   const utc = new Date(Date.UTC(y, m - 1, d));
   const shift = (utc.getUTCDay() + 6) % 7; // 0 = Monday
   utc.setUTCDate(utc.getUTCDate() - shift);

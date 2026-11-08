@@ -1,5 +1,6 @@
-import { describe, test } from "node:test";
-import { deepStrictEqual, strictEqual } from "node:assert";
+import { describe, test, expect } from "vitest";
+const deepStrictEqual = (actual: unknown, expected: unknown) => expect(actual).toEqual(expected);
+const strictEqual = (actual: unknown, expected: unknown) => expect(actual).toBe(expected);
 import { planHoursHistory } from "./hours-history";
 
 describe("effective-dated contract hours", () => {

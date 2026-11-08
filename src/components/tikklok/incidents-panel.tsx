@@ -17,7 +17,7 @@ type Person = { id: string; name: string };
 const formatDate = (s: string) => new Date(`${s}T12:00:00`).toLocaleDateString("nl-BE");
 const formatTime = (s: string) => new Date(s).toLocaleString("nl-BE", { timeZone: "Europe/Brussels" });
 
-export function IncidentForm({ employees, employee, onSaved }: { employees: Person[]; employee?: Person; onSaved: () => void }) {
+export function IncidentForm({ employees, employee, onSaved }: { employees: Person[]; employee?: Person | undefined; onSaved: () => void }) {
   const prefix = useId();
   const create = useServerFn(recordIncident);
   const [requestId, setRequestId] = useState("");
@@ -55,13 +55,13 @@ export function IncidentForm({ employees, employee, onSaved }: { employees: Pers
   </form>;
 }
 
-export function IncidentsPanel({ employees, employee }: { employees: Person[]; employee?: Person }) {
+export function IncidentsPanel({ employees, employee }: { employees: Person[]; employee?: Person | undefined }) {
   const list = useServerFn(listIncidents);
   const send = useServerFn(sendIncident);
   const qc = useQueryClient();
   const [filter, setFilter] = useState("all");
   const [type, setType] = useState("all");
-  const rows = useQuery({ queryKey: ["tikklok:incidents", employee?.id ?? "all"], queryFn: () => list({ data: { employee_id: employee?.id } }) });
+  const rows = useQuery({ queryKey: ["tikklok:incidents", employee?.id ?? "all"], queryFn: () => list({ data: employee ? { employee_id: employee.id } : {} }) });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["tikklok:incidents"] }); qc.invalidateQueries({ queryKey: ["tikklok:employeeDossier"] }); qc.invalidateQueries({ queryKey: ["tikklok:employee-messages"] }); };
   const sendM = useMutation({ mutationFn: (id: string) => send({ data: { id } }), onSuccess: () => { toast.success("Persoonlijke pop-up klaargezet voor de medewerker"); refresh(); }, onError: (e) => toast.error(e.message) });
   const visible = (rows.data ?? []).filter((r) => (filter === "all" || r.employee_id === filter) && (type === "all" || r.incident_type === type));

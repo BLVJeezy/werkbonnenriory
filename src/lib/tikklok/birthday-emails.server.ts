@@ -30,8 +30,8 @@ export function birthdayEmailContent(name: string) {
 }
 
 export async function sendOutlookBirthdayEmail(input: { recipient: string; employeeName: string }) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const outlookKey = process.env.MICROSOFT_OUTLOOK_API_KEY;
+  const lovableKey = process.env['LOVABLE_API_KEY'];
+  const outlookKey = process.env['MICROSOFT_OUTLOOK_API_KEY'];
   if (!lovableKey || !outlookKey) throw new Error("Outlook-mailbox is niet gekoppeld");
   const { subject, html } = birthdayEmailContent(input.employeeName);
   const response = await fetch(`${OUTLOOK_GATEWAY}/me/sendMail`, {

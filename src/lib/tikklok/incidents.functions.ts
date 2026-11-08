@@ -35,7 +35,7 @@ export const recordIncident = createServerFn({ method: "POST" })
     if (data.incident_type === "no_show" && !existing) {
       const { data: profile } = await supabaseAdmin.from("tk_employee_profiles").select("weekly_hours, daily_schedule").eq("employee_id", data.employee_id).maybeSingle();
       const keys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-      const weekday = keys[new Date(`${data.occurred_on}T12:00:00Z`).getUTCDay()];
+      const weekday = keys[new Date(`${data.occurred_on}T12:00:00Z`).getUTCDay()] ?? "mon";
       const schedule = (profile?.daily_schedule ?? null) as Record<string, number> | null;
       const dayHours = schedule && typeof schedule[weekday] === "number" ? schedule[weekday] : profile?.weekly_hours != null ? Number(profile.weekly_hours) / 5 : 0;
       const minutes = Math.round(dayHours * 60);

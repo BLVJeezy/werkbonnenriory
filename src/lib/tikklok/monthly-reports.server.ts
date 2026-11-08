@@ -168,8 +168,8 @@ export async function sendOutlookTimesheet(input: {
   filename: string;
   pdfBytes: Uint8Array;
 }) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const outlookKey = process.env.MICROSOFT_OUTLOOK_API_KEY;
+  const lovableKey = process.env['LOVABLE_API_KEY'];
+  const outlookKey = process.env['MICROSOFT_OUTLOOK_API_KEY'];
   if (!lovableKey || !outlookKey) throw new Error("Outlook-mailbox is niet gekoppeld");
   const employeeName = input.employeeName.replace(/[<>&"']/g, "");
   const response = await fetch(`${OUTLOOK_GATEWAY}/me/sendMail`, {
