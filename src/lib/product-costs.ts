@@ -26,8 +26,8 @@ export function productCostLines(
     const d = (p.invoice_date ?? "").slice(0, 10);
     if (!d || d < from || d > to) continue;
     for (const l of (Array.isArray(p.lines) ? p.lines : []) as Record<string, unknown>[]) {
-      const k = costKey(p.supplier_name, String(l?.description ?? ""));
-      if (k) out.push({ key: k, date: d, amount: Number(l?.amount ?? Number(l?.quantity ?? 0) * Number(l?.unitPrice ?? 0)) });
+      const k = costKey(p.supplier_name, String(l?.["description"] ?? ""));
+      if (k) out.push({ key: k, date: d, amount: Number(l?.["amount"] ?? Number(l?.["quantity"] ?? 0) * Number(l?.["unitPrice"] ?? 0)) });
     }
   }
   const sup = new Map(simpla.suppliers.map((s) => [s.supplierId, s.supplierName ?? ""]));
