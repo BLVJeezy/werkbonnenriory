@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Tikklok: werknemerstoegang op eigen mobiel uitleggen en controleren; blauw vervangen door Riory-oranje zonder toegang te verbreden.
+- [x] Mobiele werknemerstoegang uitgelegd: /tikklok, toestelgoedkeuring door admin en bestaande PIN. Riory-kleuren hersteld in lichte/donkere modus, mobiele kop aangepast; beheer en toegangspoort zonder horizontale overflow gecontroleerd. Oude tikklok blijft actief tot goedgekeurde omschakeling.
 
 - [x] Nieuwe beheerders aanmaken of uitnodigen vanuit Instellingen; alleen bestaande beheerders kunnen rollen toekennen. Uitnodiging delen/kopiëren, eigen wachtwoord en eenmalige link getest; zes tests geslaagd, mobiele weergave gecontroleerd en tijdelijk testaccount verwijderd. Handleiding bijgewerkt; publiceren nodig voor de publieke uitnodigingspagina.
 
@@ -51,4 +51,4 @@
 
 - [x] Riostopkost van IDBS bij de dashboardtegel Riostoppen/inspectiepunten; 10 tests geslaagd en ingelogde controle (Kost IDBS €900,00, marge €3.940,00 over 2023-2026).
 
-- [ ] Tikklok volledig verhuizen (geen dataverlies): 25 aparte tabellen en native beheer-/tabletschermen gebouwd; 369 exportregels atomisch geïmporteerd en volledig vergeleken (5 medewerkers, 177 klokregistraties, 13 loonberekeningen, contract met beide handtekeningen). 36 tests en tijdelijke medewerker-aanmaak/in-/uitklokken/teruglezen/verwijderen geslaagd; alle beheertabs en mobiele breedte gecontroleerd. Oude tikklok blijft actief; nieuwe bereikbaar via Medewerkers → Nieuwe tikklok controleren. Nog nodig: bestaand medewerkers-PIN testen, sociaal-secretariaatveld dat exportfilter wegliet veilig aanvullen, bronbeheerdersidentiteit en privébestandsinventaris, daadwerkelijke mailafzender/planningen controleren, laatste aanvullings-export en expliciete omschakelgoedkeuring. Automatische mails bewust uitgeschakeld.
+- [ ] Tikklok volledig verhuizen (geen dataverlies): 25 aparte tabellen en native beheer-/tabletschermen gebouwd; 369 exportregels atomisch geïmporteerd en volledig vergeleken (5 medewerkers, 177 klokregistraties, 13 loonberekeningen, contract met beide handtekeningen). 38 tests geslaagd; Overdracht-tab bevat PIN- en mailafzendercontroles. Mailafzendercheck geeft Outlook 401 en nieuwe telling blijft op Controleren; nog te herstellen/valideren. Oude tikklok blijft actief; nieuwe bereikbaar via Medewerkers → Nieuwe tikklok controleren. Nog nodig: bestaand medewerkers-PIN testen, sociaal-secretariaatveld dat exportfilter wegliet veilig aanvullen, bronbeheerdersidentiteit en privébestandsinventaris, daadwerkelijke mailafzender/planningen controleren, laatste aanvullings-export en expliciete omschakelgoedkeuring. Automatische mails bewust uitgeschakeld.
