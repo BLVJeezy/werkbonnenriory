@@ -22,23 +22,28 @@ describe("costKey", () => {
     );
     expect(res).toEqual([{ key: "septisch", date: "2026-05-01", amount: 180 }]);
   });
-  it("telt IDBS-riostoppen als kost en laat een concept staan", () => {
+  it("telt IDBS-riostoppen mee, ook uit een concept, maar geen andere werken", () => {
     const res = productCostLines(
       {
         bills: [
           { billDatabaseId: 1, billCustomerId: 36, billDate: "2026-03-10", documentId: "2026-0374", billStatus: "LOCKED" },
           { billDatabaseId: 2, billCustomerId: 36, billDate: "2026-10-27", documentId: "2027-0036", billStatus: "DRAFT" },
           { billDatabaseId: 3, billCustomerId: 36, billDate: "2026-10-13", documentId: "2027-0018", billStatus: "LOCKED" },
+          { billDatabaseId: 4, billCustomerId: 9, billDate: "2026-10-27", documentId: "2027-0099", billStatus: "DRAFT" },
         ],
         lines: [
           { billDatabaseId: 1, billLineProductDescription: "Verkoop Riostoppen", billLineUnitPrice: 9, billLineNumber: 50 },
           { billDatabaseId: 2, billLineProductDescription: "Verkoop riostoppen", billLineUnitPrice: 9, billLineNumber: 50 },
           { billDatabaseId: 3, billLineProductDescription: "Ontstoppen riolering in kelder + combi camera-tracing", billLineUnitPrice: 350, billLineNumber: 1 },
+          { billDatabaseId: 4, billLineProductDescription: "Ledigen septische put", billLineUnitPrice: 180, billLineNumber: 1 },
         ],
-        suppliers: [{ supplierId: 36, supplierName: "IDBS RIOOLTECHNIEK" }],
+        suppliers: [{ supplierId: 36, supplierName: "IDBS RIOOLTECHNIEK" }, { supplierId: 9, supplierName: "BVBA RIOCLEAN" }],
       },
       [], "2023-01-01", "2026-12-31",
     );
-    expect(res).toEqual([{ key: "riostop", date: "2026-03-10", amount: 450 }]);
+    expect(res).toEqual([
+      { key: "riostop", date: "2026-03-10", amount: 450 },
+      { key: "riostop", date: "2026-10-27", amount: 450 },
+    ]);
   });
 });
