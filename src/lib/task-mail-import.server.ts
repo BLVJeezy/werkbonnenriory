@@ -1,5 +1,6 @@
 import { applySyndicus, syndicusDetailsFromMail, SYNDICUS_DETAIL_FIELDS } from "./syndicus";
 import { isUrgentMail } from "./urgent-mail";
+import { isReplyMail } from "./reply-mail";
 import { formatAddress, formatSiteAddress } from "@/lib/address";
 import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "@/lib/vat-number";
 
@@ -167,7 +168,8 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
     if (!res.ok) throw new Error(`Mailbox fout [${res.status}]: ${await res.text()}`);
     const json = (await res.json()) as { value: GraphMessage[] };
     // The connected mailbox is afspraak@riory.be itself, so every inbox mail counts.
-    const candidates = json.value;
+    // Alleen nieuwe mails: antwoord- en doorstuurmails maken geen taak.
+    const candidates = json.value.filter((m) => !isReplyMail(m.subject));
     if (candidates.length === 0) return { imported: 0, checked: json.value.length };
 
     const { data: existing } = await db
