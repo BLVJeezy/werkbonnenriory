@@ -9,6 +9,13 @@ export function normalizeSlot(s:AppointmentSlot):AppointmentSlot{return {date:no
 export const appointmentSlotsInput=z.array(appointmentSlotInput).min(1).max(10);
 export function appointmentSlots(value:unknown):AppointmentSlot[]{const result=z.array(appointmentSlotInput).safeParse(value);return result.success?result.data:[];}
 export function slotLabel(s:AppointmentSlot){return `${s.date.split('-').reverse().join('/')} · ${s.from}–${s.until}`;}
+/** Keep the offered bounds, with separate morning/afternoon choices across the lunch break. */
+export function splitAppointmentDays(slots:AppointmentSlot[]):AppointmentSlot[]{
+ return slots.flatMap(s=>s.from<'12:00' && s.until>'13:00'
+  ? [{...s,until:'12:00'},{...s,from:'13:00'}]
+  : [s]);
+}
+export function confirmedAppointmentLabel(s:AppointmentSlot){return `Gekozen en bevestigd tijdsblok: ${slotLabel(s)}. Uitvoering binnen dit tijdsblok.`;}
 export const proposalInput = tokenInput.extend({date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),from:z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),until:z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)}).refine(i=>i.from<i.until,'Het einduur moet na het beginuur liggen');
 export const appointmentStatuses: Record<string,string> = {crew_pending:'Wacht op datum van ploeg',customer_pending:'Wacht op bevestiging klant',confirmed:'Afspraak bevestigd'};
 /** Only descriptions and quantities; never serialize quote prices or totals. */
