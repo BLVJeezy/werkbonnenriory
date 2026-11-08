@@ -932,6 +932,13 @@
       "when": 1794127724841,
       "tag": "0132_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 133,
+      "version": "7",
+      "when": 1794129841254,
+      "tag": "0133_integrated_timeclock_schema",
+      "breakpoints": true
     }
   ]
 }
