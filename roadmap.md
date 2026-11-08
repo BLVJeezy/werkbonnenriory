@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Niko Vandeweyer: dinsdagselectie/bevestiging reproduceren; controleer aangeboden uren en herstel alleen bewezen fout, geen echte bevestiging uitvoeren.
+- [ ] Niko Vandeweyer: echte gepubliceerde mobiele link toont dinsdag 10/11 08:00–16:00, vrijdag 13/11 12:00–16:00 en maandag 16/11 08:00–16:00. Dinsdag selecteerbaar en bevestigingsknop actief; geen apart dinsdagnamiddagvak. Wacht op exacte foutmelding of verduidelijking gewenste uren; geen echte bevestiging uitgevoerd.
 
 - [x] Voorgestelde tijdsloten onderaannemer zichtbaar in Kalender en taakdetail, inclusief klantalternatieven en bevestigingsstatus. Drie echte Rioclean-voorstellen teruggelezen in beide schermen, mobiel zonder overflow; twaalf bestaande afspraaktests geslaagd. Geen afspraak of mail gewijzigd.
 
