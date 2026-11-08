@@ -25,7 +25,7 @@ import { RunningTask } from "@/components/RunningTask";
 import type { TimeEntry } from "@/lib/time";
 import { activeTimeEntry, totalSeconds } from "@/lib/time";
 import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
-import { taskListRows } from "@/lib/task-list";
+import { taskListRows, pinFirstCustomer } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
 import { AppointmentMailSync } from "@/components/AppointmentMailSync";
 import { CustomerInvite } from "@/components/CustomerInvite";
@@ -122,7 +122,7 @@ function Kalender() {
 
   // Alleen volledig ingeplande taken (dag + ploeg + activiteit) verschijnen op de dag; afgetekende blijven op hun dag staan.
   const visible = data.filter(w => (!search || [w.customer_name, w.number, w.description, destinationAddress(w), w.phone, w.site_contact_name].join(" ").toLocaleLowerCase("nl-BE").includes(search.toLocaleLowerCase("nl-BE"))) && (!onlyRunning || activeTimeEntry(w.time_entries)));
-  const dayList = (k: string) => visible.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w)));
+  const dayList = (k: string) => pinFirstCustomer(visible.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w))));
   // Dagomzet: enkel afgewerkte bonnen — betaald bedrag, of het berekende totaal als er nog geen betaling is.
   const dayOmzet = (k: string) =>
     dayList(k)
@@ -240,7 +240,7 @@ function Kalender() {
       </div>
     </div>
   );
-  const unplanned = sortRows(visible.filter((w) => w.status !== "afgetekend" && !isFullyPlanned(w)), w => taskSort === "klant" ? w.customer_name : taskSort === "plaats" ? w.site_city || w.city : taskSort === "datum" ? w.scheduled_date : w.created_at, taskDir).sort((a,b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
+  const unplanned = pinFirstCustomer(sortRows(visible.filter((w) => w.status !== "afgetekend" && !isFullyPlanned(w)), w => taskSort === "klant" ? w.customer_name : taskSort === "plaats" ? w.site_city || w.city : taskSort === "datum" ? w.scheduled_date : w.created_at, taskDir).sort((a,b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a))));
   if (!role) return <p className="text-muted-foreground">Laden…</p>;
   if (role === "technician") return <CrewTasks rows={data} />;
   if (role !== "admin") return null;
