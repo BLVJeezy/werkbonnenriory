@@ -57,7 +57,7 @@ function Layout() {
       {role === "admin" && <AdminNotifications />}
       <header className="no-print shrink-0 border-b-4 border-primary bg-secondary text-secondary-foreground">
         <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 sm:flex sm:flex-wrap sm:gap-4 sm:px-4">
-          <Link to={role === "admin" ? "/dashboard" : "/werkbonnen"} className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
+          <Link to={role === "admin" ? "/dashboard" : "/kalender"} className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
             Riory <span className="text-primary">Werkbonnen</span>
           </Link>
           <Button variant="secondary" size="icon" className="shrink-0 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
@@ -71,9 +71,7 @@ function Layout() {
             ) : (
               <>
               {role === "admin" && <Link to="/dashboard" className={navCls} activeProps={active}>Dashboard</Link>}
-              <Link to="/werkbonnen" className={navCls} activeProps={active}>
-                {role === "admin" ? "Taken" : "Mijn taken"}
-              </Link>
+              {role === "technician" && <Link to="/kalender" className={navCls} activeProps={active}>Kalender</Link>}
               </>
             )}
             {role === "admin" && (

@@ -121,7 +121,7 @@ function Detail() {
     if (!isRestoredWorkOrder(`/werkbonnen/${id}`)) return;
     clearAppEntry();
     if (data.wo.status === "afgetekend" && !data.times.some((t) => !t.ended_at)) {
-      navigate({ to: "/werkbonnen", search: {}, replace: true });
+      navigate({ to: "/kalender", search: {}, replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, id, navigate]);
@@ -162,7 +162,7 @@ function Detail() {
     const r = await mailWerkbon({ data: { workOrderId: id } });
     if (r.sent) toast.success(`Werkbon gemaild naar ${wo.email}`);
     else if (r.reason === "reconnect_required") toast.error("Koppel de mailbox info@riory.be opnieuw om te kunnen mailen");
-    else if (r.reason === "mailbox_not_connected") toast.error("Koppel eerst de mailbox info@riory.be op de takenpagina");
+    else if (r.reason === "mailbox_not_connected") toast.error("Koppel eerst de mailbox info@riory.be op de kalenderpagina");
     else toast.error("Mail versturen mislukt");
   }
 
@@ -181,7 +181,7 @@ function Detail() {
         save: () => update(patch),
         mail: mailNaarKlant,
         afterSaved: async () => {
-          if (role === "technician") await navigate({ to: "/werkbonnen", search: {} });
+          if (role === "technician") await navigate({ to: "/kalender", search: {} });
         },
       });
     } catch {
@@ -191,8 +191,8 @@ function Detail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/werkbonnen" className="no-print text-sm text-muted-foreground underline">
-        {isAdmin ? "← Alle taken" : "← Mijn taken"}
+      <Link to="/kalender" className="no-print text-sm text-muted-foreground underline">
+        {isAdmin ? "← Kalender" : "← Kalender"}
       </Link>
       {isUrgentOpen(wo) && (
         <div className={`no-print rounded-md bg-destructive p-4 text-destructive-foreground ${URGENT_RING}`}>
@@ -283,7 +283,7 @@ function Detail() {
                 if (error) { toast.error(error.message); return; }
                 qc.invalidateQueries({ queryKey: ["work_orders"] });
                 toast.success("Verwijderd");
-                navigate({ to: "/werkbonnen" });
+                navigate({ to: "/kalender" });
               }}
             >
               Verwijderen

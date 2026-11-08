@@ -75,7 +75,7 @@ function CompletedWorkOrders() {
   return <div className="space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-2xl font-black uppercase sm:text-3xl">Afgewerkte werkbonnen</h1><p className="text-sm text-muted-foreground">{filtered.length} van {data.length} werkbonnen</p></div>
-      <Button variant="outline" asChild><Link to="/werkbonnen">Taken</Link></Button>
+      <Button variant="outline" asChild><Link to="/kalender">Kalender</Link></Button>
     </div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div className="space-y-1"><Label htmlFor="completed-search">Zoeken</Label><Input id="completed-search" placeholder="Klant, nummer, adres…" value={search} onChange={e => setSearch(e.target.value)} /></div>

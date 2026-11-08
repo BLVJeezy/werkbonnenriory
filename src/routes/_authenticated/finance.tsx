@@ -92,7 +92,7 @@ function Finance() {
     <div className="min-w-0 overflow-x-clip bg-background text-foreground">
       <div className="mx-auto max-w-6xl space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Link to="/werkbonnen"><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Taken</Button></Link>
+          <Link to="/kalender"><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Kalender</Button></Link>
           <Link to="/boekhouding" search={{ tab: "rekeningen" }}><Button variant="outline" size="sm">Boekhouding</Button></Link>
           <h1 className="text-xl font-bold">Finance</h1>
           <span className="text-sm text-muted-foreground">Riory BV</span>
