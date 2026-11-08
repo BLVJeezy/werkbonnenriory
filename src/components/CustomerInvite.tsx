@@ -31,7 +31,7 @@ export function CustomerInvite({ task, size = 'sm', className }: { task: InviteT
     queryFn: async () => {
       const { data } = await supabase
         .from('appointment_requests')
-        .select('status,proposed_date,time_from,time_until,mail_error,mail_pending,expires_at')
+        .select('status,proposed_date,time_from,time_until,crew_slots,customer_slots,mail_error,mail_pending,expires_at')
         .eq('work_order_id', task.id)
         .maybeSingle();
       return data;
