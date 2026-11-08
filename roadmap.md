@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Voorgestelde tijdsloten onderaannemer zichtbaar bij opdrachten in Kalender, met bevestigingsstatus.
+- [x] Voorgestelde tijdsloten onderaannemer zichtbaar in Kalender en taakdetail, inclusief klantalternatieven en bevestigingsstatus. Drie echte Rioclean-voorstellen teruggelezen in beide schermen, mobiel zonder overflow; twaalf bestaande afspraaktests geslaagd. Geen afspraak of mail gewijzigd.
 
 - [x] Mobiele werknemerstoegang uitgelegd: /tikklok, toestelgoedkeuring door admin en bestaande PIN. Riory-kleuren hersteld in lichte/donkere modus, mobiele kop aangepast; beheer en toegangspoort zonder horizontale overflow gecontroleerd. Oude tikklok blijft actief tot goedgekeurde omschakeling.
 
