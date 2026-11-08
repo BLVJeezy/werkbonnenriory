@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { HANDLEIDING_VERSIE, processenVoor, type Doelgroep } from "@/lib/processen";
 import { ProcessFlow } from "@/components/ProcessFlow";
 import { useRole } from "@/lib/use-role";
+import { toast } from "sonner";
 import logo from "@/assets/riory-mail-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated/handleiding")({
@@ -33,13 +34,18 @@ function HandleidingPage() {
 
   const send = async () => {
     const url = `${window.location.origin}/handleiding`;
-    const text = `${titel} — Riory Werkbonnen: ${url}`;
+    const text = `${titel} — Riory Werkbonnen: ${url}\n\nOpen de link en kies 'Download PDF' om ze te bewaren.`;
     if (navigator.share) {
       try { await navigator.share({ title: titel, text, url }); return; } catch (e) {
         if ((e as DOMException).name === "AbortError") return;
       }
     }
-    window.location.href = `mailto:?subject=${encodeURIComponent(titel)}&body=${encodeURIComponent(text + "\n\nOpen de link en kies 'Download PDF' om ze te bewaren.")}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Link gekopieerd — plak hem in een mail of bericht.");
+    } catch {
+      toast.info(text);
+    }
   };
 
   return (
