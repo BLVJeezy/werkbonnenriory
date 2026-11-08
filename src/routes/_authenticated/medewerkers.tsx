@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,9 @@ function Medewerkers() {
           <p className="truncate text-sm font-black uppercase">Medewerkers</p>
           <p className="truncate text-xs opacity-80">Riory tijdklok — eigen login nodig</p>
         </div>
+        <Button asChild variant="outline" size="sm" className="shrink-0">
+          <Link to="/tikklok-beheer">Nieuwe tikklok controleren</Link>
+        </Button>
         <Button asChild variant="outline" size="sm" className="ml-auto shrink-0">
           <a href={TIJKLOK_URL} target="_blank" rel="noopener noreferrer">
             <ExternalLink />
