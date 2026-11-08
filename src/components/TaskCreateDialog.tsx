@@ -18,7 +18,7 @@ import { CustomerPicker } from "@/components/CustomerPicker";
 
 const emptyForm = { name: "", street: "", house_number: "", postal_code: "", city: "", phone: "", email: "", billing_email: "", vat_number: "", project_name: "", description: "", technician_id: "", activity_id: "", vat_rate: "21", scheduled_date: "", use_site_address: false, site_street: "", site_house_number: "", site_postal_code: "", site_city: "", site_contact_name: "", site_contact_phone: "" };
 
-export function TaskCreateDialog({ open, day, direct = false, onClose }: { open: boolean; day?: string; direct?: boolean; onClose: () => void }) {
+export function TaskCreateDialog({ open, day, direct = false, onClose }: { open: boolean; day?: string | undefined; direct?: boolean | undefined; onClose: () => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [form, setForm] = useState({ ...emptyForm, scheduled_date: day ?? (direct ? new Date().toLocaleDateString("sv-SE") : "") });
@@ -40,7 +40,7 @@ export function TaskCreateDialog({ open, day, direct = false, onClose }: { open:
     
     queryFn: () => allCustomers(supabase),
   });
-  const {data:projects=[]}=useQuery({queryKey:['customer_projects'],enabled:role==='admin',queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
+  const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
   const selectedCustomer = customers.find(c=>customerKey(c)===customerKey(form));
   const selectedProjects = projects.filter(p=>p.customer_id===selectedCustomer?.id);
   const customerLabel = (c: (typeof customers)[number]) => [c.customer_number,c.name, [c.street, c.house_number].filter(Boolean).join(" "), c.city].filter(Boolean).join(" — ");
