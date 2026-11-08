@@ -10,7 +10,7 @@
 ## Wat er wordt gebouwd
 1. **Afzonderlijk tikklokonderdeel binnen Riory.** Onder Medewerkers komen de bestaande beheerschermen; een eigen tabletpagina behoudt het inklokscherm met pincode en toestelgoedkeuring. De werkbonnenapp blijft ongewijzigd werken.
 2. **Alle bestaande functies behouden.** Medewerkers, werkuren, correcties, uurroosters, overuren, verlof, afwezigheden, berichten, kalender, verjaardagen, incidenten, HR-dossiers, contracten en ondertekening, loonberekeningen, rapporten en toestelbeheer.
-3. **Veilige volledige overdracht.** De originele nummers, onderlinge koppelingen, contractinhoud, handtekeningen, instellingen en historische verzendstatussen behouden. Bedrijfsvelden die door een algemene veiligheidsfilter onterecht worden verwijderd, zoals het sociaal secretariaat, apart veilig overdragen. Beheerdersidentiteit en eventuele overige bestanden controleren vóór afronding.
+3. **Veilige volledige overdracht.** De originele nummers, onderlinge koppelingen, contractinhoud, handtekeningen, instellingen en historische verzendstatussen behouden. Bedrijfsvelden die door een algemene veiligheidsfilter onterecht worden verwijderd, zoals het sociaal secretariaat, apart veilig overdragen. De export bevat geen beheerdersaccounts: die identiteit veilig koppelen zonder bestaande Riory-rechten te wijzigen. Ook een inventaris van de privébestanden uit de oude tikklok controleren; een lege documenttabel bewijst niet dat alle opgeslagen bestanden ontbreken.
 4. **Bestaande toegang beschermen.** HR- en loongegevens blijven uitsluitend voor bevoegde beheerders. Medewerkers krijgen enkel hun eigen gegevens via de bestaande pincode-/toestelcontrole; ploegen krijgen geen bijkomende toegang.
 5. **Vergelijken en testen vóór omschakeling.** Aantallen, waarden en relaties per tabel vergelijken; berekeningen met de bestaande tests vergelijken; inloggen, inklokken, uitklokken, correcties, contracten, rapporten en belangrijke beheeracties controleren. Testgegevens nadien opruimen.
 6. **Geen verlies bij de overgang.** De oude tikklok blijft actief. Na controle volgt een laatste aanvullende export voor nieuwe of gewijzigde gegevens en een korte afgesproken omschakeling. De oude tikklok pas buiten gebruik stellen na jouw uitdrukkelijke goedkeuring; niet vanuit deze chat verwijderen.
@@ -21,6 +21,8 @@
 - Gegevens en pincodehashes uitsluitend in afgeschermde Lovable Cloud-opslag importeren, niet als bestanden die de app publiek serveert.
 - Oude beheerder-ID's behouden voor historische toeschrijving; actuele toegang afzonderlijk en gecontroleerd koppelen aan Riory-beheerders. Een geïmporteerde rolregel verleent niet automatisch rechten.
 - Bestaande mail- en rapportfuncties behouden; oude verzendregistraties voorkomen dubbele mails. Nieuwe automatische verzending pas na gecontroleerde omschakeling inschakelen.
+- Beide bestaande migratiereeksen samen reconstrueren, inclusief functies, indexen en toegangsregels. De actieve maandrapportplanning afzonderlijk controleren; die staat niet volledig in de bronbestanden.
+- Automatische verjaardag- en maandrapportaanroepen beveiligen met een eigen geheime planningssleutel, niet met een publiek beschikbare appsleutel. De werking blijft behouden zonder het bestaande toegangsrisico over te nemen.
 - Toestelgoedkeuringen overnemen; door het gewijzigde webadres kan een toestel opnieuw aangemeld moeten worden. Geen ongecontroleerde automatische goedkeuring.
 
 ## Oplevercriterium
