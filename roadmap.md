@@ -45,4 +45,4 @@
 - [x] Creditnota 20260847 als betaald gemarkeerd (boekt factuur 20260842 af)
 - [x] Factuur 20260842 als betaald gemarkeerd
 
-- [x] Riostopkost van IDBS bij de dashboardtegel Riostoppen/inspectiepunten; 10 tests geslaagd en ingelogde controle (Kost IDBS €450,00, marge €4.390,00 over 2023-2026).
+- [x] Riostopkost van IDBS bij de dashboardtegel Riostoppen/inspectiepunten; 10 tests geslaagd en ingelogde controle (Kost IDBS €900,00, marge €3.940,00 over 2023-2026).

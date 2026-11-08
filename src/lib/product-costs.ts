@@ -16,7 +16,7 @@ export type SimplaPurchaseBill = { billDatabaseId: number; billCustomerId?: numb
 export type SimplaPurchaseLine = { billDatabaseId: number; billLineProductDescription?: string | null; billLineUnitPrice?: number | null; billLineNumber?: number | null; billLineDiscount?: number | null };
 export type AppPurchase = { supplier_name: string | null; invoice_number: string | null; invoice_date: string | null; lines: unknown };
 
-/** Pure: kostlijnen uit Simpla en de app; Simpla-facturen die ook in de app staan (leverancier + nummer) tellen één keer. */
+/** Pure: kostlijnen uit Simpla en de app; Simpla-facturen die ook in de app staan (leverancier + nummer) tellen één keer. Concepten tellen enkel bij riostoppen. */
 export function productCostLines(
   simpla: { bills: SimplaPurchaseBill[]; lines: SimplaPurchaseLine[]; suppliers: { supplierId: number; supplierName?: string | null }[] },
   app: AppPurchase[], from: string, to: string,
@@ -32,19 +32,21 @@ export function productCostLines(
     }
   }
   const sup = new Map(simpla.suppliers.map((s) => [s.supplierId, s.supplierName ?? ""]));
-  const bills = new Map<number, { d: string; s: string }>();
+  const bills = new Map<number, { d: string; s: string; draft: boolean }>();
   for (const b of simpla.bills) {
     const d = (b.billDate ?? "").slice(0, 10);
     const s = sup.get(Number(b.billCustomerId)) ?? "";
-    if (!d || d < from || d > to || b.billStatus === "DRAFT") continue;
+    if (!d || d < from || d > to) continue;
     if (b.documentId && inApp.has(`${norm(s)}|${norm(b.documentId)}`)) continue;
-    bills.set(b.billDatabaseId, { d, s });
+    bills.set(b.billDatabaseId, { d, s, draft: b.billStatus === "DRAFT" });
   }
   for (const l of simpla.lines) {
     const b = bills.get(l.billDatabaseId);
     if (!b) continue;
     const k = costKey(b.s, l.billLineProductDescription);
-    if (k) out.push({ key: k, date: b.d, amount: Number(l.billLineNumber ?? 0) * Number(l.billLineUnitPrice ?? 0) * (1 - Number(l.billLineDiscount ?? 0) / 100) });
+    // Een concept telt enkel voor riostoppen mee (keuze van de beheerder), elders niet.
+    if (!k || (b.draft && k !== "riostop")) continue;
+    out.push({ key: k, date: b.d, amount: Number(l.billLineNumber ?? 0) * Number(l.billLineUnitPrice ?? 0) * (1 - Number(l.billLineDiscount ?? 0) / 100) });
   }
   return out;
 }
