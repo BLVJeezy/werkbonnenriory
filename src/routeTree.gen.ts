@@ -15,6 +15,7 @@ import { Route as AdminUitnodigingRouteImport } from './routes/admin-uitnodiging
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as PloegUitnodigingRouteImport } from './routes/ploeg-uitnodiging'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as TikklokRouteImport } from './routes/tikklok'
 import { Route as AuthenticatedAankoopfacturenRouteImport } from './routes/_authenticated/aankoopfacturen'
 import { Route as AuthenticatedAfgewerkteWerkbonnenRouteImport } from './routes/_authenticated/afgewerkte-werkbonnen'
 import { Route as AuthenticatedBetalingenRouteImport } from './routes/_authenticated/betalingen'
@@ -34,6 +35,7 @@ import { Route as AuthenticatedNieuwsbrievenRouteImport } from './routes/_authen
 import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedSyndiciRouteImport } from './routes/_authenticated/syndici'
+import { Route as AuthenticatedTikklokBeheerRouteImport } from './routes/_authenticated/tikklok-beheer'
 import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
 import { Route as VideoTokenRouteImport } from './routes/video.$token'
@@ -86,6 +88,11 @@ const PloegUitnodigingRoute = PloegUitnodigingRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TikklokRoute = TikklokRouteImport.update({
+  id: '/tikklok',
+  path: '/tikklok',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAankoopfacturenRoute =
@@ -191,6 +198,12 @@ const AuthenticatedSyndiciRoute = AuthenticatedSyndiciRouteImport.update({
   path: '/syndici',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTikklokBeheerRoute =
+  AuthenticatedTikklokBeheerRouteImport.update({
+    id: '/tikklok-beheer',
+    path: '/tikklok-beheer',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const DocumentTokenRoute = DocumentTokenRouteImport.update({
   id: '/document/$token',
   path: '/document/$token',
@@ -332,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/ploeg-uitnodiging': typeof PloegUitnodigingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tikklok': typeof TikklokRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
   '/betalingen': typeof AuthenticatedBetalingenRoute
@@ -351,6 +365,7 @@ export interface FileRoutesByFullPath {
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/syndici': typeof AuthenticatedSyndiciRoute
+  '/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
@@ -382,6 +397,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/ploeg-uitnodiging': typeof PloegUitnodigingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tikklok': typeof TikklokRoute
   '/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
   '/betalingen': typeof AuthenticatedBetalingenRoute
@@ -401,6 +417,7 @@ export interface FileRoutesByTo {
   '/offertes': typeof AuthenticatedOffertesRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/syndici': typeof AuthenticatedSyndiciRoute
+  '/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
@@ -434,6 +451,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/ploeg-uitnodiging': typeof PloegUitnodigingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tikklok': typeof TikklokRoute
   '/_authenticated/aankoopfacturen': typeof AuthenticatedAankoopfacturenRoute
   '/_authenticated/afgewerkte-werkbonnen': typeof AuthenticatedAfgewerkteWerkbonnenRoute
   '/_authenticated/betalingen': typeof AuthenticatedBetalingenRoute
@@ -453,6 +471,7 @@ export interface FileRoutesById {
   '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/syndici': typeof AuthenticatedSyndiciRoute
+  '/_authenticated/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
   '/video/$token': typeof VideoTokenRoute
@@ -486,6 +505,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/ploeg-uitnodiging'
     | '/reset-password'
+    | '/tikklok'
     | '/aankoopfacturen'
     | '/afgewerkte-werkbonnen'
     | '/betalingen'
@@ -505,6 +525,7 @@ export interface FileRouteTypes {
     | '/offertes'
     | '/producten'
     | '/syndici'
+    | '/tikklok-beheer'
     | '/document/$token'
     | '/offerte/$token'
     | '/video/$token'
@@ -536,6 +557,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/ploeg-uitnodiging'
     | '/reset-password'
+    | '/tikklok'
     | '/aankoopfacturen'
     | '/afgewerkte-werkbonnen'
     | '/betalingen'
@@ -555,6 +577,7 @@ export interface FileRouteTypes {
     | '/offertes'
     | '/producten'
     | '/syndici'
+    | '/tikklok-beheer'
     | '/document/$token'
     | '/offerte/$token'
     | '/video/$token'
@@ -587,6 +610,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/ploeg-uitnodiging'
     | '/reset-password'
+    | '/tikklok'
     | '/_authenticated/aankoopfacturen'
     | '/_authenticated/afgewerkte-werkbonnen'
     | '/_authenticated/betalingen'
@@ -606,6 +630,7 @@ export interface FileRouteTypes {
     | '/_authenticated/offertes'
     | '/_authenticated/producten'
     | '/_authenticated/syndici'
+    | '/_authenticated/tikklok-beheer'
     | '/document/$token'
     | '/offerte/$token'
     | '/video/$token'
@@ -639,6 +664,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PloegUitnodigingRoute: typeof PloegUitnodigingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  TikklokRoute: typeof TikklokRoute
   DocumentTokenRoute: typeof DocumentTokenRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
   VideoTokenRoute: typeof VideoTokenRoute
@@ -704,6 +730,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tikklok': {
+      id: '/tikklok'
+      path: '/tikklok'
+      fullPath: '/tikklok'
+      preLoaderRoute: typeof TikklokRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/aankoopfacturen': {
@@ -837,6 +870,13 @@ declare module '@tanstack/react-router' {
       path: '/syndici'
       fullPath: '/syndici'
       preLoaderRoute: typeof AuthenticatedSyndiciRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tikklok-beheer': {
+      id: '/_authenticated/tikklok-beheer'
+      path: '/tikklok-beheer'
+      fullPath: '/tikklok-beheer'
+      preLoaderRoute: typeof AuthenticatedTikklokBeheerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/document/$token': {
@@ -1030,6 +1070,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedSyndiciRoute: typeof AuthenticatedSyndiciRoute
+  AuthenticatedTikklokBeheerRoute: typeof AuthenticatedTikklokBeheerRoute
   AuthenticatedAankoopfacturenIdRoute: typeof AuthenticatedAankoopfacturenIdRoute
   AuthenticatedWerkbonnenIdRoute: typeof AuthenticatedWerkbonnenIdRoute
   AuthenticatedWerkbonnenIndexRoute: typeof AuthenticatedWerkbonnenIndexRoute
@@ -1056,6 +1097,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedSyndiciRoute: AuthenticatedSyndiciRoute,
+  AuthenticatedTikklokBeheerRoute: AuthenticatedTikklokBeheerRoute,
   AuthenticatedAankoopfacturenIdRoute: AuthenticatedAankoopfacturenIdRoute,
   AuthenticatedWerkbonnenIdRoute: AuthenticatedWerkbonnenIdRoute,
   AuthenticatedWerkbonnenIndexRoute: AuthenticatedWerkbonnenIndexRoute,
@@ -1071,6 +1113,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   PloegUitnodigingRoute: PloegUitnodigingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  TikklokRoute: TikklokRoute,
   DocumentTokenRoute: DocumentTokenRoute,
   OfferteTokenRoute: OfferteTokenRoute,
   VideoTokenRoute: VideoTokenRoute,

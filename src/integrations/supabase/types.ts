@@ -2878,6 +2878,1289 @@ export type Database = {
           },
         ]
       }
+      tk_approved_devices: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          device_name: string
+          id: string
+          last_seen_at: string | null
+          requested_at: string
+          status: string
+          token_hash: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          device_name: string
+          id?: string
+          last_seen_at?: string | null
+          requested_at?: string
+          status?: string
+          token_hash: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          device_name?: string
+          id?: string
+          last_seen_at?: string | null
+          requested_at?: string
+          status?: string
+          token_hash?: string
+        }
+        Relationships: []
+      }
+      tk_birthday_email_jobs: {
+        Row: {
+          attempts: number
+          birthday_date: string
+          created_at: string
+          employee_id: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          birthday_date: string
+          created_at?: string
+          employee_id: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          birthday_date?: string
+          created_at?: string
+          employee_id?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      tk_calendar_events: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          employee_id: string | null
+          event_date: string
+          id: string
+          notify_all: boolean
+          popup_enabled: boolean
+          recurrence_interval: number
+          recurrence_unit: string
+          recurrence_until: string | null
+          title: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          created_by: string
+          employee_id?: string | null
+          event_date: string
+          id?: string
+          notify_all?: boolean
+          popup_enabled?: boolean
+          recurrence_interval?: number
+          recurrence_unit?: string
+          recurrence_until?: string | null
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          employee_id?: string | null
+          event_date?: string
+          id?: string
+          notify_all?: boolean
+          popup_enabled?: boolean
+          recurrence_interval?: number
+          recurrence_unit?: string
+          recurrence_until?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_calendar_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_calendar_notification_reads: {
+        Row: {
+          employee_id: string
+          notification_key: string
+          occurrence_date: string
+          read_at: string
+        }
+        Insert: {
+          employee_id: string
+          notification_key: string
+          occurrence_date: string
+          read_at?: string
+        }
+        Update: {
+          employee_id?: string
+          notification_key?: string
+          occurrence_date?: string
+          read_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_calendar_notification_reads_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_calendar_settings: {
+        Row: {
+          birthday_notify_all: boolean
+          id: boolean
+        }
+        Insert: {
+          birthday_notify_all?: boolean
+          id?: boolean
+        }
+        Update: {
+          birthday_notify_all?: boolean
+          id?: boolean
+        }
+        Relationships: []
+      }
+      tk_company_settings: {
+        Row: {
+          city: string | null
+          company_name: string
+          country: string
+          created_at: string
+          default_schedule: string | null
+          default_weekly_hours: number
+          email: string | null
+          enterprise_number: string | null
+          extra_clauses: string | null
+          id: string
+          insurance_company: string | null
+          joint_committee: string | null
+          legal_form: string | null
+          phone: string | null
+          postal_code: string | null
+          representative_name: string | null
+          representative_role: string | null
+          rsz_number: string | null
+          social_secretariat: string | null
+          street_address: string | null
+          updated_at: string
+          vat_number: string | null
+          website: string | null
+          workplace_address: string | null
+        }
+        Insert: {
+          city?: string | null
+          company_name?: string
+          country?: string
+          created_at?: string
+          default_schedule?: string | null
+          default_weekly_hours?: number
+          email?: string | null
+          enterprise_number?: string | null
+          extra_clauses?: string | null
+          id?: string
+          insurance_company?: string | null
+          joint_committee?: string | null
+          legal_form?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          representative_name?: string | null
+          representative_role?: string | null
+          rsz_number?: string | null
+          social_secretariat?: string | null
+          street_address?: string | null
+          updated_at?: string
+          vat_number?: string | null
+          website?: string | null
+          workplace_address?: string | null
+        }
+        Update: {
+          city?: string | null
+          company_name?: string
+          country?: string
+          created_at?: string
+          default_schedule?: string | null
+          default_weekly_hours?: number
+          email?: string | null
+          enterprise_number?: string | null
+          extra_clauses?: string | null
+          id?: string
+          insurance_company?: string | null
+          joint_committee?: string | null
+          legal_form?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          representative_name?: string | null
+          representative_role?: string | null
+          rsz_number?: string | null
+          social_secretariat?: string | null
+          street_address?: string | null
+          updated_at?: string
+          vat_number?: string | null
+          website?: string | null
+          workplace_address?: string | null
+        }
+        Relationships: []
+      }
+      tk_employee_absences: {
+        Row: {
+          absence_type: string
+          created_at: string
+          employee_id: string
+          ends_on: string
+          id: string
+          notes: string | null
+          starts_on: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          absence_type: string
+          created_at?: string
+          employee_id: string
+          ends_on: string
+          id?: string
+          notes?: string | null
+          starts_on: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          absence_type?: string
+          created_at?: string
+          employee_id?: string
+          ends_on?: string
+          id?: string
+          notes?: string | null
+          starts_on?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_absences_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employee_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          employee_id: string
+          expires_on: string | null
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          storage_path: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string
+          employee_id: string
+          expires_on?: string | null
+          file_name: string
+          file_size: number
+          id?: string
+          mime_type: string
+          storage_path: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          employee_id?: string
+          expires_on?: string | null
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          storage_path?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employee_hours_history: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          daily_schedule: Json | null
+          effective_from: string
+          employee_id: string
+          id: string
+          weekly_hours: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          daily_schedule?: Json | null
+          effective_from: string
+          employee_id: string
+          id?: string
+          weekly_hours: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          daily_schedule?: Json | null
+          effective_from?: string
+          employee_id?: string
+          id?: string
+          weekly_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_hours_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employee_incidents: {
+        Row: {
+          created_at: string
+          created_by: string
+          employee_id: string
+          ends_on: string
+          id: string
+          incident_type: string
+          late_minutes: number | null
+          message_id: string | null
+          observation: string
+          occurred_on: string
+          sent_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          employee_id: string
+          ends_on: string
+          id?: string
+          incident_type: string
+          late_minutes?: number | null
+          message_id?: string | null
+          observation?: string
+          occurred_on: string
+          sent_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          ends_on?: string
+          id?: string
+          incident_type?: string
+          late_minutes?: number | null
+          message_id?: string | null
+          observation?: string
+          occurred_on?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_incidents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tk_employee_incidents_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employee_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employee_message_reads: {
+        Row: {
+          employee_id: string
+          id: string
+          message_id: string
+          read_at: string
+        }
+        Insert: {
+          employee_id: string
+          id?: string
+          message_id: string
+          read_at?: string
+        }
+        Update: {
+          employee_id?: string
+          id?: string
+          message_id?: string
+          read_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_message_reads_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tk_employee_message_reads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employee_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employee_messages: {
+        Row: {
+          active: boolean
+          body: string
+          created_at: string
+          created_by: string | null
+          employee_id: string | null
+          expires_on: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          expires_on?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          expires_on?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_messages_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employee_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          note_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          employee_id: string
+          id?: string
+          note_date?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          id?: string
+          note_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_notes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employee_profiles: {
+        Row: {
+          birth_date: string | null
+          birth_place: string | null
+          city: string | null
+          contract_type: string | null
+          country: string | null
+          created_at: string
+          daily_schedule: Json | null
+          day_hourly_rate: number | null
+          department: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          employee_id: string
+          employment_start_date: string | null
+          employment_status: string
+          iban: string | null
+          is_contractor: boolean
+          job_category: string | null
+          job_tasks: string | null
+          job_title: string | null
+          joint_committee: string | null
+          monthly_report_enabled: boolean
+          national_number: string | null
+          overtime_calculation_mode: string
+          phone: string | null
+          postal_code: string | null
+          salary_advances: Json
+          salary_settlement_day: number
+          special_hourly_rate: number | null
+          split_special_hours: boolean
+          street_address: string | null
+          updated_at: string
+          weekly_hours: number | null
+        }
+        Insert: {
+          birth_date?: string | null
+          birth_place?: string | null
+          city?: string | null
+          contract_type?: string | null
+          country?: string | null
+          created_at?: string
+          daily_schedule?: Json | null
+          day_hourly_rate?: number | null
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_id: string
+          employment_start_date?: string | null
+          employment_status?: string
+          iban?: string | null
+          is_contractor?: boolean
+          job_category?: string | null
+          job_tasks?: string | null
+          job_title?: string | null
+          joint_committee?: string | null
+          monthly_report_enabled?: boolean
+          national_number?: string | null
+          overtime_calculation_mode?: string
+          phone?: string | null
+          postal_code?: string | null
+          salary_advances?: Json
+          salary_settlement_day?: number
+          special_hourly_rate?: number | null
+          split_special_hours?: boolean
+          street_address?: string | null
+          updated_at?: string
+          weekly_hours?: number | null
+        }
+        Update: {
+          birth_date?: string | null
+          birth_place?: string | null
+          city?: string | null
+          contract_type?: string | null
+          country?: string | null
+          created_at?: string
+          daily_schedule?: Json | null
+          day_hourly_rate?: number | null
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_id?: string
+          employment_start_date?: string | null
+          employment_status?: string
+          iban?: string | null
+          is_contractor?: boolean
+          job_category?: string | null
+          job_tasks?: string | null
+          job_title?: string | null
+          joint_committee?: string | null
+          monthly_report_enabled?: boolean
+          national_number?: string | null
+          overtime_calculation_mode?: string
+          phone?: string | null
+          postal_code?: string | null
+          salary_advances?: Json
+          salary_settlement_day?: number
+          special_hourly_rate?: number | null
+          split_special_hours?: boolean
+          street_address?: string | null
+          updated_at?: string
+          weekly_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_employees: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          pin: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          pin: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          pin?: string
+        }
+        Relationships: []
+      }
+      tk_employment_contracts: {
+        Row: {
+          body: string
+          contract_type: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          employee_signature_image: string | null
+          employee_signed_at: string | null
+          employee_signed_device: string | null
+          employee_signed_name: string | null
+          employer_signature_image: string | null
+          employer_signed_at: string | null
+          employer_signed_name: string | null
+          ends_on: string | null
+          extra_clauses: string | null
+          id: string
+          job_title: string | null
+          joint_committee: string | null
+          notice_clause: string | null
+          params: Json
+          schedule: string | null
+          starts_on: string | null
+          status: string
+          student_yearly_hours: number | null
+          trial_clause: string | null
+          updated_at: string
+          wage_amount: number | null
+          wage_mode: string
+          weekly_hours: number | null
+          workplace: string | null
+        }
+        Insert: {
+          body?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          employee_signature_image?: string | null
+          employee_signed_at?: string | null
+          employee_signed_device?: string | null
+          employee_signed_name?: string | null
+          employer_signature_image?: string | null
+          employer_signed_at?: string | null
+          employer_signed_name?: string | null
+          ends_on?: string | null
+          extra_clauses?: string | null
+          id?: string
+          job_title?: string | null
+          joint_committee?: string | null
+          notice_clause?: string | null
+          params?: Json
+          schedule?: string | null
+          starts_on?: string | null
+          status?: string
+          student_yearly_hours?: number | null
+          trial_clause?: string | null
+          updated_at?: string
+          wage_amount?: number | null
+          wage_mode?: string
+          weekly_hours?: number | null
+          workplace?: string | null
+        }
+        Update: {
+          body?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          employee_signature_image?: string | null
+          employee_signed_at?: string | null
+          employee_signed_device?: string | null
+          employee_signed_name?: string | null
+          employer_signature_image?: string | null
+          employer_signed_at?: string | null
+          employer_signed_name?: string | null
+          ends_on?: string | null
+          extra_clauses?: string | null
+          id?: string
+          job_title?: string | null
+          joint_committee?: string | null
+          notice_clause?: string | null
+          params?: Json
+          schedule?: string | null
+          starts_on?: string | null
+          status?: string
+          student_yearly_hours?: number | null
+          trial_clause?: string | null
+          updated_at?: string
+          wage_amount?: number | null
+          wage_mode?: string
+          weekly_hours?: number | null
+          workplace?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employment_contracts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_leave_requests: {
+        Row: {
+          absence_id: string | null
+          created_at: string
+          employee_id: string
+          ends_on: string
+          hours: number | null
+          id: string
+          note: string | null
+          request_type: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          starts_on: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          absence_id?: string | null
+          created_at?: string
+          employee_id: string
+          ends_on: string
+          hours?: number | null
+          id?: string
+          note?: string | null
+          request_type?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_on: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          absence_id?: string | null
+          created_at?: string
+          employee_id?: string
+          ends_on?: string
+          hours?: number | null
+          id?: string
+          note?: string | null
+          request_type?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_on?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_leave_requests_absence_id_fkey"
+            columns: ["absence_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employee_absences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tk_leave_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_monthly_report_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          employee_id: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          report_month: string
+          sent_at: string | null
+          status: string
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          employee_id: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          report_month: string
+          sent_at?: string | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          employee_id?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          report_month?: string
+          sent_at?: string | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_monthly_report_jobs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_overtime_adjustments: {
+        Row: {
+          adjustment_type: string
+          created_at: string
+          created_by: string | null
+          effective_on: string
+          employee_id: string
+          id: string
+          leave_request_id: string | null
+          minutes: number
+          note: string | null
+          source_week: string
+          updated_at: string
+        }
+        Insert: {
+          adjustment_type: string
+          created_at?: string
+          created_by?: string | null
+          effective_on?: string
+          employee_id: string
+          id?: string
+          leave_request_id?: string | null
+          minutes: number
+          note?: string | null
+          source_week: string
+          updated_at?: string
+        }
+        Update: {
+          adjustment_type?: string
+          created_at?: string
+          created_by?: string | null
+          effective_on?: string
+          employee_id?: string
+          id?: string
+          leave_request_id?: string | null
+          minutes?: number
+          note?: string | null
+          source_week?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_overtime_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tk_overtime_adjustments_leave_request_id_fkey"
+            columns: ["leave_request_id"]
+            isOneToOne: true
+            referencedRelation: "tk_leave_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_payroll_profiles: {
+        Row: {
+          barema: string | null
+          bv_scale: string
+          created_at: string
+          dependents: number
+          employee_id: string
+          fixed_bv_monthly: number | null
+          holiday_pay_enabled: boolean
+          hourly_wage: number | null
+          id: string
+          monthly_wage: number | null
+          notes: string | null
+          simulation_parameters: Json
+          status: string
+          updated_at: string
+          wage_mode: string
+          weekly_hours: number | null
+          year_end_bonus_enabled: boolean
+        }
+        Insert: {
+          barema?: string | null
+          bv_scale?: string
+          created_at?: string
+          dependents?: number
+          employee_id: string
+          fixed_bv_monthly?: number | null
+          holiday_pay_enabled?: boolean
+          hourly_wage?: number | null
+          id?: string
+          monthly_wage?: number | null
+          notes?: string | null
+          simulation_parameters?: Json
+          status?: string
+          updated_at?: string
+          wage_mode?: string
+          weekly_hours?: number | null
+          year_end_bonus_enabled?: boolean
+        }
+        Update: {
+          barema?: string | null
+          bv_scale?: string
+          created_at?: string
+          dependents?: number
+          employee_id?: string
+          fixed_bv_monthly?: number | null
+          holiday_pay_enabled?: boolean
+          hourly_wage?: number | null
+          id?: string
+          monthly_wage?: number | null
+          notes?: string | null
+          simulation_parameters?: Json
+          status?: string
+          updated_at?: string
+          wage_mode?: string
+          weekly_hours?: number | null
+          year_end_bonus_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_payroll_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_payroll_runs: {
+        Row: {
+          bv: number
+          created_at: string
+          employee_id: string
+          employer_cost: number
+          gross: number
+          holiday_pay_reserve: number
+          id: string
+          net: number
+          paid_at: string | null
+          paid_by: string | null
+          period_month: string
+          rsz_employee: number
+          rsz_employer: number
+          snapshot: Json
+          status: string
+          taxable: number
+          updated_at: string
+          warnings: Json
+          worked_day_minutes: number
+          worked_minutes: number
+          worked_special_minutes: number
+          year_end_bonus_reserve: number
+        }
+        Insert: {
+          bv?: number
+          created_at?: string
+          employee_id: string
+          employer_cost?: number
+          gross?: number
+          holiday_pay_reserve?: number
+          id?: string
+          net?: number
+          paid_at?: string | null
+          paid_by?: string | null
+          period_month: string
+          rsz_employee?: number
+          rsz_employer?: number
+          snapshot?: Json
+          status: string
+          taxable?: number
+          updated_at?: string
+          warnings?: Json
+          worked_day_minutes?: number
+          worked_minutes?: number
+          worked_special_minutes?: number
+          year_end_bonus_reserve?: number
+        }
+        Update: {
+          bv?: number
+          created_at?: string
+          employee_id?: string
+          employer_cost?: number
+          gross?: number
+          holiday_pay_reserve?: number
+          id?: string
+          net?: number
+          paid_at?: string | null
+          paid_by?: string | null
+          period_month?: string
+          rsz_employee?: number
+          rsz_employer?: number
+          snapshot?: Json
+          status?: string
+          taxable?: number
+          updated_at?: string
+          warnings?: Json
+          worked_day_minutes?: number
+          worked_minutes?: number
+          worked_special_minutes?: number
+          year_end_bonus_reserve?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_payroll_runs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_payroll_settings: {
+        Row: {
+          bv_brackets: Json
+          dependent_reduction_per_person: number
+          disclaimer: string
+          employee_rsz_pct: number
+          employer_rsz_pct: number
+          holiday_pay_reserve_pct: number
+          id: string
+          student_employee_pct: number
+          student_employer_pct: number
+          student_yearly_hours_limit: number
+          updated_at: string
+          year_end_bonus_reserve_pct: number
+        }
+        Insert: {
+          bv_brackets?: Json
+          dependent_reduction_per_person?: number
+          disclaimer?: string
+          employee_rsz_pct?: number
+          employer_rsz_pct?: number
+          holiday_pay_reserve_pct?: number
+          id?: string
+          student_employee_pct?: number
+          student_employer_pct?: number
+          student_yearly_hours_limit?: number
+          updated_at?: string
+          year_end_bonus_reserve_pct?: number
+        }
+        Update: {
+          bv_brackets?: Json
+          dependent_reduction_per_person?: number
+          disclaimer?: string
+          employee_rsz_pct?: number
+          employer_rsz_pct?: number
+          holiday_pay_reserve_pct?: number
+          id?: string
+          student_employee_pct?: number
+          student_employer_pct?: number
+          student_yearly_hours_limit?: number
+          updated_at?: string
+          year_end_bonus_reserve_pct?: number
+        }
+        Relationships: []
+      }
+      tk_source_user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tk_time_entries: {
+        Row: {
+          clock_in: string
+          clock_out: string | null
+          created_at: string
+          employee_id: string
+          id: string
+        }
+        Insert: {
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+        }
+        Update: {
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_time_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tk_time_entry_requests: {
+        Row: {
+          approved_entry_id: string | null
+          clock_in: string
+          clock_out: string
+          created_at: string
+          employee_id: string
+          id: string
+          note: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_entry_id?: string | null
+          clock_in: string
+          clock_out: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          note?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_entry_id?: string | null
+          clock_in?: string
+          clock_out?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          note?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_time_entry_requests_approved_entry_id_fkey"
+            columns: ["approved_entry_id"]
+            isOneToOne: false
+            referencedRelation: "tk_time_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tk_time_entry_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -3452,6 +4735,24 @@ export type Database = {
         Returns: number
       }
       tech_reopen_work_order: { Args: { _id: string }; Returns: undefined }
+      tk_record_employee_incident: {
+        Args: {
+          p_admin: string
+          p_date: string
+          p_employee: string
+          p_end: string
+          p_id: string
+          p_minutes: number
+          p_observation: string
+          p_send: boolean
+          p_type: string
+        }
+        Returns: string
+      }
+      tk_send_employee_incident: {
+        Args: { p_admin: string; p_id: string }
+        Returns: string
+      }
       unsubscribe_newsletter: { Args: { p_hash: string }; Returns: boolean }
     }
     Enums: {

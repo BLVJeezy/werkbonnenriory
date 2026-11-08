@@ -49,3 +49,5 @@
 - Range-paged reads order by id first (un-ordered paging drops rows; parallel salvo's on the joined journal query return 500). Dashboard journal figures use the `fin_journal_summary` month-aggregate RPC (invoker, so RLS holds); accounting pages keep raw lines for arbitrary periods.
 - Prior-year accountant figures are one `jaarafsluiting`-source entry that trialBalance counts only for periods ending in that year, so it never doubles the next opening balance.
 - Supplier payment details resolve through `creditorBank` (what the admin typed on the invoice first, then the supplier record), and a corrected invoice writes those details back to `suppliers`; the BIC is only ever derived from the static bank-code table in `src/lib/iban-bic.ts`, so a hand-typed BIC is never overwritten.
+
+- Integrated timeclock modules and tables use a dedicated tikklok/tk namespace; Riory admin roles protect HR/payroll and device/PIN checks protect employee self-service, preventing collisions with work-order time entries. Keep the legacy clock active until reconciliation and explicit cutover approval.
