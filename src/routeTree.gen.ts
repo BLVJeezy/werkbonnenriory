@@ -48,6 +48,7 @@ import { Route as ApiPublicAankoopfacturenPeppolRouteImport } from './routes/api
 import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/public/bookkeeping/sales'
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicCronFinanceRouteImport } from './routes/api/public/cron/finance'
+import { Route as ApiPublicCronTaskMailRouteImport } from './routes/api/public/cron/task-mail'
 import { Route as ApiPublicMailOpenTokenRouteImport } from './routes/api/public/mail-open/$token'
 import { Route as ApiPublicNieuwsbriefAfbeeldingFileRouteImport } from './routes/api/public/nieuwsbrief-afbeelding/$file'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
@@ -266,6 +267,11 @@ const ApiPublicCronFinanceRoute = ApiPublicCronFinanceRouteImport.update({
   path: '/api/public/cron/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronTaskMailRoute = ApiPublicCronTaskMailRouteImport.update({
+  id: '/api/public/cron/task-mail',
+  path: '/api/public/cron/task-mail',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMailOpenTokenRoute = ApiPublicMailOpenTokenRouteImport.update({
   id: '/api/public/mail-open/$token',
   path: '/api/public/mail-open/$token',
@@ -346,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
+  '/api/public/cron/task-mail': typeof ApiPublicCronTaskMailRoute
   '/api/public/mail-open/$token': typeof ApiPublicMailOpenTokenRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
+  '/api/public/cron/task-mail': typeof ApiPublicCronTaskMailRoute
   '/api/public/mail-open/$token': typeof ApiPublicMailOpenTokenRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
@@ -442,6 +450,7 @@ export interface FileRoutesById {
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
+  '/api/public/cron/task-mail': typeof ApiPublicCronTaskMailRoute
   '/api/public/mail-open/$token': typeof ApiPublicMailOpenTokenRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
@@ -491,6 +500,7 @@ export interface FileRouteTypes {
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
+    | '/api/public/cron/task-mail'
     | '/api/public/mail-open/$token'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
@@ -538,6 +548,7 @@ export interface FileRouteTypes {
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
+    | '/api/public/cron/task-mail'
     | '/api/public/mail-open/$token'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
@@ -586,6 +597,7 @@ export interface FileRouteTypes {
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
+    | '/api/public/cron/task-mail'
     | '/api/public/mail-open/$token'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
@@ -614,6 +626,7 @@ export interface RootRouteChildren {
   ApiPublicBookkeepingSalesRoute: typeof ApiPublicBookkeepingSalesRoute
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicCronFinanceRoute: typeof ApiPublicCronFinanceRoute
+  ApiPublicCronTaskMailRoute: typeof ApiPublicCronTaskMailRoute
   ApiPublicMailOpenTokenRoute: typeof ApiPublicMailOpenTokenRoute
   ApiPublicNieuwsbriefAfbeeldingFileRoute: typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
@@ -898,6 +911,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronFinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/task-mail': {
+      id: '/api/public/cron/task-mail'
+      path: '/api/public/cron/task-mail'
+      fullPath: '/api/public/cron/task-mail'
+      preLoaderRoute: typeof ApiPublicCronTaskMailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mail-open/$token': {
       id: '/api/public/mail-open/$token'
       path: '/api/public/mail-open/$token'
@@ -1021,6 +1041,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBookkeepingSalesRoute: ApiPublicBookkeepingSalesRoute,
   ApiPublicContractsProcessRoute: ApiPublicContractsProcessRoute,
   ApiPublicCronFinanceRoute: ApiPublicCronFinanceRoute,
+  ApiPublicCronTaskMailRoute: ApiPublicCronTaskMailRoute,
   ApiPublicMailOpenTokenRoute: ApiPublicMailOpenTokenRoute,
   ApiPublicNieuwsbriefAfbeeldingFileRoute:
     ApiPublicNieuwsbriefAfbeeldingFileRoute,
