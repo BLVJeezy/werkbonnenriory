@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useRole, useLargeText, usePerms } from "@/lib/use-role";
 import { largeTextOn, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
 import { Menu, X } from "lucide-react";
+import { ScreenHelpPanel, ScreenHelpToggle } from "@/components/ScreenHelp";
 import { OverdueAfterNoticeAlert } from "@/components/OverdueAfterNoticeAlert";
 import { AdminNotifications } from "@/components/AdminNotifications";
 
@@ -115,6 +116,7 @@ function Layout() {
             )}
             {(role === "admin" || (role === "technician" && perms?.showSigned)) && <Link to="/afgewerkte-werkbonnen" className={navCls} activeProps={active}>Afgewerkte werkbonnen</Link>}
             <Link to="/handleiding" className={navCls} activeProps={active}>Handleiding</Link>
+            {role === "admin" && <ScreenHelpToggle />}
             {role === "technician" && (
               <Button
                 size="sm"
@@ -147,6 +149,7 @@ function Layout() {
           </nav>
         </div>
       </header>
+      {role === "admin" && !fullScreen && <ScreenHelpPanel />}
       {role === "marketing" && !marketingAllowed ? null : <main className={fullScreen ? 'min-h-0 w-full min-w-0 flex-1 overflow-hidden' : 'mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6'}>
         <Outlet />
       </main>}
