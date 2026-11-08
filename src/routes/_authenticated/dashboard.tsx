@@ -183,9 +183,10 @@ function Dashboard() {
             <p className="text-xs font-bold uppercase opacity-70">{p.label}</p>
             <p className="text-xl font-black">{euro(p.amount)}</p>
             <p className="text-xs opacity-70">{Math.round(p.quantity * 100) / 100} stuks (excl. btw)</p>
-            {(p.key === "regenput" || p.key === "septisch") && (() => {
+            {(p.key === "regenput" || p.key === "septisch" || p.key === "riostop") && (() => {
               const k = costs.filter((c) => c.key === p.key).reduce((s, c) => s + c.amount, 0);
-              return <p className="mt-1 text-xs"><span className="font-bold">Kost {p.key === "regenput" ? "Rioclean" : "leveranciers"}:</span> {euro(k)} · <span className="font-bold">Marge:</span> {euro(p.amount - k)}</p>;
+              const who = p.key === "regenput" ? "Rioclean" : p.key === "septisch" ? "leveranciers" : "IDBS";
+              return <p className="mt-1 text-xs"><span className="font-bold">Kost {who}:</span> {euro(k)} · <span className="font-bold">Marge:</span> {euro(p.amount - k)}</p>;
             })()}
           </div>
         ))}
