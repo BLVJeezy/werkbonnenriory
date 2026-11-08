@@ -446,10 +446,10 @@ function ClockTerminal() {
         </DialogContent>
       </Dialog>
       <header className="border-b border-border/50">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={rioryLogo.url} alt="Riory" className="h-10 w-auto" />
-            <span className="heading-display text-2xl tracking-wide">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-5 flex flex-wrap gap-3 items-center justify-between">
+          <Link to="/" className="flex min-w-0 items-center gap-2">
+            <img src={rioryLogo.url} alt="Riory" className="h-8 sm:h-10 w-auto" />
+            <span className="heading-display text-lg sm:text-2xl">
               Riory<span className="text-primary"> · Tikklok</span>
             </span>
           </Link>

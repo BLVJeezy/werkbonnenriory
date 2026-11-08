@@ -11,10 +11,10 @@ function applyTheme(t: Theme) {
 }
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = (localStorage.getItem("riory-theme") as Theme | null) ?? "dark";
+    const stored: Theme = localStorage.getItem("riory-theme") === "dark" ? "dark" : "light";
     setTheme(stored);
     applyTheme(stored);
   }, []);
