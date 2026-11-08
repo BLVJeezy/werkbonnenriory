@@ -95,6 +95,7 @@ function Dashboard() {
   });
 
   const [simplaError, setSimplaError] = useState<string | null>(null);
+  const [costs, setCosts] = useState<{ key: string; amount: number }[]>([]);
   // Omzet per product: Simpla-facturen vóór de app (alleen lezen) + materialen op werkbonnen (werkdag) + lijnen van zelf gemaakte facturen.
   const { data: prodLines = [] } = useQuery({
     queryKey: ["dashboard-producten", from, to],
@@ -106,8 +107,9 @@ function Dashboard() {
         supabase.from("invoices").select("kind, lines, work_order_id").is("work_order_id", null).gte("issue_date", from).lte("issue_date", to),
       ]);
       if (w.error) throw w.error;
-      const sim = await simplaDashboardProducts({ data: { from, to } }).catch(() => ({ lines: [] as ProductLine[], error: "Simpla niet bereikbaar" }));
+      const sim = await simplaDashboardProducts({ data: { from, to } }).catch(() => ({ lines: [] as ProductLine[], costs: [] as { key: string; amount: number }[], error: "Simpla niet bereikbaar" }));
       setSimplaError(sim.error);
+      setCosts(sim.costs);
       const out: ProductLine[] = [...sim.lines];
       for (const o of w.data ?? []) {
         const day = (o.scheduled_date ?? o.signed_at ?? "").slice(0, 10);
@@ -181,6 +183,10 @@ function Dashboard() {
             <p className="text-xs font-bold uppercase opacity-70">{p.label}</p>
             <p className="text-xl font-black">{euro(p.amount)}</p>
             <p className="text-xs opacity-70">{Math.round(p.quantity * 100) / 100} stuks (excl. btw)</p>
+            {(p.key === "regenput" || p.key === "septisch") && (() => {
+              const k = costs.filter((c) => c.key === p.key).reduce((s, c) => s + c.amount, 0);
+              return <p className="mt-1 text-xs"><span className="font-bold">Kost {p.key === "regenput" ? "Rioclean" : "leveranciers"}:</span> {euro(k)} · <span className="font-bold">Marge:</span> {euro(p.amount - k)}</p>;
+            })()}
           </div>
         ))}
       </div>
