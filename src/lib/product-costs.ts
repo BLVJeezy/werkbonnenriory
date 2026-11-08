@@ -1,13 +1,14 @@
-export type CostLine = { key: "regenput" | "septisch"; date: string; amount: number };
+export type CostLine = { key: "regenput" | "septisch" | "riostop"; date: string; amount: number };
 
 const n = (s: string | null | undefined) => (s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 const norm = (s: string | null | undefined) => n(s).replace(/[^a-z0-9]/g, "");
 
-/** Kostgroep van een aankooplijn: regenputreiniging enkel door Rioclean, septische putten bij elke leverancier. */
+/** Kostgroep van een aankooplijn: regenputreiniging enkel door Rioclean, septische putten bij elke leverancier, riostoppen bij IDBS. */
 export function costKey(supplier: string | null | undefined, description: string | null | undefined): CostLine["key"] | null {
   const d = n(description);
   if (d.includes("septisch")) return "septisch";
   if (norm(supplier).includes("rioclean") && /regen(water)?put/.test(d)) return "regenput";
+  if (norm(supplier).includes("idbs") && d.includes("riostop")) return "riostop";
   return null;
 }
 
