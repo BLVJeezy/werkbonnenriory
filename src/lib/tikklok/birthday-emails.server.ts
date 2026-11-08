@@ -1,6 +1,5 @@
 import { brusselsDate } from "@/lib/tikklok/calendar-rules";
-
-const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev/microsoft_outlook";
+import { verifiedTikklokMailbox } from './mailbox.server';
 
 export type BirthdayRecipient = { employee_id: string; name: string; email: string };
 
@@ -30,17 +29,11 @@ export function birthdayEmailContent(name: string) {
 }
 
 export async function sendOutlookBirthdayEmail(input: { recipient: string; employeeName: string }) {
-  const lovableKey = process.env['LOVABLE_API_KEY'];
-  const outlookKey = process.env['MICROSOFT_OUTLOOK_API_KEY'];
-  if (!lovableKey || !outlookKey) throw new Error("Outlook-mailbox is niet gekoppeld");
+  const { headers, gateway } = await verifiedTikklokMailbox();
   const { subject, html } = birthdayEmailContent(input.employeeName);
-  const response = await fetch(`${OUTLOOK_GATEWAY}/me/sendMail`, {
+  const response = await fetch(`${gateway}/me/sendMail`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": outlookKey,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       message: {
         subject,
