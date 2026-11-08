@@ -3,6 +3,8 @@ import { FactuurInstellingen } from "@/components/FactuurInstellingen";
 import { TarievenBeheer } from "@/components/TarievenBeheer";
 import { PloegenBeheer } from "@/components/PloegenBeheer";
 import { VestigingenBeheer } from "@/components/VestigingenBeheer";
+import { AdminUsers } from "@/components/AdminUsers";
+import { useRole } from "@/lib/use-role";
 
 export const Route = createFileRoute("/_authenticated/instellingen")({
   head: () => ({ meta: [{ title: "Instellingen — Riory Werkbonnen" }, { name: "description", content: "Factuurinstellingen, tarieven en ploegen beheren." }, { property: "og:title", content: "Instellingen — Riory Werkbonnen" }, { property: "og:description", content: "Factuurinstellingen, tarieven en ploegen beheren." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -10,9 +12,16 @@ export const Route = createFileRoute("/_authenticated/instellingen")({
 });
 
 function Instellingen() {
+  const role = useRole();
+  if (role !== "admin") return <p className="text-muted-foreground">Instellingen zijn alleen beschikbaar voor beheerders.</p>;
   return (
     <div className="space-y-10">
       <h1 className="text-3xl font-black uppercase">Instellingen</h1>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-black uppercase">Beheerders</h2>
+        <AdminUsers />
+      </section>
 
       <section className="space-y-4">
         <h2 className="text-lg font-black uppercase">Factuurinstellingen</h2>

@@ -26,13 +26,32 @@ export const processen: Proces[] = [
       { titel: "Dashboard", uitleg: "Omzet, kosten, marge" },
     ],
     details: [
-      "De beheerder meldt aan met info@riory.be en het eigen wachtwoord. Publiek registreren is uitgeschakeld; nieuwe logins maakt alleen de beheerder.",
+      "De beheerder meldt aan met het eigen e-mailadres en wachtwoord. Publiek registreren is uitgeschakeld; nieuwe logins maakt alleen een bestaande beheerder.",
       "'Wachtwoord vergeten' stuurt een herstelmail; de link opent de pagina om een nieuw wachtwoord te kiezen. Wachtwoorden worden nooit getoond.",
       "Na aanmelden opent het Dashboard: jaarcijfers (omzet, kosten, resultaat, marge, vergelijking met vorige jaren), omzet per dag of maand en omzet per product.",
       "Kies bovenaan Van en Tot. Omzet telt op de werkdag van de werkbon (geplande datum, anders aftekendatum). Zelf gemaakte facturen zonder werkbon tellen op hun factuurdatum; creditnota's trekken af; 'Niet factureren' telt niet mee.",
       "Omzet per product: camera-inspectie 32-50, 75-110 en 125-250 apart, ledigen septische put, reiniging regenputten, riostoppen/inspectiepunten. Simpla-facturen van vóór de eerste werkbon in de app tellen mee (alleen gelezen).",
       "Bij regenputten staat de kost van Rioclean en de marge; bij septische putten de kost van alle leveranciers die septische putten factureren.",
     ],
+  },
+  {
+    id: "beheerders", titel: "Een beheerder aanmaken of uitnodigen", doelgroep: "admin", schermen: ["/instellingen"],
+    doel: "Een collega volledige beheertoegang geven met een eigen account.",
+    stappen: [
+      { titel: "Instellingen → Beheerders" },
+      { titel: "Kies aanmaken of uitnodigen", keuze: ["Zelf aanmaken → e-mailadres en wachtwoord", "Uitnodigen → e-mailadres en persoonlijke link"] },
+      { titel: "Deel de uitnodiging", uitleg: "Delen of kopiëren naar mail/bericht" },
+      { titel: "Nieuwe beheerder opent de link", uitleg: "Uitnodiging openen, eigen wachtwoord kiezen" },
+      { titel: "Aanmelden", uitleg: "Eigen e-mailadres en wachtwoord → Dashboard" },
+    ],
+    details: [
+      "Alleen een bestaande beheerder kan een nieuw beheerderaccount maken. Het e-mailadres mag nog niet voor een ander account gebruikt zijn.",
+      "Uitnodigen maakt het account en toont een persoonlijk bericht. Er wordt niet automatisch een mail verstuurd: gebruik Delen of Kopiëren en stuur het bericht zelf door.",
+      "De persoonlijke link is eenmalig en kan verlopen. De ontvanger klikt Uitnodiging openen en kiest tweemaal hetzelfde wachtwoord van minstens acht tekens.",
+      "Zelf aanmaken vraagt het e-mailadres en een wachtwoord. Het nieuwe account kan daarmee meteen aanmelden; wachtwoorden worden nadien nooit getoond.",
+      "De lijst toont wie al aangemeld heeft. Met Uitnodigingslink bij een andere beheerder maak je een nieuwe wachtwoordlink; deel die alleen met die persoon.",
+    ],
+    letOp: ["Een beheerder krijgt volledige toegang, ook tot facturen, boekhouding en accountbeheer.", "Uitnodigingslinks zijn vertrouwelijk: deel ze uitsluitend met de bedoelde ontvanger."],
   },
   {
     id: "mailimport", titel: "Nieuwe opdrachten uit de mailbox", doelgroep: "admin", schermen: ["/kalender"],
