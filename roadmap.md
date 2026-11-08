@@ -49,4 +49,4 @@
 
 - [x] Riostopkost van IDBS bij de dashboardtegel Riostoppen/inspectiepunten; 10 tests geslaagd en ingelogde controle (Kost IDBS €900,00, marge €3.940,00 over 2023-2026).
 
-- [ ] Tikklok volledig verhuizen naar deze app (optie 1, geen dataverlies): wacht op CSV-export van alle tabellen uit de Time Keeper Pro-chat; daarna importeren met behoud van nummers, aantallen vergelijken, beheer- en inklokschermen bouwen en pas na goedkeuring de oude tikklok stilleggen.
+- [ ] Tikklok volledig verhuizen naar deze app (optie 1, geen dataverlies): export van 8 november ontvangen en structureel gecontroleerd (25 tabellen, 369 rijen, 5 medewerkers, 177 klokregistraties; geen verweesde medewerkerverwijzingen). Bronfunctionaliteit en toegangsgrenzen inventariseren, privé importeren met behoud van nummers en PIN-hashes, aantallen/velden vergelijken, alle beheer- en inklokschermen integreren en testen. Beheerdersidentiteit en volledige bestandsdekking nog controleren; laatste aanvullings-export en expliciete goedkeuring vóór omschakeling. Oude tikklok blijft actief.

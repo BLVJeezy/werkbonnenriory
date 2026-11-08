@@ -1,0 +1,19 @@
+{
+  "source": "Time Keeper Pro",
+  "export": "tikklok-export-2026-11-08.zip",
+  "capabilities": [
+    {"capability":"code","source":"read-only source snapshot","outcome":"native integration","status":"inspecting","next_action":"Map complete source functionality to Riory routes without replacing app initialization."},
+    {"capability":"schema","source":"25 exported application tables","outcome":"migrate","status":"pending","next_action":"Create isolated timeclock tables, avoiding existing time_entries and user_roles collisions."},
+    {"capability":"records","source":"25 CSV files, 369 rows","outcome":"migrate","status":"export_checked","next_action":"Import privately, preserving identifiers and all legitimate business fields; compare counts and relations."},
+    {"capability":"employee PIN credentials","source":"five bcrypt hashes","outcome":"preserve securely","status":"format_checked","next_action":"Transfer only into private credential storage and verify existing PIN login; never include hashes in source, reports, or public data."},
+    {"capability":"auth identities","source":"one exported role row; no auth identity export","outcome":"migrate","status":"pending","next_action":"Resolve source administrator identity securely and preserve attribution separately from destination grants."},
+    {"capability":"authorization","source":"admin role and approved-device/PIN model","outcome":"preserve boundaries","status":"pending","next_action":"Keep crew access independent; restrict HR and payroll to administrators and employee self-service to verified device/PIN access."},
+    {"capability":"uploaded file bytes","source":"empty employee_documents export and no nonempty storage_path references","outcome":"verify coverage","status":"pending","next_action":"Check every file reference and source storage capability; preserve embedded contract signatures."},
+    {"capability":"external providers","source":"source implementation","outcome":"preserve compatible services","status":"inspecting","next_action":"Verify actual email, AI and report integrations and retain supported behavior."},
+    {"capability":"public endpoints and callbacks","source":"source implementation","outcome":"preserve behavior","status":"inspecting","next_action":"Inventory employee terminal endpoints and external callers."},
+    {"capability":"schedules","source":"monthly and birthday report job exports","outcome":"preserve","status":"pending","next_action":"Map schedules and delivery claims without duplicate outgoing messages."},
+    {"capability":"secrets","source":"not requested or displayed","outcome":"secure transfer when needed","status":"pending","next_action":"Check existing compatible connections before requesting private values securely."},
+    {"capability":"cutover","source":"old timeclock remains active","outcome":"explicitly approved cutover","status":"blocked","next_action":"Final incremental export and user approval after successful comparison; do not stop old clock."},
+    {"capability":"verification","source":"export structural checks","outcome":"zero-loss acceptance checks","status":"partial","next_action":"369 exported rows, 177 time entries, five employees, no orphan employee references and no open clock entries checked; destination flows not yet implemented or tested."}
+  ]
+}
