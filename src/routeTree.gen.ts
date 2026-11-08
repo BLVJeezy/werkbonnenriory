@@ -53,6 +53,8 @@ import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/publ
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicCronFinanceRouteImport } from './routes/api/public/cron/finance'
 import { Route as ApiPublicCronTaskMailRouteImport } from './routes/api/public/cron/task-mail'
+import { Route as ApiPublicHooksBirthdayEmailsRouteImport } from './routes/api/public/hooks/birthday-emails'
+import { Route as ApiPublicHooksMonthlyTimesheetsRouteImport } from './routes/api/public/hooks/monthly-timesheets'
 import { Route as ApiPublicMailOpenTokenRouteImport } from './routes/api/public/mail-open/$token'
 import { Route as ApiPublicNieuwsbriefAfbeeldingFileRouteImport } from './routes/api/public/nieuwsbrief-afbeelding/$file'
 import { Route as ApiPublicPontoSyncRouteImport } from './routes/api/public/ponto/sync'
@@ -298,6 +300,18 @@ const ApiPublicCronTaskMailRoute = ApiPublicCronTaskMailRouteImport.update({
   path: '/api/public/cron/task-mail',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksBirthdayEmailsRoute =
+  ApiPublicHooksBirthdayEmailsRouteImport.update({
+    id: '/api/public/hooks/birthday-emails',
+    path: '/api/public/hooks/birthday-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksMonthlyTimesheetsRoute =
+  ApiPublicHooksMonthlyTimesheetsRouteImport.update({
+    id: '/api/public/hooks/monthly-timesheets',
+    path: '/api/public/hooks/monthly-timesheets',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMailOpenTokenRoute = ApiPublicMailOpenTokenRouteImport.update({
   id: '/api/public/mail-open/$token',
   path: '/api/public/mail-open/$token',
@@ -383,6 +397,8 @@ export interface FileRoutesByFullPath {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/cron/task-mail': typeof ApiPublicCronTaskMailRoute
+  '/api/public/hooks/birthday-emails': typeof ApiPublicHooksBirthdayEmailsRoute
+  '/api/public/hooks/monthly-timesheets': typeof ApiPublicHooksMonthlyTimesheetsRoute
   '/api/public/mail-open/$token': typeof ApiPublicMailOpenTokenRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
@@ -435,6 +451,8 @@ export interface FileRoutesByTo {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/cron/task-mail': typeof ApiPublicCronTaskMailRoute
+  '/api/public/hooks/birthday-emails': typeof ApiPublicHooksBirthdayEmailsRoute
+  '/api/public/hooks/monthly-timesheets': typeof ApiPublicHooksMonthlyTimesheetsRoute
   '/api/public/mail-open/$token': typeof ApiPublicMailOpenTokenRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
@@ -489,6 +507,8 @@ export interface FileRoutesById {
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
   '/api/public/cron/task-mail': typeof ApiPublicCronTaskMailRoute
+  '/api/public/hooks/birthday-emails': typeof ApiPublicHooksBirthdayEmailsRoute
+  '/api/public/hooks/monthly-timesheets': typeof ApiPublicHooksMonthlyTimesheetsRoute
   '/api/public/mail-open/$token': typeof ApiPublicMailOpenTokenRoute
   '/api/public/nieuwsbrief-afbeelding/$file': typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   '/api/public/ponto/sync': typeof ApiPublicPontoSyncRoute
@@ -543,6 +563,8 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
     | '/api/public/cron/task-mail'
+    | '/api/public/hooks/birthday-emails'
+    | '/api/public/hooks/monthly-timesheets'
     | '/api/public/mail-open/$token'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
@@ -595,6 +617,8 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
     | '/api/public/cron/task-mail'
+    | '/api/public/hooks/birthday-emails'
+    | '/api/public/hooks/monthly-timesheets'
     | '/api/public/mail-open/$token'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
@@ -648,6 +672,8 @@ export interface FileRouteTypes {
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
     | '/api/public/cron/task-mail'
+    | '/api/public/hooks/birthday-emails'
+    | '/api/public/hooks/monthly-timesheets'
     | '/api/public/mail-open/$token'
     | '/api/public/nieuwsbrief-afbeelding/$file'
     | '/api/public/ponto/sync'
@@ -679,6 +705,8 @@ export interface RootRouteChildren {
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicCronFinanceRoute: typeof ApiPublicCronFinanceRoute
   ApiPublicCronTaskMailRoute: typeof ApiPublicCronTaskMailRoute
+  ApiPublicHooksBirthdayEmailsRoute: typeof ApiPublicHooksBirthdayEmailsRoute
+  ApiPublicHooksMonthlyTimesheetsRoute: typeof ApiPublicHooksMonthlyTimesheetsRoute
   ApiPublicMailOpenTokenRoute: typeof ApiPublicMailOpenTokenRoute
   ApiPublicNieuwsbriefAfbeeldingFileRoute: typeof ApiPublicNieuwsbriefAfbeeldingFileRoute
   ApiPublicPontoSyncRoute: typeof ApiPublicPontoSyncRoute
@@ -998,6 +1026,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronTaskMailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/birthday-emails': {
+      id: '/api/public/hooks/birthday-emails'
+      path: '/api/public/hooks/birthday-emails'
+      fullPath: '/api/public/hooks/birthday-emails'
+      preLoaderRoute: typeof ApiPublicHooksBirthdayEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/monthly-timesheets': {
+      id: '/api/public/hooks/monthly-timesheets'
+      path: '/api/public/hooks/monthly-timesheets'
+      fullPath: '/api/public/hooks/monthly-timesheets'
+      preLoaderRoute: typeof ApiPublicHooksMonthlyTimesheetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mail-open/$token': {
       id: '/api/public/mail-open/$token'
       path: '/api/public/mail-open/$token'
@@ -1128,6 +1170,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicContractsProcessRoute: ApiPublicContractsProcessRoute,
   ApiPublicCronFinanceRoute: ApiPublicCronFinanceRoute,
   ApiPublicCronTaskMailRoute: ApiPublicCronTaskMailRoute,
+  ApiPublicHooksBirthdayEmailsRoute: ApiPublicHooksBirthdayEmailsRoute,
+  ApiPublicHooksMonthlyTimesheetsRoute: ApiPublicHooksMonthlyTimesheetsRoute,
   ApiPublicMailOpenTokenRoute: ApiPublicMailOpenTokenRoute,
   ApiPublicNieuwsbriefAfbeeldingFileRoute:
     ApiPublicNieuwsbriefAfbeeldingFileRoute,
