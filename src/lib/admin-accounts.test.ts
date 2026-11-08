@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { adminAccountSchema, adminInvitationUrl, assertAccountAdmin, persistAdminRole } from "./admin-accounts";
+import { adminAccountSchema, adminInvitationUrl, assertAccountAdmin, persistAdminRole, validAdminToken } from "./admin-accounts";
 
 describe("beheerderaccounts", () => {
   it("staat alleen een bevestigde adminrol toe", async () => {
@@ -36,5 +36,10 @@ describe("beheerderaccounts", () => {
     expect(url.search).toBe("");
     expect(new URLSearchParams(url.hash.slice(1)).get("token")).toBe("a".repeat(64));
     expect(() => adminInvitationUrl("invalid", "invite")).toThrow();
+  });
+  it("accepteert opaque geversioneerde Auth-tokens zonder een hashformaat te veronderstellen", () => {
+    expect(validAdminToken("v1_" + "a".repeat(56))).toBe(true);
+    expect(validAdminToken("a".repeat(56))).toBe(true);
+    expect(validAdminToken("abc<script>" + "a".repeat(40))).toBe(false);
   });
 });

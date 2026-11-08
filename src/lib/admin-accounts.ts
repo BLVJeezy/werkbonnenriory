@@ -5,8 +5,12 @@ export const adminAccountSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("invite"), email: z.string().trim().email().max(254).transform((s) => s.toLowerCase()) }),
 ]);
 
+export function validAdminToken(token: string) {
+  // Auth hashes are opaque: deployments can prefix/version them or use different hash lengths.
+  return /^[a-zA-Z0-9_-]{32,512}$/.test(token);
+}
 export function adminInvitationUrl(token: string, type: "invite" | "recovery") {
-  if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error("Ongeldige uitnodigingscode");
+  if (!validAdminToken(token)) throw new Error("Ongeldige uitnodigingscode");
   return `https://werkbonnenriory.lovable.app/admin-uitnodiging#${new URLSearchParams({ token, type })}`;
 }
 

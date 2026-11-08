@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { validAdminToken } from "@/lib/admin-accounts";
 
 export const Route = createFileRoute("/admin-uitnodiging")({
   head: () => ({ meta: [{ title: "Beheerderuitnodiging — Riory Werkbonnen" }, { name: "description", content: "Activeer je beheerderaccount en kies je eigen wachtwoord voor Riory Werkbonnen." }, { property: "og:title", content: "Beheerderuitnodiging — Riory Werkbonnen" }, { property: "og:description", content: "Activeer veilig je beheerderaccount voor Riory Werkbonnen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -22,7 +23,7 @@ function AdminInvitation() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.slice(1));
     const token = params.get("token"), type = params.get("type");
-    if (token && /^[a-f0-9]{64}$/i.test(token) && (type === "invite" || type === "recovery")) setCode({ token, type });
+    if (token && validAdminToken(token) && (type === "invite" || type === "recovery")) setCode({ token, type });
     else setError("Deze uitnodiging is ongeldig. Vraag je beheerder om een nieuwe link.");
   }, []);
   async function activate() {
