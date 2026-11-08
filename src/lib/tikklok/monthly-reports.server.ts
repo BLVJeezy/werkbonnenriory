@@ -1,7 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { splitWorkedMinutes } from "@/lib/tikklok/special-hours";
-
-const OUTLOOK_GATEWAY = "https://connector-gateway.lovable.dev/microsoft_outlook";
+import { verifiedTikklokMailbox } from './mailbox.server';
 type TimeEntry = { clock_in: string; clock_out: string | null };
 
 function formatDuration(minutes: number) {
@@ -168,17 +167,11 @@ export async function sendOutlookTimesheet(input: {
   filename: string;
   pdfBytes: Uint8Array;
 }) {
-  const lovableKey = process.env['LOVABLE_API_KEY'];
-  const outlookKey = process.env['MICROSOFT_OUTLOOK_API_KEY'];
-  if (!lovableKey || !outlookKey) throw new Error("Outlook-mailbox is niet gekoppeld");
+  const { headers, gateway } = await verifiedTikklokMailbox();
   const employeeName = input.employeeName.replace(/[<>&"']/g, "");
-  const response = await fetch(`${OUTLOOK_GATEWAY}/me/sendMail`, {
+  const response = await fetch(`${gateway}/me/sendMail`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": outlookKey,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       message: {
         subject: `Urenstaat ${input.month}`,

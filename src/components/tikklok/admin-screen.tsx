@@ -79,6 +79,7 @@ import { DossierPayroll } from "@/components/tikklok/dossier-payroll";
 import { OvertimeAdminPanel } from "@/components/tikklok/overtime-admin-panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { deleteDevice, listDevices, updateDeviceStatus } from "@/lib/tikklok/device-admin.functions";
+import { MigrationPanel } from '@/components/tikklok/migration-panel';
 
 export function TikklokAdmin() {
   const navigate = useNavigate();
@@ -156,6 +157,7 @@ export function TikklokAdmin() {
             <TabsTrigger value="contracts"><FileSignature className="h-4 w-4 mr-1" /> Contracten</TabsTrigger>
             <TabsTrigger value="payroll"><Wallet className="h-4 w-4 mr-1" /> Loon</TabsTrigger>
             <TabsTrigger value="devices"><ShieldCheck className="h-4 w-4 mr-1" /> Toestellen</TabsTrigger>
+            <TabsTrigger value="migration"><ShieldCheck className="h-4 w-4 mr-1" /> Overdracht</TabsTrigger>
           </TabsList>
 
           <TabsContent value="live" className="mt-6">
@@ -195,6 +197,9 @@ export function TikklokAdmin() {
           </TabsContent>
           <TabsContent value="devices" className="mt-6">
             <DevicesPanel />
+          </TabsContent>
+          <TabsContent value="migration" className="mt-6">
+            <MigrationPanel employees={employeesQ.data ?? []} />
           </TabsContent>
         </Tabs>
       </main>
