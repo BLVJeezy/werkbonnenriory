@@ -203,12 +203,13 @@ function ClockTerminal() {
   }
 
   useEffect(() => {
+    if (!deviceToken || deviceStatus !== "approved") return;
     let active = true;
-    fetchPublicNotices({ data: { deviceToken: device.token } })
+    fetchPublicNotices({ data: { deviceToken } })
       .then((result) => { if (active && result.notices.length) setPublicNotices(result.notices); })
       .catch(() => { /* meldingen bij het openen mogen de app niet blokkeren */ });
     return () => { active = false; };
-  }, [fetchPublicNotices]);
+  }, [fetchPublicNotices, deviceToken, deviceStatus]);
 
   useEffect(() => {
     let active = true;

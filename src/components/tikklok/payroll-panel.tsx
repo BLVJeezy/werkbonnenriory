@@ -39,7 +39,7 @@ function esc(v: unknown) {
 
 function isPayDue(period: string) {
   const now = new Date();
-  const [y, m] = period.split("-").map(Number);
+  const [y = 0, m = 0] = period.split("-").map(Number);
   const cur = now.getFullYear() * 12 + now.getMonth();
   const sel = y * 12 + (m - 1);
   if (sel < cur) return true;
@@ -50,8 +50,8 @@ function isPayDue(period: string) {
 
 function openPayslip(r: PayrollRunRow, company: any, period: string) {
   const w = window.open("", "_blank");
-  if (!w) return toast.error("Sta pop-ups toe om de loonbrief te openen");
-  const [y, m] = period.split("-").map(Number);
+  if (!w) { toast.error("Sta pop-ups toe om de loonbrief te openen"); return; }
+  const [y = 0, m = 0] = period.split("-").map(Number);
   const monthLabel = new Date(y, m - 1, 1).toLocaleDateString("nl-BE", { month: "long", year: "numeric" });
   const rate = r.wage_mode === "hourly" && r.hourly_wage != null ? `${eur(r.hourly_wage)} / uur` : r.monthly_wage != null ? `${eur(r.monthly_wage)} / maand` : "—";
   const row = (l: string, v: string, b = false) => `<tr${b ? ' class="b"' : ""}><td>${esc(l)}</td><td class="r">${esc(v)}</td></tr>`;
@@ -453,7 +453,7 @@ export function ProfileDialog({ profile, onClose }: { profile: PayrollProfileRow
             <legend className="font-semibold">Parameters loonsecretariaat</legend>
             <p className="sm:col-span-2 text-sm text-muted-foreground">Vaste RSZ en bedrijfsvoorheffing zijn maandbedragen uit een simulatie, geen automatische wettelijke berekening. Controleer ze bij een andere maand of ander loon.</p>
             {simulationFields.map(({ key, label }) => <div key={key}><Label htmlFor={`simulation-${key}`}>{label}</Label><Input id={`simulation-${key}`} inputMode="decimal" value={simulation[key] ?? ""} onChange={(e) => setSimulation((s) => ({ ...s, [key]: e.target.value }))} /></div>)}
-            <div className="sm:col-span-2 text-sm text-muted-foreground">8222 · Totaal verplaatsing: {eur((parseDecimal(simulation.commute_taxable ?? "") ?? 0) + (parseDecimal(simulation.commute_net ?? "") ?? 0))}</div>
+            <div className="sm:col-span-2 text-sm text-muted-foreground">8222 · Totaal verplaatsing: {eur((parseDecimal(simulation['commute_taxable'] ?? "") ?? 0) + (parseDecimal(simulation['commute_net'] ?? "") ?? 0))}</div>
           </fieldset>
         </div>
         <DialogFooter>

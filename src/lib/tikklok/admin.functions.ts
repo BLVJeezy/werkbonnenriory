@@ -56,7 +56,7 @@ export const listAdministrators = createServerFn({ method: "GET" })
         if (result.error || !result.data.user) return null;
         return {
           id: result.data.user.id,
-          email: result.data.user.email ?? "Geen e-mailadres",
+          email: result.data.user['email'] ?? "Geen e-mailadres",
           created_at: result.data.user.created_at,
         };
       }),
@@ -65,7 +65,7 @@ export const listAdministrators = createServerFn({ method: "GET" })
   });
 
 const newAdministratorSchema = z.object({
-  email: z.string().trim().email("Vul een geldig e-mailadres in").max(255),
+  email: z.string().trim()['email']("Vul een geldig e-mailadres in").max(255),
   password: z.string().min(12, "Wachtwoord moet minimaal 12 tekens bevatten").max(128),
 });
 
@@ -76,7 +76,7 @@ export const createAdministrator = createServerFn({ method: "POST" })
     await ensureAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
+      email: data['email'],
       password: data.password,
       email_confirm: true,
     });
@@ -91,7 +91,7 @@ export const createAdministrator = createServerFn({ method: "POST" })
       await supabaseAdmin.auth.admin.deleteUser(created.user.id);
       throw new Error("Beheerdersrol toekennen mislukt");
     }
-    return { id: created.user.id, email: created.user.email ?? data.email };
+    return { id: created.user.id, email: created.user['email'] ?? data['email'] };
   });
 
 export const listEmployees = createServerFn({ method: "GET" })
@@ -358,8 +358,8 @@ export const getReport = createServerFn({ method: "POST" })
       const isContractor = Boolean(profile?.is_contractor);
       const splitEnabled = Boolean(profile?.split_special_hours) || isContractor;
       const split = splitWorkedMinutes(r.clock_in, r.clock_out);
-      const dayRate = isContractor && profile?.day_hourly_rate != null ? Number(profile.day_hourly_rate) : null;
-      const specialRate = isContractor && profile?.special_hourly_rate != null ? Number(profile.special_hourly_rate) : null;
+      const dayRate = isContractor && profile?.day_hourly_rate != null ? Number(profile['day_hourly_rate']) : null;
+      const specialRate = isContractor && profile?.special_hourly_rate != null ? Number(profile['special_hourly_rate']) : null;
       const invoiceAmount =
         split.dayMinutes == null || split.specialMinutes == null || dayRate == null || specialRate == null
           ? null
@@ -491,9 +491,9 @@ export const saveEmployeeProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: Record<string, unknown> & { employee_id: string }) => {
     if (!data?.employee_id) throw new Error("Personeelslid ontbreekt");
-    const email = optionalText(data.email, 255);
+    const email = optionalText(data['email'], 255);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Ongeldig e-mailadres");
-    const weekly = data.weekly_hours === "" || data.weekly_hours == null ? null : Number(String(data.weekly_hours).replace(",", "."));
+    const weekly = data['weekly_hours'] === "" || data['weekly_hours'] == null ? null : Number(String(data['weekly_hours']).replace(",", "."));
     if (weekly != null && (!Number.isFinite(weekly) || weekly < 0 || weekly > 168)) throw new Error("Ongeldig urenregime");
     const scheduleKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
     const scheduleEntries = scheduleKeys.map((day) => {
@@ -509,49 +509,49 @@ export const saveEmployeeProfile = createServerFn({ method: "POST" })
     if (hasDailySchedule && weekly != null && Math.abs(scheduleTotal - weekly) > 0.01) {
       throw new Error(`Het weekrooster telt ${scheduleTotal.toLocaleString("nl-BE")} u, maar het contract vermeldt ${weekly.toLocaleString("nl-BE")} u`);
     }
-    const isContractor = Boolean(data.is_contractor);
+    const isContractor = Boolean(data['is_contractor']);
     const parseRate = (value: unknown, label: string) => {
       if (value === "" || value == null) return null;
       const rate = Number(value);
       if (!Number.isFinite(rate) || rate < 0 || rate > 10000) throw new Error(`Ongeldig ${label}`);
       return Math.round(rate * 100) / 100;
     };
-    const dayHourlyRate = parseRate(data.day_hourly_rate, "dagtarief");
-    const specialHourlyRate = parseRate(data.special_hourly_rate, "avond- en weekendtarief");
+    const dayHourlyRate = parseRate(data['day_hourly_rate'], "dagtarief");
+    const specialHourlyRate = parseRate(data['special_hourly_rate'], "avond- en weekendtarief");
     if (isContractor && (dayHourlyRate == null || specialHourlyRate == null)) {
       throw new Error("Vul beide uurtarieven in voor een onderaannemer");
     }
     return {
       employee_id: data.employee_id,
       email,
-      phone: optionalText(data.phone, 40),
-      street_address: optionalText(data.street_address, 160),
-      postal_code: optionalText(data.postal_code, 20),
-      city: optionalText(data.city, 80),
-      country: optionalText(data.country, 80),
-      birth_date: optionalText(data.birth_date, 10),
-      birth_place: optionalText(data.birth_place, 100),
-      national_number: optionalText(data.national_number, 30),
-      iban: optionalText(data.iban, 40),
-      job_category: optionalText(data.job_category, 100),
-      joint_committee: optionalText(data.joint_committee, 60),
-      job_tasks: optionalText(data.job_tasks, 1000),
-      emergency_contact_name: optionalText(data.emergency_contact_name, 100),
-      emergency_contact_phone: optionalText(data.emergency_contact_phone, 40),
-      job_title: optionalText(data.job_title, 100),
-      department: optionalText(data.department, 100),
-      employment_start_date: optionalText(data.employment_start_date, 10),
+      phone: optionalText(data['phone'], 40),
+      street_address: optionalText(data['street_address'], 160),
+      postal_code: optionalText(data['postal_code'], 20),
+      city: optionalText(data['city'], 80),
+      country: optionalText(data['country'], 80),
+      birth_date: optionalText(data['birth_date'], 10),
+      birth_place: optionalText(data['birth_place'], 100),
+      national_number: optionalText(data['national_number'], 30),
+      iban: optionalText(data['iban'], 40),
+      job_category: optionalText(data['job_category'], 100),
+      joint_committee: optionalText(data['joint_committee'], 60),
+      job_tasks: optionalText(data['job_tasks'], 1000),
+      emergency_contact_name: optionalText(data['emergency_contact_name'], 100),
+      emergency_contact_phone: optionalText(data['emergency_contact_phone'], 40),
+      job_title: optionalText(data['job_title'], 100),
+      department: optionalText(data['department'], 100),
+      employment_start_date: optionalText(data['employment_start_date'], 10),
       hours_effective_from: (() => {
-        const raw = optionalText(data.hours_effective_from, 10);
+        const raw = optionalText(data['hours_effective_from'], 10);
         if (raw && !/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("Ongeldige ingangsdatum voor de uren");
         return raw;
       })(),
-      contract_type: optionalText(data.contract_type, 80),
+      contract_type: optionalText(data['contract_type'], 80),
       weekly_hours: weekly,
       daily_schedule: dailySchedule,
-      overtime_calculation_mode: data.overtime_calculation_mode === "weekly" ? "weekly" : "daily",
-      salary_advances: (() => { const list = parseSalaryAdvances(String(data.salary_advances ?? "")); return list.length ? list : null; })(),
-      salary_settlement_day: (() => { const d = Number(data.salary_settlement_day ?? 1) || 1; if (d < 1 || d > 31) throw new Error("Afrekeningsdag moet tussen 1 en 31 liggen"); return Math.round(d); })(),
+      overtime_calculation_mode: data['overtime_calculation_mode'] === "weekly" ? "weekly" : "daily",
+      salary_advances: (() => { const list = parseSalaryAdvances(String(data['salary_advances'] ?? "")); return list.length ? list : null; })(),
+      salary_settlement_day: (() => { const d = Number(data['salary_settlement_day'] ?? 1) || 1; if (d < 1 || d > 31) throw new Error("Afrekeningsdag moet tussen 1 en 31 liggen"); return Math.round(d); })(),
       employment_status: ["active", "inactive", "leave", "ended"].includes(String(data.employment_status)) ? String(data.employment_status) : "active",
       monthly_report_enabled: Boolean(data.monthly_report_enabled),
       split_special_hours: Boolean(data.split_special_hours),
@@ -574,7 +574,7 @@ export const saveEmployeeProfile = createServerFn({ method: "POST" })
 
     const defaultEffective = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Brussels" });
     await recordHoursChange(supabaseAdmin, data.employee_id, context.userId, previous,
-      profileData.weekly_hours, profileData.daily_schedule ?? null, hoursEffectiveFrom ?? defaultEffective);
+      profileData['weekly_hours'], profileData.daily_schedule ?? null, hoursEffectiveFrom ?? defaultEffective);
     const { error } = await supabaseAdmin.from("tk_employee_profiles").upsert(profileData, { onConflict: "employee_id" });
     if (error) throw new Error("Profiel opslaan mislukt");
     return { ok: true };
@@ -774,7 +774,7 @@ export const getAdminOvertime = createServerFn({ method: "POST" })
     const overtime = await buildOvertime(
       supabaseAdmin,
       employee.id,
-      profile?.weekly_hours == null ? null : Number(profile.weekly_hours),
+      profile?.weekly_hours == null ? null : Number(profile['weekly_hours']),
       profile?.employment_start_date ?? null,
       profile?.daily_schedule ?? null,
       profile?.overtime_calculation_mode === "weekly" ? "weekly" : "daily",
@@ -806,7 +806,7 @@ export const addOvertimeAdjustment = createServerFn({ method: "POST" })
     const overtime = await buildOvertime(
       supabaseAdmin,
       data.employeeId,
-      profile?.weekly_hours == null ? null : Number(profile.weekly_hours),
+      profile?.weekly_hours == null ? null : Number(profile['weekly_hours']),
       profile?.employment_start_date ?? null,
       profile?.daily_schedule ?? null,
       profile?.overtime_calculation_mode === "weekly" ? "weekly" : "daily",
@@ -864,7 +864,7 @@ export const resetOvertimeAsPaid = createServerFn({ method: "POST" })
     const overtime = await buildOvertime(
       supabaseAdmin,
       data.employeeId,
-      profile?.weekly_hours == null ? null : Number(profile.weekly_hours),
+      profile?.weekly_hours == null ? null : Number(profile['weekly_hours']),
       profile?.employment_start_date ?? null,
       profile?.daily_schedule ?? null,
       profile?.overtime_calculation_mode === "weekly" ? "weekly" : "daily",

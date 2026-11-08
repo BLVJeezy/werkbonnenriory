@@ -561,7 +561,7 @@ function EmployeeDossierDialog({ employee }: { employee: Employee }) {
       const value = dossierQ.data.profile[key as keyof typeof dossierQ.data.profile];
       next[key] = typeof value === "boolean" ? value : value == null ? "" : String(value);
     }
-    next.salary_advances = formatSalaryAdvances((dossierQ.data.profile as any).salary_advances);
+    next['salary_advances'] = formatSalaryAdvances((dossierQ.data.profile as any)['salary_advances']);
     const schedule = dossierQ.data.profile.daily_schedule;
     if (schedule && typeof schedule === "object" && !Array.isArray(schedule)) {
       const values = schedule as Record<string, unknown>;
@@ -590,16 +590,16 @@ function EmployeeDossierDialog({ employee }: { employee: Employee }) {
     ["contract_type", "Contracttype", "text"], ["weekly_hours", "Uren per week", "number"],
   ] as const;
   const scheduleTotal = scheduleFields.reduce((sum, [key]) => sum + (Number(String(profile[key] ?? "").replace(",", ".")) || 0), 0);
-  const weeklyHours = Number(String(profile.weekly_hours ?? "").replace(",", "."));
+  const weeklyHours = Number(String(profile['weekly_hours'] ?? "").replace(",", "."));
   const hasScheduleValues = scheduleFields.some(([key]) => String(profile[key] ?? "").trim() !== "");
   const scheduleMatches = !hasScheduleValues || !Number.isFinite(weeklyHours) || Math.abs(scheduleTotal - weeklyHours) < 0.01;
 
   async function uploadDocument(file: File) {
-    if (file.size > 20 * 1024 * 1024) return toast.error("Document mag maximaal 20 MB zijn");
+    if (file.size > 20 * 1024 * 1024) { toast.error("Document mag maximaal 20 MB zijn"); return; }
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
     const path = `${employee.id}/${crypto.randomUUID()}-${safeName}`;
     const { error } = await supabase.storage.from("tikklok-documents").upload(path, file);
-    if (error) return toast.error("Upload mislukt");
+    if (error) { toast.error("Upload mislukt"); return; }
     try {
       await registerDocument({ data: { employee_id: employee.id, title: file.name, document_type: "other", storage_path: path, file_name: file.name, mime_type: file.type || "application/octet-stream", file_size: file.size } });
       toast.success("Document toegevoegd"); refresh();
@@ -621,24 +621,24 @@ function EmployeeDossierDialog({ employee }: { employee: Employee }) {
               {["1A – gewone schoonmaak", "1B – gewone schoonmaak (zware)", "2A – gespecialiseerde schoonmaak", "3A – industriële schoonmaak", "4A – ploegbaas", "5A – meestergast"].map((o) => <option key={o} value={o} />)}
             </datalist>
             <div className="grid sm:grid-cols-[1fr_180px] gap-3 border-t border-border/60 pt-4">
-              <div><Label>Loonvoorschotten (dag: bedrag)</Label><Input placeholder="bv. 10: 500; 20: 500" value={String(profile.salary_advances ?? "")} onChange={(e) => setField("salary_advances", e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">Leeg laten als er geen voorschotten zijn. Komt automatisch in nieuwe contracten.</p></div>
-              <div><Label>Afrekening op dag</Label><Input inputMode="numeric" value={String(profile.salary_settlement_day ?? "1")} onChange={(e) => setField("salary_settlement_day", e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">van de volgende maand</p></div>
+              <div><Label>Loonvoorschotten (dag: bedrag)</Label><Input placeholder="bv. 10: 500; 20: 500" value={String(profile['salary_advances'] ?? "")} onChange={(e) => setField("salary_advances", e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">Leeg laten als er geen voorschotten zijn. Komt automatisch in nieuwe contracten.</p></div>
+              <div><Label>Afrekening op dag</Label><Input inputMode="numeric" value={String(profile['salary_settlement_day'] ?? "1")} onChange={(e) => setField("salary_settlement_day", e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">van de volgende maand</p></div>
             </div>
             <div className="space-y-3 border-y border-border/60 py-4">
-              <div><Label>Berekening overuren</Label><Select value={String(profile.overtime_calculation_mode ?? "daily")} onValueChange={(value) => setField("overtime_calculation_mode", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="daily">Volgens uren per dag</SelectItem><SelectItem value="weekly">Enkel volgens uren per week (variabel rooster)</SelectItem></SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Bij een variabel rooster telt alleen het totaal van de afgesloten week. Minder uren op één dag geven dan geen apart tekort.</p></div>
+              <div><Label>Berekening overuren</Label><Select value={String(profile['overtime_calculation_mode'] ?? "daily")} onValueChange={(value) => setField("overtime_calculation_mode", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="daily">Volgens uren per dag</SelectItem><SelectItem value="weekly">Enkel volgens uren per week (variabel rooster)</SelectItem></SelectContent></Select><p className="mt-1 text-xs text-muted-foreground">Bij een variabel rooster telt alleen het totaal van de afgesloten week. Minder uren op één dag geven dan geen apart tekort.</p></div>
               <div><Label>Persoonlijk weekrooster</Label><p className="text-xs text-muted-foreground">Vul de contracturen per dag in. Laat alles leeg om de weekuren gelijk over maandag tot vrijdag te verdelen.</p></div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{scheduleFields.map(([key, label]) => <div key={key}><Label htmlFor={`${key}-${employee.id}`}>{label}</Label><Input id={`${key}-${employee.id}`} type="text" inputMode="decimal" placeholder="0" value={String(profile[key] ?? "")} onChange={(e) => setField(key, e.target.value)} /></div>)}</div>
               <p className={`text-sm font-medium ${scheduleMatches ? "text-muted-foreground" : "text-destructive"}`}>{hasScheduleValues ? `Totaal rooster: ${scheduleTotal.toLocaleString("nl-BE")} u${Number.isFinite(weeklyHours) ? ` van ${weeklyHours.toLocaleString("nl-BE")} u/week` : ""}` : `Standaardverdeling: ${Number.isFinite(weeklyHours) ? `${(weeklyHours / 5).toLocaleString("nl-BE", { maximumFractionDigits: 2 })} u per werkdag` : "vul eerst de weekuren in"}`}</p>
-              <div><Label htmlFor={`hours-effective-${employee.id}`}>Ingangsdatum bij gewijzigde uren</Label><Input id={`hours-effective-${employee.id}`} type="date" value={String(profile.hours_effective_from ?? "")} onChange={(e) => setField("hours_effective_from", e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">Enkel invullen als je de weekuren of het rooster wijzigt: weken vóór deze datum blijven met de oude uren rekenen. Leeg laten = vanaf vandaag.</p></div>
+              <div><Label htmlFor={`hours-effective-${employee.id}`}>Ingangsdatum bij gewijzigde uren</Label><Input id={`hours-effective-${employee.id}`} type="date" value={String(profile['hours_effective_from'] ?? "")} onChange={(e) => setField("hours_effective_from", e.target.value)} /><p className="mt-1 text-xs text-muted-foreground">Enkel invullen als je de weekuren of het rooster wijzigt: weken vóór deze datum blijven met de oude uren rekenen. Leeg laten = vanaf vandaag.</p></div>
             </div>
-            <div><Label>Taken (komt in het contract)</Label><Textarea rows={3} value={String(profile.job_tasks ?? "")} onChange={(e) => setField("job_tasks", e.target.value)} /></div>
-            <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Maandelijks rapport mailen</Label><p className="text-xs text-muted-foreground">Op de eerste dag, naar het e-mailadres hierboven.</p></div><Switch checked={Boolean(profile.monthly_report_enabled)} onCheckedChange={(v) => setField("monthly_report_enabled", v)} /></div>
-            <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Dag- en avond/weekenduren opsplitsen</Label><p className="text-xs text-muted-foreground">Weekdagen vanaf 18u en alle weekenduren worden apart geteld.</p></div><Switch checked={Boolean(profile.split_special_hours)} onCheckedChange={(v) => setField("split_special_hours", v)} /></div>
+            <div><Label>Taken (komt in het contract)</Label><Textarea rows={3} value={String(profile['job_tasks'] ?? "")} onChange={(e) => setField("job_tasks", e.target.value)} /></div>
+            <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Maandelijks rapport mailen</Label><p className="text-xs text-muted-foreground">Op de eerste dag, naar het e-mailadres hierboven.</p></div><Switch checked={Boolean(profile['monthly_report_enabled'])} onCheckedChange={(v) => setField("monthly_report_enabled", v)} /></div>
+            <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Dag- en avond/weekenduren opsplitsen</Label><p className="text-xs text-muted-foreground">Weekdagen vanaf 18u en alle weekenduren worden apart geteld.</p></div><Switch checked={Boolean(profile['split_special_hours'])} onCheckedChange={(v) => setField("split_special_hours", v)} /></div>
             <div className="space-y-3 rounded-md border p-3">
-              <div className="flex items-center justify-between gap-4"><div><Label>Onderaannemer</Label><p className="text-xs text-muted-foreground">Bereken in de adminzone het bedrag dat deze persoon kan factureren.</p></div><Switch checked={Boolean(profile.is_contractor)} onCheckedChange={(v) => setField("is_contractor", v)} /></div>
-              {Boolean(profile.is_contractor) && <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label htmlFor={`day-rate-${employee.id}`}>Uurloon overdag (€)</Label><Input id={`day-rate-${employee.id}`} type="number" min="0" max="10000" step="0.01" inputMode="decimal" value={String(profile.day_hourly_rate ?? "")} onChange={(e) => setField("day_hourly_rate", e.target.value)} /></div>
-                <div><Label htmlFor={`special-rate-${employee.id}`}>Uurloon na 18u/weekend (€)</Label><Input id={`special-rate-${employee.id}`} type="number" min="0" max="10000" step="0.01" inputMode="decimal" value={String(profile.special_hourly_rate ?? "")} onChange={(e) => setField("special_hourly_rate", e.target.value)} /></div>
+              <div className="flex items-center justify-between gap-4"><div><Label>Onderaannemer</Label><p className="text-xs text-muted-foreground">Bereken in de adminzone het bedrag dat deze persoon kan factureren.</p></div><Switch checked={Boolean(profile['is_contractor'])} onCheckedChange={(v) => setField("is_contractor", v)} /></div>
+              {Boolean(profile['is_contractor']) && <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label htmlFor={`day-rate-${employee.id}`}>Uurloon overdag (€)</Label><Input id={`day-rate-${employee.id}`} type="number" min="0" max="10000" step="0.01" inputMode="decimal" value={String(profile['day_hourly_rate'] ?? "")} onChange={(e) => setField("day_hourly_rate", e.target.value)} /></div>
+                <div><Label htmlFor={`special-rate-${employee.id}`}>Uurloon na 18u/weekend (€)</Label><Input id={`special-rate-${employee.id}`} type="number" min="0" max="10000" step="0.01" inputMode="decimal" value={String(profile['special_hourly_rate'] ?? "")} onChange={(e) => setField("special_hourly_rate", e.target.value)} /></div>
               </div>}
             </div>
             <Button onClick={() => saveM.mutate()} disabled={saveM.isPending}>Dossier opslaan</Button>
@@ -903,11 +903,11 @@ function ReportsPanel({ employees }: { employees: Employee[] }) {
           r.clock_out ? fmtTime(r.clock_out) : "",
           r.minutes ?? "",
           r.minutes != null ? (r.minutes / 60).toFixed(2) : "",
-          r.split_special_hours && r.day_minutes != null ? (r.day_minutes / 60).toFixed(2) : "",
-          r.split_special_hours && r.special_minutes != null ? (r.special_minutes / 60).toFixed(2) : "",
-          r.is_contractor && r.day_hourly_rate != null ? r.day_hourly_rate.toFixed(2) : "",
-          r.is_contractor && r.special_hourly_rate != null ? r.special_hourly_rate.toFixed(2) : "",
-          r.is_contractor && r.invoice_amount != null ? r.invoice_amount.toFixed(2) : "",
+          r['split_special_hours'] && r.day_minutes != null ? (r.day_minutes / 60).toFixed(2) : "",
+          r['split_special_hours'] && r.special_minutes != null ? (r.special_minutes / 60).toFixed(2) : "",
+          r['is_contractor'] && r['day_hourly_rate'] != null ? r['day_hourly_rate'].toFixed(2) : "",
+          r['is_contractor'] && r['special_hourly_rate'] != null ? r['special_hourly_rate'].toFixed(2) : "",
+          r['is_contractor'] && r.invoice_amount != null ? r.invoice_amount.toFixed(2) : "",
         ].join(","),
       );
     }
@@ -992,9 +992,9 @@ function ReportsPanel({ employees }: { employees: Employee[] }) {
       const totalMinutes = rows.reduce((sum, row) => sum + (row.minutes ?? 0), 0);
       const dayMinutes = rows.reduce((sum, row) => sum + (row.day_minutes ?? 0), 0);
       const specialMinutes = rows.reduce((sum, row) => sum + (row.special_minutes ?? 0), 0);
-      const hasSplit = rows.some((row) => row.split_special_hours);
+      const hasSplit = rows.some((row) => row['split_special_hours']);
       const invoiceTotal = rows.reduce((sum, row) => sum + (row.invoice_amount ?? 0), 0);
-      const hasContractors = rows.some((row) => row.is_contractor);
+      const hasContractors = rows.some((row) => row['is_contractor']);
       page.drawText(`Totaal: ${fmtDuration(totalMinutes)}`, { x: 40, y, size: 13, font: bold, color: orange });
       page.drawText(`Registraties: ${rows.length}`, { x: 220, y, size: 10, font: regular, color: dark });
       if (hasSplit) {
@@ -1018,8 +1018,8 @@ function ReportsPanel({ employees }: { employees: Employee[] }) {
         page.drawText(fmtTime(row.clock_in), { x: 260, y, size: 8, font: regular, color: dark });
         page.drawText(row.clock_out ? fmtTime(row.clock_out) : "bezig", { x: 305, y, size: 8, font: regular, color: row.clock_out ? dark : orange });
         page.drawText(fmtDuration(row.minutes), { x: 360, y, size: 8, font: regular, color: dark });
-        page.drawText(row.split_special_hours ? fmtDuration(row.day_minutes) : "-", { x: 423, y, size: 8, font: regular, color: dark });
-        page.drawText(row.split_special_hours ? fmtDuration(row.special_minutes) : "-", { x: 485, y, size: 8, font: regular, color: dark });
+        page.drawText(row['split_special_hours'] ? fmtDuration(row.day_minutes) : "-", { x: 423, y, size: 8, font: regular, color: dark });
+        page.drawText(row['split_special_hours'] ? fmtDuration(row.special_minutes) : "-", { x: 485, y, size: 8, font: regular, color: dark });
         y -= 18;
         page.drawLine({ start: { x: 40, y: y + 6 }, end: { x: 555, y: y + 6 }, thickness: 0.35, color: border });
       }
@@ -1207,9 +1207,9 @@ function ReportsPanel({ employees }: { employees: Employee[] }) {
                   <TableCell>{fmtTime(r.clock_in)}</TableCell>
                   <TableCell>{r.clock_out ? fmtTime(r.clock_out) : <span className="text-muted-foreground">bezig</span>}</TableCell>
                   <TableCell className="text-right font-mono">{fmtDuration(r.minutes)}</TableCell>
-                  <TableCell className="text-right font-mono">{r.split_special_hours ? fmtDuration(r.day_minutes) : "—"}</TableCell>
-                  <TableCell className="text-right font-mono">{r.split_special_hours ? fmtDuration(r.special_minutes) : "—"}</TableCell>
-                  <TableCell className="text-right font-mono">{r.is_contractor ? fmtMoney(r.invoice_amount) : "—"}</TableCell>
+                  <TableCell className="text-right font-mono">{r['split_special_hours'] ? fmtDuration(r.day_minutes) : "—"}</TableCell>
+                  <TableCell className="text-right font-mono">{r['split_special_hours'] ? fmtDuration(r.special_minutes) : "—"}</TableCell>
+                  <TableCell className="text-right font-mono">{r['is_contractor'] ? fmtMoney(r.invoice_amount) : "—"}</TableCell>
                   <TableCell className="text-right">
                     <EntryActions row={r} onChanged={() => reportQ.refetch()} />
                   </TableCell>
@@ -1357,8 +1357,8 @@ function groupRows(rows: ReportRow[], mode: "day" | "week" | "month" | "person")
     ex.minutes += r.minutes ?? 0;
     ex.dayMinutes += r.day_minutes ?? 0;
     ex.specialMinutes += r.special_minutes ?? 0;
-    ex.hasSplit ||= r.split_special_hours;
-    ex.isContractor ||= r.is_contractor;
+    ex.hasSplit ||= r['split_special_hours'];
+    ex.isContractor ||= r['is_contractor'];
     ex.invoiceAmount += r.invoice_amount ?? 0;
     ex.count += 1;
     map.set(key, ex);
