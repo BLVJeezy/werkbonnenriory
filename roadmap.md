@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Nieuwe beheerders aanmaken of uitnodigen vanuit Instellingen, met beveiligde roltoekenning en eigen wachtwoord via uitnodigingslink.
+- [x] Nieuwe beheerders aanmaken of uitnodigen vanuit Instellingen; alleen bestaande beheerders kunnen rollen toekennen. Uitnodiging delen/kopiëren, eigen wachtwoord en eenmalige link getest; zes tests geslaagd, mobiele weergave gecontroleerd en tijdelijk testaccount verwijderd. Handleiding bijgewerkt; publiceren nodig voor de publieke uitnodigingspagina.
 
 - [x] Takenbeheer samengebracht in Kalender: aanmaken, mailinstroom naar Nog in te plannen, snel dag/ploeg/activiteit kiezen en offerteknop; oude URL verwijst door, beperkte ploegweergave behouden. 22 tests en ingelogde desktop-/mobiele planning met teruglezen geslaagd; tijdelijke controletaak verwijderd. Dagelijkse mailboxcontrole om 05:00 UTC ingesteld (06:00 wintertijd / 07:00 zomertijd, maximaal een dag vertraging zonder geopende kalender), plus vijfminutencontrole zolang Kalender openstaat; dagelijkse uitvoering wacht op publicatie. Offerteknop zichtbaar gecontroleerd, geen echte offerte aangemaakt.
 
