@@ -191,7 +191,7 @@ async function workedMinutesForEmployee(employeeId: string, fromISO: string, toI
 }
 
 async function studentHoursThisYear(employeeId: string, period: string) {
-  const [y] = period.split("-").map(Number);
+  const [y = 0] = period.split("-").map(Number);
   const from = new Date(Date.UTC(y, 0, 1)).toISOString();
   const to = new Date(Date.UTC(y + 1, 0, 1)).toISOString();
   const w = await workedMinutesForEmployee(employeeId, from, to);

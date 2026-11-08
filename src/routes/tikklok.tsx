@@ -167,6 +167,7 @@ function ClockTerminal() {
   async function signPendingContract() {
     if (!pendingSign || pendingSignBusy) return;
     const current = pendingSign.items[0];
+    if (!current) return;
     setPendingSignBusy(true);
     try {
       await doSignContract({ data: { pin: pendingSign.pin, deviceToken, id: current.id, fullName: pendingSignName, signatureImage: pendingSignImage ?? "" } });
@@ -605,9 +606,9 @@ function ClockTerminal() {
         </Dialog>
         <Dialog open={!!pendingSign && !calendarNotices && !messages} onOpenChange={(open) => { if (!open && !pendingSignBusy) setPendingSign(null); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Contract te ondertekenen – {pendingSign ? contractTypeLabel(pendingSign.items[0].contract_type) : ""}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Contract te ondertekenen – {pendingSign ? contractTypeLabel(pendingSign.items[0]?.contract_type ?? "") : ""}</DialogTitle></DialogHeader>
             <p className="text-sm text-muted-foreground">De beheerder vraagt je dit contract te lezen en te ondertekenen.</p>
-            <div className="whitespace-pre-wrap text-xs leading-relaxed border border-border/60 rounded-md p-4 max-h-[45vh] overflow-y-auto">{pendingSign?.items[0].body}</div>
+            <div className="whitespace-pre-wrap text-xs leading-relaxed border border-border/60 rounded-md p-4 max-h-[45vh] overflow-y-auto">{pendingSign?.items[0]?.body}</div>
             {pendingSign?.items[0]?.employer_signature_image && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Zaakvoerder: {pendingSign.items[0].employer_signed_name}</p>

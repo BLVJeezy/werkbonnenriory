@@ -9,7 +9,7 @@ export function parseSalaryAdvances(raw: string): SalaryAdvance[] {
   const out: SalaryAdvance[] = [];
   for (const part of parts) {
     const m = part.match(/^(\d{1,2})\s*(?:e|ste|de)?\s*[:=\s-]\s*(?:€|eur)?\s*([\d.,]+)\s*(?:€|eur)?$/i);
-    if (!m) throw new Error(`Voorschot "${part}" niet begrepen. Schrijf bv. 10: 500; 20: 500`);
+    if (!m || !m[1] || !m[2]) throw new Error(`Voorschot "${part}" niet begrepen. Schrijf bv. 10: 500; 20: 500`);
     const day = Number(m[1]);
     const amount = Number(m[2].replace(/\.(?=\d{3}\b)/g, "").replace(",", "."));
     if (day < 1 || day > 31) throw new Error("Dag van een voorschot moet tussen 1 en 31 liggen");
