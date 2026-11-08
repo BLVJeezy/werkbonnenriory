@@ -1,6 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useRole } from "@/lib/use-role";
+import { quoteFromTask } from "@/lib/quotes.functions";
+import { importFromMailbox } from "@/lib/mailbox.functions";
+import { TaskCreateDialog } from "@/components/TaskCreateDialog";
+import { CrewTasks } from "@/components/CrewTasks";
+import { MailboxConnect, WerkbonMailboxConnect } from "@/components/MailboxConnect";
+import { TaskActions, isNoAnswer } from "@/components/TaskActions";
+import { destinationAddress } from "@/lib/address";
+import { sortRows, type SortDir } from "@/lib/sort-rows";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,22 +31,44 @@ import { AppointmentMailSync } from "@/components/AppointmentMailSync";
 import { CustomerInvite } from "@/components/CustomerInvite";
 import { dayPartLabel } from "@/lib/invite-slots";
 import { appointmentStatuses } from "@/lib/appointments";
-import { X } from "lucide-react";
+import { X, FilePenLine, Plus } from "lucide-react";
 import { FirstCustomerLabel } from "@/components/FirstCustomerLabel";
 import { calendarWindow } from "@/lib/calendar-window";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  validateSearch: (s: Record<string, unknown>): { dag?: string } => typeof s["dag"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s["dag"]) ? { dag: s["dag"] } : {},
   component: Kalender,
 });
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null } | null; time_entries: TimeEntry[]; materials: { quantity: number; unit_price: number }[] };
+type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null; manual_time_entry: boolean | null } | null; time_entries: (TimeEntry & { id: string })[]; materials: { quantity: number; unit_price: number }[] };
 
 function Kalender() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const role = useRole();
+  const makeQuote = useServerFn(quoteFromTask);
+  const runImport = useServerFn(importFromMailbox);
+  const { dag } = Route.useSearch();
+  const [create, setCreate] = useState<{ day?: string; direct?: boolean } | null>(dag ? { day: dag } : null);
+  const [quotingId, setQuotingId] = useState<string | null>(null);
+  const [crewView, setCrewView] = useState("");
+  const [search, setSearch] = useState("");
+  const [taskSort, setTaskSort] = useState("nieuwste");
+  const [taskDir, setTaskDir] = useState<SortDir>("desc");
+  const [onlyRunning, setOnlyRunning] = useState(false);
+  const { error: importError, isFetching: importing, refetch: fetchMail } = useQuery({
+    queryKey: ["task-mail-import"], enabled: role === "admin", retry: false,
+    staleTime: 5 * 60_000, refetchInterval: 5 * 60_000,
+    queryFn: async () => {
+      const result = await runImport();
+      if (result.imported) { toast.success(`${result.imported} nieuwe taken bij Nog in te plannen`); await Promise.all([qc.invalidateQueries({ queryKey: ["work_orders"] }), qc.invalidateQueries({ queryKey: ["customers"] })]); }
+      if (result.errors?.length) throw new Error(`${result.errors.length} afspraakmails konden niet gelezen worden: ${result.errors[0]}`);
+      return result;
+    },
+  });
   const [offset, setOffset] = useState(0);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -49,11 +81,13 @@ function Kalender() {
   const { data = [] } = useQuery({
     queryKey: ["work_orders", "calendar"],
     refetchInterval: 10000,
+    enabled: role === "admin" || role === "technician",
     queryFn: async () =>
-      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color), time_entries(started_at, ended_at), materials(quantity, unit_price)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
+      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color, manual_time_entry), time_entries(id, started_at, ended_at), materials(quantity, unit_price)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
-    queryKey: ["assign_opts"],
+    queryKey: ["calendar_assign_opts"],
+    enabled: role === "admin",
     queryFn: async () => {
       const [t, a, s] = await Promise.all([
         supabase.from("technicians").select("id, name").order("name"),
@@ -66,6 +100,7 @@ function Kalender() {
   // Open uitnodigingen: de tabel is alleen voor de beheerder leesbaar, dus ploegen zien hier niets.
   const { data: appts = [] } = useQuery({
     queryKey: ["appointment_requests"],
+    enabled: role === "admin",
     refetchInterval: 10000,
     queryFn: async () => (await supabase.from("appointment_requests").select("work_order_id,status,expires_at,created_at").order("created_at", { ascending: false })).data ?? [],
   });
@@ -86,7 +121,8 @@ function Kalender() {
   const today = iso(now);
 
   // Alleen volledig ingeplande taken (dag + ploeg + activiteit) verschijnen op de dag; afgetekende blijven op hun dag staan.
-  const dayList = (k: string) => data.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w)));
+  const visible = data.filter(w => (!search || [w.customer_name, w.number, w.description, destinationAddress(w), w.phone, w.site_contact_name].join(" ").toLocaleLowerCase("nl-BE").includes(search.toLocaleLowerCase("nl-BE"))) && (!onlyRunning || activeTimeEntry(w.time_entries)));
+  const dayList = (k: string) => visible.filter((w) => w.scheduled_date === k && (w.status === "afgetekend" || isFullyPlanned(w)));
   // Dagomzet: enkel afgewerkte bonnen — betaald bedrag, of het berekende totaal als er nog geen betaling is.
   const dayOmzet = (k: string) =>
     dayList(k)
@@ -142,7 +178,7 @@ function Kalender() {
       <p className="break-words opacity-80">{[w.scheduled_from && `${w.scheduled_from.slice(0,5)}–${w.scheduled_until?.slice(0,5) ?? ""}`, destinationLines(w).join(", ") || "Geen adres", w.technicians?.name].filter(Boolean).join(" · ")}</p>
     </div>
   ) : (
-    <div key={w.id} draggable onPointerDown={(e) => { e.currentTarget.draggable = !(e.target as HTMLElement).closest("input,select,button,a,textarea"); }} onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`min-w-0 cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
+    <div key={w.id} draggable onPointerDown={(e) => { e.currentTarget.draggable = !(e.target as HTMLElement).closest("input,select,button,a,textarea"); }} onDragStart={() => setDrag(w.id)} style={crewStyle(w.technicians?.color)} className={`relative min-w-0 cursor-grab rounded border bg-background p-3 text-sm ${horizontal ? "grid gap-x-5 gap-y-2 lg:grid-cols-[minmax(0,1fr)_20rem]" : ""} ${isUrgentOpen(w) ? URGENT_RING : ""} ${activeTimeEntry(w.time_entries) ? "task-running" : ""}`}>
       <div className="min-w-0">
       {w.first_customer && <div className="mb-1"><FirstCustomerLabel /></div>}
       {w.quote_approved && <span className="mb-1 inline-block rounded bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">Offerte goedgekeurd</span>}
@@ -152,6 +188,9 @@ function Kalender() {
         <Link to="/werkbonnen/$id" params={{ id: w.id }} className="flex-1 font-bold underline">{werkbonNr(w.number)} {w.customer_name}{w.project_name ? ` · ${w.project_name}` : ""}</Link>
         <Button type="button" size="icon" variant="ghost" title="Verwijderen" aria-label="Taak verwijderen" className="h-7 w-7 shrink-0" onClick={() => deleteTask(qc, w.id, `Taak ${werkbonNr(w.number)} (${w.customer_name})`)}><X /></Button>
       </div>
+      {w.no_invoice && <span className="rounded bg-secondary px-1 text-xs font-bold text-secondary-foreground">Niet factureren</span>}
+      {isNoAnswer(w.no_answer_at) && <p className="text-xs font-bold">Neemt niet op · {new Date(w.no_answer_at ?? "").toLocaleString("nl-BE")}</p>}
+      {w.reopened_at && <p className="text-xs font-bold">Heropend — opnieuw laten aftekenen</p>}
       <RunningTask entries={w.time_entries} crewName={w.technicians?.name} />
       {w.scheduled_from && <p className="font-bold">{w.scheduled_from.slice(0,5)}–{w.scheduled_until?.slice(0,5)}</p>}
       {!horizontal && <div className="flex items-start gap-1 text-xs opacity-90">
@@ -171,7 +210,7 @@ function Kalender() {
       </>}
       </div>
       <div className={horizontal ? "grid min-w-0 content-start gap-2 sm:grid-cols-2" : "grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-4"}>
-      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number ?? "nieuw"}`} className="mt-0 h-7 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onBlur={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number ?? "nieuw"}`} className="mt-0 h-7 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onChange={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
       <select aria-label={`Ploeg taak ${w.number ?? "nieuw"}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
         {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -183,11 +222,25 @@ function Kalender() {
       <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
       </select>
+      <div className="col-span-full flex flex-wrap items-center gap-2">
+        <Button type="button" size="sm" variant="outline" className="h-8 text-xs" disabled={quotingId !== null} onClick={async () => {
+          setQuotingId(w.id);
+          try { const q = await makeQuote({ data: { workOrderId: w.id } }); await Promise.all([qc.invalidateQueries({ queryKey: ["quotes"] }), qc.invalidateQueries({ queryKey: ["work_orders"] })]); toast.success(`Offerte ${q.number} aangemaakt`); await navigate({ to: "/offertes", search: { bewerk: q.id } }); }
+          catch (e) { toast.error(e instanceof Error ? e.message : "Offerte maken mislukt"); } finally { setQuotingId(null); }
+        }}><FilePenLine />{quotingId === w.id ? "Offerte maken…" : "Omzetten naar offerte"}</Button>
+        <Button type="button" size="sm" variant={w.no_invoice ? "secondary" : "outline"} className="h-8 text-xs" onClick={() => set(w.id, { no_invoice: !w.no_invoice })}>{w.no_invoice ? "Niet factureren ✓" : "Niet factureren"}</Button>
+      </div>
       <div className="col-span-full flex flex-wrap items-center gap-2"><Button type="button" size="sm" variant={w.urgent ? "destructive" : "outline"} aria-pressed={!!w.urgent} title="Markeer deze taak als dringend" className="h-7 shrink-0 text-xs" onClick={() => set(w.id, { urgent: !w.urgent })}>{w.urgent ? "Dringend ✓" : "Dringend"}</Button><label className="flex cursor-pointer items-center gap-1.5 text-xs font-bold"><input type="checkbox" className="accent-primary" checked={w.first_customer} onChange={(e) => set(w.id, { first_customer: e.target.checked })} />Eerste klant</label><CustomerInvite task={w} />{w.scheduled_date && <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => plan(w.id, null)}>Terug naar nog in te plannen</Button>}</div>
+      <div className="col-span-full border-t pt-2 [&_button.absolute]:static"><TaskActions id={w.id} address={destinationAddress(w)} phone={w.phone} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={w.time_entries.find(t => !t.ended_at)?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} noAnswerAt={w.no_answer_at} /></div>
       </div>
     </div>
   );
-  const unplanned = data.filter((w) => w.status !== "afgetekend" && !isFullyPlanned(w));
+  const unplanned = sortRows(visible.filter((w) => w.status !== "afgetekend" && !isFullyPlanned(w)), w => taskSort === "klant" ? w.customer_name : taskSort === "plaats" ? w.site_city || w.city : taskSort === "datum" ? w.scheduled_date : w.created_at, taskDir).sort((a,b) => Number(isUrgentOpen(b)) - Number(isUrgentOpen(a)));
+  if (!role) return <p className="text-muted-foreground">Laden…</p>;
+  if (role === "technician") return <CrewTasks rows={data} />;
+  if (role !== "admin") return null;
+  const crewPicker = <label className="flex flex-wrap items-center gap-2 text-sm font-bold">Ploegweergave<select aria-label="Ploegweergave" className="h-9 rounded border bg-background px-2 text-foreground" value={crewView} onChange={e => setCrewView(e.target.value)}><option value="">Uit (beheer)</option>{opts?.techs.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>;
+  if (crewView) return <div className="space-y-4">{crewPicker}<CrewTasks rows={data.filter(w => w.technician_id === crewView)} /></div>;
 
   return (
     <div className="space-y-4">
@@ -197,7 +250,12 @@ function Kalender() {
         <Button variant="outline" size="sm" onClick={() => { setNow(new Date()); setOffset(0); }}>Vandaag</Button>
         <Button variant="outline" size="sm" onClick={() => shift(7)}>Volgende week →</Button>
       </div>
+      <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setCreate({})}><Plus />Taak toevoegen</Button><Button variant="outline" onClick={() => setCreate({ direct: true })}><Plus />Werkbon maken</Button><Button disabled={importing} onClick={() => fetchMail()}>{importing ? "Mails lezen…" : "Mails ophalen"}</Button></div>
+      <details className="border-b pb-2"><summary className="cursor-pointer text-sm font-bold">Mailboxen</summary><div className="space-y-2 pt-2"><MailboxConnect /><WerkbonMailboxConnect /></div></details>
+      {importError && <p role="alert" className="text-sm text-destructive">{importError instanceof Error ? importError.message : "Afspraakmails ophalen mislukt"}</p>}
+      {create && <TaskCreateDialog key={`${create.day ?? "nieuw"}-${!!create.direct}`} open day={create.day} direct={create.direct} onClose={() => { setCreate(null); if (dag) navigate({ to: "/kalender", search: {}, replace: true }); }} />}
       <AppointmentMailSync />
+      <div className="flex flex-wrap gap-3">{crewPicker}<Input aria-label="Taken zoeken" placeholder="Klant, adres, omschrijving…" className="min-w-0 sm:max-w-xs" value={search} onChange={e => setSearch(e.target.value)} /><Button variant={onlyRunning ? "default" : "outline"} aria-pressed={onlyRunning} onClick={() => setOnlyRunning(!onlyRunning)}>Bezig ({data.filter(w => activeTimeEntry(w.time_entries)).length})</Button></div>
       <div className="grid gap-3 xl:grid-cols-[repeat(9,minmax(260px,1fr))] xl:overflow-x-auto xl:gap-2">
         {days.map((d) => {
           const k = iso(d);
@@ -207,7 +265,7 @@ function Kalender() {
                 <span className="text-base font-black uppercase xl:text-sm">
                   {d.toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
-                <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" onClick={() => navigate({ to: "/werkbonnen", search: { dag: k } })}>+</Button>
+                <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" aria-label={`Taak toevoegen op ${k}`} onClick={() => setCreate({ day: k })}>+</Button>
               </div>
               {dayOmzet(k) > 0 && <p className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-black text-primary" title="Som van de afgewerkte bonnen van deze dag">Omzet: {euro(dayOmzet(k))}</p>}
               <div className="grid min-w-0 gap-2">
@@ -219,8 +277,10 @@ function Kalender() {
           );
         })}
       </div>
-      <section {...drop(null)} className="rounded-md border bg-card p-3">
+      <section {...drop(null)} className="space-y-3 border-t pt-4">
         <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
+        <div className="flex flex-wrap gap-2"><select aria-label="Taken sorteren" className="h-9 rounded border bg-background px-2 text-sm text-foreground" value={taskSort} onChange={e => setTaskSort(e.target.value)}><option value="nieuwste">Ontvangstdatum</option><option value="klant">Klant</option><option value="plaats">Plaats</option><option value="datum">Geplande dag</option></select><Button size="sm" variant="outline" onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button></div>
+        {!unplanned.length && <p className="text-sm text-muted-foreground">Geen taken om in te plannen.</p>}
         <div className="grid gap-2">{unplanned.map((w) => card(w, undefined, undefined, true))}</div>
       </section>
       <Button variant="outline" asChild><Link to="/contracten">Contracten beheren</Link></Button>
