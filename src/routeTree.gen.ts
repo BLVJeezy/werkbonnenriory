@@ -23,6 +23,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedFacturenRouteImport } from './routes/_authenticated/facturen'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFotosRouteImport } from './routes/_authenticated/fotos'
+import { Route as AuthenticatedHandleidingRouteImport } from './routes/_authenticated/handleiding'
 import { Route as AuthenticatedInstellingenRouteImport } from './routes/_authenticated/instellingen'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKlantenRouteImport } from './routes/_authenticated/klanten'
@@ -129,6 +130,12 @@ const AuthenticatedFotosRoute = AuthenticatedFotosRouteImport.update({
   path: '/fotos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHandleidingRoute =
+  AuthenticatedHandleidingRouteImport.update({
+    id: '/handleiding',
+    path: '/handleiding',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedInstellingenRoute =
   AuthenticatedInstellingenRouteImport.update({
     id: '/instellingen',
@@ -327,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/fotos': typeof AuthenticatedFotosRoute
+  '/handleiding': typeof AuthenticatedHandleidingRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
@@ -375,6 +383,7 @@ export interface FileRoutesByTo {
   '/facturen': typeof AuthenticatedFacturenRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/fotos': typeof AuthenticatedFotosRoute
+  '/handleiding': typeof AuthenticatedHandleidingRoute
   '/instellingen': typeof AuthenticatedInstellingenRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/klanten': typeof AuthenticatedKlantenRoute
@@ -425,6 +434,7 @@ export interface FileRoutesById {
   '/_authenticated/facturen': typeof AuthenticatedFacturenRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/fotos': typeof AuthenticatedFotosRoute
+  '/_authenticated/handleiding': typeof AuthenticatedHandleidingRoute
   '/_authenticated/instellingen': typeof AuthenticatedInstellingenRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/klanten': typeof AuthenticatedKlantenRoute
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/finance'
     | '/fotos'
+    | '/handleiding'
     | '/instellingen'
     | '/kalender'
     | '/klanten'
@@ -523,6 +534,7 @@ export interface FileRouteTypes {
     | '/facturen'
     | '/finance'
     | '/fotos'
+    | '/handleiding'
     | '/instellingen'
     | '/kalender'
     | '/klanten'
@@ -572,6 +584,7 @@ export interface FileRouteTypes {
     | '/_authenticated/facturen'
     | '/_authenticated/finance'
     | '/_authenticated/fotos'
+    | '/_authenticated/handleiding'
     | '/_authenticated/instellingen'
     | '/_authenticated/kalender'
     | '/_authenticated/klanten'
@@ -734,6 +747,13 @@ declare module '@tanstack/react-router' {
       path: '/fotos'
       fullPath: '/fotos'
       preLoaderRoute: typeof AuthenticatedFotosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/handleiding': {
+      id: '/_authenticated/handleiding'
+      path: '/handleiding'
+      fullPath: '/handleiding'
+      preLoaderRoute: typeof AuthenticatedHandleidingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/instellingen': {
@@ -980,6 +1000,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFacturenRoute: typeof AuthenticatedFacturenRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFotosRoute: typeof AuthenticatedFotosRoute
+  AuthenticatedHandleidingRoute: typeof AuthenticatedHandleidingRoute
   AuthenticatedInstellingenRoute: typeof AuthenticatedInstellingenRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKlantenRoute: typeof AuthenticatedKlantenRoute
@@ -1005,6 +1026,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFacturenRoute: AuthenticatedFacturenRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFotosRoute: AuthenticatedFotosRoute,
+  AuthenticatedHandleidingRoute: AuthenticatedHandleidingRoute,
   AuthenticatedInstellingenRoute: AuthenticatedInstellingenRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKlantenRoute: AuthenticatedKlantenRoute,
