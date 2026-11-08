@@ -48,3 +48,5 @@
 - [x] Factuur 20260842 als betaald gemarkeerd
 
 - [x] Riostopkost van IDBS bij de dashboardtegel Riostoppen/inspectiepunten; 10 tests geslaagd en ingelogde controle (Kost IDBS €900,00, marge €3.940,00 over 2023-2026).
+
+- [ ] Tikklok volledig verhuizen naar deze app (optie 1, geen dataverlies): wacht op CSV-export van alle tabellen uit de Time Keeper Pro-chat; daarna importeren met behoud van nummers, aantallen vergelijken, beheer- en inklokschermen bouwen en pas na goedkeuring de oude tikklok stilleggen.
