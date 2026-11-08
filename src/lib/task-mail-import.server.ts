@@ -178,7 +178,15 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
         candidates.map((m) => m.id),
       );
     const seen = new Set((existing ?? []).map((e) => e.source_message_id));
-    const fresh = candidates.filter((m) => !seen.has(m.id)).slice(0, 15);
+    // Outlook geeft dezelfde mail soms een ander ID (bv. andere ID-vorm); daarom ook
+    // ontdubbelen op ontvangsttijd + onderwerp, zodat een taak die offerte werd niet terugkomt.
+    const times = candidates.map((m) => m.receivedDateTime).filter((t): t is string => !!t);
+    const { data: sameMail } = times.length
+      ? await db.from("work_orders").select("received_at, source_subject").in("received_at", times)
+      : { data: [] as { received_at: string | null; source_subject: string | null }[] };
+    const mailKey = (t: string | null | undefined, s: string | null | undefined) => `${t ? new Date(t).getTime() : ""}|${(s ?? "").trim()}`;
+    const seenMail = new Set((sameMail ?? []).map((e) => mailKey(e.received_at, e.source_subject)));
+    const fresh = candidates.filter((m) => !seen.has(m.id) && !seenMail.has(mailKey(m.receivedDateTime, m.subject))).slice(0, 15);
 
     let imported = 0;
     const errors: string[] = [];
