@@ -229,6 +229,11 @@ function Kalender() {
           catch (e) { toast.error(e instanceof Error ? e.message : "Offerte maken mislukt"); } finally { setQuotingId(null); }
         }}><FilePenLine />{quotingId === w.id ? "Offerte maken…" : "Omzetten naar offerte"}</Button>
         <Button type="button" size="sm" variant={w.no_invoice ? "secondary" : "outline"} className="h-8 text-xs" onClick={() => set(w.id, { no_invoice: !w.no_invoice })}>{w.no_invoice ? "Niet factureren ✓" : "Niet factureren"}</Button>
+        {w.status !== "afgetekend" && <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={async () => {
+          if (!window.confirm("Deze taak markeren als niet meer nodig? De taak verdwijnt uit de kalender en de mail gaat naar Uitgevoerd.")) return;
+          await set(w.id, { not_needed: true });
+          toast.success("Taak gemarkeerd als niet meer nodig", { action: { label: "Ongedaan maken", onClick: () => set(w.id, { not_needed: false }) } });
+        }}>Niet meer nodig</Button>}
       </div>
       <div className="col-span-full flex flex-wrap items-center gap-2"><Button type="button" size="sm" variant={w.urgent ? "destructive" : "outline"} aria-pressed={!!w.urgent} title="Markeer deze taak als dringend" className="h-7 shrink-0 text-xs" onClick={() => set(w.id, { urgent: !w.urgent })}>{w.urgent ? "Dringend ✓" : "Dringend"}</Button><label className="flex cursor-pointer items-center gap-1.5 text-xs font-bold"><input type="checkbox" className="accent-primary" checked={w.first_customer} onChange={(e) => set(w.id, { first_customer: e.target.checked })} />Eerste klant</label><CustomerInvite task={w} />{w.scheduled_date && <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => plan(w.id, null)}>Terug naar nog in te plannen</Button>}</div>
       <div className="col-span-full border-t pt-2 [&_button.absolute]:static"><TaskActions id={w.id} address={destinationAddress(w)} phone={w.phone} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={w.time_entries.find(t => !t.ended_at)?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} noAnswerAt={w.no_answer_at} /></div>

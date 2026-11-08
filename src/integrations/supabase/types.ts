@@ -2944,6 +2944,7 @@ export type Database = {
           id: string
           no_answer_at: string | null
           no_invoice: boolean
+          not_needed: boolean
           number: number | null
           paid_amount: number | null
           paid_at: string | null
@@ -3002,6 +3003,7 @@ export type Database = {
           id?: string
           no_answer_at?: string | null
           no_invoice?: boolean
+          not_needed?: boolean
           number?: number | null
           paid_amount?: number | null
           paid_at?: string | null
@@ -3060,6 +3062,7 @@ export type Database = {
           id?: string
           no_answer_at?: string | null
           no_invoice?: boolean
+          not_needed?: boolean
           number?: number | null
           paid_amount?: number | null
           paid_at?: string | null
