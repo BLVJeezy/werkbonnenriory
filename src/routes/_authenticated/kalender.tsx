@@ -34,6 +34,7 @@ import { appointmentStatuses } from "@/lib/appointments";
 import { X, FilePenLine, Plus } from "lucide-react";
 import { FirstCustomerLabel } from "@/components/FirstCustomerLabel";
 import { calendarWindow } from "@/lib/calendar-window";
+import { AppointmentProposal } from "@/components/AppointmentProposal";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/kalender")({
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null; manual_time_entry: boolean | null } | null; time_entries: (TimeEntry & { id: string })[]; materials: { quantity: number; unit_price: number }[] };
+type Row = Database["public"]["Tables"]["work_orders"]["Row"] & { technicians: { name: string; color: string | null; manual_time_entry: boolean | null; external_planning: boolean | null } | null; time_entries: (TimeEntry & { id: string })[]; materials: { quantity: number; unit_price: number }[] };
 
 function Kalender() {
   const qc = useQueryClient();
@@ -83,7 +84,7 @@ function Kalender() {
     refetchInterval: 10000,
     enabled: role === "admin" || role === "technician",
     queryFn: async () =>
-      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color, manual_time_entry), time_entries(id, started_at, ended_at), materials(quantity, unit_price)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
+      taskListRows((await supabase.from("work_orders").select("*, technicians(name, color, manual_time_entry, external_planning), time_entries(id, started_at, ended_at), materials(quantity, unit_price)").neq("status", "offerte").eq("quote_pending", false).order("sort_order").order("number")).data ?? []) as Row[],
   });
   const { data: opts } = useQuery({
     queryKey: ["calendar_assign_opts"],
@@ -98,11 +99,11 @@ function Kalender() {
     },
   });
   // Open uitnodigingen: de tabel is alleen voor de beheerder leesbaar, dus ploegen zien hier niets.
-  const { data: appts = [] } = useQuery({
+  const { data: appts = [], error: appointmentError } = useQuery({
     queryKey: ["appointment_requests"],
     enabled: role === "admin",
     refetchInterval: 10000,
-    queryFn: async () => (await supabase.from("appointment_requests").select("work_order_id,status,expires_at,created_at").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => { const { data, error } = await supabase.from("appointment_requests").select("work_order_id,status,expires_at,created_at,crew_slots,customer_slots,proposed_date,time_from,time_until").order("created_at", { ascending: false }); if (error) throw error; return data ?? []; },
   });
   const waiting = new Map<string, string>();
   for (const a of appts) if (!waiting.has(a.work_order_id) && Date.parse(a.expires_at) >= Date.now()) waiting.set(a.work_order_id, a.status);
@@ -204,6 +205,7 @@ function Kalender() {
         )}
       </div>}
       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-snug">{w.description || "Geen omschrijving"}</p>
+      {appts.find(a => a.work_order_id === w.id) && <AppointmentProposal request={appts.find(a => a.work_order_id === w.id) as typeof appts[number]} external={!!w.technicians?.external_planning} />}
       {horizontal && <>
         <p className="mt-2 font-medium">{destinationLabel(w)}: {destinationLines(w).join(" · ") || "Niet ingevuld"}</p>
         {(w.site_contact_name || w.phone || w.site_contact_phone) && <p className="mt-2 text-xs opacity-80">{[w.site_contact_name, w.site_contact_phone, w.phone && `Klant: ${w.phone}`].filter(Boolean).join(" · ")}</p>}
@@ -258,6 +260,7 @@ function Kalender() {
       <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setCreate({})}><Plus />Taak toevoegen</Button><Button variant="outline" onClick={() => setCreate({ direct: true })}><Plus />Werkbon maken</Button><Button disabled={importing} onClick={() => fetchMail()}>{importing ? "Mails lezen…" : "Mails ophalen"}</Button></div>
       <details className="border-b pb-2"><summary className="cursor-pointer text-sm font-bold">Mailboxen</summary><div className="space-y-2 pt-2"><MailboxConnect /><WerkbonMailboxConnect /></div></details>
       {importError && <p role="alert" className="text-sm text-destructive">{importError instanceof Error ? importError.message : "Afspraakmails ophalen mislukt"}</p>}
+      {appointmentError && <p role="alert" className="text-sm text-destructive">Voorgestelde tijdsloten konden niet worden opgehaald.</p>}
       {create && <TaskCreateDialog key={`${create.day ?? "nieuw"}-${!!create.direct}`} open day={create.day} direct={create.direct} onClose={() => { setCreate(null); if (dag) navigate({ to: "/kalender", search: {}, replace: true }); }} />}
       <AppointmentMailSync />
       <div className="flex flex-wrap gap-3">{crewPicker}<Input aria-label="Taken zoeken" placeholder="Klant, adres, omschrijving…" className="min-w-0 sm:max-w-xs" value={search} onChange={e => setSearch(e.target.value)} /><Button variant={onlyRunning ? "default" : "outline"} aria-pressed={onlyRunning} onClick={() => setOnlyRunning(!onlyRunning)}>Bezig ({data.filter(w => activeTimeEntry(w.time_entries)).length})</Button></div>
