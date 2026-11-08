@@ -9,6 +9,7 @@ import { euro } from "@/lib/billing";
 import { FinanceYear } from "@/components/FinanceYear";
 import { computeTotals } from "@/lib/billing";
 import { totalSeconds } from "@/lib/time";
+import { productRevenue, type ProductLine } from "@/lib/product-revenue";
 import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
 import {
   ResponsiveContainer,
@@ -92,6 +93,34 @@ function Dashboard() {
     },
   });
 
+  // Omzet per product: materialen op werkbonnen (werkdag) + lijnen van zelf gemaakte facturen.
+  const { data: prodLines = [] } = useQuery({
+    queryKey: ["dashboard-producten", from, to],
+    enabled: role === "admin" && !!from && !!to && from <= to,
+    queryFn: async () => {
+      const early = new Date(`${from}T12:00:00Z`); early.setUTCDate(early.getUTCDate() - 60);
+      const [w, inv] = await Promise.all([
+        supabase.from("work_orders").select("scheduled_date, signed_at, materials(name, quantity, unit_price)").eq("status", "afgetekend").eq("no_invoice", false).gte("signed_at", early.toISOString()).limit(5000),
+        supabase.from("invoices").select("kind, lines, work_order_id").is("work_order_id", null).gte("issue_date", from).lte("issue_date", to),
+      ]);
+      if (w.error) throw w.error;
+      const out: ProductLine[] = [];
+      for (const o of w.data ?? []) {
+        const day = (o.scheduled_date ?? o.signed_at ?? "").slice(0, 10);
+        if (!day || day < from || day > to) continue;
+        for (const m of o.materials) out.push({ name: m.name, quantity: Number(m.quantity), amount: Number(m.quantity) * Number(m.unit_price) });
+      }
+      for (const i of inv.data ?? []) {
+        const sg = i.kind === "creditnota" ? -1 : 1;
+        for (const l of (Array.isArray(i.lines) ? i.lines : []) as any[]) {
+          const q = Number(l?.quantity ?? 0);
+          out.push({ name: String(l?.description ?? ""), quantity: sg * Math.abs(q), amount: sg * Math.abs(Number(l?.amount ?? q * Number(l?.unitPrice ?? 0))) });
+        }
+      }
+      return out;
+    },
+  });
+
   if (role !== "admin") return null;
 
   const sign = (r: InvoiceOmzetRow) => (r.kind === "creditnota" ? -1 : 1);
@@ -139,6 +168,17 @@ function Dashboard() {
           <p className="text-xs font-bold uppercase opacity-70">Documenten</p>
           <p className="text-xl font-black">{rows.length}</p>
         </div>
+      </div>
+
+      <h2 className="text-lg font-black uppercase">Omzet per product</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {productRevenue(prodLines).map((p) => (
+          <div key={p.key} className="rounded-md border bg-card p-3">
+            <p className="text-xs font-bold uppercase opacity-70">{p.label}</p>
+            <p className="text-xl font-black">{euro(p.amount)}</p>
+            <p className="text-xs opacity-70">{Math.round(p.quantity * 100) / 100} stuks (excl. btw)</p>
+          </div>
+        ))}
       </div>
 
       <div className="rounded-md border bg-card p-3 sm:p-4">
