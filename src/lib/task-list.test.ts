@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { taskListRows, newTaskRows, plannedTaskRows, activeTaskRows, completedWorkOrderRows } from './task-list';
+import { taskListRows, newTaskRows, plannedTaskRows, activeTaskRows, completedWorkOrderRows, pinFirstCustomer } from './task-list';
 
 it('keeps completed work orders out of the active task page', () => {
   expect(activeTaskRows([
