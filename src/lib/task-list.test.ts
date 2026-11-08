@@ -68,6 +68,15 @@ it('returns approved quote output tasks to unplanned while retaining their assig
   ])).toEqual([approved]);
   expect(newTaskRows([approved])[0]?.technician_id).toBe('assigned-crew');
 });
+it('pins first-customer tasks to the top while keeping the rest in order', () => {
+  expect(pinFirstCustomer([
+    { id: 'a', first_customer: false },
+    { id: 'first', first_customer: true },
+    { id: 'b', first_customer: false },
+    { id: 'c' },
+  ]).map(r => r.id)).toEqual(['first', 'a', 'b', 'c']);
+});
+
 import { taskListRows as rowsForNotNeeded } from './task-list';
 import { test as t2, expect as e2 } from 'vitest';
 t2('niet meer nodige taken verdwijnen uit de takenlijst', () => {
