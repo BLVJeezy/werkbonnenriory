@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Nieuwe beheerders aanmaken of uitnodigen vanuit Instellingen; alleen bestaande beheerders kunnen rollen toekennen. Uitnodiging delen/kopiëren, eigen wachtwoord en eenmalige link getest; zes tests geslaagd, mobiele weergave gecontroleerd en tijdelijk testaccount verwijderd. Handleiding bijgewerkt; publiceren nodig voor de publieke uitnodigingspagina.
+
 - [x] Takenbeheer samengebracht in Kalender: aanmaken, mailinstroom naar Nog in te plannen, snel dag/ploeg/activiteit kiezen en offerteknop; oude URL verwijst door, beperkte ploegweergave behouden. 22 tests en ingelogde desktop-/mobiele planning met teruglezen geslaagd; tijdelijke controletaak verwijderd. Dagelijkse mailboxcontrole om 05:00 UTC ingesteld (06:00 wintertijd / 07:00 zomertijd, maximaal een dag vertraging zonder geopende kalender), plus vijfminutencontrole zolang Kalender openstaat; dagelijkse uitvoering wacht op publicatie. Offerteknop zichtbaar gecontroleerd, geen echte offerte aangemaakt.
 
 - [x] Klantnaam en opgesplitst adres automatisch via VIES bij BE-/NL-btw-nummer (Belgisch nummer ook zonder BE); bestaande gegevens en syndicus gescheiden behouden. Zeven tests en ingelogde Nederlandse aanvulling geslaagd; Belgische dienst tijdelijk bezet, foutmelding gecontroleerd. Niet-btw-plichtige ondernemingen/VME’s blijven handmatig.
