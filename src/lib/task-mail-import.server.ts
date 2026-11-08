@@ -160,7 +160,7 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
       connectionAPIKey,
       connectorId: "microsoft_outlook",
       path: "/me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body",
-      init: { headers: { Prefer: 'outlook.body-content-type="text", IdType="ImmutableId"' } },
+      init: { headers: { Prefer: 'outlook.body-content-type="text"' } },
       requiredScopes: OUTLOOK_SCOPES,
     });
     if (await appUserReconnectRequired(res)) throw new Error("De mailbox-koppeling is verlopen. Klik op \"Mailbox opnieuw koppelen\".");

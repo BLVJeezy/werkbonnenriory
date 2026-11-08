@@ -116,7 +116,7 @@ function Kalender() {
     if (error) toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["work_orders"] });
   }
-  const sel = "mt-1 h-7 w-full min-w-0 rounded border bg-background px-1 text-xs text-foreground";
+  const sel = "h-9 w-full min-w-0 rounded border bg-background px-1 text-xs text-foreground";
   const days = calendarWindow(now, offset);
   const today = iso(now);
 
@@ -209,8 +209,8 @@ function Kalender() {
         {(w.site_contact_name || w.phone || w.site_contact_phone) && <p className="mt-2 text-xs opacity-80">{[w.site_contact_name, w.site_contact_phone, w.phone && `Klant: ${w.phone}`].filter(Boolean).join(" · ")}</p>}
       </>}
       </div>
-      <div className={horizontal ? "grid min-w-0 content-start gap-2 sm:grid-cols-2" : "grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-4"}>
-      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number ?? "nieuw"}`} className="mt-0 h-7 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onChange={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+      <div className={horizontal ? "grid min-w-0 content-start gap-2 sm:grid-cols-2" : "grid min-w-0 grid-cols-2 gap-1.5"}>
+      <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number ?? "nieuw"}`} className="mt-0 h-9 min-w-0 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onChange={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
       <select aria-label={`Ploeg taak ${w.number ?? "nieuw"}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
         {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -256,6 +256,12 @@ function Kalender() {
       {create && <TaskCreateDialog key={`${create.day ?? "nieuw"}-${!!create.direct}`} open day={create.day} direct={create.direct} onClose={() => { setCreate(null); if (dag) navigate({ to: "/kalender", search: {}, replace: true }); }} />}
       <AppointmentMailSync />
       <div className="flex flex-wrap gap-3">{crewPicker}<Input aria-label="Taken zoeken" placeholder="Klant, adres, omschrijving…" className="min-w-0 sm:max-w-xs" value={search} onChange={e => setSearch(e.target.value)} /><Button variant={onlyRunning ? "default" : "outline"} aria-pressed={onlyRunning} onClick={() => setOnlyRunning(!onlyRunning)}>Bezig ({data.filter(w => activeTimeEntry(w.time_entries)).length})</Button></div>
+      <section {...drop(null)} className="space-y-3 border-t pt-4">
+        <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
+        <div className="flex flex-wrap gap-2"><select aria-label="Taken sorteren" className="h-9 rounded border bg-background px-2 text-sm text-foreground" value={taskSort} onChange={e => setTaskSort(e.target.value)}><option value="nieuwste">Ontvangstdatum</option><option value="klant">Klant</option><option value="plaats">Plaats</option><option value="datum">Geplande dag</option></select><Button size="sm" variant="outline" onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button></div>
+        {!unplanned.length && <p className="text-sm text-muted-foreground">Geen taken om in te plannen.</p>}
+        <div className="grid gap-2">{unplanned.map((w) => card(w, undefined, undefined, true))}</div>
+      </section>
       <div className="grid gap-3 xl:grid-cols-[repeat(9,minmax(260px,1fr))] xl:overflow-x-auto xl:gap-2">
         {days.map((d) => {
           const k = iso(d);
@@ -277,12 +283,6 @@ function Kalender() {
           );
         })}
       </div>
-      <section {...drop(null)} className="space-y-3 border-t pt-4">
-        <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
-        <div className="flex flex-wrap gap-2"><select aria-label="Taken sorteren" className="h-9 rounded border bg-background px-2 text-sm text-foreground" value={taskSort} onChange={e => setTaskSort(e.target.value)}><option value="nieuwste">Ontvangstdatum</option><option value="klant">Klant</option><option value="plaats">Plaats</option><option value="datum">Geplande dag</option></select><Button size="sm" variant="outline" onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button></div>
-        {!unplanned.length && <p className="text-sm text-muted-foreground">Geen taken om in te plannen.</p>}
-        <div className="grid gap-2">{unplanned.map((w) => card(w, undefined, undefined, true))}</div>
-      </section>
       <Button variant="outline" asChild><Link to="/contracten">Contracten beheren</Link></Button>
     </div>
   );
