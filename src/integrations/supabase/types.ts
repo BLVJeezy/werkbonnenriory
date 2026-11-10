@@ -458,6 +458,99 @@ export type Database = {
           },
         ]
       }
+      crew_stock: {
+        Row: {
+          product_id: string
+          quantity: number
+          technician_id: string
+          updated_at: string
+        }
+        Insert: {
+          product_id: string
+          quantity?: number
+          technician_id: string
+          updated_at?: string
+        }
+        Update: {
+          product_id?: string
+          quantity?: number
+          technician_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_stock_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crew_stock_moves: {
+        Row: {
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          delta: number
+          id: string
+          kind: string
+          material_id: string | null
+          note: string | null
+          product_id: string
+          technician_id: string
+          work_order_id: string | null
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          created_by?: string | null
+          delta: number
+          id?: string
+          kind: string
+          material_id?: string | null
+          note?: string | null
+          product_id: string
+          technician_id: string
+          work_order_id?: string | null
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          delta?: number
+          id?: string
+          kind?: string
+          material_id?: string | null
+          note?: string | null
+          product_id?: string
+          technician_id?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_stock_moves_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_stock_moves_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_projects: {
         Row: {
           city: string | null
@@ -1994,30 +2087,36 @@ export type Database = {
       materials: {
         Row: {
           created_at: string
+          from_crew_stock: boolean
           id: string
           name: string
           product_id: string | null
           quantity: number
+          stock_technician_id: string | null
           unit: string
           unit_price: number
           work_order_id: string
         }
         Insert: {
           created_at?: string
+          from_crew_stock?: boolean
           id?: string
           name: string
           product_id?: string | null
           quantity?: number
+          stock_technician_id?: string | null
           unit?: string
           unit_price?: number
           work_order_id: string
         }
         Update: {
           created_at?: string
+          from_crew_stock?: boolean
           id?: string
           name?: string
           product_id?: string | null
           quantity?: number
+          stock_technician_id?: string | null
           unit?: string
           unit_price?: number
           work_order_id?: string
@@ -4208,6 +4307,62 @@ export type Database = {
           },
         ]
       }
+      work_order_sms: {
+        Row: {
+          body: string
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          provider: string
+          provider_message_id: string | null
+          request_key: string
+          sent_by: string | null
+          status: string
+          to_number: string
+          updated_at: string
+          work_order_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          provider?: string
+          provider_message_id?: string | null
+          request_key: string
+          sent_by?: string | null
+          status?: string
+          to_number: string
+          updated_at?: string
+          work_order_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          provider?: string
+          provider_message_id?: string | null
+          request_key?: string
+          sent_by?: string | null
+          status?: string
+          to_number?: string
+          updated_at?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_sms_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_orders: {
         Row: {
           activity_id: string | null
@@ -4513,6 +4668,28 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      crew_stock_admin: {
+        Args: {
+          p_mode: string
+          p_note: string
+          p_product: string
+          p_quantity: number
+          p_tech: string
+        }
+        Returns: number
+      }
+      crew_stock_apply: {
+        Args: {
+          p_delta: number
+          p_kind: string
+          p_material: string
+          p_note: string
+          p_product: string
+          p_tech: string
+          p_wo: string
+        }
+        Returns: number
       }
       customer_identity: {
         Args: { c: string; h: string; n: string; p: string; s: string }
