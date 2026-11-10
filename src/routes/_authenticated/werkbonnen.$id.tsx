@@ -35,6 +35,8 @@ import { isUrgentOpen, URGENT_RING } from '@/lib/urgent';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { startCcvPayment } from '@/lib/ccv.functions';
 import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
+import { OnderwegSms } from '@/components/OnderwegSms';
+import { CrewStockPicker } from '@/components/CrewStockPicker';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -505,7 +507,7 @@ function Detail() {
               <span className="w-20 font-mono">
                 {m.quantity} {m.unit}
               </span>
-              <span className="flex-1">{m.name}</span>
+              <span className="flex-1">{m.name}{m.from_crew_stock && <span className="ml-2 rounded bg-secondary px-1 text-xs">uit ploegvoorraad</span>}</span>
               <span className="font-mono text-sm">{money(Number(m.quantity) * Number(m.unit_price))}</span>
               {!matLocked && (
                 <Button
@@ -557,7 +559,10 @@ function Detail() {
             <Button>Toevoegen</Button>
           </form>
         )}
+        {!matLocked && wo.technician_id && <CrewStockPicker workOrderId={id} technicianId={wo.technician_id} prods={prods} onDone={refresh} />}
       </section>
+
+      {(isAdmin || role === "technician") && <OnderwegSms workOrderId={id} />}
 
       <WorkOrderPhotos workOrderId={id} locked={matLocked} />
       {isAdmin && <WorkOrderVideos workOrderId={id} customerId={wo.customer_id ?? null} hasEmail={!!wo.email} />}

@@ -115,6 +115,7 @@ function Layout() {
               </>
             )}
             {(role === "admin" || (role === "technician" && perms?.showSigned)) && <Link to="/afgewerkte-werkbonnen" className={navCls} activeProps={active}>Afgewerkte werkbonnen</Link>}
+            {(role === "admin" || role === "technician") && <Link to="/ploegvoorraad" className={navCls} activeProps={active}>Ploegvoorraad</Link>}
             <Link to="/handleiding" className={navCls} activeProps={active}>Handleiding</Link>
             {role === "admin" && <ScreenHelpToggle />}
             {role === "technician" && (

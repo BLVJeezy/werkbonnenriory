@@ -1,0 +1,1 @@
+- Integrated timeclock modules and tables use a dedicated tikklok/tk namespace; Riory admin roles protect HR/payroll and device/PIN checks protect employee self-service, preventing collisions with work-order time entries. Keep the legacy clock active until reconciliation and explicit cutover approval.
