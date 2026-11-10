@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "./vat-number";
 
 it("keeps the customer VAT number extracted from mail", () => {
@@ -86,5 +86,14 @@ describe("bewaard klanttarief", () => {
   });
   it("vrij beroep gaat voor op bewaard 6%", () => {
     expect(vatRateForCustomer("", 21, undefined, { vrijBeroep: true, defaultRate: 6 })).toBe(21);
+  });
+});
+
+describe("VME ouder dan 10 jaar", () => {
+  it("krijgt automatisch 6%", () => {
+    expect(vatRateForCustomer(null, 21, { customerType: "vme", olderThanTenYears: true })).toBe(6);
+  });
+  it("blijft 21% als het gebouw niet ouder dan 10 jaar is", () => {
+    expect(vatRateForCustomer(null, 21, { customerType: "vme", olderThanTenYears: false })).toBe(21);
   });
 });
