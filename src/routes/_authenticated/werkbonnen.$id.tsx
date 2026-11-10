@@ -36,7 +36,6 @@ import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { startCcvPayment } from '@/lib/ccv.functions';
 import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
 import { OnderwegSms } from '@/components/OnderwegSms';
-import { CrewStockPicker } from '@/components/CrewStockPicker';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -94,6 +93,7 @@ function Detail() {
   const perms = signing ? { ...basePerms, showPrices: false, canPayment: false } : basePerms;
   const money = (n: number) => (perms.showPrices ? euro(n) : "");
   const [mat, setMat] = useState({ productId: "", quantity: "1" });
+  const [prodQ, setProdQ] = useState("");
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
@@ -507,7 +507,7 @@ function Detail() {
               <span className="w-20 font-mono">
                 {m.quantity} {m.unit}
               </span>
-              <span className="flex-1">{m.name}{m.from_crew_stock && <span className="ml-2 rounded bg-secondary px-1 text-xs">uit ploegvoorraad</span>}</span>
+              <span className="flex-1">{m.name}</span>
               <span className="font-mono text-sm">{money(Number(m.quantity) * Number(m.unit_price))}</span>
               {!matLocked && (
                 <Button
@@ -542,6 +542,7 @@ function Detail() {
               refresh();
             }}
           >
+            <Input className="min-w-40 flex-1" placeholder="Zoek product…" value={prodQ} onChange={(e) => setProdQ(e.target.value)} />
             <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} />
             <select
               required
@@ -549,8 +550,8 @@ function Detail() {
               value={mat.productId}
               onChange={(e) => setMat({ ...mat, productId: e.target.value })}
             >
-              <option value="">{prods.length ? "— Kies product —" : "Nog geen producten aangemaakt"}</option>
-              {[...prods].sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)).map((p) => (
+              <option value="">{prods.length ? "— Kies product —" : isAdmin ? "Nog geen producten aangemaakt" : "Geen producten toegewezen aan deze ploeg"}</option>
+              {prods.filter((p) => p.id === mat.productId || `${p.alias ?? ""} ${p.name}`.toLowerCase().includes(prodQ.toLowerCase())).sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.alias ? `${p.alias} — ${p.name}` : p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
                 </option>
@@ -559,7 +560,6 @@ function Detail() {
             <Button>Toevoegen</Button>
           </form>
         )}
-        {!matLocked && wo.technician_id && <CrewStockPicker workOrderId={id} technicianId={wo.technician_id} prods={prods} onDone={refresh} />}
       </section>
 
       {(isAdmin || role === "technician") && <OnderwegSms workOrderId={id} />}

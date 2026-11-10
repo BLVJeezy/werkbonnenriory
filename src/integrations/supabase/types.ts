@@ -458,6 +458,39 @@ export type Database = {
           },
         ]
       }
+      crew_product_access: {
+        Row: {
+          created_at: string
+          product_id: string
+          technician_id: string
+        }
+        Insert: {
+          created_at?: string
+          product_id: string
+          technician_id: string
+        }
+        Update: {
+          created_at?: string
+          product_id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_product_access_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_product_access_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_stock: {
         Row: {
           product_id: string
@@ -2907,6 +2940,7 @@ export type Database = {
           manual_time_entry: boolean
           name: string
           phone: string | null
+          product_scope: string
           show_contact: boolean
           show_prices: boolean
           show_signed: boolean
@@ -2924,6 +2958,7 @@ export type Database = {
           manual_time_entry?: boolean
           name: string
           phone?: string | null
+          product_scope?: string
           show_contact?: boolean
           show_prices?: boolean
           show_signed?: boolean
@@ -2941,6 +2976,7 @@ export type Database = {
           manual_time_entry?: boolean
           name?: string
           phone?: string | null
+          product_scope?: string
           show_contact?: boolean
           show_prices?: boolean
           show_signed?: boolean
@@ -4669,28 +4705,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      crew_stock_admin: {
-        Args: {
-          p_mode: string
-          p_note: string
-          p_product: string
-          p_quantity: number
-          p_tech: string
-        }
-        Returns: number
-      }
-      crew_stock_apply: {
-        Args: {
-          p_delta: number
-          p_kind: string
-          p_material: string
-          p_note: string
-          p_product: string
-          p_tech: string
-          p_wo: string
-        }
-        Returns: number
-      }
+      crew_product_allowed: { Args: { p_product: string }; Returns: boolean }
       customer_identity: {
         Args: { c: string; h: string; n: string; p: string; s: string }
         Returns: string
