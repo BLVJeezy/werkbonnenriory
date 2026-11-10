@@ -14,7 +14,7 @@ export function mentionsVrijBeroep(text: string | null | undefined): boolean {
 
 /** User-defined automatic rate criteria; this is not an external VAT validity check. */
 export function vatRateForCustomer(value: string | null | undefined, currentRate: number, housing?: {
-  customerType: "private" | "business" | "unknown";
+  customerType: "private" | "business" | "vme" | "unknown";
   olderThanTenYears: boolean | null;
 }, context?: {
   postalCode?: string | null | undefined;
@@ -34,8 +34,8 @@ export function vatRateForCustomer(value: string | null | undefined, currentRate
   if (context?.dutchBranch) return 21;
   // Nederlandse particulier (Nederlands postcodeformaat, geen btw-nummer): altijd 21%.
   if (isDutchPostalCode(context?.postalCode)) return 21;
-  // Belgische particulier, woning ouder dan 10 jaar: 6%.
-  if (housing?.customerType === "private" && housing.olderThanTenYears === true) return 6;
+  // Belgische particulier of VME (woongebouw), ouder dan 10 jaar: 6%.
+  if ((housing?.customerType === "private" || housing?.customerType === "vme") && housing.olderThanTenYears === true) return 6;
   // Anders het tarief dat bij de klant bewaard is.
   const saved = context?.defaultRate == null || context.defaultRate === "" ? NaN : Number(context.defaultRate);
   if ([0, 6, 12, 21].includes(saved)) return saved;

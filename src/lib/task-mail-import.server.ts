@@ -260,9 +260,11 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
         // Een mail die "vrij beroep" zegt, maakt de klant duurzaam vrij beroep; de beheerder kan het later nog corrigeren.
         // Klantgegevens meenemen: 6% (oude particuliere woning) bewaren bij de klant, of het bewaarde tarief toepassen.
         if (created?.customer_id && !vrij) {
-          const fromMail = x.customer_type === "private" && x.home_older_than_ten_years === true;
+          const isVme = !!(x.vme_name?.trim() || x.syndicus?.trim());
+          const fromMail = vatRateForCustomer(x.vat_number, 21, { customerType: isVme ? "vme" : x.customer_type, olderThanTenYears: x.home_older_than_ten_years }, { postalCode: x.postal_code || x.site_postal_code }) === 6;
           if (fromMail) {
             await db.from("customers").update({ default_vat_rate: 6 }).eq("id", created.customer_id);
+            await db.from("work_orders").update({ vat_rate: 6 }).eq("source_message_id", m.id);
           } else {
             const { data: k } = await db.from("customers").select("vat_number, postal_code, vrij_beroep, default_vat_rate").eq("id", created.customer_id).maybeSingle();
             if (k) {
