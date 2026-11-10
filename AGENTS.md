@@ -51,3 +51,5 @@
 - Supplier payment details resolve through `creditorBank` (what the admin typed on the invoice first, then the supplier record), and a corrected invoice writes those details back to `suppliers`; the BIC is only ever derived from the static bank-code table in `src/lib/iban-bic.ts`, so a hand-typed BIC is never overwritten.
 
 - Integrated timeclock modules and tables use a dedicated tikklok/tk namespace; Riory admin roles protect HR/payroll and device/PIN checks protect employee self-service, preventing collisions with work-order time entries. Keep the legacy clock active until reconciliation and explicit cutover approval.
+- Crew stock (crew_stock/crew_stock_moves) changes only via admin RPC crew_stock_admin and the materials trigger; materials.from_crew_stock rows deduct once on insert and restore on edit/delete, so assignment and actual consumption cannot double-count.
+- Werkbon SMS goes through sms.functions.ts (Twilio via connector gateway) with a unique request_key per confirmation and a work_order_sms history row; missing credentials return a config error, never a fake success.

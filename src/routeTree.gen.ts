@@ -33,6 +33,7 @@ import { Route as AuthenticatedLeveranciersRouteImport } from './routes/_authent
 import { Route as AuthenticatedMedewerkersRouteImport } from './routes/_authenticated/medewerkers'
 import { Route as AuthenticatedNieuwsbrievenRouteImport } from './routes/_authenticated/nieuwsbrieven'
 import { Route as AuthenticatedOffertesRouteImport } from './routes/_authenticated/offertes'
+import { Route as AuthenticatedPloegvoorraadRouteImport } from './routes/_authenticated/ploegvoorraad'
 import { Route as AuthenticatedProductenRouteImport } from './routes/_authenticated/producten'
 import { Route as AuthenticatedSyndiciRouteImport } from './routes/_authenticated/syndici'
 import { Route as AuthenticatedTikklokBeheerRouteImport } from './routes/_authenticated/tikklok-beheer'
@@ -190,6 +191,12 @@ const AuthenticatedOffertesRoute = AuthenticatedOffertesRouteImport.update({
   path: '/offertes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPloegvoorraadRoute =
+  AuthenticatedPloegvoorraadRouteImport.update({
+    id: '/ploegvoorraad',
+    path: '/ploegvoorraad',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProductenRoute = AuthenticatedProductenRouteImport.update({
   id: '/producten',
   path: '/producten',
@@ -377,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/medewerkers': typeof AuthenticatedMedewerkersRoute
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
+  '/ploegvoorraad': typeof AuthenticatedPloegvoorraadRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/syndici': typeof AuthenticatedSyndiciRoute
   '/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
@@ -431,6 +439,7 @@ export interface FileRoutesByTo {
   '/medewerkers': typeof AuthenticatedMedewerkersRoute
   '/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/offertes': typeof AuthenticatedOffertesRoute
+  '/ploegvoorraad': typeof AuthenticatedPloegvoorraadRoute
   '/producten': typeof AuthenticatedProductenRoute
   '/syndici': typeof AuthenticatedSyndiciRoute
   '/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
@@ -487,6 +496,7 @@ export interface FileRoutesById {
   '/_authenticated/medewerkers': typeof AuthenticatedMedewerkersRoute
   '/_authenticated/nieuwsbrieven': typeof AuthenticatedNieuwsbrievenRoute
   '/_authenticated/offertes': typeof AuthenticatedOffertesRoute
+  '/_authenticated/ploegvoorraad': typeof AuthenticatedPloegvoorraadRoute
   '/_authenticated/producten': typeof AuthenticatedProductenRoute
   '/_authenticated/syndici': typeof AuthenticatedSyndiciRoute
   '/_authenticated/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
@@ -543,6 +553,7 @@ export interface FileRouteTypes {
     | '/medewerkers'
     | '/nieuwsbrieven'
     | '/offertes'
+    | '/ploegvoorraad'
     | '/producten'
     | '/syndici'
     | '/tikklok-beheer'
@@ -597,6 +608,7 @@ export interface FileRouteTypes {
     | '/medewerkers'
     | '/nieuwsbrieven'
     | '/offertes'
+    | '/ploegvoorraad'
     | '/producten'
     | '/syndici'
     | '/tikklok-beheer'
@@ -652,6 +664,7 @@ export interface FileRouteTypes {
     | '/_authenticated/medewerkers'
     | '/_authenticated/nieuwsbrieven'
     | '/_authenticated/offertes'
+    | '/_authenticated/ploegvoorraad'
     | '/_authenticated/producten'
     | '/_authenticated/syndici'
     | '/_authenticated/tikklok-beheer'
@@ -886,6 +899,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOffertesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ploegvoorraad': {
+      id: '/_authenticated/ploegvoorraad'
+      path: '/ploegvoorraad'
+      fullPath: '/ploegvoorraad'
+      preLoaderRoute: typeof AuthenticatedPloegvoorraadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/producten': {
       id: '/_authenticated/producten'
       path: '/producten'
@@ -1110,6 +1130,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMedewerkersRoute: typeof AuthenticatedMedewerkersRoute
   AuthenticatedNieuwsbrievenRoute: typeof AuthenticatedNieuwsbrievenRoute
   AuthenticatedOffertesRoute: typeof AuthenticatedOffertesRoute
+  AuthenticatedPloegvoorraadRoute: typeof AuthenticatedPloegvoorraadRoute
   AuthenticatedProductenRoute: typeof AuthenticatedProductenRoute
   AuthenticatedSyndiciRoute: typeof AuthenticatedSyndiciRoute
   AuthenticatedTikklokBeheerRoute: typeof AuthenticatedTikklokBeheerRoute
@@ -1137,6 +1158,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMedewerkersRoute: AuthenticatedMedewerkersRoute,
   AuthenticatedNieuwsbrievenRoute: AuthenticatedNieuwsbrievenRoute,
   AuthenticatedOffertesRoute: AuthenticatedOffertesRoute,
+  AuthenticatedPloegvoorraadRoute: AuthenticatedPloegvoorraadRoute,
   AuthenticatedProductenRoute: AuthenticatedProductenRoute,
   AuthenticatedSyndiciRoute: AuthenticatedSyndiciRoute,
   AuthenticatedTikklokBeheerRoute: AuthenticatedTikklokBeheerRoute,
