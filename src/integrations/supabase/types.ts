@@ -4818,6 +4818,7 @@ export type Database = {
         Args: { p_id: string; p_instruction: string }
         Returns: string
       }
+      has_any_app_role: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
