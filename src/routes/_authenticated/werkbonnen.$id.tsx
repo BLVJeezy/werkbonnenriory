@@ -93,6 +93,7 @@ function Detail() {
   const perms = signing ? { ...basePerms, showPrices: false, canPayment: false } : basePerms;
   const money = (n: number) => (perms.showPrices ? euro(n) : "");
   const [mat, setMat] = useState({ productId: "", quantity: "1" });
+  const [prodQ, setProdQ] = useState("");
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
@@ -541,6 +542,7 @@ function Detail() {
               refresh();
             }}
           >
+            <Input className="min-w-40 flex-1" placeholder="Zoek product…" value={prodQ} onChange={(e) => setProdQ(e.target.value)} />
             <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} />
             <select
               required
@@ -548,8 +550,8 @@ function Detail() {
               value={mat.productId}
               onChange={(e) => setMat({ ...mat, productId: e.target.value })}
             >
-              <option value="">{prods.length ? "— Kies product —" : "Nog geen producten aangemaakt"}</option>
-              {[...prods].sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)).map((p) => (
+              <option value="">{prods.length ? "— Kies product —" : isAdmin ? "Nog geen producten aangemaakt" : "Geen producten toegewezen aan deze ploeg"}</option>
+              {prods.filter((p) => p.id === mat.productId || `${p.alias ?? ""} ${p.name}`.toLowerCase().includes(prodQ.toLowerCase())).sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.alias ? `${p.alias} — ${p.name}` : p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
                 </option>
