@@ -52,7 +52,9 @@ function Dashboard() {
   const [to, setTo] = useState(def.to);
 
   useEffect(() => {
-    if (role && role !== "admin") navigate({ to: "/werkbonnen", replace: true });
+    // Marketing must never pass through the crew calendar: the layout would hide it.
+    if (role === "marketing") navigate({ to: "/nieuwsbrieven", replace: true });
+    else if (role && role !== "admin") navigate({ to: "/kalender", replace: true });
   }, [role, navigate]);
 
   const { data: rows = [] } = useQuery({

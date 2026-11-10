@@ -10,7 +10,9 @@ function useMe() {
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return { role: "technician" as const, perms: { ...ALL, showPrices: false, showContact: false, canPayment: false, showSigned: false }, largeText: false };
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
+      const { data: roles, error } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
+      // A failed role read must not silently downgrade someone to crew.
+      if (error) throw error;
       if (roles?.some((r) => r.role === "admin")) return { role: "admin" as const, perms: ALL, largeText: false };
       if (roles?.some((r) => r.role === "marketing")) return { role: "marketing" as const, perms: { showPrices: false, showContact: true, canPayment: false, showSigned: false }, largeText: false };
       const { data: t } = await supabase
@@ -35,6 +37,12 @@ function useMe() {
 /** Role of the signed-in user: "admin" or "technician" (null while loading). */
 export function useRole() {
   return useMe().data?.role ?? null;
+}
+
+/** True when the role could not be loaded (after retries). */
+export function useRoleError(): boolean {
+  const q = useMe();
+  return q.isError && !q.data;
 }
 
 /** What the signed-in crew may see/do; admins get everything. */
