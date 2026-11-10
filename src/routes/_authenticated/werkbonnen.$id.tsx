@@ -294,6 +294,8 @@ function Detail() {
         </div>
       </div>
 
+      {(isAdmin || role === "technician") && !locked && <OnderwegSms workOrderId={id} />}
+
       <section className="grid gap-4 rounded-md border-2 border-primary bg-card p-4 sm:grid-cols-[1fr_10rem]">
         <div className="space-y-1">
           <Label>Activiteit</Label>
@@ -562,7 +564,6 @@ function Detail() {
         )}
       </section>
 
-      {(isAdmin || role === "technician") && <OnderwegSms workOrderId={id} />}
 
       <WorkOrderPhotos workOrderId={id} locked={matLocked} />
       {isAdmin && <WorkOrderVideos workOrderId={id} customerId={wo.customer_id ?? null} hasEmail={!!wo.email} />}
