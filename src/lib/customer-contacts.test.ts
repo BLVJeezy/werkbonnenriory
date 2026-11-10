@@ -13,3 +13,17 @@ describe("customer contacts", () => {
     expect(parseContacts([{ name: "", phone: "" }, { name: "An" }])).toEqual([{ name: "An", phone: "", role: "" }]);
   });
 });
+
+import { addMailContact } from "./customer-contacts";
+describe("addMailContact", () => {
+  it("voegt de contactpersoon uit de mail toe aan de VME", () => {
+    expect(addMailContact([], "Marc Janssens", "0470 12 34 56")).toEqual([{ name: "Marc Janssens", phone: "0470 12 34 56", role: "" }]);
+  });
+  it("wist geen bestaand nummer of rol als de mail geen nummer bevat", () => {
+    const list = [{ name: "Marc Janssens", phone: "0470 12 34 56", role: "conciërge" }];
+    expect(addMailContact(list, "marc janssens", null)).toEqual([{ name: "marc janssens", phone: "0470 12 34 56", role: "conciërge" }]);
+  });
+  it("doet niets zonder naam en nummer", () => {
+    expect(addMailContact([], null, " ")).toEqual([]);
+  });
+});

@@ -23,3 +23,11 @@ export function upsertContact(list: CustomerContact[], c: CustomerContact): Cust
 export function hasContact(list: CustomerContact[], name: string, phone: string) {
   return list.some((x) => norm(x.name) === norm(name) && norm(x.phone) === norm(phone));
 }
+
+/** Contactpersoon uit een mail toevoegen: nooit een bestaand nummer of rol wissen met een leeg veld. */
+export function addMailContact(list: CustomerContact[], name: string | null | undefined, phone: string | null | undefined): CustomerContact[] {
+  const n = (name ?? "").trim(), p = (phone ?? "").trim();
+  if (!n && !p) return list;
+  const existing = list.find((x) => (n && norm(x.name) === norm(n)) || (!n && norm(x.phone) === norm(p)));
+  return upsertContact(list, { name: n || existing?.name || "", phone: p || existing?.phone || "", role: existing?.role || "" });
+}
