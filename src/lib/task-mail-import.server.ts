@@ -1,3 +1,4 @@
+import { addMailContact, parseContacts } from "./customer-contacts";
 import { applySyndicus, syndicusDetailsFromMail, SYNDICUS_DETAIL_FIELDS } from "./syndicus";
 import { isUrgentMail } from "./urgent-mail";
 import { isReplyMail } from "./reply-mail";
@@ -245,6 +246,15 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
             if (Object.keys(patch).length > 0) {
               await db.from("customers").update(patch).eq("id", created.customer_id);
             }
+          }
+        }
+        // Contactpersoon ter plaatse (bewoner, conciërge, …) bewaren bij de contactpersonen van de VME.
+        if (created?.customer_id && x.syndicus && (x.site_contact_name?.trim() || x.site_contact_phone?.trim())) {
+          const { data: cust } = await db.from("customers").select("contacts").eq("id", created.customer_id).maybeSingle();
+          const before = parseContacts(cust?.contacts);
+          const after = addMailContact(before, x.site_contact_name, x.site_contact_phone);
+          if (JSON.stringify(after) !== JSON.stringify(before)) {
+            await db.from("customers").update({ contacts: after }).eq("id", created.customer_id);
           }
         }
         // Een mail die "vrij beroep" zegt, maakt de klant duurzaam vrij beroep; de beheerder kan het later nog corrigeren.
