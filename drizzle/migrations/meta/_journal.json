@@ -967,6 +967,13 @@
       "when": 1794307006410,
       "tag": "0137_crew_stock_and_sms",
       "breakpoints": true
+    },
+    {
+      "idx": 138,
+      "version": "7",
+      "when": 1794308978223,
+      "tag": "0138_crew_product_visibility",
+      "breakpoints": true
     }
   ]
 }
