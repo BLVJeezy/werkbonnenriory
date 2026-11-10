@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useRole, useRoleError, useLargeText, usePerms } from "@/lib/use-role";
-import { largeTextOn, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
+import { largeTextOn, textSizeStatus, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
 import { Menu, X } from "lucide-react";
 import { ScreenHelpPanel, ScreenHelpToggle } from "@/components/ScreenHelp";
 import { OverdueAfterNoticeAlert } from "@/components/OverdueAfterNoticeAlert";
@@ -62,6 +62,29 @@ function Layout() {
           <Link to={role === "admin" ? "/dashboard" : "/kalender"} className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
             Riory <span className="text-primary">Werkbonnen</span>
           </Link>
+          <div className="col-span-full flex flex-wrap items-center gap-2 sm:order-last sm:basis-full">
+            <Button
+              size="sm"
+              variant={large ? "default" : "secondary"}
+              role="switch"
+              aria-checked={large}
+              aria-describedby="tekstgrootte-uitleg"
+              onClick={() => {
+                const next: DeviceChoice = large ? "off" : "on";
+                writeDeviceChoice(next);
+                setDevice(next);
+              }}
+            >
+              <span aria-hidden className="font-mono leading-none">Aa</span>
+              Grote letters: {large ? "AAN" : "UIT"}
+            </Button>
+            {device !== null && (
+              <Button size="sm" variant="secondary" onClick={() => { writeDeviceChoice(null); setDevice(null); }}>
+                Tekstgrootte terugzetten
+              </Button>
+            )}
+            <span id="tekstgrootte-uitleg" className="text-xs opacity-80">{textSizeStatus(adminSet, device)}</span>
+          </div>
           <Button variant="secondary" size="icon" className="shrink-0 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
           <nav id="beheer-menu" aria-label="Beheerpagina’s" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenuOpen(false); }} className={`${menuOpen ? "grid" : "hidden"} col-span-full min-w-0 grid-cols-2 items-center gap-1 border-t border-secondary-foreground/20 pt-2 text-sm font-semibold sm:ml-auto sm:flex sm:flex-wrap sm:border-0 sm:pt-0`}>
             {role === "marketing" ? (
@@ -119,23 +142,6 @@ function Layout() {
             {role === "admin" && <Link to="/ploegproducten" className={navCls} activeProps={active}>Producten per ploeg</Link>}
             <Link to="/handleiding" className={navCls} activeProps={active}>Handleiding</Link>
             {role === "admin" && <ScreenHelpToggle />}
-            {role === "technician" && (
-              <Button
-                size="sm"
-                variant={large ? "default" : "ghost"}
-                aria-pressed={large}
-                onClick={() => {
-                  const next: DeviceChoice = large ? "off" : "on";
-                  writeDeviceChoice(next);
-                  setDevice(next);
-                }}
-              >
-                <span aria-hidden className="font-mono leading-none">
-                  Aa
-                </span>
-                Grote letters
-              </Button>
-            )}
             <Button
               size="sm"
               variant="ghost"
