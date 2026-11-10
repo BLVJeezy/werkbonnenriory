@@ -11,3 +11,5 @@
 - Waiting-account invoice allocations use `fin_allocate_waiting_bank` to reuse the split ledger atomically and replace only its bank leg with the waiting account; the original bank entry remains unchanged and residual amounts stay available.
 - Partial bank journal references include cumulative allocated cents via `fin_bank_part_reference`, so each later allocation is unique while the transaction lock and existing ledger prevent reuse.
 - Zero-amount bank lines are bank notices, dropped by the `fin_skip_zero_bank_tx` insert trigger so no import path (Ponto, CODA, Excel) can bring them back; paid-marked invoices settle with any open payment via `fin_split_bank_payment` type `paid`, which posts only the bank leg and never changes the invoice's paid amount.
+- Crew stock changes only via crew_stock_admin RPC and the materials trigger; from_crew_stock rows deduct once and restore on edit/delete, preventing double counting.
+- Werkbon SMS uses sms.functions.ts (Twilio gateway) with a unique request_key and work_order_sms history; missing credentials return a config error, never fake success.
