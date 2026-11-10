@@ -8,7 +8,7 @@ export function quoteInvoiceLines(lines: InvoiceLine[] | null | undefined, vatRa
       const x = l as InvoiceLine & { discount?: number; group?: string | null; hidePrice?: boolean };
       return {
         description: String(x.description).trim(), quantity: Number(x.quantity) || 0, unit: x.unit || "St",
-        unitPrice: Number(x.unitPrice) || 0, vatRate: Number(vatRate) || 0,
+        unitPrice: Number(x.discount && x.originalUnitPrice ? x.originalUnitPrice : x.unitPrice) || 0, vatRate: Number(vatRate) || 0,
         ...(x.discount ? { discount: Number(x.discount) } : {}),
         ...(x.group ? { group: x.group } : {}),
         ...(x.hidePrice ? { hidePrice: true } : {}),

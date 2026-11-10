@@ -65,6 +65,39 @@ export const createInvoices = createServerFn({ method: "POST" })
     return { created, skipped, sent, failed };
   });
 
+/** Onderaannemer zonder login: automatisch afgesloten werkbon factureren met de lijnen van de goedgekeurde offerte. */
+export const createSubcontractInvoices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { workOrderIds: string[] }) => ({ workOrderIds: (i?.workOrderIds ?? []).filter((x) => typeof x === "string").slice(0, 50) }))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabase } = context;
+    const { quoteInvoiceLines } = await import("./subcontract");
+    const { data: s } = await supabase.from("settings").select("payment_days").eq("id", 1).single();
+    const created: string[] = [], problems: string[] = [];
+    for (const id of data.workOrderIds) {
+      const { data: wo } = await supabase.from("work_orders").select("*").eq("id", id).single();
+      if (!wo || !wo.subcontract_auto || !canInvoiceWorkOrder(wo)) continue;
+      const { data: done } = await supabase.from("invoices").select("id").or(`work_order_id.eq.${id},extra_work_order_ids.cs.{${id}}`).limit(1);
+      if (done?.length) continue;
+      const { data: q } = await supabase.from("quotes").select("lines, vat_rate, number").eq("work_order_id", id).eq("status", "akkoord").order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const rows = quoteInvoiceLines(q?.lines as InvoiceLine[] | null, Number(q?.vat_rate ?? wo.vat_rate));
+      if (!rows.length) { problems.push(`${wo.customer_name}: geen goedgekeurde offertelijnen`); continue; }
+      const { data: klant } = wo.customer_id ? await supabase.from("customers").select("billing_email").eq("id", wo.customer_id).maybeSingle() : { data: null };
+      const base = buildInvoice({ wo: { ...wo, customer_billing_email: klant?.billing_email ?? null, distance_km: null, vat_rate: Number(wo.vat_rate) }, activity: null, seconds: 0, kmRate: 0, materials: [] });
+      const calc = buildManualInvoice(rows);
+      const issue = new Date().toISOString().slice(0, 10);
+      const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
+        p_work_order_id: wo.id, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+        p_customer: base.customer, p_lines: calc.lines, p_vat_rate: calc.vatRate, p_net: calc.net, p_vat: calc.vat, p_total: calc.total, p_paid_amount: Number(wo.paid_amount ?? 0),
+        p_contract_reference: q?.number ? `Offerte ${q.number}` : "",
+      });
+      if (error) throw new Error(error.message);
+      created.push(row.number);
+    }
+    return { created, problems };
+  });
+
 type ManualLine = { description: string; quantity: number; unit: string; unitPrice: number; vatRate: number; discount?: number; group?: string | null; hidePrice?: boolean };
 
 /** Handmade invoice from the "Nieuwe factuur" form: existing customer or free-form customer, own lines, per-line VAT. */
