@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
   const [busy, setBusy] = useState(false);
   const key = useRef<string>("");
   const d = q.data;
+  useEffect(() => { if (open && d && !body) { setPhone(d.phone); setBody(d.template); } }, [open, d]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = () => {
     setConfirm(false);
@@ -47,7 +48,6 @@ export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
       <Button size="lg" className="h-14 w-full text-base font-black uppercase" onClick={start}>📱 SMS – wij zijn onderweg</Button>
       {open && q.isLoading && <p className="mt-2 text-sm text-muted-foreground">Gegevens laden…</p>}
       {open && q.isError && <p className="mt-2 text-sm text-destructive">Kon de SMS-gegevens niet laden: {(q.error as Error).message}</p>}
-      {open && d && !phone && !body && (setPhone(d.phone), setBody(d.template), null)}
       {d && !d.config.configured && (
         <p className="mt-2 text-sm text-destructive">SMS is nog niet ingesteld ({d.config.missing.join(", ")}). Er wordt niets verzonden tot dit ingesteld is.</p>
       )}
