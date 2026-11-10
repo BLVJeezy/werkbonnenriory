@@ -981,6 +981,13 @@
       "when": 1794326897236,
       "tag": "0139_restrict_settings_activities_branches_read",
       "breakpoints": true
+    },
+    {
+      "idx": 140,
+      "version": "7",
+      "when": 1794327568058,
+      "tag": "0140_subcontractor_auto_close",
+      "breakpoints": true
     }
   ]
 }
