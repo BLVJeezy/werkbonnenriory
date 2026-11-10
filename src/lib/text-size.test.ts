@@ -18,3 +18,16 @@ describe("largeTextOn", () => {
     expect(largeTextOn(true, "off")).toBe(false);
   });
 });
+
+import { textSizeStatus } from "./text-size";
+describe("textSizeStatus", () => {
+  it("legt uit dat de ploeginstelling van kracht is", () => {
+    expect(textSizeStatus(true, null)).toContain("ploeg");
+  });
+  it("meldt dat de ploeginstelling bewaard blijft na lokaal uitzetten", () => {
+    expect(textSizeStatus(true, "off")).toContain("blijft bewaard");
+  });
+  it("toont normaal zonder keuzes", () => {
+    expect(textSizeStatus(false, null)).toBe("Normale tekstgrootte.");
+  });
+});

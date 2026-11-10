@@ -29,3 +29,17 @@ export function writeDeviceChoice(choice: DeviceChoice) {
     /* toestel bewaart niets: de instelling van de beheerder blijft dan gelden */
   }
 }
+
+/** Korte uitleg bij de knop: waar komt de huidige tekstgrootte vandaan? */
+export function textSizeStatus(adminSet: boolean, device: DeviceChoice): string {
+  const on = largeTextOn(adminSet, device);
+  if (device === null) {
+    return on
+      ? "Grote letters staan aan via de instelling van je ploeg (door de beheerder)."
+      : "Normale tekstgrootte.";
+  }
+  if (on) return adminSet ? "Grote letters aan op dit toestel (ook ploeginstelling)." : "Grote letters aan op dit toestel.";
+  return adminSet
+    ? "Normale tekst op dit toestel. Je ploeginstelling (grote letters) blijft bewaard."
+    : "Normale tekstgrootte op dit toestel.";
+}
