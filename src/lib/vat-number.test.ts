@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "./vat-number";
 
 it("keeps the customer VAT number extracted from mail", () => {
