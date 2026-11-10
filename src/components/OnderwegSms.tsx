@@ -24,6 +24,7 @@ export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
 
   const start = () => {
     setConfirm(false);
+    key.current = crypto.randomUUID();
     if (!d) { setOpen(true); q.refetch(); return; }
     setPhone(d.phone); setBody(d.template);
     key.current = crypto.randomUUID();
