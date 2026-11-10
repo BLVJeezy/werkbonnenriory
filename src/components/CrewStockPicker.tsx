@@ -22,11 +22,11 @@ export function CrewStockPicker({ workOrderId, technicianId, prods, onDone }: { 
   async function use(productId: string, p: Prod) {
     if (busy) return;
     const n = Number(qty[productId] ?? "1");
-    if (!(n > 0)) return toast.error("Aantal moet groter dan 0 zijn");
+    if (!(n > 0)) { toast.error("Aantal moet groter dan 0 zijn"); return; }
     setBusy(productId);
     const { error } = await supabase.from("materials").insert({ work_order_id: workOrderId, product_id: p.id, name: p.name, quantity: n, unit: p.unit, unit_price: Number(p.price), from_crew_stock: true });
     setBusy(null);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setQty({ ...qty, [productId]: "1" });
     qc.invalidateQueries({ queryKey: ["crew_stock", technicianId] });
     onDone();

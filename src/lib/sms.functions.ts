@@ -58,7 +58,7 @@ export const getOnderwegSms = createServerFn({ method: "POST" })
 
 export const sendOnderwegSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { workOrderId: string; requestKey: string; phone?: string; body: string }) => {
+  .inputValidator((i: { workOrderId: string; requestKey: string; phone?: string | undefined; body: string }) => {
     if (!/^[0-9a-f-]{36}$/i.test(i.requestKey)) throw new Error("Ongeldige aanvraag");
     const body = String(i.body ?? "").trim();
     if (!body || body.length > 480) throw new Error("Bericht moet tussen 1 en 480 tekens zijn");

@@ -46,7 +46,7 @@ function Page() {
     setBusy(true);
     const { error } = await supabase.rpc("crew_stock_admin", { p_tech: techId, p_product: product, p_mode: mode, p_quantity: qty, p_note: note });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Opgeslagen");
     qc.invalidateQueries({ queryKey: ["crew_stock", techId] });
     qc.invalidateQueries({ queryKey: ["crew_stock_moves", techId] });
@@ -67,7 +67,7 @@ function Page() {
         <form className="grid gap-2 rounded-md border bg-card p-3 sm:grid-cols-[1fr_7rem_10rem_1fr_auto]" onSubmit={(e) => {
           e.preventDefault();
           const n = Number(form.qty);
-          if (!form.product || !(n >= 0)) return toast.error("Kies een product en een aantal van 0 of meer");
+          if (!form.product || !(n >= 0)) { toast.error("Kies een product en een aantal van 0 of meer"); return; }
           apply(form.product, form.mode, n, form.note).then(() => setForm({ ...form, qty: "1", note: "" }));
         }}>
           <select required className="h-10 rounded-md border bg-background px-2" value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })}>
