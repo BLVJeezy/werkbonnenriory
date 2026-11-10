@@ -974,6 +974,13 @@
       "when": 1794308978223,
       "tag": "0138_crew_product_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 139,
+      "version": "7",
+      "when": 1794326897236,
+      "tag": "0139_restrict_settings_activities_branches_read",
+      "breakpoints": true
     }
   ]
 }
