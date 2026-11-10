@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -20,10 +20,13 @@ export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
   const [busy, setBusy] = useState(false);
   const key = useRef<string>("");
   const d = q.data;
+  useEffect(() => { if (open && d && !body) { setPhone(d.phone); setBody(d.template); } }, [open, d]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = () => {
-    if (!d) return;
-    setPhone(d.phone); setBody(d.template); setConfirm(false);
+    setConfirm(false);
+    key.current = crypto.randomUUID();
+    if (!d) { setOpen(true); q.refetch(); return; }
+    setPhone(d.phone); setBody(d.template);
     key.current = crypto.randomUUID();
     setOpen(true);
   };
@@ -42,11 +45,10 @@ export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
   }
 
   return (
-    <section className="no-print rounded-md border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-black uppercase">SMS aan klant</h2>
-        <Button onClick={start} disabled={!d}>📱 We zijn onderweg</Button>
-      </div>
+    <section className="no-print rounded-md border-2 border-primary bg-card p-3">
+      <Button size="lg" className="h-14 w-full text-base font-black uppercase" onClick={start}>📱 SMS – wij zijn onderweg</Button>
+      {open && q.isLoading && <p className="mt-2 text-sm text-muted-foreground">Gegevens laden…</p>}
+      {open && q.isError && <p className="mt-2 text-sm text-destructive">Kon de SMS-gegevens niet laden: {(q.error as Error).message}</p>}
       {d && !d.config.configured && (
         <p className="mt-2 text-sm text-destructive">SMS is nog niet ingesteld ({d.config.missing.join(", ")}). Er wordt niets verzonden tot dit ingesteld is.</p>
       )}
