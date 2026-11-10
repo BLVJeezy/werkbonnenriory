@@ -12,7 +12,7 @@ import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { AccountantPackage } from "@/components/AccountantPackage";
-import { createCreditNote, createInvoices, invoicePdf, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
+import { createCreditNote, createInvoices, createSubcontractInvoices, invoicePdf, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
 import { sendConfirmText } from "@/lib/invoice-delivery";
 import { isInvoiceEditable } from "@/lib/invoice";
 import { QrCode, Trash2 } from "lucide-react";
@@ -50,6 +50,7 @@ type TodoRow = {
   vat_rate: number;
   warranty: boolean;
   no_invoice: boolean;
+  subcontract_auto: boolean;
   time_entries: TimeEntry[];
   materials: { quantity: number; unit_price: number }[];
   technicians: { name: string } | null;
@@ -64,6 +65,7 @@ function woWhen(w: { scheduled_date: string | null; scheduled_from: string | nul
 function Facturen() {
   const qc = useQueryClient();
   const create = useServerFn(createInvoices);
+  const createSub = useServerFn(createSubcontractInvoices);
   const send = useServerFn(sendInvoices);
   const getPdf = useServerFn(invoicePdf);
   const creditNote = useServerFn(createCreditNote);
@@ -101,7 +103,7 @@ function Facturen() {
     refetchInterval: 10_000,
     queryFn: async () => {
       const [w, i, s, a, o] = await Promise.all([
-        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, no_invoice, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
+        supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, no_invoice, subcontract_auto, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
         supabase.from("activities").select("id, hourly_rate"),
@@ -117,7 +119,7 @@ function Facturen() {
       }
       const invoiced = new Set((i.data ?? []).flatMap((x) => [x.work_order_id, ...((x as { extra_work_order_ids?: string[] }).extra_work_order_ids ?? [])]));
       const uninvoiced = (w.data ?? []).filter((x) => !invoiced.has(x.id)) as unknown as TodoRow[];
-      return { todo: uninvoiced.filter((x) => !x.no_invoice), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], settings: s.data, activities: a.data ?? [], opens };
+      return { todo: uninvoiced.filter((x) => !x.no_invoice && !x.subcontract_auto), sub: uninvoiced.filter((x) => !x.no_invoice && x.subcontract_auto), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], settings: s.data, activities: a.data ?? [], opens };
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["facturen"] });
@@ -130,6 +132,17 @@ function Facturen() {
       toast.success(`${r.created.length} factuur/facturen gemaakt${r.sent ? `, ${r.sent} betaalde automatisch verzonden` : ""}${r.failed ? `, ${r.failed} verzending mislukt` : ""}`);
       setSelWo([]);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Omzetten mislukt"); }
+    setBusy(false);
+    refresh();
+  }
+  async function invoiceSub(ids: string[]) {
+    if (!confirm(`${ids.length} factuur/facturen maken volgens de goedgekeurde offerte? Ze worden nog niet verzonden.`)) return;
+    setBusy(true);
+    try {
+      const r = await createSub({ data: { workOrderIds: ids } });
+      if (r.created.length) toast.success(`${r.created.length} factuur/facturen gemaakt volgens offerte`);
+      if (r.problems.length) toast.error(r.problems.join(" · "));
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Factureren mislukt"); }
     setBusy(false);
     refresh();
   }
@@ -254,6 +267,33 @@ function Facturen() {
           </table>
         </div>
       </section>
+
+      {data.sub.length > 0 && (
+        <section className="space-y-3 rounded-md border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-black uppercase">Onderaannemers – factureren volgens offerte</h2>
+            <span className="text-sm text-muted-foreground">({data.sub.length})</span>
+            <Button size="sm" className="ml-auto" disabled={busy} onClick={() => invoiceSub(data.sub.map((w) => w.id))}>Alles factureren volgens offerte</Button>
+          </div>
+          <p className="text-sm text-muted-foreground">Opdrachten van onderaannemers zonder login worden op het einde van de opdrachtdag automatisch afgesloten. Factureer zodra de aankoopfactuur van de onderaannemer binnen is.</p>
+          <div className="overflow-x-auto">
+            <table className={tableCls}>
+              <thead><tr><Th>Nr.</Th><Th>Klant</Th><Th className="hidden sm:table-cell">Onderaannemer</Th><Th className="hidden sm:table-cell">Datum</Th><Th /></tr></thead>
+              <tbody>
+                {data.sub.map((w) => (
+                  <tr key={w.id}>
+                    <td><Link to="/werkbonnen/$id" params={{ id: w.id }} className="font-mono font-bold underline">{werkbonNr(w.number)}</Link></td>
+                    <td>{w.customer_name}</td>
+                    <td className="hidden sm:table-cell">{w.technicians?.name ?? "—"}</td>
+                    <td className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">{woWhen(w)}</td>
+                    <td className="text-right"><Button size="sm" disabled={busy} onClick={() => invoiceSub([w.id])}>Factureren volgens offerte</Button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {(data.noInvoice?.length ?? 0) > 0 && (
         <section className="space-y-3 rounded-md border bg-card p-4">

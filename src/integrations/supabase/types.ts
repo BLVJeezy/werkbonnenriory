@@ -4450,6 +4450,7 @@ export type Database = {
           source_subject: string | null
           status: string
           street: string | null
+          subcontract_auto: boolean
           syndicus: string | null
           technician_id: string | null
           urgent: boolean
@@ -4509,6 +4510,7 @@ export type Database = {
           source_subject?: string | null
           status?: string
           street?: string | null
+          subcontract_auto?: boolean
           syndicus?: string | null
           technician_id?: string | null
           urgent?: boolean
@@ -4568,6 +4570,7 @@ export type Database = {
           source_subject?: string | null
           status?: string
           street?: string | null
+          subcontract_auto?: boolean
           syndicus?: string | null
           technician_id?: string | null
           urgent?: boolean
@@ -4631,6 +4634,7 @@ export type Database = {
         Args: { p_hash: string }
         Returns: string
       }
+      close_subcontractor_work_orders: { Args: never; Returns: number }
       convert_approved_quote: { Args: { p_id: string }; Returns: string }
       create_contract_completion_invoice: {
         Args: {
