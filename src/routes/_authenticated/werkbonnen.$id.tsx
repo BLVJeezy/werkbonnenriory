@@ -548,16 +548,24 @@ function Detail() {
               refresh();
             }}
           >
-            <SearchSelect
-              className="min-w-0 flex-1 basis-full sm:basis-auto"
-              placeholder={prods.length ? "Kies product…" : isAdmin ? "Nog geen producten aangemaakt" : "Geen producten toegewezen aan deze ploeg"}
-              searchPlaceholder="Zoek product of alias…"
-              value={mat.productId}
-              onChange={(productId) => setMat({ ...mat, productId })}
-              options={materialChoices(prods, perms.showPrices)}
-            />
-            <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} aria-label="Aantal" />
-            <Button>Toevoegen</Button>
+            {prods.length === 0 ? (
+              <p className="flex-1 py-2 text-sm text-muted-foreground">
+                {isAdmin ? "Nog geen producten aangemaakt. Voeg ze toe via Producten." : "Er zijn nog geen producten aan deze ploeg toegewezen."}
+              </p>
+            ) : (
+              <>
+                <SearchSelect
+                  className="min-w-0 flex-1 basis-full sm:basis-auto"
+                  placeholder="Kies product…"
+                  searchPlaceholder="Zoek product of alias…"
+                  value={mat.productId}
+                  onChange={(productId) => setMat({ ...mat, productId })}
+                  options={materialChoices(prods, perms.showPrices)}
+                />
+                <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} aria-label="Aantal" />
+                <Button>Toevoegen</Button>
+              </>
+            )}
           </form>
         )}
       </section>
