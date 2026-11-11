@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Interne admin-interventiekaart: echte afgeronde werkbonnen, adresgroepering, filters/lijst/clusters, privé locatiecache en begrensde optionele geocoder; tests en ingelogde controle. Geen Simpla-factuuradressen als interventies.
+- [x] Interne admin-interventiekaart gebouwd: 71 echte afgetekende werkbonnen op 63 genormaliseerde bestemmingen, menu, filters/lijst, clusters, werkbonlinks, privé locatiecache en optionele begrensde geocoder. 27 tests en automatische type-/buildcontrole geslaagd; ingelogde echte-bronnencheck desktop/mobiel en werkbonlink zonder JS-fouten. Geen Simpla-adressen, datawijzigingen of externe adresopzoekingen.
+- [ ] Interventiepinnen vullen: alle 63 locaties missen opgeslagen coördinaten; wacht op handmatig bevestigde coördinaten of goedgekeurde adreszoekdienst met dagbudget. Pin/popover-flow met echte opgeslagen locatie nog niet uitvoerbaar zonder broncoördinaten. Echte oudere werkbonnen vóór 27 oktober 2026 niet beschikbaar; vereist daadwerkelijk interventiearchief. Publicatie nog niet uitgevoerd.
 - [x] Verduidelijking: alle beschikbare adressen op uitgevoerde werkbonnen als bron, met werfadres waar aangeduid; geen factuurhistoriek als fictieve interventies.
 
 - [x] Historische Simpla-productomzet hersteld: werkelijke lees-API en token bevestigd (2918 verkoopfacturen, 104 creditnota’s); factuurdatum/netto-kortingen, bron+nummerdeduplicatie met appvoorrang, aankoopfouten afzonderlijk, herkomst en niet-herkende productregels zichtbaar. 18 tests/typecontrole/build en ingelogde echte-bronnencontrole geslaagd; niets geïmporteerd/geboekt. Ambigue 110–200mm-camera’s niet gegokt bij 125–250. Publicatie en GitHub-syncstatus niet bevestigd.
