@@ -17,7 +17,8 @@ export function InterventionLocationDetails({ location, configured, onClose }: {
   return <Dialog open={!!location} onOpenChange={open => { if (!open) { onClose(); setLat(''); setLon(''); } }}><DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
     <DialogHeader><DialogTitle className="break-words">{location?.address}</DialogTitle></DialogHeader>
     {location && <>
-      <p className="text-sm text-muted-foreground">{location.customers.join(' · ')} · {location.orders.length} interventies</p>
+      <p className="text-sm text-muted-foreground">{location.customers.join(' · ')} · {location.orders.length} werkbonnen{location.simpla?.length ? ` · ${location.simpla.reduce((n,x)=>n+x.bills,0)} Simpla-facturen` : ''}</p>
+      {location.simpla?.map(x => <p key={x.id} className="text-sm">Simpla · {x.customer} · {x.bills} facturen{x.latest ? ` · laatste ${x.latest}` : ''}</p>)}
       <div className="divide-y">{location.orders.map(order => <div key={order.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
         <div><p className="font-semibold">{interventionDay(order)} · {order.activities?.name ?? 'Interventie'}</p><p className="text-sm text-muted-foreground">{order.customer_name} · {order.technicians?.name ?? 'Geen ploeg'}</p></div>
         <Button variant="outline" size="sm" asChild><Link to="/werkbonnen/$id" params={{ id: order.id }}>Werkbon {order.number ?? 'Nieuw'}</Link></Button>
@@ -33,7 +34,7 @@ export function InterventionLocationDetails({ location, configured, onClose }: {
         }}>
           <div className="grid grid-cols-2 gap-2"><label className="text-sm">Breedtegraad<Input aria-label="Breedtegraad" value={lat} onChange={e => setLat(e.target.value)} inputMode="decimal" required /></label><label className="text-sm">Lengtegraad<Input aria-label="Lengtegraad" value={lon} onChange={e => setLon(e.target.value)} inputMode="decimal" required /></label></div>
           <Button disabled={busy} type="submit">{busy ? 'Bezig…' : 'Coördinaten opslaan'}</Button>
-          {configured && !located(location.cache) && <Button type="button" variant="outline" disabled={busy} onClick={async () => { if (!firstOrder) return; setBusy(true); try { const result = await geocode({ data: { ids: [firstOrder.id] } }); toast.info(result.found ? 'Locatie gevonden.' : result.stopped === 'budget' ? 'Dagbudget bereikt.' : 'Nog geen exacte locatie gevonden.'); await qc.invalidateQueries({ queryKey: ['intervention-map'] }); onClose(); } catch(error) { toast.error(error instanceof Error ? error.message : 'Opzoeken mislukt.'); } finally { setBusy(false); } }}>Adres opnieuw opzoeken</Button>}
+          {configured && !located(location.cache) && <Button type="button" variant="outline" disabled={busy} onClick={async () => { if (!firstOrder) return; setBusy(true); try { const result = await geocode({ data: { ids: [firstOrder.id], simplaIds: [] } }); toast.info(result.found ? 'Locatie gevonden.' : result.stopped === 'budget' ? 'Dagbudget bereikt.' : 'Nog geen exacte locatie gevonden.'); await qc.invalidateQueries({ queryKey: ['intervention-map'] }); onClose(); } catch(error) { toast.error(error instanceof Error ? error.message : 'Opzoeken mislukt.'); } finally { setBusy(false); } }}>Adres opnieuw opzoeken</Button>}
         </form>}
       </div>
     </>}

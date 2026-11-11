@@ -40,3 +40,23 @@ describe('Interventiekaart', () => {
     expect(pickPremisesLocation({ results: [{ geometry: { location: { lat: 999, lng: 4 }, location_type: 'ROOFTOP' } }] })).toBeNull();
   });
 });
+import { buildSimplaLocations, mergeSimplaLocations, emptyMapFilters as noFilters } from './intervention-map';
+describe('Simpla-adressen op de interventiekaart', () => {
+  const customers = [
+    { customerId: 1, customerName: 'Jan', customerStreetNr: 'Kerkstraat 12', customerPostal: '9000', customerCity: 'Gent' },
+    { customerId: 2, customerName: 'Enkel gemeente', customerStreetNr: '', customerPostal: '3740', customerCity: 'Bilzen' },
+    { customerId: 3, customerName: 'VME', customerStreetNr: 'Kantoor 1', customerPostal: '1000', customerCity: 'Brussel', deliveryStreetNr: 'Werf 5', deliveryPostal: '3600', deliveryCity: 'Genk' },
+  ];
+  const rows = buildSimplaLocations(customers, [{ billCustomerId: 1, billDate: '2024-05-01T00:00' }, { billCustomerId: 1, billDate: '2025-01-02' }]);
+  it('slaat adressen zonder straat over en gebruikt het leveringsadres', () => {
+    expect(rows.map(r => r.address)).toEqual(['Kerkstraat 12, 9000 Gent', 'Werf 5, 3600 Genk']);
+    expect(rows[0]).toMatchObject({ bills: 2, latest: '2025-01-02' });
+  });
+  it('voegt een Simpla-adres samen met een bestaande locatie op hetzelfde adres', () => {
+    const merged = mergeSimplaLocations([{ key: 'kerkstraat 12 9000 gent', address: 'Kerkstraat 12, 9000 Gent', customers: ['Jan'], latest: '2026-11-01', orders: [], cache: null }], rows, [], noFilters);
+    expect(merged).toHaveLength(2); expect(merged[0]?.simpla).toHaveLength(1);
+  });
+  it('ploegfilter toont geen Simpla-adressen', () => {
+    expect(mergeSimplaLocations([], rows, [], { ...noFilters, crew: 'x' })).toHaveLength(0);
+  });
+});

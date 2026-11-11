@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import type { InterventionLocation } from '@/lib/intervention-map';
-import { located } from '@/lib/intervention-map';
+import { located, locationCount } from '@/lib/intervention-map';
 
 let loader: Promise<typeof google.maps> | null = null;
 function loadGoogleMaps(): Promise<typeof google.maps> {
@@ -56,11 +56,11 @@ export default function InterventionMap({ locations, selected, onSelect }: { loc
       if (!located(location.cache)) continue;
       const position = { lat: location.cache.lat, lng: location.cache.lon };
       bounds.extend(position);
-      const marker = new google.maps.Marker({ position, title: location.address, label: { text: String(location.orders.length), color: '#ffffff', fontWeight: '800' } });
+      const marker = new google.maps.Marker({ position, title: location.address, label: { text: String(locationCount(location)), color: '#ffffff', fontWeight: '800' } });
       marker.addListener('click', () => {
         const text = document.createElement('div');
         const title = document.createElement('strong'); title.textContent = location.address; text.append(title);
-        const details = document.createElement('p'); details.textContent = `${location.orders.length} interventies · ${location.latest}`; text.append(details);
+        const details = document.createElement('p'); details.textContent = `${locationCount(location)} interventies · ${location.latest}`; text.append(details);
         const names = document.createElement('p'); names.textContent = location.customers.join(', '); text.append(names);
         info.current?.setContent(text); info.current?.open({ map: instance, anchor: marker });
         callback.current(location.key);

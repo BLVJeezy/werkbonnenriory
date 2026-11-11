@@ -8,7 +8,7 @@ export type Intervention = AddressParts & SiteAddressParts & {
   no_invoice: boolean; subcontract_auto: boolean;
 };
 export type LocationCache = { address_key: string; lat: number | null; lon: number | null; state: string; source: string | null; error: string | null };
-export type InterventionLocation = { key: string; address: string; customers: string[]; latest: string; orders: Intervention[]; cache: LocationCache | null };
+export type InterventionLocation = { key: string; address: string; customers: string[]; latest: string; orders: Intervention[]; cache: LocationCache | null; simpla?: SimplaLocation[] };
 export type MapFilters = { from: string; until: string; crew: string; activity: string; status: string; search: string };
 export const emptyMapFilters: MapFilters = { from: '', until: '', crew: '', activity: '', status: '', search: '' };
 
@@ -70,3 +70,42 @@ export function pickPremisesLocation(payload: unknown): { lat: number; lon: numb
 export function located(cache: LocationCache | null): cache is LocationCache & { lat: number; lon: number } {
   return cache?.state === 'located' && typeof cache.lat === 'number' && typeof cache.lon === 'number' && Number.isFinite(cache.lat) && Number.isFinite(cache.lon) && Math.abs(cache.lat) <= 90 && Math.abs(cache.lon) <= 180;
 }
+// Historische Simpla-klantadressen (op uitdrukkelijke vraag van de beheerder mee op de kaart).
+export type SimplaCustomerRow = { customerId?: number; customerName?: string; customerStreetNr?: string | null; customerPostal?: string | null; customerCity?: string | null; deliveryStreetNr?: string | null; deliveryPostal?: string | null; deliveryCity?: string | null };
+export type SimplaBillRow = { billCustomerId?: number; billDate?: string | null };
+export type SimplaLocation = { id: number; key: string; address: string; customer: string; latest: string; bills: number };
+export function simplaAddress(c: SimplaCustomerRow): string | null {
+  const useDelivery = !!c.deliveryStreetNr?.trim() && !!(c.deliveryPostal?.trim() || c.deliveryCity?.trim());
+  const street = (useDelivery ? c.deliveryStreetNr : c.customerStreetNr)?.trim() ?? '';
+  const place = [useDelivery ? c.deliveryPostal : c.customerPostal, useDelivery ? c.deliveryCity : c.customerCity].map(v => v?.trim() ?? '').filter(Boolean).join(' ');
+  // Zonder straat is er geen exact adres: een gemeente alleen wordt nooit een pin.
+  return street && place ? `${street}, ${place}` : null;
+}
+export function buildSimplaLocations(customers: SimplaCustomerRow[], bills: SimplaBillRow[]): SimplaLocation[] {
+  const stats = new Map<number, { latest: string; bills: number }>();
+  for (const b of bills) { if (typeof b.billCustomerId !== 'number') continue; const s = stats.get(b.billCustomerId) ?? { latest: '', bills: 0 }; s.bills++; const d = (b.billDate ?? '').slice(0, 10); if (d > s.latest) s.latest = d; stats.set(b.billCustomerId, s); }
+  const out: SimplaLocation[] = [];
+  for (const c of customers) {
+    if (typeof c.customerId !== 'number') continue; const address = simplaAddress(c); if (!address) continue;
+    const s = stats.get(c.customerId) ?? { latest: '', bills: 0 };
+    out.push({ id: c.customerId, key: normalizeInterventionAddress(address), address, customer: c.customerName?.trim() || 'Simpla-klant', latest: s.latest, bills: s.bills });
+  }
+  return out;
+}
+/** Voegt Simpla-adressen samen met werkbonlocaties op hetzelfde genormaliseerde adres. Ploeg-, activiteit- en statusfilters gelden enkel voor werkbonnen. */
+export function mergeSimplaLocations(groups: InterventionLocation[], simpla: SimplaLocation[], caches: LocationCache[], filters: MapFilters): InterventionLocation[] {
+  if (filters.crew || filters.activity || filters.status) return groups;
+  const cache = new Map(caches.map(c => [c.address_key, c])); const byKey = new Map(groups.map(g => [g.key, { ...g }]));
+  const needle = normalizeInterventionAddress(filters.search);
+  for (const s of simpla) {
+    if ((filters.from || filters.until) && (!s.latest || (filters.from && s.latest < filters.from) || (filters.until && s.latest > filters.until))) continue;
+    if (needle && !normalizeInterventionAddress(`${s.address} ${s.customer}`).includes(needle)) continue;
+    const g = byKey.get(s.key) ?? { key: s.key, address: s.address, customers: [], latest: '', orders: [], cache: cache.get(s.key) ?? null, simpla: [] };
+    g.simpla = [...(g.simpla ?? []), s];
+    if (!g.customers.includes(s.customer)) g.customers.push(s.customer);
+    if (s.latest > g.latest) g.latest = s.latest;
+    byKey.set(s.key, g);
+  }
+  return [...byKey.values()].sort((a, b) => b.latest.localeCompare(a.latest));
+}
+export function locationCount(l: InterventionLocation): number { return l.orders.length + (l.simpla ?? []).reduce((n, s) => n + Math.max(1, s.bills), 0); }
