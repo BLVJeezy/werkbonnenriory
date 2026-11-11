@@ -40,7 +40,7 @@ describe('Interventiekaart', () => {
     expect(pickPremisesLocation({ results: [{ geometry: { location: { lat: 999, lng: 4 }, location_type: 'ROOFTOP' } }] })).toBeNull();
   });
 });
-import { buildSimplaLocations, mergeSimplaLocations, emptyMapFilters as noFilters } from './intervention-map';
+import { buildSimplaLocations, buildProjectLocations, mergeSimplaLocations, emptyMapFilters as noFilters } from './intervention-map';
 describe('Simpla-adressen op de interventiekaart', () => {
   const customers = [
     { customerId: 1, customerName: 'Jan', customerStreetNr: 'Kerkstraat 12', customerPostal: '9000', customerCity: 'Gent' },
@@ -48,13 +48,18 @@ describe('Simpla-adressen op de interventiekaart', () => {
     { customerId: 3, customerName: 'VME', customerStreetNr: 'Kantoor 1', customerPostal: '1000', customerCity: 'Brussel', deliveryStreetNr: 'Werf 5', deliveryPostal: '3600', deliveryCity: 'Genk' },
   ];
   const rows = buildSimplaLocations(customers, [{ billCustomerId: 1, billDate: '2024-05-01T00:00' }, { billCustomerId: 1, billDate: '2025-01-02' }]);
-  it('slaat adressen zonder straat over en gebruikt het leveringsadres', () => {
-    expect(rows.map(r => r.address)).toEqual(['Kerkstraat 12, 9000 Gent', 'Werf 5, 3600 Genk']);
+  it('slaat adressen zonder straat over en neemt factuur- én leveringsadres', () => {
+    expect(rows.map(r => r.address)).toEqual(['Kerkstraat 12, 9000 Gent', 'Kantoor 1, 1000 Brussel', 'Werf 5, 3600 Genk']);
+    expect(rows.map(r => r.ref)).toEqual(['s:1:f', 's:3:f', 's:3:l']);
     expect(rows[0]).toMatchObject({ bills: 2, latest: '2025-01-02' });
   });
   it('voegt een Simpla-adres samen met een bestaande locatie op hetzelfde adres', () => {
     const merged = mergeSimplaLocations([{ key: 'kerkstraat 12 9000 gent', address: 'Kerkstraat 12, 9000 Gent', customers: ['Jan'], latest: '2026-11-01', orders: [], cache: null }], rows, [], noFilters);
-    expect(merged).toHaveLength(2); expect(merged[0]?.simpla).toHaveLength(1);
+    expect(merged).toHaveLength(3); expect(merged[0]?.simpla).toHaveLength(1);
+  });
+  it('neemt projecten met volledig adres mee', () => {
+    const p = buildProjectLocations([{ id: 'a', name: 'Werf', street: 'Dorp', house_number: '3', postal_code: '3740', city: 'Bilzen', created_at: '2025-03-04T10:00', customers: { name: 'Piet' } }, { id: 'b', name: 'Leeg', street: null, house_number: null, postal_code: '3740', city: 'Bilzen', created_at: '2025-01-01' }]);
+    expect(p).toEqual([{ ref: 'p:a', source: 'project', key: 'dorp 3 3740 bilzen', address: 'Dorp 3, 3740 Bilzen', customer: 'Piet', latest: '2025-03-04', bills: 0 }]);
   });
   it('ploegfilter toont geen Simpla-adressen', () => {
     expect(mergeSimplaLocations([], rows, [], { ...noFilters, crew: 'x' })).toHaveLength(0);
