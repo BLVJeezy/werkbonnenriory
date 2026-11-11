@@ -18,7 +18,7 @@ Antwoord (voorbeeld):
 {
   "version": 1,
   "work_orders": [
-    { "id": "00000000-0000-4000-8000-000000000001", "email": "klant@example.com", "completed_at": "2026-11-02T12:00:00Z" }
+    { "id": "00000000-0000-4000-8000-000000000001", "email": "klant@example.com", "completed_at": "2026-11-02T12:00:00Z", "customer_name": "Jan Peeters" }
   ],
   "next_cursor": { "completed_at": "2026-11-02T12:00:00Z", "id": "00000000-0000-4000-8000-000000000001" },
   "has_more": false
