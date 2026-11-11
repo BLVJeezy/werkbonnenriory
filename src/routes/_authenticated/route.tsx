@@ -108,6 +108,7 @@ function Layout() {
                   Offertes
                 </Link>
                 <Link to="/contracten" className={navCls} activeProps={active}>Contracten</Link>
+                <Link to="/interventiekaart" className={navCls} activeProps={active}>Interventiekaart</Link>
                 <Link to="/facturen" className={navCls} activeProps={active}>
                   Facturen
                 </Link>
