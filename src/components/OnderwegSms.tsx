@@ -103,6 +103,5 @@ export function OnderwegSms({ workOrderId, compact = false }: { workOrderId: str
           ))}
         </ul>
       )}
-    </section>
-  );
+    </section>  );
 }
