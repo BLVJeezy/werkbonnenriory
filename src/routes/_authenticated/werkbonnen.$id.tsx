@@ -36,6 +36,8 @@ import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { startCcvPayment } from '@/lib/ccv.functions';
 import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
 import { OnderwegSms } from '@/components/OnderwegSms';
+import { SearchSelect } from '@/components/SearchSelect';
+import { materialChoices } from '@/lib/material-options';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -93,7 +95,6 @@ function Detail() {
   const perms = signing ? { ...basePerms, showPrices: false, canPayment: false } : basePerms;
   const money = (n: number) => (perms.showPrices ? euro(n) : "");
   const [mat, setMat] = useState({ productId: "", quantity: "1" });
-  const [prodQ, setProdQ] = useState("");
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
