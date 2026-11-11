@@ -18,7 +18,7 @@ export function InterventionLocationDetails({ location, configured, onClose }: {
     <DialogHeader><DialogTitle className="break-words">{location?.address}</DialogTitle></DialogHeader>
     {location && <>
       <p className="text-sm text-muted-foreground">{location.customers.join(' · ')} · {location.orders.length} werkbonnen{location.simpla?.length ? ` · ${location.simpla.reduce((n,x)=>n+x.bills,0)} Simpla-facturen` : ''}</p>
-      {location.simpla?.map(x => <p key={x.id} className="text-sm">Simpla · {x.customer} · {x.bills} facturen{x.latest ? ` · laatste ${x.latest}` : ''}</p>)}
+      {location.simpla?.map(x => <p key={x.ref} className="text-sm">{x.source === 'project' ? `Project · ${x.customer}` : `Simpla ${x.ref.endsWith(':l') ? 'leveringsadres' : 'factuuradres'} · ${x.customer} · ${x.bills} facturen`}{x.latest ? ` · ${x.source === 'project' ? 'aangemaakt' : 'laatste'} ${x.latest}` : ''}</p>)}
       <div className="divide-y">{location.orders.map(order => <div key={order.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
         <div><p className="font-semibold">{interventionDay(order)} · {order.activities?.name ?? 'Interventie'}</p><p className="text-sm text-muted-foreground">{order.customer_name} · {order.technicians?.name ?? 'Geen ploeg'}</p></div>
         <Button variant="outline" size="sm" asChild><Link to="/werkbonnen/$id" params={{ id: order.id }}>Werkbon {order.number ?? 'Nieuw'}</Link></Button>
