@@ -10,6 +10,11 @@ import { FinanceYear } from "@/components/FinanceYear";
 import { computeTotals } from "@/lib/billing";
 import { totalSeconds } from "@/lib/time";
 import { productRevenue, type ProductLine } from "@/lib/product-revenue";
+import { PRODUCT_GROUPS } from "@/lib/product-revenue";
+import { appProductLines } from "@/lib/product-sales";
+import { fetchAll } from "@/lib/fetch-all";
+import { Button } from "@/components/ui/button";
+import { useServerFn } from "@tanstack/react-start";
 import { simplaDashboardProducts } from "@/lib/simpla-product-revenue.functions";
 import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
 import {
@@ -97,35 +102,24 @@ function Dashboard() {
   });
 
   const [simplaError, setSimplaError] = useState<string | null>(null);
+  const [costError, setCostError] = useState<string | null>(null);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const readSimpla = useServerFn(simplaDashboardProducts);
   const [costs, setCosts] = useState<{ key: string; amount: number }[]>([]);
-  // Omzet per product: Simpla-facturen vóór de app (alleen lezen) + materialen op werkbonnen (werkdag) + lijnen van zelf gemaakte facturen.
-  const { data: prodLines = [] } = useQuery({
+  // Product sales use invoice snapshots and invoice dates; daily revenue keeps its work-day rules.
+  const { data: prodLines = [], isFetching: productsLoading, error: productError, refetch: refreshProducts } = useQuery({
     queryKey: ["dashboard-producten", from, to],
     enabled: role === "admin" && !!from && !!to && from <= to,
     queryFn: async () => {
-      const early = new Date(`${from}T12:00:00Z`); early.setUTCDate(early.getUTCDate() - 60);
-      const [w, inv] = await Promise.all([
-        supabase.from("work_orders").select("scheduled_date, signed_at, materials(name, quantity, unit_price)").eq("status", "afgetekend").eq("no_invoice", false).gte("signed_at", early.toISOString()).limit(5000),
-        supabase.from("invoices").select("kind, lines, work_order_id").is("work_order_id", null).gte("issue_date", from).lte("issue_date", to),
+      const [inv, sim] = await Promise.all([
+        fetchAll((a, b) => supabase.from("invoices").select("id, number, issue_date, kind, lines").gte("issue_date", from).lte("issue_date", to).order("id").range(a, b)),
+        readSimpla({ data: { from, to } }).catch(() => ({ lines: [] as ProductLine[], costs: [] as { key: string; amount: number }[], error: "Simpla niet bereikbaar", costError: "Aankoopkosten niet beschikbaar", checkedAt: null })),
       ]);
-      if (w.error) throw w.error;
-      const sim = await simplaDashboardProducts({ data: { from, to } }).catch(() => ({ lines: [] as ProductLine[], costs: [] as { key: string; amount: number }[], error: "Simpla niet bereikbaar" }));
       setSimplaError(sim.error);
+      setCostError(sim.costError);
+      setCheckedAt(sim.checkedAt);
       setCosts(sim.costs);
-      const out: ProductLine[] = [...sim.lines];
-      for (const o of w.data ?? []) {
-        const day = (o.scheduled_date ?? o.signed_at ?? "").slice(0, 10);
-        if (!day || day < from || day > to) continue;
-        for (const m of o.materials) out.push({ name: m.name, quantity: Number(m.quantity), amount: Number(m.quantity) * Number(m.unit_price) });
-      }
-      for (const i of inv.data ?? []) {
-        const sg = i.kind === "creditnota" ? -1 : 1;
-        for (const l of (Array.isArray(i.lines) ? i.lines : []) as any[]) {
-          const q = Number(l?.quantity ?? 0);
-          out.push({ name: String(l?.description ?? ""), quantity: sg * Math.abs(q), amount: sg * Math.abs(Number(l?.amount ?? q * Number(l?.unitPrice ?? 0))) });
-        }
-      }
-      return out;
+      return [...sim.lines, ...appProductLines(inv, from, to)];
     },
   });
 
@@ -178,22 +172,38 @@ function Dashboard() {
         </div>
       </div>
 
-      <h2 className="text-lg font-black uppercase">Omzet per product</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-black uppercase">Omzet per product</h2>
+        <Button variant="outline" disabled={productsLoading} onClick={() => refreshProducts()}>{productsLoading ? "Ophalen…" : "Opnieuw ophalen"}</Button>
+      </div>
+      {productError && <p role="alert" className="text-destructive">Productomzet kon niet worden geladen. Probeer opnieuw.</p>}
+      {simplaError && <p role="alert" className="text-destructive">Historische omzet ontbreekt: {simplaError}. De bedragen zijn onvolledig.</p>}
+      {costError && <p role="alert" className="text-destructive">Kosten en marge zijn onvolledig: {costError}.</p>}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {productRevenue(prodLines).map((p) => (
           <div key={p.key} className="rounded-md border bg-card p-3">
             <p className="text-xs font-bold uppercase opacity-70">{p.label}</p>
-            <p className="text-xl font-black">{euro(p.amount)}</p>
+            <p className="text-xl font-black">{productsLoading ? "…" : euro(p.amount)}</p>
             <p className="text-xs opacity-70">{Math.round(p.quantity * 100) / 100} stuks (excl. btw)</p>
+            <p className="mt-1 text-xs">Simpla: {euro(productRevenue(prodLines.filter(l => l.source === "simpla")).find(g => g.key === p.key)?.amount ?? 0)} · App: {euro(productRevenue(prodLines.filter(l => l.source === "app")).find(g => g.key === p.key)?.amount ?? 0)}</p>
             {(p.key === "regenput" || p.key === "septisch" || p.key === "riostop") && (() => {
               const k = costs.filter((c) => c.key === p.key).reduce((s, c) => s + c.amount, 0);
               const who = p.key === "regenput" ? "Rioclean" : p.key === "septisch" ? "leveranciers" : "IDBS";
-              return <p className="mt-1 text-xs"><span className="font-bold">Kost {who}:</span> {euro(k)} · <span className="font-bold">Marge:</span> {euro(p.amount - k)}</p>;
+              return <p className="mt-1 text-xs"><span className="font-bold">Kost {who}:</span> {euro(k)} · <span className="font-bold">Marge:</span> {costError || simplaError || productError || productsLoading ? "Niet beschikbaar" : euro(p.amount - k)}</p>;
             })()}
           </div>
         ))}
       </div>
-      <p className="text-xs opacity-70">Inclusief Simpla-facturen van vóór de eerste werkbon in deze app.{simplaError ? ` Simpla kon niet gelezen worden: ${simplaError}` : ""}</p>
+      <p className="text-xs opacity-70">Verkoopfacturen en creditnota’s uit Simpla en deze app, op factuurdatum en excl. btw. Nog niet gefactureerde werkbonnen tellen hier niet mee.{checkedAt ? ` Simpla gecontroleerd: ${new Date(checkedAt).toLocaleString("nl-BE")}.` : ""}</p>
+      <details className="border-t pt-3">
+        <summary className="cursor-pointer text-sm font-bold">Overige / niet-herkende productregels ({prodLines.filter(l => !PRODUCT_GROUPS.some(g => g.match(l.name))).length})</summary>
+        <div className="mt-2 max-h-96 overflow-auto">
+          <table className="w-full text-left text-xs">
+            <thead><tr><th>Bron</th><th>Factuur</th><th>Datum</th><th>Product</th><th>Excl. btw</th></tr></thead>
+            <tbody>{prodLines.filter(l => !PRODUCT_GROUPS.some(g => g.match(l.name))).map((l, index) => <tr key={`${l.source}-${l.invoiceNumber}-${index}`} className="border-t"><td className="p-1">{l.source === "simpla" ? "Simpla" : "App"}</td><td className="p-1">{l.invoiceNumber}</td><td className="p-1 whitespace-nowrap">{l.date}</td><td className="p-1">{l.name || "Zonder omschrijving"}{l.sourceProductId ? ` (Simpla-product ${l.sourceProductId})` : ""}</td><td className="p-1 whitespace-nowrap">{euro(l.amount)}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </details>
 
       <div className="rounded-md border bg-card p-3 sm:p-4">
         <p className="mb-3 text-sm font-bold uppercase opacity-70">

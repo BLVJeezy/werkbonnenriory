@@ -1,4 +1,4 @@
-export type ProductLine = { name: string; quantity: number; amount: number };
+export type ProductLine = { name: string; quantity: number; amount: number; source?: "app" | "simpla"; date?: string; invoiceNumber?: string; sourceProductId?: string };
 export type ProductGroup = { key: string; label: string; match: (name: string) => boolean };
 
 const n = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");

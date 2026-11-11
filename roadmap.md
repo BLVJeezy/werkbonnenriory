@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Historische Simpla-productomzet hersteld: werkelijke lees-API en token bevestigd (2918 verkoopfacturen, 104 creditnota’s); factuurdatum/netto-kortingen, bron+nummerdeduplicatie met appvoorrang, aankoopfouten afzonderlijk, herkomst en niet-herkende productregels zichtbaar. 18 tests/typecontrole/build en ingelogde echte-bronnencontrole geslaagd; niets geïmporteerd/geboekt. Ambigue 110–200mm-camera’s niet gegokt bij 125–250. Publicatie en GitHub-syncstatus niet bevestigd.
+
 - [x] Niko's bestaande live link behoudt token en toont nu 08:00–12:00 en 13:00–16:00 voor dinsdag/maandag; vrijdag behouden. Dinsdagnamiddag mobiel selecteerbaar en bevestigingsknop actief, niets namens klant bevestigd. Nieuwe ploegvoorstellen worden bij opslaan gesplitst; bevestigingsmail gebruikt exacte gekozen uren. Vijftien tests geslaagd; nieuwe automatische splitsing/mailtekst vereist publicatie, bestaande live link al aangepast.
 
 - [x] Voorgestelde tijdsloten onderaannemer zichtbaar in Kalender en taakdetail, inclusief klantalternatieven en bevestigingsstatus. Drie echte Rioclean-voorstellen teruggelezen in beide schermen, mobiel zonder overflow; twaalf bestaande afspraaktests geslaagd. Geen afspraak of mail gewijzigd.
