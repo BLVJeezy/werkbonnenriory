@@ -12,7 +12,7 @@ const googleKeys = () => { vi.stubEnv('GOOGLE_MAPS_API_KEY', 'connection-key'); 
 const workOrders = { select: () => workOrders, eq: () => workOrders, in: async () => ({ data: [{ address: 'Kerkstraat 12, 9000 Gent' }], error: null }) };
 const locations = () => { const table = { update: () => table, eq: vi.fn() }; table.eq.mockReturnValueOnce(table).mockResolvedValueOnce({ error: null }); return table; };
 describe('Interventiekaart servergrenzen', () => {
-  it.each([['lijst',read,{offset:0}],['opslaan',save,{id:'id',lat:51,lon:5}],['geocoderen',lookup,{ids:['id']}]] as const)('weigert niet-admin vóór adreslezen of externe actie: %s', async (_name,run,data) => {
+  it.each([['lijst',read,{offset:0}],['opslaan',save,{id:'id',lat:51,lon:5}],['geocoderen',lookup,{ids:['id'],simplaIds:[]}]] as const)('weigert niet-admin vóór adreslezen of externe actie: %s', async (_name,run,data) => {
     const from = vi.fn(); const fetch = vi.fn(); vi.stubGlobal('fetch',fetch);
     await expect(run({data,context:{userId:'user',supabase:{rpc:async()=>({data:false,error:null}),from}}})).rejects.toThrow('Alleen beheerders');
     expect(from).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
@@ -20,27 +20,27 @@ describe('Interventiekaart servergrenzen', () => {
   it('weigert geocoding zonder gekoppelde Google Maps zonder externe verzoeken',async()=>{
     vi.stubEnv('GOOGLE_MAPS_API_KEY',''); vi.stubEnv('LOVABLE_API_KEY','');
     const fetch = vi.fn(); const from=vi.fn(); vi.stubGlobal('fetch',fetch);
-    await expect(lookup({data:{ids:['id']},context:{userId:'admin',supabase:{rpc:async()=>({data:true,error:null}),from}}})).rejects.toThrow('Google Maps');
+    await expect(lookup({data:{ids:['id'],simplaIds:[]},context:{userId:'admin',supabase:{rpc:async()=>({data:true,error:null}),from}}})).rejects.toThrow('Google Maps');
     expect(fetch).not.toHaveBeenCalled();expect(from).not.toHaveBeenCalled();
   });
   it('hergebruikt gecachte locaties zonder geocoderverzoek',async()=>{
     googleKeys();
     const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
     const rpc=vi.fn().mockResolvedValueOnce({data:true,error:null}).mockResolvedValueOnce({data:'cached',error:null});
-    expect(await lookup({data:{ids:['id']},context:{userId:'admin',supabase:{rpc,from:()=>workOrders}}})).toEqual({found:0,failed:0,stopped:null});expect(fetch).not.toHaveBeenCalled();
+    expect(await lookup({data:{ids:['id'],simplaIds:[]},context:{userId:'admin',supabase:{rpc,from:()=>workOrders}}})).toEqual({found:0,failed:0,stopped:null});expect(fetch).not.toHaveBeenCalled();
   });
   it('stopt bij globaal dagbudget vóór externe verzoeken',async()=>{
     googleKeys(); vi.stubEnv('INTERVENTION_GEOCODER_DAILY_LIMIT','5');
     const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
     const rpc=vi.fn().mockResolvedValueOnce({data:true,error:null}).mockResolvedValueOnce({data:'budget',error:null});
-    expect(await lookup({data:{ids:['id']},context:{userId:'admin',supabase:{rpc,from:()=>workOrders}}})).toEqual({found:0,failed:0,stopped:'budget'});expect(fetch).not.toHaveBeenCalled();
+    expect(await lookup({data:{ids:['id'],simplaIds:[]},context:{userId:'admin',supabase:{rpc,from:()=>workOrders}}})).toEqual({found:0,failed:0,stopped:'budget'});expect(fetch).not.toHaveBeenCalled();
   });
   it('slaagt en bewaart enkel een exact adres uit het Google-antwoord',async()=>{
     googleKeys();
     const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>({status:'OK',results:[{geometry:{location:{lat:50.85,lng:4.35},location_type:'ROOFTOP'}}]})});vi.stubGlobal('fetch',fetch);
     const rpc=vi.fn().mockResolvedValueOnce({data:true,error:null}).mockResolvedValueOnce({data:'claimed',error:null});
     const tables: Record<string,unknown> = { work_orders: workOrders, intervention_locations: locations() };
-    expect(await lookup({data:{ids:['id']},context:{userId:'admin',supabase:{rpc,from:(table:string)=>tables[table]}}})).toEqual({found:1,failed:0,stopped:null});
+    expect(await lookup({data:{ids:['id'],simplaIds:[]},context:{userId:'admin',supabase:{rpc,from:(table:string)=>tables[table]}}})).toEqual({found:1,failed:0,stopped:null});
     expect(fetch).toHaveBeenCalledOnce();
     const [url,init] = fetch.mock.calls[0] as [string,RequestInit];
     expect(url).toContain('connector-gateway.lovable.dev/google_maps/maps/api/geocode/json');
@@ -52,6 +52,6 @@ describe('Interventiekaart servergrenzen', () => {
     const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>({status:'OK',results:[{geometry:{location:{lat:50.85,lng:4.35},location_type:'APPROXIMATE'}}]})});vi.stubGlobal('fetch',fetch);
     const rpc=vi.fn().mockResolvedValueOnce({data:true,error:null}).mockResolvedValueOnce({data:'claimed',error:null});
     const tables: Record<string,unknown> = { work_orders: workOrders, intervention_locations: locations() };
-    expect(await lookup({data:{ids:['id']},context:{userId:'admin',supabase:{rpc,from:(table:string)=>tables[table]}}})).toEqual({found:0,failed:1,stopped:null});
+    expect(await lookup({data:{ids:['id'],simplaIds:[]},context:{userId:'admin',supabase:{rpc,from:(table:string)=>tables[table]}}})).toEqual({found:0,failed:1,stopped:null});
   });
 });
