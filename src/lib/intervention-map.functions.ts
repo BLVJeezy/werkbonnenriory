@@ -2,7 +2,16 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { destinationAddress } from '@/lib/address';
-import { normalizeInterventionAddress, requireInterventionAdmin, type Intervention } from './intervention-map';
+import { normalizeInterventionAddress, pickPremisesLocation, requireInterventionAdmin, type Intervention } from './intervention-map';
+
+const GATEWAY_URL = 'https://connector-gateway.lovable.dev/google_maps';
+function geocoderConfig() {
+  const apiKey = process.env['GOOGLE_MAPS_API_KEY'];
+  const lovableKey = process.env['LOVABLE_API_KEY'];
+  const budget = Number(process.env['INTERVENTION_GEOCODER_DAILY_LIMIT'] ?? 50);
+  const configured = !!apiKey && !!lovableKey && Number.isInteger(budget) && budget > 0 && budget <= 1000;
+  return { apiKey, lovableKey, budget, configured };
+}
 
 const projection = 'id,number,customer_name,address,street,house_number,postal_code,city,use_site_address,site_street,site_house_number,site_postal_code,site_city,status,signed_at,paid_at,scheduled_date,created_at,technician_id,activity_id,no_invoice,subcontract_auto,technicians(name),activities(name)' as const;
 
@@ -19,9 +28,7 @@ export const getInterventionPage = createServerFn({ method: 'POST' })
     const keys = [...new Set(rows.map(row => destinationAddress(row)).filter((value): value is string => !!value).map(normalizeInterventionAddress))];
     const cache = keys.length ? await context.supabase.from('intervention_locations').select('address_key,lat,lon,state,source,error').in('address_key', keys) : { data: [], error: null };
     if (cache.error) throw new Error(cache.error.message);
-    const endpoint = process.env['INTERVENTION_GEOCODER_URL'];
-    const budget = Number(process.env['INTERVENTION_GEOCODER_DAILY_LIMIT'] ?? 0);
-    const configured = !!endpoint?.startsWith('https://') && Number.isInteger(budget) && budget > 0 && budget <= 1000;
+    const { configured, budget } = geocoderConfig();
     return { rows, caches: cache.data ?? [], next: rows.length === 500 ? data.offset + 500 : null, configured, budget: configured ? budget : 0 };
   });
 
