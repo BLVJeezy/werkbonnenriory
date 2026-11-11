@@ -2079,6 +2079,7 @@ export type Database = {
           sent_via: string | null
           status: string
           total: number
+          updated_at: string
           vat: number
           vat_rate: number
           work_order_id: string | null
@@ -2116,6 +2117,7 @@ export type Database = {
           sent_via?: string | null
           status?: string
           total: number
+          updated_at?: string
           vat: number
           vat_rate: number
           work_order_id?: string | null
@@ -2153,6 +2155,7 @@ export type Database = {
           sent_via?: string | null
           status?: string
           total?: number
+          updated_at?: string
           vat?: number
           vat_rate?: number
           work_order_id?: string | null
@@ -4687,6 +4690,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      attribution_invoices: {
+        Args: { _after: string; _after_id: string; _limit: number }
+        Returns: {
+          created_at: string
+          credit_for: string
+          customer: Json
+          customer_id: string
+          due_date: string
+          id: string
+          issue_date: string
+          kind: string
+          lines: Json
+          net: number
+          number: string
+          paid_amount: number
+          paid_at: string
+          sent_at: string
+          status: string
+          total: number
+          updated_at: string
+          vat: number
+          vat_rate: number
+          work_orders: Json
+        }[]
+      }
       claim_crew_password_invitation: {
         Args: { p_hash: string }
         Returns: string
@@ -4759,6 +4787,7 @@ export type Database = {
           sent_via: string | null
           status: string
           total: number
+          updated_at: string
           vat: number
           vat_rate: number
           work_order_id: string | null
