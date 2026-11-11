@@ -35,6 +35,8 @@ import { X, FilePenLine, Plus } from "lucide-react";
 import { FirstCustomerLabel } from "@/components/FirstCustomerLabel";
 import { calendarWindow } from "@/lib/calendar-window";
 import { AppointmentProposal } from "@/components/AppointmentProposal";
+import { OnderwegSms } from "@/components/OnderwegSms";
+import { showOnderwegSms } from "@/lib/onderweg-sms";
 
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Riory" }, { name: "description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:title", content: "Kalender — Riory" }, { property: "og:description", content: "Plan Riory-taken per dag en wijs ploegen en activiteiten toe." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -212,6 +214,7 @@ function Kalender() {
       </>}
       </div>
       <div className={horizontal ? "grid min-w-0 content-start gap-2 sm:grid-cols-2" : "grid min-w-0 grid-cols-2 gap-1.5"}>
+      {showOnderwegSms(w.status) && <div className="col-span-full"><OnderwegSms compact workOrderId={w.id} /></div>}
       <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number ?? "nieuw"}`} className="mt-0 h-9 min-w-0 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onChange={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
       <select aria-label={`Ploeg taak ${w.number ?? "nieuw"}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
