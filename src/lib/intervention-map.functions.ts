@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { destinationAddress } from '@/lib/address';
-import { buildSimplaLocations, normalizeInterventionAddress, pickPremisesLocation, requireInterventionAdmin, type Intervention, type SimplaLocation } from './intervention-map';
+import { buildProjectLocations, buildSimplaLocations, type ProjectRow, normalizeInterventionAddress, pickPremisesLocation, requireInterventionAdmin, type Intervention, type SimplaLocation } from './intervention-map';
 
 const GATEWAY_URL = 'https://connector-gateway.lovable.dev/google_maps';
 function geocoderConfig() {
@@ -66,6 +66,17 @@ async function loadSimplaLocations(): Promise<SimplaLocation[]> {
   const rows = buildSimplaLocations(customers, bills); simplaMemo = { at: Date.now(), rows }; return rows;
 }
 
+// Projectadressen (werven per klant) — gelezen als admin, dus RLS blijft gelden.
+async function loadProjectLocations(supabase: any): Promise<SimplaLocation[]> {
+  const rows: ProjectRow[] = [];
+  for (let from = 0; ; from += 1000) {
+    const res = await supabase.from('projects').select('id,name,street,house_number,postal_code,city,created_at,customers(name)').order('id').range(from, from + 999);
+    if (res.error) throw new Error(`Projecten: ${res.error.message}`);
+    rows.push(...(res.data ?? [])); if ((res.data ?? []).length < 1000) break;
+  }
+  return buildProjectLocations(rows);
+}
+
 export const getSimplaMapLocations = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -73,7 +84,7 @@ export const getSimplaMapLocations = createServerFn({ method: 'POST' })
     if (role.error) throw new Error('Toegang kon niet gecontroleerd worden.');
     requireInterventionAdmin(role.data);
     try {
-      const rows = await loadSimplaLocations();
+      const rows = [...await loadSimplaLocations(), ...await loadProjectLocations(context.supabase)];
       const keys = [...new Set(rows.map(r => r.key))]; const caches = [];
       for (let i = 0; i < keys.length; i += 150) {
         const res = await context.supabase.from('intervention_locations').select('address_key,lat,lon,state,source,error').in('address_key', keys.slice(i, i + 150));
@@ -85,7 +96,7 @@ export const getSimplaMapLocations = createServerFn({ method: 'POST' })
 
 export const geocodeInterventionBatch = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ ids: z.array(z.string().uuid()).max(25).default([]), simplaIds: z.array(z.number().int().positive()).max(25).default([]) }).refine(v => v.ids.length + v.simplaIds.length >= 1 && v.ids.length + v.simplaIds.length <= 25).parse(input))
+  .inputValidator((input: unknown) => z.object({ ids: z.array(z.string().uuid()).max(25).default([]), refs: z.array(z.string().regex(/^(s:\d+:[fl]|p:[0-9a-f-]{36})$/)).max(25).default([]) }).refine(v => v.ids.length + v.refs.length >= 1 && v.ids.length + v.refs.length <= 25).parse(input))
   .handler(async ({ data, context }) => {
     const role = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
     if (role.error) throw new Error('Toegang kon niet gecontroleerd worden.');
@@ -98,10 +109,11 @@ export const geocodeInterventionBatch = createServerFn({ method: 'POST' })
       if (rows.error) throw new Error(rows.error.message);
       for (const row of rows.data ?? []) { const address = destinationAddress(row); if (address) addresses.set(normalizeInterventionAddress(address), address); }
     }
-    if (data.simplaIds.length) {
-      // Adressen komen van de server zelf (Simpla), nooit uit de browser.
-      const wanted = new Set(data.simplaIds);
-      for (const s of await loadSimplaLocations()) if (wanted.has(s.id)) addresses.set(s.key, s.address);
+    if (data.refs.length) {
+      // Adressen komen van de server zelf (Simpla/projecten), nooit uit de browser.
+      const wanted = new Set(data.refs);
+      const pool = [...(data.refs.some(r => r.startsWith('s:')) ? await loadSimplaLocations() : []), ...(data.refs.some(r => r.startsWith('p:')) ? await loadProjectLocations(context.supabase) : [])];
+      for (const s of pool) if (wanted.has(s.ref)) addresses.set(s.key, s.address);
     }
     let found = 0; let failed = 0; let stopped: string | null = null;
     for (const [addressKey, address] of addresses) {
