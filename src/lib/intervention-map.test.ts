@@ -54,7 +54,7 @@ describe('Simpla-adressen op de interventiekaart', () => {
   });
   it('voegt een Simpla-adres samen met een bestaande locatie op hetzelfde adres', () => {
     const merged = mergeSimplaLocations([{ key: 'kerkstraat 12 9000 gent', address: 'Kerkstraat 12, 9000 Gent', customers: ['Jan'], latest: '2026-11-01', orders: [], cache: null }], rows, [], noFilters);
-    expect(merged).toHaveLength(2); expect(merged[0].simpla).toHaveLength(1);
+    expect(merged).toHaveLength(2); expect(merged[0]?.simpla).toHaveLength(1);
   });
   it('ploegfilter toont geen Simpla-adressen', () => {
     expect(mergeSimplaLocations([], rows, [], { ...noFilters, crew: 'x' })).toHaveLength(0);
