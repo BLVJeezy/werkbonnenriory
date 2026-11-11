@@ -28,8 +28,10 @@ Antwoord (voorbeeld):
 Volgende aanvragen: `{"limit":100,"cursor":{"completed_at":"…","id":"…"}}` met de laatst ontvangen niet-lege `next_cursor`.
 
 - Afgewerkt = werkbon afgetekend (handtekening) of afgerekend. `completed_at` is het moment van aftekenen, anders van afrekenen.
-- E-mail = het facturatie-e-mailadres van de werkbon, anders het klantmailadres. Werkbonnen zonder geldig adres worden overgeslagen (cursor schuift wel op).
-- Geen namen, adressen, prijzen of foto's worden gedeeld.
+- E-mail = het mailadres op de werkbon (de persoon die de monteur gezien heeft), anders het facturatie-e-mailadres. Werkbonnen zonder geldig adres worden overgeslagen (cursor schuift wel op).
+- `customer_name` = de klantnaam op de werkbon, om de klant bij naam te groeten; kan `null` zijn als er geen naam bekend is.
+- Automatisch afgesloten onderaannemersopdrachten (zonder handtekening van de klant) verschijnen niet in deze feed.
+- Geen adressen, prijzen of foto's worden gedeeld.
 - Een heropende en opnieuw afgetekende werkbon kan opnieuw verschijnen met dezelfde `id`: stuur maximaal één reviewmail per `id`.
 
 ## Alternatief: na verzonden factuur
