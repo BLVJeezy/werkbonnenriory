@@ -81,7 +81,7 @@ export const geocodeInterventionBatch = createServerFn({ method: 'POST' })
         if (saved.error) throw new Error(saved.error.message);
         failed++;
       }
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await new Promise(resolve => setTimeout(resolve, 250));
     }
     return { found, failed, stopped };
   });
