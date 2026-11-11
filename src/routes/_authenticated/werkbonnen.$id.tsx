@@ -533,7 +533,10 @@ function Detail() {
             onSubmit={async (e) => {
               e.preventDefault();
               const p = prods.find((x) => x.id === mat.productId);
-              if (!p) return;
+              if (!p) {
+                toast.warning("Kies eerst een product.");
+                return;
+              }
               const { error } = await supabase
                 .from("materials")
                 .insert({ work_order_id: id, product_id: p.id, name: p.name, quantity: Number(mat.quantity) || 1, unit: p.unit, unit_price: Number(p.price) });
@@ -545,21 +548,15 @@ function Detail() {
               refresh();
             }}
           >
-            <Input className="min-w-40 flex-1" placeholder="Zoek product…" value={prodQ} onChange={(e) => setProdQ(e.target.value)} />
-            <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} />
-            <select
-              required
-              className="h-9 min-w-48 flex-1 rounded-md border bg-background px-2"
+            <SearchSelect
+              className="min-w-0 flex-1 basis-full sm:basis-auto"
+              placeholder={prods.length ? "Kies product…" : isAdmin ? "Nog geen producten aangemaakt" : "Geen producten toegewezen aan deze ploeg"}
+              searchPlaceholder="Zoek product of alias…"
               value={mat.productId}
-              onChange={(e) => setMat({ ...mat, productId: e.target.value })}
-            >
-              <option value="">{prods.length ? "— Kies product —" : isAdmin ? "Nog geen producten aangemaakt" : "Geen producten toegewezen aan deze ploeg"}</option>
-              {prods.filter((p) => p.id === mat.productId || `${p.alias ?? ""} ${p.name}`.toLowerCase().includes(prodQ.toLowerCase())).sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.alias ? `${p.alias} — ${p.name}` : p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
-                </option>
-              ))}
-            </select>
+              onChange={(productId) => setMat({ ...mat, productId })}
+              options={materialChoices(prods, perms.showPrices)}
+            />
+            <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} aria-label="Aantal" />
             <Button>Toevoegen</Button>
           </form>
         )}
