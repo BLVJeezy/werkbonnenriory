@@ -36,6 +36,8 @@ import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { startCcvPayment } from '@/lib/ccv.functions';
 import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
 import { OnderwegSms } from '@/components/OnderwegSms';
+import { SearchSelect } from '@/components/SearchSelect';
+import { materialChoices } from '@/lib/material-options';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -93,7 +95,6 @@ function Detail() {
   const perms = signing ? { ...basePerms, showPrices: false, canPayment: false } : basePerms;
   const money = (n: number) => (perms.showPrices ? euro(n) : "");
   const [mat, setMat] = useState({ productId: "", quantity: "1" });
-  const [prodQ, setProdQ] = useState("");
   const [signature, setSignature] = useState<string | null>(null);
   const [signedName, setSignedName] = useState("");
   const calcKm = useServerFn(computeDistance);
@@ -532,7 +533,10 @@ function Detail() {
             onSubmit={async (e) => {
               e.preventDefault();
               const p = prods.find((x) => x.id === mat.productId);
-              if (!p) return;
+              if (!p) {
+                toast.warning("Kies eerst een product.");
+                return;
+              }
               const { error } = await supabase
                 .from("materials")
                 .insert({ work_order_id: id, product_id: p.id, name: p.name, quantity: Number(mat.quantity) || 1, unit: p.unit, unit_price: Number(p.price) });
@@ -544,21 +548,15 @@ function Detail() {
               refresh();
             }}
           >
-            <Input className="min-w-40 flex-1" placeholder="Zoek product…" value={prodQ} onChange={(e) => setProdQ(e.target.value)} />
-            <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} />
-            <select
-              required
-              className="h-9 min-w-48 flex-1 rounded-md border bg-background px-2"
+            <SearchSelect
+              className="min-w-0 flex-1 basis-full sm:basis-auto"
+              placeholder={prods.length ? "Kies product…" : isAdmin ? "Nog geen producten aangemaakt" : "Geen producten toegewezen aan deze ploeg"}
+              searchPlaceholder="Zoek product of alias…"
               value={mat.productId}
-              onChange={(e) => setMat({ ...mat, productId: e.target.value })}
-            >
-              <option value="">{prods.length ? "— Kies product —" : isAdmin ? "Nog geen producten aangemaakt" : "Geen producten toegewezen aan deze ploeg"}</option>
-              {prods.filter((p) => p.id === mat.productId || `${p.alias ?? ""} ${p.name}`.toLowerCase().includes(prodQ.toLowerCase())).sort((a, b) => (a.alias || a.name).localeCompare(b.alias || b.name)).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.alias ? `${p.alias} — ${p.name}` : p.name} ({p.unit}){perms.showPrices && ` — ${money(Number(p.price))}`}
-                </option>
-              ))}
-            </select>
+              onChange={(productId) => setMat({ ...mat, productId })}
+              options={materialChoices(prods, perms.showPrices)}
+            />
+            <Input className="w-20" type="number" step="any" min="0" value={mat.quantity} onChange={(e) => setMat({ ...mat, quantity: e.target.value })} aria-label="Aantal" />
             <Button>Toevoegen</Button>
           </form>
         )}
