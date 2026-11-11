@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] SMS-knop "wij zijn onderweg" op de taakkaart zelf (Kalender én ploegweergave), vóór openen; panelen op neutrale witte achtergrond zodat ze leesbaar blijven op gekleurde ploegtaken. 10 tests, typecontrole en ingelogde desktopcontrole geslaagd; geen SMS verzonden.
+
 - [x] Interne admin-interventiekaart gebouwd: 71 echte afgetekende werkbonnen op 63 genormaliseerde bestemmingen, menu, filters/lijst, clusters, werkbonlinks, privé locatiecache en optionele begrensde geocoder. 27 tests en automatische type-/buildcontrole geslaagd; ingelogde echte-bronnencheck desktop/mobiel en werkbonlink zonder JS-fouten. Geen Simpla-adressen, datawijzigingen of externe adresopzoekingen.
 - [ ] Interventiepinnen vullen: alle 63 locaties missen opgeslagen coördinaten; wacht op handmatig bevestigde coördinaten of goedgekeurde adreszoekdienst met dagbudget. Pin/popover-flow met echte opgeslagen locatie nog niet uitvoerbaar zonder broncoördinaten. Echte oudere werkbonnen vóór 27 oktober 2026 niet beschikbaar; vereist daadwerkelijk interventiearchief. Publicatie nog niet uitgevoerd.
 - [x] Verduidelijking: alle beschikbare adressen op uitgevoerde werkbonnen als bron, met werfadres waar aangeduid; geen factuurhistoriek als fictieve interventies.
