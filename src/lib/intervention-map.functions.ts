@@ -55,11 +55,8 @@ export const geocodeInterventionBatch = createServerFn({ method: 'POST' })
     const role = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
     if (role.error) throw new Error('Toegang kon niet gecontroleerd worden.');
     requireInterventionAdmin(role.data);
-    // No public geocoder fallback: configuration is an explicit administrator decision.
-    const endpoint = process.env['INTERVENTION_GEOCODER_URL'];
-    const key = process.env['INTERVENTION_GEOCODER_KEY'];
-    const budget = Number(process.env['INTERVENTION_GEOCODER_DAILY_LIMIT'] ?? 0);
-    if (!endpoint?.startsWith('https://') || !Number.isInteger(budget) || budget < 1 || budget > 1000) throw new Error('Geen toegestane adreszoekdienst met dagbudget ingesteld. Handmatige coördinaten blijven mogelijk.');
+    const { apiKey, lovableKey, budget, configured } = geocoderConfig();
+    if (!configured || !apiKey || !lovableKey) throw new Error('Google Maps is niet gekoppeld of het dagbudget is ongeldig. Handmatige coördinaten blijven mogelijk.');
     const rows = await context.supabase.from('work_orders').select(projection).eq('status', 'afgetekend').in('id', data.ids);
     if (rows.error) throw new Error(rows.error.message);
     const addresses = new Map<string,string>();
@@ -71,11 +68,12 @@ export const geocodeInterventionBatch = createServerFn({ method: 'POST' })
       if (claim.data === 'cached') continue;
       if (claim.data !== 'claimed') { stopped = claim.data; break; }
       try {
-        const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}) }, body: JSON.stringify({ address, countryCodes: ['BE', 'NL'] }), signal: AbortSignal.timeout(10000), redirect: 'error' });
+        const response = await fetch(`${GATEWAY_URL}/maps/api/geocode/json?address=${encodeURIComponent(address)}&region=be`, { headers: { Authorization: `Bearer ${lovableKey}`, 'X-Connection-Api-Key': apiKey }, signal: AbortSignal.timeout(10000), redirect: 'error' });
         if (!response.ok) throw new Error(`Adreszoekdienst gaf fout ${response.status}.`);
         // Premises-level matches only; postcode/city-centroid results cannot become intervention pins.
-        const hit = z.object({ lat: z.number().finite().min(-90).max(90), lon: z.number().finite().min(-180).max(180), precision: z.literal('address') }).parse(await response.json());
-        const saved = await context.supabase.from('intervention_locations').update({ lat: hit.lat, lon: hit.lon, state: 'located', source: 'configured', error: null, lease_until: null, updated_at: new Date().toISOString() }).eq('address_key', addressKey).eq('state', 'processing');
+        const hit = pickPremisesLocation(await response.json());
+        if (!hit) throw new Error('Geen exact adres gevonden.');
+        const saved = await context.supabase.from('intervention_locations').update({ lat: hit.lat, lon: hit.lon, state: 'located', source: 'google', error: null, lease_until: null, updated_at: new Date().toISOString() }).eq('address_key', addressKey).eq('state', 'processing');
         if (saved.error) throw new Error(saved.error.message);
         found++;
       } catch {
