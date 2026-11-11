@@ -12,7 +12,8 @@ import { saveInterventionCoordinates, geocodeInterventionBatch } from '@/lib/int
 export function InterventionLocationDetails({ location, configured, onClose }: { location: InterventionLocation | null; configured: boolean; onClose: () => void }) {
   const save = useServerFn(saveInterventionCoordinates); const geocode = useServerFn(geocodeInterventionBatch); const qc = useQueryClient();
   const [lat, setLat] = useState(''); const [lon, setLon] = useState(''); const [busy, setBusy] = useState(false);
-  const canLocate = !!location && !location.key.startsWith('missing:');
+  const firstOrder = location?.orders[0];
+  const canLocate = !!location && !!firstOrder && !location.key.startsWith('missing:');
   return <Dialog open={!!location} onOpenChange={open => { if (!open) { onClose(); setLat(''); setLon(''); } }}><DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
     <DialogHeader><DialogTitle className="break-words">{location?.address}</DialogTitle></DialogHeader>
     {location && <>
@@ -27,11 +28,12 @@ export function InterventionLocationDetails({ location, configured, onClose }: {
         {canLocate && <form className="space-y-3" onSubmit={async event => {
           event.preventDefault(); const latitude = Number(lat.replace(',', '.')); const longitude = Number(lon.replace(',', '.'));
           if (!lat.trim() || !lon.trim() || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) { toast.error('Vul geldige breedte- en lengtegraad in.'); return; }
-          setBusy(true); try { await save({ data: { id: location.orders[0].id, lat: latitude, lon: longitude } }); await qc.invalidateQueries({ queryKey: ['intervention-map'] }); toast.success('Locatie opgeslagen.'); onClose(); } catch (error) { toast.error(error instanceof Error ? error.message : 'Opslaan mislukt.'); } finally { setBusy(false); }
+          if (!firstOrder) return;
+          setBusy(true); try { await save({ data: { id: firstOrder.id, lat: latitude, lon: longitude } }); await qc.invalidateQueries({ queryKey: ['intervention-map'] }); toast.success('Locatie opgeslagen.'); onClose(); } catch (error) { toast.error(error instanceof Error ? error.message : 'Opslaan mislukt.'); } finally { setBusy(false); }
         }}>
           <div className="grid grid-cols-2 gap-2"><label className="text-sm">Breedtegraad<Input aria-label="Breedtegraad" value={lat} onChange={e => setLat(e.target.value)} inputMode="decimal" required /></label><label className="text-sm">Lengtegraad<Input aria-label="Lengtegraad" value={lon} onChange={e => setLon(e.target.value)} inputMode="decimal" required /></label></div>
           <Button disabled={busy} type="submit">{busy ? 'Bezig…' : 'Coördinaten opslaan'}</Button>
-          {configured && !located(location.cache) && <Button type="button" variant="outline" disabled={busy} onClick={async () => { setBusy(true); try { const result = await geocode({ data: { ids: [location.orders[0].id] } }); toast.info(result.found ? 'Locatie gevonden.' : result.stopped === 'budget' ? 'Dagbudget bereikt.' : 'Nog geen exacte locatie gevonden.'); await qc.invalidateQueries({ queryKey: ['intervention-map'] }); onClose(); } catch(error) { toast.error(error instanceof Error ? error.message : 'Opzoeken mislukt.'); } finally { setBusy(false); } }}>Adres opnieuw opzoeken</Button>}
+          {configured && !located(location.cache) && <Button type="button" variant="outline" disabled={busy} onClick={async () => { if (!firstOrder) return; setBusy(true); try { const result = await geocode({ data: { ids: [firstOrder.id] } }); toast.info(result.found ? 'Locatie gevonden.' : result.stopped === 'budget' ? 'Dagbudget bereikt.' : 'Nog geen exacte locatie gevonden.'); await qc.invalidateQueries({ queryKey: ['intervention-map'] }); onClose(); } catch(error) { toast.error(error instanceof Error ? error.message : 'Opzoeken mislukt.'); } finally { setBusy(false); } }}>Adres opnieuw opzoeken</Button>}
         </form>}
       </div>
     </>}

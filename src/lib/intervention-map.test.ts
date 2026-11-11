@@ -5,7 +5,7 @@ const row = (patch: Partial<Intervention> = {}): Intervention => ({ id: 'one', n
 describe('Interventiekaart', () => {
   it('groepeert hetzelfde genormaliseerde volledige adres en telt unieke werkbonnen', () => {
     const groups = groupInterventions([row(), row({ id: 'two', address: ' KERKSTRAAT  12 9000 Gent ', scheduled_date: '2026-11-03' }), row()], []);
-    expect(groups).toHaveLength(1); expect(groups[0].orders).toHaveLength(2); expect(groups[0].latest).toBe('2026-11-03');
+    expect(groups).toHaveLength(1); expect(groups[0]?.orders).toHaveLength(2); expect(groups[0]?.latest).toBe('2026-11-03');
   });
   it('houdt verschillende huisnummers en busnummers apart', () => {
     expect(groupInterventions([row(), row({ id: 'two', address: 'Kerkstraat 13, 9000 Gent' }), row({ id: 'three', address: 'Kerkstraat 12 bus 2, 9000 Gent' })], [])).toHaveLength(3);

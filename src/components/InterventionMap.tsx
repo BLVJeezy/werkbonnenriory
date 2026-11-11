@@ -16,7 +16,7 @@ export default function InterventionMap({ locations, selected, onSelect }: { loc
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const L = await import('leaflet');
+      const L = (await import('leaflet')).default;
       await import('leaflet.markercluster');
       if (cancelled || !container.current) return;
       const instance = L.map(container.current, { scrollWheelZoom: true }).setView([50.95, 5.35], 9);
@@ -31,7 +31,8 @@ export default function InterventionMap({ locations, selected, onSelect }: { loc
   }, []);
   useEffect(() => {
     if (!ready) return;
-    void import('leaflet').then(L => {
+    void import('leaflet').then(module => {
+      const L = module.default;
       const instance = map.current; const markers = cluster.current;
       if (!instance || !markers) return;
       markers.clearLayers();
