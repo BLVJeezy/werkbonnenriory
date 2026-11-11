@@ -24,19 +24,19 @@ export function attributionInvoicePage(rows: AttributionInvoiceRow[], limit: num
     version: 1,
     invoices: page.map((r) => {
       const c = r.customer ?? {};
-      const mail = email.safeParse(c.email ?? '');
+      const mail = email.safeParse(c['email'] ?? '');
       return {
         id: r.id, number: r.number, kind: r.kind === 'creditnota' ? 'creditnota' : 'factuur', status: r.status,
         issue_date: r.issue_date, due_date: r.due_date, sent_at: r.sent_at, paid_at: r.paid_at,
         paid_amount: num(r.paid_amount), net: num(r.net), vat: num(r.vat), total: num(r.total), vat_rate: num(r.vat_rate),
         credit_for: r.credit_for, created_at: r.created_at, updated_at: r.updated_at,
         customer: {
-          id: r.customer_id, name: text(c.name), email: mail.success ? mail.data : null, phone: text(c.phone),
-          postal_code: text(c.postalCode ?? c.postal_code), city: text(c.city), vat_number: text(c.vatNumber ?? c.vat_number),
+          id: r.customer_id, name: text(c['name']), email: mail.success ? mail.data : null, phone: text(c['phone']),
+          postal_code: text(c['postalCode'] ?? c['postal_code']), city: text(c['city']), vat_number: text(c['vatNumber'] ?? c['vat_number']),
         },
         lines: (Array.isArray(r.lines) ? r.lines : []).map((l: Record<string, unknown>) => ({
-          description: text(l?.description), quantity: num(l?.quantity),
-          unit_price_excl_vat: num(l?.unitPrice ?? l?.unit_price), amount_excl_vat: num(l?.amount),
+          description: text(l?.['description']), quantity: num(l?.['quantity']),
+          unit_price_excl_vat: num(l?.['unitPrice'] ?? l?.['unit_price']), amount_excl_vat: num(l?.['amount']),
         })),
         work_orders: (Array.isArray(r.work_orders) ? r.work_orders : []).map((w: Record<string, unknown>) => ({
           id: String(w['id']), activity: text(w['activity']), signed_at: text(w['signed_at']),
