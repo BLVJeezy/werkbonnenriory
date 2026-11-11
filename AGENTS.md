@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Mailtaken/review feeds need server tokens and stable IDs. Reviews expose id+email+timestamp (work orders also customer_name, excluding subcontract_auto) with timestamp+id cursors.
+- Attribution feed (`/api/public/attribution/invoices`, ATTRIBUTION_API.md) uses its own ATTRIBUTION_API_TOKEN and may share customer data/amounts for the internal marketing dashboard; it pages invoices on trigger-maintained updated_at+id, omits never-sent drafts, and keys customers by customers.id via linked work orders, never email. Keep the review feed lean.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery: public /reset-password and recovery sessions; never disclose passwords.
 - Purchase payments use a tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes excluded. Original purchase PDFs stay private attachments.
