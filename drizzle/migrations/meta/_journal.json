@@ -988,6 +988,13 @@
       "when": 1794327568058,
       "tag": "0140_subcontractor_auto_close",
       "breakpoints": true
+    },
+    {
+      "idx": 141,
+      "version": "7",
+      "when": 1794387178703,
+      "tag": "0141_private_intervention_locations",
+      "breakpoints": true
     }
   ]
 }

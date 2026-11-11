@@ -1,6 +1,8 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
+@import "leaflet.markercluster/dist/MarkerCluster.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -197,4 +199,10 @@ html.large-text {
   outline: 3px solid var(--running);
   outline-offset: 2px;
 }
+
+.intervention-map { z-index: 0; font-family: var(--font-sans); }
+.intervention-pin span { display: grid; place-items: center; width: 34px; height: 34px; border: 2px solid var(--primary-foreground); border-radius: 50% 50% 50% 0; background: var(--primary); color: var(--primary-foreground); font-weight: 800; box-shadow: 0 2px 8px color-mix(in oklab, var(--foreground) 25%, transparent); }
+.intervention-cluster span { display: grid; place-items: center; width: 42px; height: 42px; border: 4px solid var(--primary); border-radius: 50%; background: var(--secondary); color: var(--secondary-foreground); font-weight: 800; }
+.intervention-map .leaflet-popup-content-wrapper, .intervention-map .leaflet-popup-tip { background: var(--popover); color: var(--popover-foreground); }
+.intervention-map .leaflet-control-zoom a { background: var(--card); color: var(--card-foreground); border-color: var(--border); }
 

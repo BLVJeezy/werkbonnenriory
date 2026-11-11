@@ -1,0 +1,82 @@
+import { createServerFn } from '@tanstack/react-start';
+import { z } from 'zod';
+import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
+import { destinationAddress } from '@/lib/address';
+import { normalizeInterventionAddress, requireInterventionAdmin, type Intervention } from './intervention-map';
+
+const projection = 'id,number,customer_name,address,street,house_number,postal_code,city,use_site_address,site_street,site_house_number,site_postal_code,site_city,status,signed_at,paid_at,scheduled_date,created_at,technician_id,activity_id,no_invoice,subcontract_auto,technicians(name),activities(name)' as const;
+
+export const getInterventionPage = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ offset: z.number().int().min(0) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const role = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+    if (role.error) throw new Error('Toegang kon niet gecontroleerd worden.');
+    requireInterventionAdmin(role.data);
+    const result = await context.supabase.from('work_orders').select(projection).eq('status', 'afgetekend').order('id').range(data.offset, data.offset + 499);
+    if (result.error) throw new Error(result.error.message);
+    const rows: Intervention[] = result.data ?? [];
+    const keys = [...new Set(rows.map(row => destinationAddress(row)).filter((value): value is string => !!value).map(normalizeInterventionAddress))];
+    const cache = keys.length ? await context.supabase.from('intervention_locations').select('address_key,lat,lon,state,source,error').in('address_key', keys) : { data: [], error: null };
+    if (cache.error) throw new Error(cache.error.message);
+    const endpoint = process.env['INTERVENTION_GEOCODER_URL'];
+    const budget = Number(process.env['INTERVENTION_GEOCODER_DAILY_LIMIT'] ?? 0);
+    const configured = !!endpoint?.startsWith('https://') && Number.isInteger(budget) && budget > 0 && budget <= 1000;
+    return { rows, caches: cache.data ?? [], next: rows.length === 500 ? data.offset + 500 : null, configured, budget: configured ? budget : 0 };
+  });
+
+export const saveInterventionCoordinates = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), lat: z.number().finite().min(-90).max(90), lon: z.number().finite().min(-180).max(180) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const role = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+    if (role.error) throw new Error('Toegang kon niet gecontroleerd worden.');
+    requireInterventionAdmin(role.data);
+    const row = await context.supabase.from('work_orders').select(projection).eq('id', data.id).eq('status', 'afgetekend').single();
+    if (row.error) throw new Error('Werkbon niet beschikbaar.');
+    const address = destinationAddress(row.data);
+    if (!address) throw new Error('Vul eerst het interventieadres op de werkbon aan.');
+    const result = await context.supabase.from('intervention_locations').upsert({ address_key: normalizeInterventionAddress(address), address, lat: data.lat, lon: data.lon, state: 'located', source: 'manual', error: null, lease_until: null, updated_at: new Date().toISOString() });
+    if (result.error) throw new Error(result.error.message);
+    return { ok: true };
+  });
+
+export const geocodeInterventionBatch = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ ids: z.array(z.string().uuid()).min(1).max(5) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const role = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
+    if (role.error) throw new Error('Toegang kon niet gecontroleerd worden.');
+    requireInterventionAdmin(role.data);
+    // No public geocoder fallback: configuration is an explicit administrator decision.
+    const endpoint = process.env['INTERVENTION_GEOCODER_URL'];
+    const key = process.env['INTERVENTION_GEOCODER_KEY'];
+    const budget = Number(process.env['INTERVENTION_GEOCODER_DAILY_LIMIT'] ?? 0);
+    if (!endpoint?.startsWith('https://') || !Number.isInteger(budget) || budget < 1 || budget > 1000) throw new Error('Geen toegestane adreszoekdienst met dagbudget ingesteld. Handmatige coördinaten blijven mogelijk.');
+    const rows = await context.supabase.from('work_orders').select(projection).eq('status', 'afgetekend').in('id', data.ids);
+    if (rows.error) throw new Error(rows.error.message);
+    const addresses = new Map<string,string>();
+    for (const row of rows.data ?? []) { const address = destinationAddress(row); if (address) addresses.set(normalizeInterventionAddress(address), address); }
+    let found = 0; let failed = 0; let stopped: string | null = null;
+    for (const [addressKey, address] of addresses) {
+      const claim = await context.supabase.rpc('claim_intervention_geocode', { p_key: addressKey, p_address: address, p_budget: budget });
+      if (claim.error) throw new Error(claim.error.message);
+      if (claim.data === 'cached') continue;
+      if (claim.data !== 'claimed') { stopped = claim.data; break; }
+      try {
+        const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}) }, body: JSON.stringify({ address, countryCodes: ['BE', 'NL'] }), signal: AbortSignal.timeout(10000), redirect: 'error' });
+        if (!response.ok) throw new Error(`Adreszoekdienst gaf fout ${response.status}.`);
+        // Premises-level matches only; postcode/city-centroid results cannot become intervention pins.
+        const hit = z.object({ lat: z.number().finite().min(-90).max(90), lon: z.number().finite().min(-180).max(180), precision: z.literal('address') }).parse(await response.json());
+        const saved = await context.supabase.from('intervention_locations').update({ lat: hit.lat, lon: hit.lon, state: 'located', source: 'configured', error: null, lease_until: null, updated_at: new Date().toISOString() }).eq('address_key', addressKey).eq('state', 'processing');
+        if (saved.error) throw new Error(saved.error.message);
+        found++;
+      } catch {
+        const saved = await context.supabase.from('intervention_locations').update({ state: 'failed', error: 'Geen exact adres gevonden of adreszoekdienst niet beschikbaar.', lease_until: null, updated_at: new Date().toISOString() }).eq('address_key', addressKey).eq('state', 'processing');
+        if (saved.error) throw new Error(saved.error.message);
+        failed++;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+    return { found, failed, stopped };
+  });
