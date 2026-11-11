@@ -14,3 +14,8 @@ Only premises-level results (`ROOFTOP` or `RANGE_INTERPOLATED`) may become pins;
 The explicit lookup button submits a maximum of five existing completed-work-order IDs per call. The server resolves destinations itself. A database-locked daily ledger imposes a per-address lease and the global budget; successes are cached without TTL, failures remain visible and retryable. A repeated click reuses successful results. No background job is activated.
 
 Historical coverage currently starts with actual local completed work orders (27 October 2026 in the audited data). Earlier interventions require an actual service-address/work-order archive; Simpla sales invoices alone are insufficient. No historical archive import is implemented without a real source file.
+
+
+## Simpla customer addresses
+
+At the admin's explicit request (11 Nov 2026), all Simpla customer addresses (delivery address when filled, else customer address; street required) are shown as locations merged with work-order locations on the same normalized key. They are read server-side via `SIMPLA_API_TOKEN`, memoized 10 minutes, and geocoded by Simpla customer ID so the browser never supplies addresses. Crew/activity/status filters hide them. Default daily geocoding budget is 3500 (max 5000), throttle 200 ms; the bulk button only sends addresses with no cache row, so failures are not re-billed automatically.
