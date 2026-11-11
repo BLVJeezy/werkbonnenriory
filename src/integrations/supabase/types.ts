@@ -4979,6 +4979,7 @@ export type Database = {
         Args: { _after: string; _after_id: string; _limit: number }
         Returns: {
           completed_at: string
+          customer_name: string
           email: string
           id: string
         }[]
