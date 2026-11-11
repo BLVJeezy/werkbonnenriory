@@ -2,7 +2,7 @@
 
 - Source: existing `work_orders` with status `afgetekend`. Destination uses the existing `destinationAddress` helper, never an enabled-but-empty worksite fallback. Invoice/customer-only records and Simpla invoice history are not evidence of an intervention.
 - Access: admin only, validated by authenticated server functions and admin RLS on the persistent address cache. No public endpoint/dataset. Stable ID paging, 500 work orders per page.
-- Map: keyless OpenStreetMap raster tiles with attribution. Only tile indices reach the tile server; no customer labels/addresses are included. Basemap tile access still reveals approximate viewport to the tile provider. Leaflet imports execute in the browser, clusters handle large location sets.
+- Map: keyless CARTO Voyager raster tiles (OSM data; tile.openstreetmap.org blocks no-referrer apps) with attribution. Only tile indices reach the tile server; no customer labels/addresses are included. Basemap tile access still reveals approximate viewport to the tile provider. Leaflet imports execute in the browser, clusters handle large location sets.
 - No address lookup occurs on loading, filtering or viewing the map. Manual coordinates are the credential-free alternative and are validated; no fabricated demo pins.
 
 ## Optional approved geocoding

@@ -21,7 +21,7 @@ export default function InterventionMap({ locations, selected, onSelect }: { loc
       if (cancelled || !container.current) return;
       const instance = L.map(container.current, { scrollWheelZoom: true }).setView([50.95, 5.35], 9);
       // Tiles contain only geographic tile indices, never customer names or addresses.
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>', referrerPolicy: 'no-referrer' }).addTo(instance);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd', attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> © <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>' }).addTo(instance);
       const markers = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 48, iconCreateFunction: group => L.divIcon({ className: 'intervention-cluster', html: `<span>${group.getChildCount()}</span>`, iconSize: [42,42] }) });
       instance.addLayer(markers); map.current = instance; cluster.current = markers; setReady(true);
       const observer = new ResizeObserver(() => instance.invalidateSize()); observer.observe(container.current);
