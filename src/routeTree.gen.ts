@@ -52,6 +52,7 @@ import { Route as NieuwsbriefUitschrijvenTokenRouteImport } from './routes/nieuw
 import { Route as ApiOauthMicrosoft_outlookReturnRouteImport } from './routes/api/oauth/microsoft_outlook/return'
 import { Route as ApiPublicAankoopfacturenImportRouteImport } from './routes/api/public/aankoopfacturen/import'
 import { Route as ApiPublicAankoopfacturenPeppolRouteImport } from './routes/api/public/aankoopfacturen/peppol'
+import { Route as ApiPublicAttributionInvoicesRouteImport } from './routes/api/public/attribution/invoices'
 import { Route as ApiPublicBookkeepingSalesRouteImport } from './routes/api/public/bookkeeping/sales'
 import { Route as ApiPublicContractsProcessRouteImport } from './routes/api/public/contracts/process'
 import { Route as ApiPublicCronFinanceRouteImport } from './routes/api/public/cron/finance'
@@ -299,6 +300,12 @@ const ApiPublicAankoopfacturenPeppolRoute =
     path: '/api/public/aankoopfacturen/peppol',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAttributionInvoicesRoute =
+  ApiPublicAttributionInvoicesRouteImport.update({
+    id: '/api/public/attribution/invoices',
+    path: '/api/public/attribution/invoices',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicBookkeepingSalesRoute =
   ApiPublicBookkeepingSalesRouteImport.update({
     id: '/api/public/bookkeeping/sales',
@@ -417,6 +424,7 @@ export interface FileRoutesByFullPath {
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/aankoopfacturen/peppol': typeof ApiPublicAankoopfacturenPeppolRoute
+  '/api/public/attribution/invoices': typeof ApiPublicAttributionInvoicesRoute
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
@@ -474,6 +482,7 @@ export interface FileRoutesByTo {
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/aankoopfacturen/peppol': typeof ApiPublicAankoopfacturenPeppolRoute
+  '/api/public/attribution/invoices': typeof ApiPublicAttributionInvoicesRoute
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
@@ -533,6 +542,7 @@ export interface FileRoutesById {
   '/api/oauth/microsoft_outlook/return': typeof ApiOauthMicrosoft_outlookReturnRoute
   '/api/public/aankoopfacturen/import': typeof ApiPublicAankoopfacturenImportRoute
   '/api/public/aankoopfacturen/peppol': typeof ApiPublicAankoopfacturenPeppolRoute
+  '/api/public/attribution/invoices': typeof ApiPublicAttributionInvoicesRoute
   '/api/public/bookkeeping/sales': typeof ApiPublicBookkeepingSalesRoute
   '/api/public/contracts/process': typeof ApiPublicContractsProcessRoute
   '/api/public/cron/finance': typeof ApiPublicCronFinanceRoute
@@ -592,6 +602,7 @@ export interface FileRouteTypes {
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
     | '/api/public/aankoopfacturen/peppol'
+    | '/api/public/attribution/invoices'
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
@@ -649,6 +660,7 @@ export interface FileRouteTypes {
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
     | '/api/public/aankoopfacturen/peppol'
+    | '/api/public/attribution/invoices'
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
@@ -707,6 +719,7 @@ export interface FileRouteTypes {
     | '/api/oauth/microsoft_outlook/return'
     | '/api/public/aankoopfacturen/import'
     | '/api/public/aankoopfacturen/peppol'
+    | '/api/public/attribution/invoices'
     | '/api/public/bookkeeping/sales'
     | '/api/public/contracts/process'
     | '/api/public/cron/finance'
@@ -740,6 +753,7 @@ export interface RootRouteChildren {
   ApiOauthMicrosoft_outlookReturnRoute: typeof ApiOauthMicrosoft_outlookReturnRoute
   ApiPublicAankoopfacturenImportRoute: typeof ApiPublicAankoopfacturenImportRoute
   ApiPublicAankoopfacturenPeppolRoute: typeof ApiPublicAankoopfacturenPeppolRoute
+  ApiPublicAttributionInvoicesRoute: typeof ApiPublicAttributionInvoicesRoute
   ApiPublicBookkeepingSalesRoute: typeof ApiPublicBookkeepingSalesRoute
   ApiPublicContractsProcessRoute: typeof ApiPublicContractsProcessRoute
   ApiPublicCronFinanceRoute: typeof ApiPublicCronFinanceRoute
@@ -1058,6 +1072,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAankoopfacturenPeppolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/attribution/invoices': {
+      id: '/api/public/attribution/invoices'
+      path: '/api/public/attribution/invoices'
+      fullPath: '/api/public/attribution/invoices'
+      preLoaderRoute: typeof ApiPublicAttributionInvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bookkeeping/sales': {
       id: '/api/public/bookkeeping/sales'
       path: '/api/public/bookkeeping/sales'
@@ -1232,6 +1253,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOauthMicrosoft_outlookReturnRoute: ApiOauthMicrosoft_outlookReturnRoute,
   ApiPublicAankoopfacturenImportRoute: ApiPublicAankoopfacturenImportRoute,
   ApiPublicAankoopfacturenPeppolRoute: ApiPublicAankoopfacturenPeppolRoute,
+  ApiPublicAttributionInvoicesRoute: ApiPublicAttributionInvoicesRoute,
   ApiPublicBookkeepingSalesRoute: ApiPublicBookkeepingSalesRoute,
   ApiPublicContractsProcessRoute: ApiPublicContractsProcessRoute,
   ApiPublicCronFinanceRoute: ApiPublicCronFinanceRoute,
