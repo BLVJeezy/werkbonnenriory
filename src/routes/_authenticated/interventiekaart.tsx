@@ -47,7 +47,7 @@ function InterventionPage() {
   if (!role) return <p>Laden…</p>;
   if (!allowed) return <p role="alert">Alleen beheerders hebben toegang tot de interventiekaart.</p>;
   return <div className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black uppercase sm:text-3xl">Interventiekaart</h1><p className="text-sm text-muted-foreground">{rows.length} uitgevoerde werkbonnen · {simplaRows.length} Simpla-klantadressen · {allGroups.length} locaties</p></div><Button variant="outline" disabled={query.isFetching} onClick={() => query.refetch()}><RefreshCw className={query.isFetching ? 'animate-spin' : ''} size={16} />Vernieuwen</Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black uppercase sm:text-3xl">Interventiekaart</h1><p className="text-sm text-muted-foreground">{rows.length} uitgevoerde werkbonnen · {simplaRows.filter(r => r.source === 'simpla').length} Simpla-adressen · {simplaRows.filter(r => r.source === 'project').length} projectadressen · {allGroups.length} locaties</p></div><Button variant="outline" disabled={query.isFetching} onClick={() => query.refetch()}><RefreshCw className={query.isFetching ? 'animate-spin' : ''} size={16} />Vernieuwen</Button></div>
     {query.error && <p role="alert" className="border-l-4 border-destructive bg-muted p-3">{query.error instanceof Error ? query.error.message : 'Werkbonnen laden mislukt.'}</p>}
     {query.isPending && <p role="status">Werkbonnen ophalen…</p>}
     {simpla.isPending && <p role="status">Simpla-adressen ophalen…</p>}
@@ -73,8 +73,8 @@ function InterventionPage() {
         setBusy(true); let found = 0, failed = 0, stop: string | null = null;
         try {
           for (let i = 0; i < todo.length && !stop; i += 25) {
-            const batch = todo.slice(i, i + 25); const ids = batch.flatMap(g => g.orders[0] ? [g.orders[0].id] : []); const simplaIds = batch.flatMap(g => !g.orders[0] && g.simpla?.[0] ? [g.simpla[0].id] : []);
-            const result = await geocode({ data: { ids, simplaIds } }); found += result.found; failed += result.failed;
+            const batch = todo.slice(i, i + 25); const ids = batch.flatMap(g => g.orders[0] ? [g.orders[0].id] : []); const refs = batch.flatMap(g => !g.orders[0] && g.simpla?.[0] ? [g.simpla[0].ref] : []);
+            const result = await geocode({ data: { ids, refs } }); found += result.found; failed += result.failed;
             if (result.stopped === 'budget' || result.stopped === 'disabled') stop = result.stopped; else if (result.stopped) await new Promise(r => setTimeout(r, 1500));
             setProgress(`${Math.min(i + 25, todo.length)} / ${todo.length} · ${found} gevonden`);
           }
@@ -82,7 +82,7 @@ function InterventionPage() {
         } catch(error) { toast.error(error instanceof Error ? error.message : 'Opzoeken mislukt.'); } finally { setBusy(false); setProgress(''); await Promise.all([query.refetch(), simpla.refetch()]); }
       }}><LocateFixed size={16} />{busy ? `Opzoeken… ${progress}` : `Alle ${todo.length} nieuwe adressen opzoeken`}</Button>; })()}
     </div>}
-    <div className="divide-y border-y">{visible.slice(page*50,page*50+50).map(location => <div key={location.key} className="flex flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0 flex-1"><p className="break-words font-bold">{location.address}</p><p className="break-words text-sm text-muted-foreground">{location.customers.join(' · ')}</p><p className="font-mono text-xs text-muted-foreground">{locationCount(location)} interventies{location.simpla?.length ? ' (incl. Simpla)' : ''} · laatste {location.latest} · {located(location.cache) ? 'Op kaart' : 'Zonder locatie'}</p></div><Button size="sm" variant="outline" onClick={() => setSelected(location.key)}>Werkbonnen / locatie</Button></div>)}{!query.isPending && !visible.length && <p className="py-8 text-center text-muted-foreground">Geen interventies binnen deze selectie.</p>}</div>
+    <div className="divide-y border-y">{visible.slice(page*50,page*50+50).map(location => <div key={location.key} className="flex flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0 flex-1"><p className="break-words font-bold">{location.address}</p><p className="break-words text-sm text-muted-foreground">{location.customers.join(' · ')}</p><p className="font-mono text-xs text-muted-foreground">{locationCount(location)} interventies{location.simpla?.length ? ' (incl. Simpla/projecten)' : ''} · laatste {location.latest} · {located(location.cache) ? 'Op kaart' : 'Zonder locatie'}</p></div><Button size="sm" variant="outline" onClick={() => setSelected(location.key)}>Werkbonnen / locatie</Button></div>)}{!query.isPending && !visible.length && <p className="py-8 text-center text-muted-foreground">Geen interventies binnen deze selectie.</p>}</div>
     {visible.length > 50 && <div className="flex items-center justify-center gap-3"><Button variant="outline" disabled={!page} onClick={() => setPage(p => p-1)}>Vorige</Button><span className="text-sm">{page+1} / {Math.ceil(visible.length/50)}</span><Button variant="outline" disabled={(page+1)*50 >= visible.length} onClick={() => setPage(p => p+1)}>Volgende</Button></div>}
     <InterventionLocationDetails location={groups.find(g => g.key === selected) ?? null} configured={configured} onClose={() => setSelected(null)} />
   </div>;

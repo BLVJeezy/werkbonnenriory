@@ -73,22 +73,37 @@ export function located(cache: LocationCache | null): cache is LocationCache & {
 // Historische Simpla-klantadressen (op uitdrukkelijke vraag van de beheerder mee op de kaart).
 export type SimplaCustomerRow = { customerId?: number; customerName?: string; customerStreetNr?: string | null; customerPostal?: string | null; customerCity?: string | null; deliveryStreetNr?: string | null; deliveryPostal?: string | null; deliveryCity?: string | null };
 export type SimplaBillRow = { billCustomerId?: number; billDate?: string | null };
-export type SimplaLocation = { id: number; key: string; address: string; customer: string; latest: string; bills: number };
-export function simplaAddress(c: SimplaCustomerRow): string | null {
-  const useDelivery = !!c.deliveryStreetNr?.trim() && !!(c.deliveryPostal?.trim() || c.deliveryCity?.trim());
-  const street = (useDelivery ? c.deliveryStreetNr : c.customerStreetNr)?.trim() ?? '';
-  const place = [useDelivery ? c.deliveryPostal : c.customerPostal, useDelivery ? c.deliveryCity : c.customerCity].map(v => v?.trim() ?? '').filter(Boolean).join(' ');
+export type SimplaLocation = { ref: string; source: 'simpla' | 'project'; key: string; address: string; customer: string; latest: string; bills: number };
+function joinAddress(street?: string | null, postal?: string | null, city?: string | null): string | null {
+  const st = street?.trim() ?? ''; const place = [postal, city].map(v => v?.trim() ?? '').filter(Boolean).join(' ');
   // Zonder straat is er geen exact adres: een gemeente alleen wordt nooit een pin.
-  return street && place ? `${street}, ${place}` : null;
+  return st && place ? `${st}, ${place}` : null;
+}
+/** Factuuradres en (indien anders) leveringsadres van een Simpla-klant. */
+export function simplaAddresses(c: SimplaCustomerRow): { kind: 'f' | 'l'; address: string }[] {
+  const out: { kind: 'f' | 'l'; address: string }[] = [];
+  const billing = joinAddress(c.customerStreetNr, c.customerPostal, c.customerCity); if (billing) out.push({ kind: 'f', address: billing });
+  const delivery = joinAddress(c.deliveryStreetNr, c.deliveryPostal, c.deliveryCity);
+  if (delivery && (!billing || normalizeInterventionAddress(delivery) !== normalizeInterventionAddress(billing))) out.push({ kind: 'l', address: delivery });
+  return out;
 }
 export function buildSimplaLocations(customers: SimplaCustomerRow[], bills: SimplaBillRow[]): SimplaLocation[] {
   const stats = new Map<number, { latest: string; bills: number }>();
   for (const b of bills) { if (typeof b.billCustomerId !== 'number') continue; const s = stats.get(b.billCustomerId) ?? { latest: '', bills: 0 }; s.bills++; const d = (b.billDate ?? '').slice(0, 10); if (d > s.latest) s.latest = d; stats.set(b.billCustomerId, s); }
   const out: SimplaLocation[] = [];
   for (const c of customers) {
-    if (typeof c.customerId !== 'number') continue; const address = simplaAddress(c); if (!address) continue;
+    if (typeof c.customerId !== 'number') continue;
     const s = stats.get(c.customerId) ?? { latest: '', bills: 0 };
-    out.push({ id: c.customerId, key: normalizeInterventionAddress(address), address, customer: c.customerName?.trim() || 'Simpla-klant', latest: s.latest, bills: s.bills });
+    for (const a of simplaAddresses(c)) out.push({ ref: `s:${c.customerId}:${a.kind}`, source: 'simpla', key: normalizeInterventionAddress(a.address), address: a.address, customer: c.customerName?.trim() || 'Simpla-klant', latest: s.latest, bills: s.bills });
+  }
+  return out;
+}
+export type ProjectRow = { id: string; name: string; street: string | null; house_number: string | null; postal_code: string | null; city: string | null; created_at: string; customers?: { name: string | null } | null };
+export function buildProjectLocations(rows: ProjectRow[]): SimplaLocation[] {
+  const out: SimplaLocation[] = [];
+  for (const p of rows) {
+    const address = joinAddress([p.street, p.house_number].map(v => v?.trim() ?? '').filter(Boolean).join(' '), p.postal_code, p.city); if (!address) continue;
+    out.push({ ref: `p:${p.id}`, source: 'project', key: normalizeInterventionAddress(address), address, customer: p.customers?.name?.trim() || p.name, latest: (p.created_at ?? '').slice(0, 10), bills: 0 });
   }
   return out;
 }
