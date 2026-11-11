@@ -14,8 +14,8 @@ export function OnderwegSms({ workOrderId, compact = false }: { workOrderId: str
   const load = useServerFn(getOnderwegSms);
   const send = useServerFn(sendOnderwegSms);
   const [open, setOpen] = useState(false);
-  // Only ask the server once the button is clicked: a calendar with dozens of tasks must not fire dozens of calls.
-  const q = useQuery({ queryKey: ["onderweg_sms", workOrderId], queryFn: () => load({ data: { workOrderId } }), enabled: open });
+  // On a task card only ask the server once the button is clicked: a calendar with dozens of tasks must not fire dozens of calls.
+  const q = useQuery({ queryKey: ["onderweg_sms", workOrderId], queryFn: () => load({ data: { workOrderId } }), enabled: compact ? open : true });
   const [confirm, setConfirm] = useState(false);
   const [phone, setPhone] = useState("");
   const [body, setBody] = useState("");
