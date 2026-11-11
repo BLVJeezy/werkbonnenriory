@@ -1941,6 +1941,63 @@ export type Database = {
           },
         ]
       }
+      intervention_geocode_budget: {
+        Row: {
+          day: string
+          id: number
+          next_at: string
+          used: number
+        }
+        Insert: {
+          day?: string
+          id: number
+          next_at?: string
+          used?: number
+        }
+        Update: {
+          day?: string
+          id?: number
+          next_at?: string
+          used?: number
+        }
+        Relationships: []
+      }
+      intervention_locations: {
+        Row: {
+          address: string
+          address_key: string
+          error: string | null
+          lat: number | null
+          lease_until: string | null
+          lon: number | null
+          source: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          address_key: string
+          error?: string | null
+          lat?: number | null
+          lease_until?: string | null
+          lon?: number | null
+          source?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          address_key?: string
+          error?: string | null
+          lat?: number | null
+          lease_until?: string | null
+          lon?: number | null
+          source?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoice_reminders: {
         Row: {
           created_at: string
@@ -4632,6 +4689,10 @@ export type Database = {
     Functions: {
       claim_crew_password_invitation: {
         Args: { p_hash: string }
+        Returns: string
+      }
+      claim_intervention_geocode: {
+        Args: { p_address: string; p_budget: number; p_key: string }
         Returns: string
       }
       close_subcontractor_work_orders: { Args: never; Returns: number }
