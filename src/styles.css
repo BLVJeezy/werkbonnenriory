@@ -1,8 +1,6 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
-@import "leaflet/dist/leaflet.css";
-@import "leaflet.markercluster/dist/MarkerCluster.css";
 
 @custom-variant dark (&:is(.dark *));
 
