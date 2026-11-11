@@ -31,4 +31,12 @@ describe('Interventiekaart', () => {
   it.each(['marketing', 'technician', null, undefined, ''])('weigert kaarttoegang voor %s', role => expect(canAccessInterventionMap(role)).toBe(false));
   it('staat alleen admin toe en faalt gesloten', () => { expect(canAccessInterventionMap('admin')).toBe(true); expect(() => requireInterventionAdmin(true)).not.toThrow(); expect(() => requireInterventionAdmin(false)).toThrow(); expect(() => requireInterventionAdmin(null)).toThrow(); });
   it('tekent alleen geldige exact opgeslagen coördinaten', () => { expect(located(null)).toBe(false); expect(located({ address_key:'x', lat:51,lon:5,state:'located',source:'manual',error:null })).toBe(true); expect(located({ address_key:'x',lat:999,lon:5,state:'located',source:null,error:null })).toBe(false); });
+  it('kiest uit een Google-antwoord enkel een exact adres, nooit een centroïde', () => {
+    expect(pickPremisesLocation({ status: 'OK', results: [{ geometry: { location: { lat: 50.85, lng: 4.35 }, location_type: 'ROOFTOP' } }] })).toEqual({ lat: 50.85, lon: 4.35 });
+    expect(pickPremisesLocation({ status: 'OK', results: [{ geometry: { location: { lat: 50.85, lng: 4.35 }, location_type: 'RANGE_INTERPOLATED' } }] })).toEqual({ lat: 50.85, lon: 4.35 });
+    expect(pickPremisesLocation({ status: 'OK', results: [{ geometry: { location: { lat: 50.85, lng: 4.35 }, location_type: 'APPROXIMATE' } }] })).toBeNull();
+    expect(pickPremisesLocation({ status: 'ZERO_RESULTS', results: [] })).toBeNull();
+    expect(pickPremisesLocation(null)).toBeNull();
+    expect(pickPremisesLocation({ results: [{ geometry: { location: { lat: 999, lng: 4 }, location_type: 'ROOFTOP' } }] })).toBeNull();
+  });
 });
