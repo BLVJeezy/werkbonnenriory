@@ -44,6 +44,13 @@ export const createInvoices = createServerFn({ method: "POST" })
       const act = (acts ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
       const { data: klant } = wo.customer_id ? await supabase.from("customers").select("billing_email").eq("id", wo.customer_id).maybeSingle() : { data: null };
       const inv = buildInvoice({ wo: { ...wo, customer_billing_email: klant?.billing_email ?? null, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) }, activity: act, seconds, kmRate: Number(s?.km_rate ?? 0), materials: m.data ?? [] });
+      // Werkbon uit een goedgekeurde offerte: factureren volgens de offertelijnen (gekozen posten), niet volgens geregistreerde uren/materialen.
+      const { data: q } = await supabase.from("quotes").select("lines, vat_rate").eq("work_order_id", id).eq("status", "akkoord").order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (q) {
+        const { quoteInvoiceLines } = await import("./subcontract");
+        const rows = quoteInvoiceLines(q.lines as InvoiceLine[] | null, Number(q.vat_rate ?? wo.vat_rate));
+        if (rows.length) { const calc = buildManualInvoice(rows); Object.assign(inv, { lines: calc.lines, net: calc.net, vat: calc.vat, total: calc.total, vatRate: calc.vatRate }); }
+      }
       const key = invoiceMergeKey(wo);
       groups.set(key, [...(groups.get(key) ?? []), { wo, inv }]);
     }
