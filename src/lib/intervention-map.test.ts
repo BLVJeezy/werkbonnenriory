@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canAccessInterventionMap, requireInterventionAdmin, normalizeInterventionAddress, groupInterventions, filterInterventions, emptyMapFilters, interventionDay, located, type Intervention } from './intervention-map';
+import { canAccessInterventionMap, requireInterventionAdmin, normalizeInterventionAddress, groupInterventions, filterInterventions, emptyMapFilters, interventionDay, located, pickPremisesLocation, type Intervention } from './intervention-map';
 
 const row = (patch: Partial<Intervention> = {}): Intervention => ({ id: 'one', number: 1, customer_name: 'VME', address: 'Kerkstraat 12, 9000 Gent', status: 'afgetekend', signed_at: '2026-11-02T23:30:00Z', paid_at: null, scheduled_date: '2026-11-01', created_at: '2026-11-01T12:00:00Z', technician_id: 'crew', activity_id: 'camera', technicians: { name: 'Ploeg' }, activities: { name: 'Camera' }, no_invoice: false, subcontract_auto: false, ...patch });
 describe('Interventiekaart', () => {
