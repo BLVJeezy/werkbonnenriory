@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canAccessInterventionMap, requireInterventionAdmin, normalizeInterventionAddress, groupInterventions, filterInterventions, emptyMapFilters, interventionDay, located, type Intervention } from './intervention-map';
+import { canAccessInterventionMap, requireInterventionAdmin, normalizeInterventionAddress, groupInterventions, filterInterventions, emptyMapFilters, interventionDay, located, pickPremisesLocation, type Intervention } from './intervention-map';
 
 const row = (patch: Partial<Intervention> = {}): Intervention => ({ id: 'one', number: 1, customer_name: 'VME', address: 'Kerkstraat 12, 9000 Gent', status: 'afgetekend', signed_at: '2026-11-02T23:30:00Z', paid_at: null, scheduled_date: '2026-11-01', created_at: '2026-11-01T12:00:00Z', technician_id: 'crew', activity_id: 'camera', technicians: { name: 'Ploeg' }, activities: { name: 'Camera' }, no_invoice: false, subcontract_auto: false, ...patch });
 describe('Interventiekaart', () => {
@@ -31,4 +31,12 @@ describe('Interventiekaart', () => {
   it.each(['marketing', 'technician', null, undefined, ''])('weigert kaarttoegang voor %s', role => expect(canAccessInterventionMap(role)).toBe(false));
   it('staat alleen admin toe en faalt gesloten', () => { expect(canAccessInterventionMap('admin')).toBe(true); expect(() => requireInterventionAdmin(true)).not.toThrow(); expect(() => requireInterventionAdmin(false)).toThrow(); expect(() => requireInterventionAdmin(null)).toThrow(); });
   it('tekent alleen geldige exact opgeslagen coördinaten', () => { expect(located(null)).toBe(false); expect(located({ address_key:'x', lat:51,lon:5,state:'located',source:'manual',error:null })).toBe(true); expect(located({ address_key:'x',lat:999,lon:5,state:'located',source:null,error:null })).toBe(false); });
+  it('kiest uit een Google-antwoord enkel een exact adres, nooit een centroïde', () => {
+    expect(pickPremisesLocation({ status: 'OK', results: [{ geometry: { location: { lat: 50.85, lng: 4.35 }, location_type: 'ROOFTOP' } }] })).toEqual({ lat: 50.85, lon: 4.35 });
+    expect(pickPremisesLocation({ status: 'OK', results: [{ geometry: { location: { lat: 50.85, lng: 4.35 }, location_type: 'RANGE_INTERPOLATED' } }] })).toEqual({ lat: 50.85, lon: 4.35 });
+    expect(pickPremisesLocation({ status: 'OK', results: [{ geometry: { location: { lat: 50.85, lng: 4.35 }, location_type: 'APPROXIMATE' } }] })).toBeNull();
+    expect(pickPremisesLocation({ status: 'ZERO_RESULTS', results: [] })).toBeNull();
+    expect(pickPremisesLocation(null)).toBeNull();
+    expect(pickPremisesLocation({ results: [{ geometry: { location: { lat: 999, lng: 4 }, location_type: 'ROOFTOP' } }] })).toBeNull();
+  });
 });
