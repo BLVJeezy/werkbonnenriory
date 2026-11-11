@@ -53,6 +53,20 @@ export function groupInterventions(rows: Intervention[], caches: LocationCache[]
   }
   return [...groups.values()].map(group => ({ ...group, orders: group.orders.sort((a,b) => interventionDay(b).localeCompare(interventionDay(a))) })).sort((a,b) => b.latest.localeCompare(a.latest));
 }
+// Google Geocoding response: only premises-level matches may become intervention pins.
+export function pickPremisesLocation(payload: unknown): { lat: number; lon: number } | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const results = (payload as { results?: unknown }).results;
+  if (!Array.isArray(results)) return null;
+  for (const result of results) {
+    const geometry = (result as { geometry?: unknown })?.geometry as { location?: { lat?: unknown; lng?: unknown }; location_type?: unknown } | undefined;
+    const lat = geometry?.location?.lat; const lon = geometry?.location?.lng;
+    if ((geometry?.location_type === 'ROOFTOP' || geometry?.location_type === 'RANGE_INTERPOLATED')
+      && typeof lat === 'number' && typeof lon === 'number' && Number.isFinite(lat) && Number.isFinite(lon)
+      && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat, lon };
+  }
+  return null;
+}
 export function located(cache: LocationCache | null): cache is LocationCache & { lat: number; lon: number } {
   return cache?.state === 'located' && typeof cache.lat === 'number' && typeof cache.lon === 'number' && Number.isFinite(cache.lat) && Number.isFinite(cache.lon) && Math.abs(cache.lat) <= 90 && Math.abs(cache.lon) <= 180;
 }
