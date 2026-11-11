@@ -20,8 +20,8 @@ const products = [
 ];
 
 describe("materialChoices", () => {
-  it("orders by alias first, then name", () => {
-    expect(materialChoices(products, true).map((c) => c.value)).toEqual(["a", "b"]);
+  it("sorts by alias when present, otherwise by name", () => {
+    expect(materialChoices(products, true).map((c) => c.value)).toEqual(["b", "a"]);
   });
 
   it("finds a product by alias, by name and by description word", () => {
@@ -38,10 +38,10 @@ describe("materialChoices", () => {
   });
 
   it("shows the price only when prices are allowed", () => {
-    const [withPrice] = materialChoices([product({ id: "a", price: 120.5 })], true);
-    const [withoutPrice] = materialChoices([product({ id: "a", price: 120.5 })], false);
-    expect(withPrice.label).toContain("€");
-    expect(withoutPrice.label).not.toContain("€");
-    expect(withoutPrice.label).toContain("(stk)");
+    const withPrice = materialChoices([product({ id: "a", price: 120.5 })], true);
+    const withoutPrice = materialChoices([product({ id: "a", price: 120.5 })], false);
+    expect(withPrice[0]?.label).toContain("€");
+    expect(withoutPrice[0]?.label).not.toContain("€");
+    expect(withoutPrice[0]?.label).toContain("(stk)");
   });
 });
