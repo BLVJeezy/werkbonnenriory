@@ -9,7 +9,7 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Mailtaken/review feeds require separate server tokens and stable IDs. Reviews expose only id+email+timestamp for sent invoices or completed work orders, with timestamp+id cursors.
+- Mailtaken/review feeds need server tokens and stable IDs. Reviews expose id+email+timestamp (work orders also customer_name, excluding subcontract_auto) with timestamp+id cursors.
 - Document links use hashed tokens, private PDF snapshots and POST opens; admin reports count opens, not reading.
 - Password recovery: public /reset-password and recovery sessions; never disclose passwords.
 - Purchase payments use a tested direction/reference/amount matcher and an atomic transaction-key ledger; SEPA export only stages payment, supplier credit notes excluded. Original purchase PDFs stay private attachments.
