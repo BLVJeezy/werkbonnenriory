@@ -39,8 +39,8 @@ export function attributionInvoicePage(rows: AttributionInvoiceRow[], limit: num
           unit_price_excl_vat: num(l?.unitPrice ?? l?.unit_price), amount_excl_vat: num(l?.amount),
         })),
         work_orders: (Array.isArray(r.work_orders) ? r.work_orders : []).map((w: Record<string, unknown>) => ({
-          id: String(w.id), activity: text(w.activity), signed_at: text(w.signed_at),
-          postal_code: text(w.postal_code), first_customer: w.first_customer === true,
+          id: String(w['id']), activity: text(w['activity']), signed_at: text(w['signed_at']),
+          postal_code: text(w['postal_code']), first_customer: w['first_customer'] === true,
         })),
       };
     }),
