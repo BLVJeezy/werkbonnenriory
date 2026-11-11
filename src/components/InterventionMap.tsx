@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 import { useEffect, useRef, useState } from 'react';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import type { InterventionLocation } from '@/lib/intervention-map';
