@@ -8,12 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { getOnderwegSms, sendOnderwegSms } from "@/lib/sms.functions";
 import { normalizeMobile } from "@/lib/sms-phone";
 
-/** "We zijn onderweg" SMS: edit number and text, confirm, send exactly once per confirmation. */
-export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
+/** "We zijn onderweg" SMS: edit number and text, confirm, send exactly once per confirmation.
+ *  compact = small button for task cards, so the crew can send before opening the task. */
+export function OnderwegSms({ workOrderId, compact = false }: { workOrderId: string; compact?: boolean }) {
   const load = useServerFn(getOnderwegSms);
   const send = useServerFn(sendOnderwegSms);
-  const q = useQuery({ queryKey: ["onderweg_sms", workOrderId], queryFn: () => load({ data: { workOrderId } }) });
   const [open, setOpen] = useState(false);
+  // Only ask the server once the button is clicked: a calendar with dozens of tasks must not fire dozens of calls.
+  const q = useQuery({ queryKey: ["onderweg_sms", workOrderId], queryFn: () => load({ data: { workOrderId } }), enabled: open });
   const [confirm, setConfirm] = useState(false);
   const [phone, setPhone] = useState("");
   const [body, setBody] = useState("");
@@ -25,10 +27,8 @@ export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
   const start = () => {
     setConfirm(false);
     key.current = crypto.randomUUID();
-    if (!d) { setOpen(true); q.refetch(); return; }
-    setPhone(d.phone); setBody(d.template);
-    key.current = crypto.randomUUID();
     setOpen(true);
+    if (d) { setPhone(d.phone); setBody(d.template); }
   };
   const norm = d?.canEditNumber ? normalizeMobile(phone) : null;
   const numberOk = d?.canEditNumber ? !!norm?.ok : !!d?.phoneValid;
@@ -45,8 +45,12 @@ export function OnderwegSms({ workOrderId }: { workOrderId: string }) {
   }
 
   return (
-    <section className="no-print rounded-md border-2 border-primary bg-card p-3">
-      <Button size="lg" className="h-14 w-full text-base font-black uppercase" onClick={start}>📱 SMS – wij zijn onderweg</Button>
+    <section className={compact ? "min-w-0" : "no-print rounded-md border-2 border-primary bg-card p-3"}>
+      {compact ? (
+        <Button size="sm" variant="outline" className="h-8 w-full justify-start border-primary text-xs font-black uppercase" onClick={start}>📱 SMS – wij zijn onderweg</Button>
+      ) : (
+        <Button size="lg" className="h-14 w-full text-base font-black uppercase" onClick={start}>📱 SMS – wij zijn onderweg</Button>
+      )}
       {open && q.isLoading && <p className="mt-2 text-sm text-muted-foreground">Gegevens laden…</p>}
       {open && q.isError && <p className="mt-2 text-sm text-destructive">Kon de SMS-gegevens niet laden: {(q.error as Error).message}</p>}
       {d && !d.config.configured && (
