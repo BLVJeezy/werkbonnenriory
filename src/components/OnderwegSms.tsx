@@ -9,7 +9,7 @@ import { getOnderwegSms, sendOnderwegSms } from "@/lib/sms.functions";
 import { normalizeMobile } from "@/lib/sms-phone";
 
 /** "We zijn onderweg" SMS: edit number and text, confirm, send exactly once per confirmation.
- *  compact = small button for task cards, so the crew can send before opening the task. */
+ *  compact = small button on the task card, so the crew can send before opening the task. */
 export function OnderwegSms({ workOrderId, compact = false }: { workOrderId: string; compact?: boolean }) {
   const load = useServerFn(getOnderwegSms);
   const send = useServerFn(sendOnderwegSms);
@@ -51,57 +51,63 @@ export function OnderwegSms({ workOrderId, compact = false }: { workOrderId: str
       ) : (
         <Button size="lg" className="h-14 w-full text-base font-black uppercase" onClick={start}>📱 SMS – wij zijn onderweg</Button>
       )}
-      {open && q.isLoading && <p className="mt-2 text-sm text-muted-foreground">Gegevens laden…</p>}
-      {open && q.isError && <p className="mt-2 text-sm text-destructive">Kon de SMS-gegevens niet laden: {(q.error as Error).message}</p>}
-      {d && !d.config.configured && (
-        <p className="mt-2 text-sm text-destructive">SMS is nog niet ingesteld ({d.config.missing.join(", ")}). Er wordt niets verzonden tot dit ingesteld is.</p>
-      )}
-      {open && d && (
-        <div className="mt-3 space-y-3">
-          {d.name && <p className="text-sm">Klant: <b>{d.name}</b>{d.address && <> — {d.address}</>}</p>}
-          <div>
-            <label className="text-sm font-semibold">Gsm-nummer</label>
-            {d.canEditNumber ? (
-              <>
-                <Input value={phone} onChange={(e) => { setPhone(e.target.value); setConfirm(false); }} inputMode="tel" placeholder="0470 12 34 56" />
-                <p className={`text-xs ${norm?.ok ? "text-muted-foreground" : "text-destructive"}`}>{norm?.ok ? `Wordt verzonden naar ${norm.e164}` : norm?.error}</p>
-              </>
-            ) : (
-              <p className="font-mono">{d.phone || "Geen geldig gsm-nummer bij deze werkbon"}</p>
-            )}
-          </div>
-          <div>
-            <label className="text-sm font-semibold">Bericht</label>
-            <Textarea value={body} onChange={(e) => { setBody(e.target.value); setConfirm(false); }} rows={3} maxLength={480} />
-            <p className="text-xs text-muted-foreground">{body.length} tekens</p>
-          </div>
-          {!confirm ? (
-            <div className="flex flex-wrap gap-2">
-              <Button disabled={!numberOk || !body.trim() || !d.config.configured} onClick={() => setConfirm(true)}>Verder</Button>
-              <Button variant="ghost" onClick={() => setOpen(false)}>Annuleren</Button>
-            </div>
-          ) : (
-            <div className="space-y-2 rounded-md border border-primary p-3">
-              <p className="text-sm font-semibold">SMS nu echt versturen naar {d.canEditNumber ? norm?.ok && norm.e164 : d.phone}?</p>
-              <div className="flex flex-wrap gap-2">
-                <Button disabled={busy} onClick={doSend}>{busy ? "Bezig…" : "Ja, verstuur"}</Button>
-                <Button variant="ghost" disabled={busy} onClick={() => setConfirm(false)}>Nee</Button>
+      {/* Neutral surface: a task card can be painted in the crew's colour, so the fields and warnings never sit on it directly. */}
+      {(open || d) && (
+        <div className="mt-2 rounded-md border bg-card p-3 text-card-foreground">
+          {open && q.isLoading && <p className="text-sm text-muted-foreground">Gegevens laden…</p>}
+          {open && q.isError && <p className="text-sm text-destructive">Kon de SMS-gegevens niet laden: {(q.error as Error).message}</p>}
+          {d && !d.config.configured && (
+            <p className="text-sm text-destructive">SMS is nog niet ingesteld ({d.config.missing.join(", ")}). Er wordt niets verzonden tot dit ingesteld is.</p>
+          )}
+          {open && d && (
+            <div className="mt-3 space-y-3">
+              {d.name && <p className="text-sm">Klant: <b>{d.name}</b>{d.address && <> — {d.address}</>}</p>}
+              <div>
+                <label className="text-sm font-semibold">Gsm-nummer</label>
+                {d.canEditNumber ? (
+                  <>
+                    <Input value={phone} onChange={(e) => { setPhone(e.target.value); setConfirm(false); }} inputMode="tel" placeholder="0470 12 34 56" />
+                    <p className={`text-xs ${norm?.ok ? "text-muted-foreground" : "text-destructive"}`}>{norm?.ok ? `Wordt verzonden naar ${norm.e164}` : norm?.error}</p>
+                  </>
+                ) : (
+                  <p className="font-mono">{d.phone || "Geen geldig gsm-nummer bij deze werkbon"}</p>
+                )}
               </div>
+              <div>
+                <label className="text-sm font-semibold">Bericht</label>
+                <Textarea value={body} onChange={(e) => { setBody(e.target.value); setConfirm(false); }} rows={3} maxLength={480} />
+                <p className="text-xs text-muted-foreground">{body.length} tekens</p>
+              </div>
+              {!confirm ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={!numberOk || !body.trim() || !d.config.configured} onClick={() => setConfirm(true)}>Verder</Button>
+                  <Button variant="ghost" onClick={() => setOpen(false)}>Annuleren</Button>
+                </div>
+              ) : (
+                <div className="space-y-2 rounded-md border border-primary p-3">
+                  <p className="text-sm font-semibold">SMS nu echt versturen naar {d.canEditNumber ? norm?.ok && norm.e164 : d.phone}?</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button disabled={busy} onClick={doSend}>{busy ? "Bezig…" : "Ja, verstuur"}</Button>
+                    <Button variant="ghost" disabled={busy} onClick={() => setConfirm(false)}>Nee</Button>
+                  </div>
+                </div>
+              )}
             </div>
+          )}
+          {d && d.history.length > 0 && (
+            <ul className="mt-3 divide-y text-sm">
+              {d.history.map((h: any) => (
+                <li key={h.id} className="py-1">
+                  <span className="font-mono">{new Date(h.created_at).toLocaleString("nl-BE")}</span> · {h.to_number} ·{" "}
+                  <b className={h.status === "mislukt" ? "text-destructive" : ""}>{h.status}</b>
+                  {h.provider_message_id && <span className="text-xs text-muted-foreground"> · {h.provider_message_id}</span>}
+                  {h.error && <div className="text-xs text-destructive">{h.error}</div>}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
-      {d && d.history.length > 0 && (
-        <ul className="mt-3 divide-y text-sm">
-          {d.history.map((h: any) => (
-            <li key={h.id} className="py-1">
-              <span className="font-mono">{new Date(h.created_at).toLocaleString("nl-BE")}</span> · {h.to_number} ·{" "}
-              <b className={h.status === "mislukt" ? "text-destructive" : ""}>{h.status}</b>
-              {h.provider_message_id && <span className="text-xs text-muted-foreground"> · {h.provider_message_id}</span>}
-              {h.error && <div className="text-xs text-destructive">{h.error}</div>}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>  );
+    </section>
+  );
 }
