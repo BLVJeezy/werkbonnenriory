@@ -1100,6 +1100,13 @@
       "when": 1794486462673,
       "tag": "0156_undo_purchase_bank_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 157,
+      "version": "7",
+      "when": 1794488628517,
+      "tag": "0157_guard_next_quote_number",
+      "breakpoints": true
     }
   ]
 }
