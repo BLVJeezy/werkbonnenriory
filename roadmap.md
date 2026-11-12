@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Ontbrekende kaartadressen bij Simpla-storing hersteld: privé laatste succesvolle adreslijst opgeslagen, projecten onafhankelijk geladen en Vernieuwen herlaadt alle bronnen. Ingelogd 3093 Simpla-adressen + 334 projectadressen, 3210 unieke locaties teruggelezen; 31 tests en automatische controle geslaagd. Geen Google-opzoekingen; kaartweergave zelf niet live getest, niet gepubliceerd.
+
 - [x] Verzekeringsverslag-tab bij afgewerkte werkbonnen: bewerkbare AI-tekst uit techniekerbevindingen, bewaren, prijsloze PDF met foto's en expliciet verzenden via info@riory.be; echte AI-tekst, bewaren en PDF met drie foto's gecontroleerd, geen echte mail verzonden. Publicatie niet uitgevoerd.
 
 - [x] SMS-knop "wij zijn onderweg" op de taakkaart zelf (Kalender én ploegweergave), vóór openen; panelen op neutrale witte achtergrond zodat ze leesbaar blijven op gekleurde ploegtaken. 10 tests, typecontrole en ingelogde desktopcontrole geslaagd; geen SMS verzonden.

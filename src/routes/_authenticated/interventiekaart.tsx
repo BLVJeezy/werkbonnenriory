@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { ClientOnly, createFileRoute } from '@tanstack/react-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { List, MapPin, RefreshCw, Search, LocateFixed } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,13 +27,14 @@ function Choice({ label, value, onChange, options }: { label: string; value: str
   return <label className="min-w-0 text-xs font-semibold text-muted-foreground">{label}<Select value={value || 'all'} onValueChange={value => onChange(value === 'all' ? '' : value)}><SelectTrigger className="mt-1 w-full" aria-label={label}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Alle</SelectItem>{options.map(([id,name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}</SelectContent></Select></label>;
 }
 function InterventionPage() {
+  const simplaClient = useQueryClient();
   const role = useRole(); const allowed = canAccessInterventionMap(role);
   const fetchPage = useServerFn(getInterventionPage); const fetchSimpla = useServerFn(getSimplaMapLocations); const geocode = useServerFn(geocodeInterventionBatch);
   const [filters, setFilters] = useState<MapFilters>(emptyMapFilters); const [view,setView] = useState('map');
   const [selected, setSelected] = useState<string | null>(null); const [scope, setScope] = useState('all'); const [page,setPage] = useState(0); const [busy,setBusy] = useState(false); const [progress,setProgress] = useState('');
   const query = useInfiniteQuery({ queryKey: ['intervention-map'], enabled: allowed, initialPageParam: 0, queryFn: ({ pageParam }) => fetchPage({ data: { offset: pageParam } }), getNextPageParam: page => page.next ?? undefined });
   const rows = useMemo(() => query.data?.pages.flatMap(p => p.rows) ?? [], [query.data]);
-  const simpla = useQuery({ queryKey: ['intervention-map', 'simpla'], enabled: allowed, staleTime: 5 * 60_000, queryFn: () => fetchSimpla() });
+  const simpla = useQuery({ queryKey: ['intervention-map', 'simpla'], enabled: allowed, staleTime: 5 * 60_000, queryFn: () => fetchSimpla({ data: {} }) });
   const caches = useMemo(() => [...(query.data?.pages.flatMap(p => p.caches) ?? []), ...(simpla.data?.caches ?? [])], [query.data, simpla.data]);
   const simplaRows = useMemo(() => simpla.data?.rows ?? [], [simpla.data]);
   const groups = useMemo(() => mergeSimplaLocations(groupInterventions(filterInterventions(rows,filters), caches), simplaRows, caches, filters), [rows,filters,caches,simplaRows]);
@@ -47,11 +48,13 @@ function InterventionPage() {
   if (!role) return <p>Laden…</p>;
   if (!allowed) return <p role="alert">Alleen beheerders hebben toegang tot de interventiekaart.</p>;
   return <div className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black uppercase sm:text-3xl">Interventiekaart</h1><p className="text-sm text-muted-foreground">{rows.length} uitgevoerde werkbonnen · {simplaRows.filter(r => r.source === 'simpla').length} Simpla-adressen · {simplaRows.filter(r => r.source === 'project').length} projectadressen · {allGroups.length} locaties</p></div><Button variant="outline" disabled={query.isFetching} onClick={() => query.refetch()}><RefreshCw className={query.isFetching ? 'animate-spin' : ''} size={16} />Vernieuwen</Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black uppercase sm:text-3xl">Interventiekaart</h1><p className="text-sm text-muted-foreground">{rows.length} uitgevoerde werkbonnen · {simplaRows.filter(r => r.source === 'simpla').length} Simpla-adressen · {simplaRows.filter(r => r.source === 'project').length} projectadressen · {allGroups.length} locaties</p></div><Button variant="outline" disabled={query.isFetching || simpla.isFetching} onClick={async () => {
+      await Promise.all([query.refetch(), fetchSimpla({ data: { refresh: true } }).then(result => simplaClient.setQueryData(['intervention-map', 'simpla'], result)).catch(() => simpla.refetch())]);
+    }}><RefreshCw className={query.isFetching || simpla.isFetching ? 'animate-spin' : ''} size={16} />Vernieuwen</Button></div>
     {query.error && <p role="alert" className="border-l-4 border-destructive bg-muted p-3">{query.error instanceof Error ? query.error.message : 'Werkbonnen laden mislukt.'}</p>}
     {query.isPending && <p role="status">Werkbonnen ophalen…</p>}
     {simpla.isPending && <p role="status">Simpla-adressen ophalen…</p>}
-    {simpla.data?.error && <p role="alert" className="border-l-4 border-destructive bg-muted p-3">Simpla-adressen konden niet geladen worden: {simpla.data.error}</p>}
+    {(simpla.data?.error || simpla.error) && <p role="alert" className="border-l-4 border-destructive bg-muted p-3">{simpla.data?.error || (simpla.error instanceof Error ? simpla.error.message : 'Simpla-adressen laden mislukt.')}</p>}
     {query.hasNextPage && <div className="flex flex-wrap items-center gap-3 border-l-4 border-primary bg-muted p-3"><p className="text-sm">Het overzicht is nog onvolledig.</p><Button disabled={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>{query.isFetchingNextPage ? 'Laden…' : 'Volgende 500 werkbonnen laden'}</Button></div>}
     <div className="grid gap-3 border-y py-4 sm:grid-cols-2 lg:grid-cols-6">
       <label className="text-xs font-semibold text-muted-foreground">Vanaf<Input className="mt-1" aria-label="Vanaf" type="date" value={filters.from} onChange={e => change('from',e.target.value)} /></label>
