@@ -1,4 +1,4 @@
-import { expect,it,vi } from '/dev-server/node_modules/vitest';
+import { expect,it,vi } from 'vitest';
 vi.mock('@tanstack/react-start',()=>({createServerFn:()=>{const b={middleware:()=>b,handler:(fn:unknown)=>fn,inputValidator:()=>b};return b}}));
 vi.mock('@/integrations/supabase/auth-middleware',()=>({requireSupabaseAuth:{}}));
 it('retains project addresses when Simpla connection fails',async()=>{
