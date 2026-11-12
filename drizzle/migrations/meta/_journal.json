@@ -1030,6 +1030,13 @@
       "when": 1794468507618,
       "tag": "0146_private_simpla_map_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 147,
+      "version": "7",
+      "when": 1794473712456,
+      "tag": "0147_allow_shared_purchase_bank_reference",
+      "breakpoints": true
     }
   ]
 }

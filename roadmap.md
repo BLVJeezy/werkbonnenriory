@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Hans Anders: oude unieke factuurverwijzing blokkeerde resterende €39 van één betaling van €288 na €249; vervangen door niet-unieke zoekindex. Unieke betalingsledger en factuurtoewijzingen behouden; fout exact gereproduceerd en 11 tests geslaagd. Geen bestaande aflettering of bankbetaling uitgevoerd.
+
 - [x] Aankoopfactuur expliciet als al betaald aanduiden met betaaldatum en bevestiging op lijst en detail; uitsluiten van nieuwe betaalbestanden, zonder bankbetaling of bankboeking. 26 tests geslaagd; ingelogde bevestiging op desktop/kleiner scherm gecontroleerd, geen bestaande factuurstatus gewijzigd.
 
 - [x] Gewijzigde leveranciersbetaalwijze vanuit factuurcontrole en leveranciersbeheer overnemen op andere gekoppelde open aankoopfacturen; betaalde en bankklaargezette facturen behouden. 31 tests geslaagd; ingelogd opslaan en teruglezen gecontroleerd zonder betaalwijze te wijzigen.
