@@ -1086,6 +1086,13 @@
       "when": 1794485994765,
       "tag": "0154_undo_purchase_bank_link",
       "breakpoints": true
+    },
+    {
+      "idx": 155,
+      "version": "7",
+      "when": 1794486217341,
+      "tag": "0155_undo_invoice_bank_link",
+      "breakpoints": true
     }
   ]
 }
