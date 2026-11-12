@@ -48,22 +48,38 @@ export const saveInterventionCoordinates = createServerFn({ method: 'POST' })
     return { ok: true };
   });
 
-// Alleen-lezen Simpla-klantadressen; kort in het geheugen bewaard zodat herhaalde opzoekreeksen Simpla niet telkens bevragen.
-let simplaMemo: { at: number; rows: SimplaLocation[] } | null = null;
-async function loadSimplaLocations(): Promise<SimplaLocation[]> {
-  if (simplaMemo && Date.now() - simplaMemo.at < 10 * 60_000) return simplaMemo.rows;
+// Persistent private snapshot: Worker instances cannot share an in-memory cache.
+async function loadSimplaLocations(supabase: any, force = false): Promise<{ rows: SimplaLocation[]; warning: string | null }> {
+  const snapshot = await supabase.from('intervention_source_snapshots').select('rows,fetched_at').eq('source', 'simpla').maybeSingle();
+  if (snapshot.error) throw new Error(`Adresarchief: ${snapshot.error.message}`);
+  const cached = snapshot.data as { rows: SimplaLocation[]; fetched_at: string } | null;
+  if (!force && cached && Date.now() - Date.parse(cached.fetched_at) < 10 * 60_000) return { rows: cached.rows, warning: null };
+  try {
   const token = process.env['SIMPLA_API_TOKEN'];
   if (!token) throw new Error('Simpla-token ontbreekt');
   const get = async (dataType: string) => {
     const url = new URL('https://app-02.simpla.be/api/'); url.searchParams.set('token', token); url.searchParams.set('dataType', dataType);
-    const res = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(45000) }).catch(() => { throw new Error(`Simpla ${dataType}: verbinding mislukt`); });
+    let res: Response | undefined;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try { res = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(20000) }); break; }
+      catch { if (attempt === 1) throw new Error(`Simpla ${dataType}: verbinding mislukt of tijdslimiet bereikt`); }
+    }
+    if (!res) throw new Error(`Simpla ${dataType}: verbinding mislukt`);
     if (!res.ok) throw new Error(`Simpla ${dataType} mislukt (HTTP ${res.status})`);
     const j = await res.json() as { status?: string; data?: unknown[] };
     if (j.status !== 'OK' || !Array.isArray(j.data)) throw new Error(`Simpla gaf geen geldige ${dataType}`);
     return j.data as never[];
   };
   const [customers, bills] = await Promise.all([get('customer'), get('bill_sale')]);
-  const rows = buildSimplaLocations(customers, bills); simplaMemo = { at: Date.now(), rows }; return rows;
+  const rows = buildSimplaLocations(customers, bills);
+  if (!rows.length && cached?.rows.length) throw new Error('Simpla gaf een lege adressenlijst');
+  const saved = await supabase.from('intervention_source_snapshots').upsert({ source: 'simpla', rows, fetched_at: new Date().toISOString() });
+  if (saved.error) return { rows, warning: `Adressen geladen, maar archief bewaren mislukt: ${saved.error.message}` };
+  return { rows, warning: null };
+  } catch (error) {
+    if (!cached) throw error;
+    return { rows: cached.rows, warning: `Simpla tijdelijk niet bereikbaar; laatst opgeslagen adressen van ${new Date(cached.fetched_at).toLocaleString('nl-BE', { timeZone: 'Europe/Brussels' })} worden getoond.` };
+  }
 }
 
 // Projectadressen (werven per klant) — gelezen als admin, dus RLS blijft gelden.
@@ -79,18 +95,23 @@ async function loadProjectLocations(supabase: any): Promise<SimplaLocation[]> {
 
 export const getSimplaMapLocations = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: unknown) => z.object({ refresh: z.boolean().optional() }).parse(input ?? {}))
+  .handler(async ({ data, context }) => {
     const role = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'admin' });
     if (role.error) throw new Error('Toegang kon niet gecontroleerd worden.');
     requireInterventionAdmin(role.data);
     try {
-      const rows = [...await loadSimplaLocations(), ...await loadProjectLocations(context.supabase)];
+      const sources = await Promise.allSettled([loadSimplaLocations(context.supabase, data?.refresh), loadProjectLocations(context.supabase)]);
+      const [simpla, projects] = sources;
+      const rows = [...(simpla.status === 'fulfilled' ? simpla.value.rows : []), ...(projects.status === 'fulfilled' ? projects.value : [])];
+      const errors = sources.flatMap(s => s.status === 'rejected' ? [s.reason instanceof Error ? s.reason.message : 'Adressen laden mislukt'] : []);
+      if (simpla.status === 'fulfilled' && simpla.value.warning) errors.push(simpla.value.warning);
       const keys = [...new Set(rows.map(r => r.key))]; const caches = [];
       for (let i = 0; i < keys.length; i += 150) {
         const res = await context.supabase.from('intervention_locations').select('address_key,lat,lon,state,source,error').in('address_key', keys.slice(i, i + 150));
         if (res.error) throw new Error(res.error.message); caches.push(...(res.data ?? []));
       }
-      return { rows, caches, error: null as string | null };
+      return { rows, caches, error: errors.join(' · ') || null };
     } catch (e) { return { rows: [] as SimplaLocation[], caches: [], error: e instanceof Error ? e.message : 'Simpla niet bereikbaar' }; }
   });
 
@@ -112,7 +133,7 @@ export const geocodeInterventionBatch = createServerFn({ method: 'POST' })
     if (data.refs.length) {
       // Adressen komen van de server zelf (Simpla/projecten), nooit uit de browser.
       const wanted = new Set(data.refs);
-      const pool = [...(data.refs.some(r => r.startsWith('s:')) ? await loadSimplaLocations() : []), ...(data.refs.some(r => r.startsWith('p:')) ? await loadProjectLocations(context.supabase) : [])];
+      const pool = [...(data.refs.some(r => r.startsWith('s:')) ? (await loadSimplaLocations(context.supabase)).rows : []), ...(data.refs.some(r => r.startsWith('p:')) ? await loadProjectLocations(context.supabase) : [])];
       for (const s of pool) if (wanted.has(s.ref)) addresses.set(s.key, s.address);
     }
     let found = 0; let failed = 0; let stopped: string | null = null;
