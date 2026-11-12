@@ -4,6 +4,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
 import { splitLineText } from "./line-text";
+import { discountLabel, quoteDiscountTotal } from "./quote";
 import { supplierFooterLine } from "./company-id";
 
 export type QuotePdfData = {
@@ -147,7 +148,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       const w = cols.qty - cols.desc - 20;
       const split = splitLineText(l.description);
       const title = bestek && postNr ? `${postNr}.${sub}  ${split.title}` : split.title;
-      const detail = [split.detail, l.discount ? `Korting ${l.discount.toLocaleString('nl-BE')}%` : ''].filter(Boolean).join('\n');
+      const detail = [split.detail, discountLabel(l, money)].filter(Boolean).join('\n');
       const tl = wrap(title, 10.5, w, bold);
       const dl = detail ? wrap(detail, 9, w - 14) : [];
       const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
@@ -213,6 +214,11 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     right(v, W - M - 8, y, strong ? 13 : 10.5, strong ? bold : font);
     y -= strong ? 22 : 16;
   };
+  const korting = quoteDiscountTotal(mainLines);
+  if (korting.saved > 0) {
+    tot("Prijs zonder korting excl. btw", money(korting.beforeDiscount));
+    tot("Uw korting", `- ${money(korting.saved)}`);
+  }
   tot("Totaal excl. btw", money(d.net));
   tot(`Btw ${d.vatRate}%`, money(d.vat));
   page.drawLine({ start: { x: W - M - 230, y: y + 14 }, end: { x: W - M, y: y + 14 }, thickness: 1.5, color: orange });

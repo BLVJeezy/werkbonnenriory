@@ -9,6 +9,7 @@ import { euro } from "@/lib/billing";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { splitLineText } from "@/lib/line-text";
 import { getQuoteByToken, signQuote } from "@/lib/quotes.functions";
+import { discountLabel, quoteDiscountTotal } from "@/lib/quote";
 import { ProductPhotoGallery } from "@/components/ProductPhotos";
 
 export const Route = createFileRoute("/offerte/$token")({
@@ -64,7 +65,7 @@ function OfferteTekenen() {
             <li key={i} className="flex items-start gap-3 p-3">
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{title}</span>
-                {!!l.discount && <span className="block text-xs text-muted-foreground">Korting {l.discount}%</span>}
+                {discountLabel(l, euro) && <span className="mt-0.5 block text-sm font-semibold text-primary">{discountLabel(l, euro)}</span>}
                 {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
                 <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
               </span>
@@ -75,6 +76,10 @@ function OfferteTekenen() {
         })}
       </ul>
       <dl className="ml-auto grid w-64 grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
+        {quoteDiscountTotal(lines).saved > 0 && <>
+          <dt>Prijs zonder korting</dt><dd className="text-right line-through">{euro(quoteDiscountTotal(lines).beforeDiscount)}</dd>
+          <dt className="font-bold text-primary">Uw korting</dt><dd className="text-right font-bold text-primary">- {euro(quoteDiscountTotal(lines).saved)}</dd>
+        </>}
         <dt>Totaal excl. btw</dt><dd className="text-right">{euro(Number(q.net))}</dd>
         <dt>Btw {Number(q.vat_rate)}%</dt><dd className="text-right">{euro(Number(q.vat))}</dd>
         <dt className="text-lg font-black">Totaal incl. btw</dt><dd className="text-right text-lg font-black">{euro(Number(q.total))}</dd>
@@ -102,7 +107,7 @@ function OfferteTekenen() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold">{title}</span>
-                      {!!l.discount && <span className="block text-xs text-muted-foreground">Korting {l.discount}%</span>}
+                      {discountLabel(l, euro) && <span className="mt-0.5 block text-sm font-semibold text-primary">{discountLabel(l, euro)}</span>}
                       {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
                       <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
                     </span>
