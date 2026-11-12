@@ -355,7 +355,12 @@ function Facturen() {
                       <td className="whitespace-nowrap font-mono font-bold"><span className="inline-flex items-center gap-1.5">{i.number}{i.pdf_sent_at && <OpenEye info={data.opens?.[i.id]} />}</span>{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
                       <td>{(i.customer as { name?: string }).name}{i.contract_reference && <div className="max-w-xs truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
                       <td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">{new Date(i.created_at).toLocaleDateString("nl-BE")}</td>
-                      <td className={`whitespace-nowrap text-right font-mono ${i.kind === "creditnota" ? "font-bold text-destructive" : ""}`}>{euro(i.kind === "creditnota" ? -Math.abs(Number(i.total)) : Number(i.total))}</td>
+                      <td className={`whitespace-nowrap text-right font-mono ${i.kind === "creditnota" ? "font-bold text-destructive" : ""}`}>
+                        {euro(i.kind === "creditnota" ? -Math.abs(Number(i.total)) : Number(i.total))}
+                        {i.kind !== "creditnota" && Number(i.paid_amount) > 0.005 && open && (
+                          <div className="text-xs font-normal text-muted-foreground">Betaald {euro(Number(i.paid_amount))} · Open {euro(Number(i.total) - Number(i.paid_amount))}</div>
+                        )}
+                      </td>
                       <td>
                         <div className="flex flex-wrap gap-1">
                           <span className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{STATUS[i.status] ?? i.status}</span>
