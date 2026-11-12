@@ -13,8 +13,17 @@ export async function undoEntry(company: string, entryId: string): Promise<void>
     for (const id of new Set<string>(allocations.map((a: { transaction_id: string }) => a.transaction_id))) { const { error } = await db.rpc('fin_undo_bank_allocations', { _transaction: id }); if (error) throw new Error(error.message); }
     return;
   }
-  if ((txs ?? []).some((t: { matched_invoice_id: string | null; matched_purchase_invoice_id: string | null }) => t.matched_invoice_id || t.matched_purchase_invoice_id)) {
-    throw new Error("Een gekoppelde factuurbetaling kan niet als losse boeking worden verwijderd; laat de betaling eerst controleren.");
+  const purchaseTxs = (txs ?? []).filter((t: { matched_purchase_invoice_id: string | null }) => t.matched_purchase_invoice_id);
+  if (purchaseTxs.length) {
+    // Aankoopbetaling: claim, boeking en factuurstatus samen terugdraaien.
+    for (const t of purchaseTxs) await undoPurchaseBankTx(t.id);
+    return;
+  }
+  const invoiceTxs = (txs ?? []).filter((t: { matched_invoice_id: string | null }) => t.matched_invoice_id);
+  if (invoiceTxs.length) {
+    // Factuurbetaling: betaald bedrag, claim, boeking en bankstatus samen terugdraaien.
+    for (const t of invoiceTxs) { const { error } = await db.rpc("fin_undo_invoice_bank", { _transaction: t.id }); if (error) throw new Error(error.message); }
+    return;
   }
   for (const t of txs ?? []) {
     if (t.matched_invoice_id) {
@@ -38,4 +47,10 @@ export async function unapproveInvoice(company: string, inv: { id: string; sourc
   if (error) throw new Error(error.message);
   await db.from("fin_audit").insert({ company_id: company, entity: "factuur", entity_id: inv.id, action: "goedkeuring_ingetrokken", detail: { boekingen_ongedaan: entries?.length ?? 0 } });
   return entries?.length ?? 0;
+}
+
+/** Maakt de koppeling tussen een bankverrichting en een aankoopfactuur ongedaan (ook zonder boeking). */
+export async function undoPurchaseBankTx(transactionId: string): Promise<void> {
+  const { error } = await db.rpc("fin_undo_purchase_bank", { _transaction: transactionId });
+  if (error) throw new Error(error.message);
 }

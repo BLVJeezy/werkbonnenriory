@@ -23,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { dedupeKey, isPrivateCompany, parseAmount } from "@/lib/finance";
 import { MAR } from "@/lib/mar";
-import { undoEntry } from "@/lib/undo";
+import { undoEntry, undoPurchaseBankTx } from "@/lib/undo";
 import { pontoAccounts, pontoSync } from "@/lib/finance-ponto.functions";
 import { useFinanceSales } from "@/lib/use-finance-sales";
 import { useFinanceCompany } from "@/lib/use-finance-company";
@@ -688,7 +688,7 @@ function Bank({ c }: { c: string }) {
   };
   const [sel, setSel] = useState<Set<string>>(new Set());
   const bulkBook = async (account: string, label?: string) => {
-    const lijst = tx.filter((t) => sel.has(t.id) && !t.entry_id);
+    const lijst = tx.filter((t) => sel.has(t.id) && !t.entry_id && !t.matched_purchase_invoice_id);
     if (lijst.some((t) => t.allocated_amount > 0)) return void toast.error('Letter gedeeltelijk verwerkte betalingen verder af via Factuur kiezen.');
     if (!confirm(label ? `${lijst.length} verrichtingen tegen elkaar verrekenen via rekening ${account}?` : `${lijst.length} verrichting(en) boeken op rekening ${account}?`)) return;
     let ok = 0, fout = 0;
@@ -706,7 +706,7 @@ function Bank({ c }: { c: string }) {
   const [zoek, setZoek] = useState("");
   const [selInv, setSelInv] = useState<Set<string>>(new Set());
   const zq = zoek.trim().toLowerCase();
-  const vis = tx.filter((t) => !t.entry_id && (!zq || `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount}`.toLowerCase().includes(zq))).slice(0, zq ? 1000 : 200);
+  const vis = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && (!zq || `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount}`.toLowerCase().includes(zq))).slice(0, zq ? 1000 : 200);
   const invHits = zq.length >= 2 ? open.filter((i: any) => `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zq)) : [];
   const afpunten = async (lijst: any[], facturen: any[]) => {
     if (lijst.length !== 1 || !facturen.length) return void toast.error("Kies één betaling en één of meer facturen.");
@@ -716,10 +716,13 @@ function Bank({ c }: { c: string }) {
   };
   // Automatisch afletteren: alleen als verrichting precies één passende factuur heeft én die factuur maar bij één verrichting past.
   const autoBusy = useRef(false); const autoTried = useRef(new Set<string>());
+  // Verrichtingen die de beheerder ooit losgekoppeld heeft, nooit meer automatisch koppelen (anders lijkt "Ongedaan maken" niet te werken).
+  const { data: undoneTx } = useQuery({ queryKey: ["fin", "bank-undone", c], queryFn: async () => new Set<string>(((await fetchAll((a, b) => db.from("fin_audit").select("entity_id").eq("company_id", c).eq("entity", "bankverrichting").in("action", ["koppeling_ongedaan", "verdeling_ongedaan"]).order("id").range(a, b))) as any[]).map((r) => r.entity_id)), refetchInterval: 30_000 });
   useEffect(() => {
-    if (autoBusy.current || !accounts.length || !tx.length) return;
+    if (autoBusy.current || !accounts.length || !tx.length || !undoneTx) return;
+    undoneTx.forEach((id) => autoTried.current.add(id));
     // Overboekingen tussen eigen rekeningen (bv. 550200 → 550700) altijd meteen intern verrekenen.
-    const transfers = tx.filter((t) => !t.entry_id && !t.allocated_amount && !autoTried.current.has(t.id) && ownTransfer(t));
+    const transfers = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && !t.allocated_amount && !autoTried.current.has(t.id) && ownTransfer(t));
     if (transfers.length) {
       transfers.forEach((t) => autoTried.current.add(t.id));
       autoBusy.current = true;
@@ -735,7 +738,7 @@ function Bank({ c }: { c: string }) {
       return;
     }
     if (!open.length && !paidNoTx.length) return;
-    const todo = tx.filter((t) => !t.entry_id && !t.allocated_amount && !ownTransfer(t));
+    const todo = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && !t.allocated_amount && !ownTransfer(t));
     const fresh = (t: any) => !autoTried.current.has(t.id);
     const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025); };
     const pairs = todo.map((t) => [t, candOf(t)] as const).filter(([, cs]) => cs.length === 1);
@@ -774,7 +777,7 @@ function Bank({ c }: { c: string }) {
       await refresh();
       autoBusy.current = false;
     })();
-  }, [tx, open, paidNoTx, accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tx, open, paidNoTx, accounts.length, undoneTx]); // eslint-disable-line react-hooks/exhaustive-deps
   // Factuurinfo bij afgeletterde verrichtingen + wachtrekening (499000) voor verrichtingen zonder factuur.
   const WACHT = "499000";
   const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).order("id").range(a, b))) as any[] });
@@ -1041,10 +1044,10 @@ function Bank({ c }: { c: string }) {
         </div>
         <p className="mt-1 text-xs text-muted-foreground">Deze facturen staan nog open op Klanten/Leveranciers tot er een betaling aan gekoppeld wordt.</p>
       </Card>
-      <Card title={`Verwerkt (${tx.filter((t) => t.entry_id).length})`}>
+      <Card title={`Verwerkt (${tx.filter((t) => t.entry_id || t.matched_purchase_invoice_id).length})`}>
         <Input className="mb-2 max-w-sm" aria-label="Zoek verwerkte betaling" placeholder="Zoek betaling (naam, mededeling, bedrag, factuur)…" value={zoekVerwerkt} onChange={(e) => setZoekVerwerkt(e.target.value)} />
         <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
-          {tx.filter((t) => { if (!t.entry_id) return false; const q = zoekVerwerkt.trim().toLowerCase(); if (!q) return true; const m = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null; return `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount} ${t.tx_date} ${m?.number ?? ""} ${m?.counterparty ?? ""}`.toLowerCase().includes(q); }).slice(0, 300).map((t) => {
+          {tx.filter((t) => { if (!t.entry_id && !t.matched_purchase_invoice_id) return false; const q = zoekVerwerkt.trim().toLowerCase(); if (!q) return true; const m = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null; return `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount} ${t.tx_date} ${m?.number ?? ""} ${m?.counterparty ?? ""}`.toLowerCase().includes(q); }).slice(0, 300).map((t) => {
             const inv = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null;
             return (
             <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
@@ -1057,7 +1060,7 @@ function Bank({ c }: { c: string }) {
                   : <span className="text-xs text-muted-foreground">geboekt zonder factuur</span>}
               </span>
               <span className="flex items-center gap-2"><span className={Number(t.amount) < 0 ? "text-destructive" : ""}>{eur(Number(t.amount))}</span>
-                <Button size="sm" variant="outline" disabled={wachtIds.has(t.id) && t.allocated_amount > 0} onClick={async () => { if (!confirm("Koppeling en boeking van deze betaling ongedaan maken?")) return; try { await undoEntry(c, t.entry_id); toast.success("Losgekoppeld"); refresh(); } catch (e: any) { toast.error(e.message); } }}>Ongedaan maken</Button></span>
+                <Button size="sm" variant="outline" disabled={wachtIds.has(t.id) && t.allocated_amount > 0} onClick={async () => { if (!confirm("Koppeling en boeking van deze betaling ongedaan maken?")) return; try { if (t.entry_id) await undoEntry(c, t.entry_id); else await undoPurchaseBankTx(t.id); toast.success("Losgekoppeld"); refresh(); } catch (e: any) { toast.error(e.message); } }}>Ongedaan maken</Button></span>
             </div>
             );
           })}
