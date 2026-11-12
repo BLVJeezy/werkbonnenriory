@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { PGlite } from '@electric-sql/pglite';
 import { describe, expect, it } from 'vitest';
 
