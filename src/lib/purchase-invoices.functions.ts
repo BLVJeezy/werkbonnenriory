@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePurchaseInvoice, type ParsedPurchaseInvoice } from "@/lib/purchase-invoice";
 import { canExportPurchase } from '@/lib/purchase-payment';
 import { paymentCommunication, creditorBank } from '@/lib/purchase-booking';
+import { syncSupplierPaymentMethod } from './supplier-payment';
 
 type Ctx = { supabase: any; userId: string };
 
@@ -60,14 +61,22 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
     let supplierSynced = false;
     let supplierSyncError: string | null = null;
     if (supplier && data.syncSupplier !== false) {
-      const patch: { vat_number?: string; iban?: string; bic?: string } = {};
+      const patch: { vat_number?: string; iban?: string; bic?: string; payment_method?: string } = {};
       for (const [col, val] of [['vat_number', n.supplierVat], ['iban', n.supplierIban], ['bic', n.supplierBic]] as const) {
         if (val && supplier[col] !== val) patch[col] = val;
       }
+      if (data.paymentMethod && data.paymentMethod !== supplier.payment_method) patch.payment_method = data.paymentMethod;
       if (Object.keys(patch).length) {
         const { error: supErr } = await context.supabase.from('suppliers').update(patch).eq('id', supplier.id);
         if (supErr) supplierSyncError = supErr.message;
         else supplierSynced = true;
+      }
+      if (!supplierSyncError && data.paymentMethod) {
+        try {
+          await syncSupplierPaymentMethod(context.supabase, supplier.id, data.paymentMethod);
+        } catch (error) {
+          supplierSyncError = error instanceof Error ? error.message : 'Betaalwijze niet overgenomen op de andere facturen';
+        }
       }
     }
     return { ok: true as const, supplierSynced, supplierSyncError };

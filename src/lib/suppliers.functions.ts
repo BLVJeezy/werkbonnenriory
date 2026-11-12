@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PAYMENT_METHODS, VAT_RULES } from "./supplier-rules";
 import { nextBic } from "./iban-bic";
+import { syncSupplierPaymentMethod } from './supplier-payment';
 
 export const saveSupplier = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -45,12 +46,7 @@ export const saveSupplier = createServerFn({ method: "POST" })
       .eq("id", id);
     if (error)
       throw new Error(error.code === "23505" ? "Deze leverancier bestaat al." : error.message);
-    // Supplier payment method applies to all its not-yet-settled invoices.
-    await context.supabase
-      .from("purchase_invoices")
-      .update({ payment_method: data.payment_method })
-      .eq("supplier_id", id)
-      .in("status", ["te_controleren", "goedgekeurd"]);
+    await syncSupplierPaymentMethod(context.supabase, id, data.payment_method);
     return { ok: true };
   });
 /** Completes the BIC of every supplier whose IBAN points at a known bank; a typed BIC is never touched. */

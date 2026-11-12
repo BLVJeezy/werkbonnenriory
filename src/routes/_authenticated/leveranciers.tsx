@@ -28,7 +28,7 @@ function Suppliers() {
   const sort = useSort(visible, { naam: r=>r.name, btw: r=>r.vat_number, betaal: r=>r.payment_method, regel: r=>r.vat_rule, aftrek: r=>Number(r.vat_deductible_percent) }, 'naam');
   async function submit() {
     if (!edit) return; setBusy(true);
-    try { await save({ data: edit }); await qc.invalidateQueries({ queryKey: ['suppliers'] }); setEdit(null); toast.success('Leverancier opgeslagen'); }
+    try { await save({ data: edit }); await Promise.all([qc.invalidateQueries({ queryKey: ['suppliers'] }), qc.invalidateQueries({ queryKey: ['purchase_invoices'] })]); setEdit(null); toast.success('Leverancier opgeslagen'); }
     catch(e) { toast.error(e instanceof Error ? e.message : 'Opslaan mislukt'); } finally { setBusy(false); }
   }
   async function fillBics() {
