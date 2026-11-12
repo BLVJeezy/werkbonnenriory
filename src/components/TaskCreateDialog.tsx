@@ -88,6 +88,8 @@ export function TaskCreateDialog({ open, day, direct = false, onClose }: { open:
       return;
     }
     qc.invalidateQueries({ queryKey: ["customers"] });
+    // Een ingetypt project werd bij de klant bewaard: laat de projectenlijst meeverversen.
+    qc.invalidateQueries({ queryKey: ["customer_projects"] });
     const wasDirect = direct;
     setForm(emptyForm);
     setOpen(false);
