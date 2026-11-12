@@ -86,18 +86,17 @@ export const sendWerkbonEmail = createServerFn({ method: "POST" })
     return result;
   });
 
-/** Every werkbon mail carries a 6-digit signing code; generated once per work order, reused on resend. */
+const SIGNING_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** Every werkbon mail carries a 12-character random signing code (~60 bits); legacy short codes are replaced. */
 async function ensureSigningCode(supabase: any, workOrderId: string, existing: string | null): Promise<string | null> {
-  if (existing) return existing;
+  if (existing && /^[A-Z2-9]{12}$/.test(existing)) return existing;
   for (let i = 0; i < 5; i++) {
-    const buf = new Uint32Array(1);
+    const buf = new Uint8Array(12);
     crypto.getRandomValues(buf);
-    const code = String((buf[0] ?? 0) % 1_000_000).padStart(6, "0");
-    const { data, error } = await supabase
-      .from("work_orders")
-      .update({ signing_code: code })
-      .eq("id", workOrderId)
-      .is("signing_code", null)
+    const code = Array.from(buf, (b) => SIGNING_ALPHABET[b % 32]).join("");
+    let q = supabase.from("work_orders").update({ signing_code: code }).eq("id", workOrderId);
+    q = existing ? q.eq("signing_code", existing) : q.is("signing_code", null);
+    const { data, error } = await q
       .select("signing_code")
       .maybeSingle();
     if (data?.signing_code) return data.signing_code;

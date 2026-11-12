@@ -19,9 +19,10 @@ export type WerkbonSigningView = {
   signedAt: string | null;
 };
 
-const CODE_PATTERN = /^\d{6}$/;
+const CODE_PATTERN = /^[A-Z2-9]{12}$/;
 
-async function loadByCode(id: string, code: string) {
+async function loadByCode(id: string, rawCode: string) {
+  const code = String(rawCode ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!CODE_PATTERN.test(code)) throw new Error("Ongeldige code");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: wo } = await supabaseAdmin
