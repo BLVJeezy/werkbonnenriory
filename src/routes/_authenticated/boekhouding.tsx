@@ -1041,10 +1041,10 @@ function Bank({ c }: { c: string }) {
         </div>
         <p className="mt-1 text-xs text-muted-foreground">Deze facturen staan nog open op Klanten/Leveranciers tot er een betaling aan gekoppeld wordt.</p>
       </Card>
-      <Card title={`Verwerkt (${tx.filter((t) => t.entry_id).length})`}>
+      <Card title={`Verwerkt (${tx.filter((t) => t.entry_id || t.matched_purchase_invoice_id).length})`}>
         <Input className="mb-2 max-w-sm" aria-label="Zoek verwerkte betaling" placeholder="Zoek betaling (naam, mededeling, bedrag, factuur)…" value={zoekVerwerkt} onChange={(e) => setZoekVerwerkt(e.target.value)} />
         <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
-          {tx.filter((t) => { if (!t.entry_id) return false; const q = zoekVerwerkt.trim().toLowerCase(); if (!q) return true; const m = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null; return `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount} ${t.tx_date} ${m?.number ?? ""} ${m?.counterparty ?? ""}`.toLowerCase().includes(q); }).slice(0, 300).map((t) => {
+          {tx.filter((t) => { if (!t.entry_id && !t.matched_purchase_invoice_id) return false; const q = zoekVerwerkt.trim().toLowerCase(); if (!q) return true; const m = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null; return `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount} ${t.tx_date} ${m?.number ?? ""} ${m?.counterparty ?? ""}`.toLowerCase().includes(q); }).slice(0, 300).map((t) => {
             const inv = t.matched_invoice_id ? invById.get(t.matched_invoice_id) : null;
             return (
             <div key={t.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
@@ -1057,7 +1057,7 @@ function Bank({ c }: { c: string }) {
                   : <span className="text-xs text-muted-foreground">geboekt zonder factuur</span>}
               </span>
               <span className="flex items-center gap-2"><span className={Number(t.amount) < 0 ? "text-destructive" : ""}>{eur(Number(t.amount))}</span>
-                <Button size="sm" variant="outline" disabled={wachtIds.has(t.id) && t.allocated_amount > 0} onClick={async () => { if (!confirm("Koppeling en boeking van deze betaling ongedaan maken?")) return; try { await undoEntry(c, t.entry_id); toast.success("Losgekoppeld"); refresh(); } catch (e: any) { toast.error(e.message); } }}>Ongedaan maken</Button></span>
+                <Button size="sm" variant="outline" disabled={wachtIds.has(t.id) && t.allocated_amount > 0} onClick={async () => { if (!confirm("Koppeling en boeking van deze betaling ongedaan maken?")) return; try { if (t.entry_id) await undoEntry(c, t.entry_id); else await undoPurchaseBankTx(t.id); toast.success("Losgekoppeld"); refresh(); } catch (e: any) { toast.error(e.message); } }}>Ongedaan maken</Button></span>
             </div>
             );
           })}
