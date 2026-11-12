@@ -23,6 +23,28 @@ export function quoteLine(description: string, quantity: number, unit: string, u
   return { description, quantity, unit, unitPrice: price, amount: r2(quantity * price), ...(disc ? { discount: disc, originalUnitPrice: unitPrice } : {}) };
 }
 
+/** Pure: what a discounted line saves the customer (excl. btw); null without discount. */
+export function lineDiscount(l: InvoiceLine): { percent: number; originalUnitPrice: number; originalAmount: number; saved: number } | null {
+  if (!l.discount || l.originalUnitPrice == null) return null;
+  const originalAmount = r2(l.quantity * l.originalUnitPrice);
+  const saved = r2(originalAmount - l.amount);
+  return saved > 0 ? { percent: l.discount, originalUnitPrice: l.originalUnitPrice, originalAmount, saved } : null;
+}
+
+/** Pure: customer-facing explanation of a line discount, e.g. "Korting 10%: € 50,00 → € 45,00 per stuk · u bespaart € 5,00 excl. btw". */
+export function discountLabel(l: InvoiceLine, money: (n: number) => string): string {
+  const d = lineDiscount(l);
+  if (!d) return "";
+  return `Korting ${d.percent.toLocaleString("nl-BE")}%: ${money(d.originalUnitPrice)} → ${money(l.unitPrice)} per ${l.unit} · u bespaart ${money(d.saved)} excl. btw`;
+}
+
+/** Pure: total discount over the offer (optional lines excluded) and the price before discount. */
+export function quoteDiscountTotal(lines: InvoiceLine[]): { saved: number; beforeDiscount: number } {
+  const main = lines.filter((l) => !l.optional);
+  const saved = r2(main.reduce((s, l) => s + (lineDiscount(l)?.saved ?? 0), 0));
+  return { saved, beforeDiscount: r2(main.reduce((s, l) => s + l.amount, 0) + saved) };
+}
+
 /** Quote status flow: concept -> verzonden -> akkoord (or geweigerd). */
 export const QUOTE_STATUS: Record<string, string> = {
   concept: "Concept",
