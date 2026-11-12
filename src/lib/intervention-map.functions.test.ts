@@ -3,7 +3,7 @@ vi.mock('@tanstack/react-start', () => ({ createServerFn: () => {
   const builder = { middleware: () => builder, inputValidator: () => builder, handler: (fn: unknown) => fn }; return builder;
 } }));
 vi.mock('@/integrations/supabase/auth-middleware', () => ({ requireSupabaseAuth: {} }));
-import { getInterventionPage, saveInterventionCoordinates, geocodeInterventionBatch } from './intervention-map.functions';
+import { getInterventionPage, getSimplaMapLocations, saveInterventionCoordinates, geocodeInterventionBatch } from './intervention-map.functions';
 const read = getInterventionPage as unknown as (args: unknown) => Promise<unknown>;
 const save = saveInterventionCoordinates as unknown as (args: unknown) => Promise<unknown>;
 const lookup = geocodeInterventionBatch as unknown as (args: unknown) => Promise<unknown>;
@@ -12,6 +12,20 @@ const googleKeys = () => { vi.stubEnv('GOOGLE_MAPS_API_KEY', 'connection-key'); 
 const workOrders = { select: () => workOrders, eq: () => workOrders, in: async () => ({ data: [{ address: 'Kerkstraat 12, 9000 Gent' }], error: null }) };
 const locations = () => { const table = { update: () => table, eq: vi.fn() }; table.eq.mockReturnValueOnce(table).mockResolvedValueOnce({ error: null }); return table; };
 describe('Interventiekaart servergrenzen', () => {
+  it('leest bestaande klantprojecten en behoudt alle 3045 Simpla-klantadressen', async () => {
+    vi.stubEnv('SIMPLA_API_TOKEN', 'test-token');
+    vi.stubGlobal('fetch', vi.fn(async (url: URL) => ({ ok: true, json: async () => ({ status: 'OK', data: url.searchParams.get('dataType') === 'customer' ? Array.from({ length: 3045 }, (_, i) => ({ customerId: i + 1, customerName: `Klant ${i}`, customerStreetNr: `Kerkstraat ${i + 1}`, customerPostal: '9000', customerCity: 'Gent' })) : [] }) })));
+    const from = vi.fn((table: string) => {
+      if (table === 'customer_projects') return { select: () => ({ order: () => ({ range: async () => ({ data: [], error: null }) }) }) };
+      if (table === 'intervention_locations') return { select: () => ({ in: async () => ({ data: [], error: null }) }) };
+      throw new Error(`Onbekende tabel ${table}`);
+    });
+    const run = getSimplaMapLocations as unknown as (args: unknown) => Promise<{ rows: unknown[]; error: string | null }>;
+    const result = await run({ context: { userId: 'admin', supabase: { rpc: async () => ({ data: true, error: null }), from } } });
+    expect(result.error).toBeNull();
+    expect(result.rows).toHaveLength(3045);
+    expect(from).toHaveBeenCalledWith('customer_projects');
+  });
   it.each([['lijst',read,{offset:0}],['opslaan',save,{id:'id',lat:51,lon:5}],['geocoderen',lookup,{ids:['id'],refs:[]}]] as const)('weigert niet-admin vóór adreslezen of externe actie: %s', async (_name,run,data) => {
     const from = vi.fn(); const fetch = vi.fn(); vi.stubGlobal('fetch',fetch);
     await expect(run({data,context:{userId:'user',supabase:{rpc:async()=>({data:false,error:null}),from}}})).rejects.toThrow('Alleen beheerders');
