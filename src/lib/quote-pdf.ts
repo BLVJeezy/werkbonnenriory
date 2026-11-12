@@ -161,6 +161,10 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
         page.drawRectangle({ x: cols.desc + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
         dl.forEach((t, j) => page.drawText(t, { x: cols.desc + 12, y: top - j * 11.5, size: 9, font, color: muted }));
       }
+      if (disc) {
+        const dy = y - tl.length * 14 - (dl.length ? 5 + dl.length * 11.5 : 0) - 10;
+        page.drawText(pr(disc), { x: cols.desc + 12, y: dy, size: 9, font: bold, color: orange });
+      }
       right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
       right(money(l.unitPrice), cols.price, y, 10);
       right(money(l.amount), cols.amt, y, 10);
