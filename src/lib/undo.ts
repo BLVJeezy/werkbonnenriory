@@ -8,7 +8,11 @@ export async function undoEntry(company: string, entryId: string): Promise<void>
   const { data: txs } = await db.from("fin_bank_tx").select("id, matched_invoice_id, matched_purchase_invoice_id").eq("company_id", company).eq("entry_id", entryId);
   const { data: allocations, error: allocationError } = await db.from('fin_bank_allocations').select('id').in('transaction_id', (txs ?? []).map((t: { id: string }) => t.id));
   if (allocationError) throw new Error(allocationError.message);
-  if (allocations?.length) throw new Error('Een verdeelde factuurbetaling kan niet als losse boeking verwijderd worden.');
+  if (allocations?.length) {
+    // Verdeelde betaling: alle verdelingen van deze verrichting samen terugdraaien (facturen terug open, bank terug te verwerken).
+    for (const t of txs ?? []) { const { error } = await db.rpc('fin_undo_bank_allocations', { _transaction: t.id }); if (error) throw new Error(error.message); }
+    return;
+  }
   if ((txs ?? []).some((t: { matched_invoice_id: string | null; matched_purchase_invoice_id: string | null }) => t.matched_invoice_id || t.matched_purchase_invoice_id)) {
     throw new Error("Een gekoppelde factuurbetaling kan niet als losse boeking worden verwijderd; laat de betaling eerst controleren.");
   }
