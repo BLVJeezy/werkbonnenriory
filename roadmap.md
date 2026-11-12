@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Gewijzigde leveranciersbetaalwijze vanuit factuurcontrole en leveranciersbeheer overnemen op andere gekoppelde open aankoopfacturen; betaalde en bankklaargezette facturen behouden. 31 tests geslaagd; ingelogd opslaan en teruglezen gecontroleerd zonder betaalwijze te wijzigen.
+
 - [x] Ontbrekende kaartadressen bij Simpla-storing hersteld: privé laatste succesvolle adreslijst opgeslagen, projecten onafhankelijk geladen en Vernieuwen herlaadt alle bronnen. Ingelogd 3093 Simpla-adressen + 334 projectadressen, 3210 unieke locaties teruggelezen; 31 tests en automatische controle geslaagd. Geen Google-opzoekingen; kaartweergave zelf niet live getest, niet gepubliceerd.
 
 - [x] Verzekeringsverslag-tab bij afgewerkte werkbonnen: bewerkbare AI-tekst uit techniekerbevindingen, bewaren, prijsloze PDF met foto's en expliciet verzenden via info@riory.be; echte AI-tekst, bewaren en PDF met drie foto's gecontroleerd, geen echte mail verzonden. Publicatie niet uitgevoerd.
