@@ -327,3 +327,21 @@ export function validateLoan(principal: number | null, rate: number | null, mont
   if (months == null || !Number.isInteger(months) || months <= 0 || months > 600) e.push("looptijd 1–600 maanden");
   return e;
 }
+
+// Afschrijvingskost per maand voor het dashboard: geplande maanden van het dagschema die nog niet
+// in het dagboek staan, als kostregel (630200) op de eerste van die maand. Geboekte maanden
+// (source_ref "<id>:<maand>") en jaren die al via een jaarafsluiting binnenkwamen tellen niet opnieuw.
+export function unbookedDepreciationLines(
+  investments: (Investment & { id: string })[],
+  bookedRefs: Set<string>,
+  closedYears: Set<string>,
+  cutoff: string,
+): { entry_date: string; account: string; source: string; debit: number; credit: number; journal: string }[] {
+  const out: { entry_date: string; account: string; source: string; debit: number; credit: number; journal: string }[] = [];
+  for (const i of investments) for (const r of depreciationSchedule(i)) {
+    if (r.month > cutoff || r.depreciation <= 0 || bookedRefs.has(`${i.id}:${r.month}`) || closedYears.has(r.month.slice(0, 4))) continue;
+    out.push({ entry_date: r.month, account: "630200", source: "afschrijving-gepland", debit: r.depreciation, credit: 0, journal: "" });
+    out.push({ entry_date: r.month, account: "230900", source: "afschrijving-gepland", debit: 0, credit: r.depreciation, journal: "" });
+  }
+  return out;
+}

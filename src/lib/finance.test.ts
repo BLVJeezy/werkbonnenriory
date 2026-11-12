@@ -203,3 +203,18 @@ describe("depreciationByYear", () => {
     ]);
   });
 });
+
+import { unbookedDepreciationLines } from "./finance";
+describe("geplande afschrijving in maandkosten", () => {
+  const inv = { id: "m", capitalizable_amount: 3925, start_date: "2026-11-10", useful_life_months: 60, residual_value: 0, opening_accumulated: 0, opening_cutoff: null, is_land: false, disposal_date: null };
+  it("november pro rata vanaf aankoopdag, december volledige maand", () => {
+    const l = unbookedDepreciationLines([inv], new Set(), new Set(), "2026-12-31").filter((x) => x.debit);
+    expect(l.map((x) => [x.entry_date, x.debit])).toEqual([["2026-11-01", 45.14], ["2026-12-01", 66.63]]);
+  });
+  it("geboekte maand telt niet dubbel", () => {
+    expect(unbookedDepreciationLines([inv], new Set(["m:2026-11-01"]), new Set(), "2026-11-30")).toEqual([]);
+  });
+  it("jaar met jaarafsluiting telt niet dubbel", () => {
+    expect(unbookedDepreciationLines([inv], new Set(), new Set(["2026"]), "2026-12-31")).toEqual([]);
+  });
+});

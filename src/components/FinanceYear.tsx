@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { isPrivateCompany, r2 } from "@/lib/finance";
+import { isPrivateCompany, r2, unbookedDepreciationLines } from "@/lib/finance";
 import { rioryCompanies } from "@/lib/finance-company-scope";
 import { monthNames, MonthlyBars, MonthlyProfit } from "@/components/FinanceCharts";
 import { fetchAll } from "@/lib/fetch-all";
@@ -93,7 +93,15 @@ export function FinanceYear() {
       // Maandtotalen per rekening en bron, opgevraagd in de database. Duizenden losse boekingsregels
       // hoeven niet meer één voor één binnen; same posted journaalregels, zelfde statements()-berekening.
       const rows = (await fetchAll((a, b) => db.rpc("fin_journal_summary", { _company: companyId, _until: cutoff }).range(a, b))) as any[];
-      return rows.map((r) => ({ entry_date: r.entry_date, account: r.account, source: r.source ?? null, debit: Number(r.debit), credit: Number(r.credit), journal: "" })) as PostedLine[];
+      const posted = rows.map((r) => ({ entry_date: r.entry_date, account: r.account, source: r.source ?? null, debit: Number(r.debit), credit: Number(r.credit), journal: "" })) as PostedLine[];
+      // Afschrijvingen lopen per dag vanaf aankoopdatum; maanden die nog niet geboekt zijn tellen toch mee in de maandkosten.
+      const [invs, refs] = await Promise.all([
+        fetchAll((a, b) => db.from("fin_investments").select("*").eq("company_id", companyId).order("id").range(a, b)),
+        fetchAll((a, b) => db.from("fin_journal_entries").select("id,source_ref").eq("company_id", companyId).eq("source", "afschrijving").order("id").range(a, b)),
+      ]) as [any[], any[]];
+      const closedYears = new Set(posted.filter((l) => l.source === "jaarafsluiting").map((l) => l.entry_date.slice(0, 4)));
+      const planned = unbookedDepreciationLines(invs.map((i) => ({ ...i, capitalizable_amount: i.capitalizable_amount == null ? null : Number(i.capitalizable_amount), purchase_amount: i.purchase_amount == null ? null : Number(i.purchase_amount), useful_life_months: i.useful_life_months == null ? null : Number(i.useful_life_months), residual_value: Number(i.residual_value ?? 0), opening_accumulated: Number(i.opening_accumulated ?? 0) })), new Set(refs.map((r) => String(r.source_ref))), closedYears, cutoff);
+      return [...posted, ...planned] as PostedLine[];
     },
   });
 
@@ -107,7 +115,7 @@ export function FinanceYear() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-black uppercase">Boekhouding {year}{year === latestYear && cutoff.slice(5) !== "12-31" ? ` t/m ${Number(cutoff.slice(8))}/${Number(cutoff.slice(5, 7))}` : ""}</h2>
-          <p className="text-xs text-muted-foreground">Afgesloten maanden · excl. btw</p>
+          <p className="text-xs text-muted-foreground">Afgesloten maanden · excl. btw · afschrijvingen per dag vanaf aankoopdatum, ook als ze nog niet geboekt zijn</p>
         </div>
         <div className="flex items-center gap-2">
           {(companies.data?.length ?? 0) > 1 && (
