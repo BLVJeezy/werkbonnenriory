@@ -2811,6 +2811,7 @@ export type Database = {
           company_name: string
           company_vat: string
           id: number
+          insurance_report_ai_denial: Json | null
           invoice_prefix: string
           km_rate: number
           newsletter_ai_denial: Json | null
@@ -2831,6 +2832,7 @@ export type Database = {
           company_name?: string
           company_vat?: string
           id?: number
+          insurance_report_ai_denial?: Json | null
           invoice_prefix?: string
           km_rate?: number
           newsletter_ai_denial?: Json | null
@@ -2851,6 +2853,7 @@ export type Database = {
           company_name?: string
           company_vat?: string
           id?: number
+          insurance_report_ai_denial?: Json | null
           invoice_prefix?: string
           km_rate?: number
           newsletter_ai_denial?: Json | null
@@ -4476,6 +4479,8 @@ export type Database = {
           first_customer: boolean
           house_number: string | null
           id: string
+          insurance_report_saved_at: string | null
+          insurance_report_text: string | null
           no_answer_at: string | null
           no_invoice: boolean
           not_needed: boolean
@@ -4536,6 +4541,8 @@ export type Database = {
           first_customer?: boolean
           house_number?: string | null
           id?: string
+          insurance_report_saved_at?: string | null
+          insurance_report_text?: string | null
           no_answer_at?: string | null
           no_invoice?: boolean
           not_needed?: boolean
@@ -4596,6 +4603,8 @@ export type Database = {
           first_customer?: boolean
           house_number?: string | null
           id?: string
+          insurance_report_saved_at?: string | null
+          insurance_report_text?: string | null
           no_answer_at?: string | null
           no_invoice?: boolean
           not_needed?: boolean

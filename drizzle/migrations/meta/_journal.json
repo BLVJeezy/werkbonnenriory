@@ -1016,6 +1016,13 @@
       "when": 1794415108182,
       "tag": "0144_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1794467383707,
+      "tag": "0145_work_order_insurance_report",
+      "breakpoints": true
     }
   ]
 }

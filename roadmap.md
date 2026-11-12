@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Verzekeringsverslag-tab bij afgewerkte werkbonnen: bewerkbare AI-tekst uit techniekerbevindingen, bewaren, prijsloze PDF met foto's en expliciet verzenden via info@riory.be; echte AI-tekst, bewaren en PDF met drie foto's gecontroleerd, geen echte mail verzonden. Publicatie niet uitgevoerd.
+
 - [x] SMS-knop "wij zijn onderweg" op de taakkaart zelf (Kalender én ploegweergave), vóór openen; panelen op neutrale witte achtergrond zodat ze leesbaar blijven op gekleurde ploegtaken. 10 tests, typecontrole en ingelogde desktopcontrole geslaagd; geen SMS verzonden.
 
 - [x] Interne admin-interventiekaart gebouwd: 71 echte afgetekende werkbonnen op 63 genormaliseerde bestemmingen, menu, filters/lijst, clusters, werkbonlinks, privé locatiecache en optionele begrensde geocoder. 27 tests en automatische type-/buildcontrole geslaagd; ingelogde echte-bronnencheck desktop/mobiel en werkbonlink zonder JS-fouten. Geen Simpla-adressen, datawijzigingen of externe adresopzoekingen.
