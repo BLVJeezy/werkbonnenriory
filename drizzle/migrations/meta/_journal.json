@@ -1037,6 +1037,13 @@
       "when": 1794473712456,
       "tag": "0147_allow_shared_purchase_bank_reference",
       "breakpoints": true
+    },
+    {
+      "idx": 148,
+      "version": "7",
+      "when": 1794480819783,
+      "tag": "0148_capitalize_purchase_invoice",
+      "breakpoints": true
     }
   ]
 }

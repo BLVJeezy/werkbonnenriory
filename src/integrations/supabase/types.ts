@@ -1286,6 +1286,8 @@ export type Database = {
           opening_accumulated: number
           opening_cutoff: string | null
           purchase_amount: number | null
+          purchase_invoice_id: string | null
+          purchase_line_index: number | null
           residual_value: number
           start_date: string | null
           useful_life_months: number | null
@@ -1304,6 +1306,8 @@ export type Database = {
           opening_accumulated?: number
           opening_cutoff?: string | null
           purchase_amount?: number | null
+          purchase_invoice_id?: string | null
+          purchase_line_index?: number | null
           residual_value?: number
           start_date?: string | null
           useful_life_months?: number | null
@@ -1322,6 +1326,8 @@ export type Database = {
           opening_accumulated?: number
           opening_cutoff?: string | null
           purchase_amount?: number | null
+          purchase_invoice_id?: string | null
+          purchase_line_index?: number | null
           residual_value?: number
           start_date?: string | null
           useful_life_months?: number | null
@@ -4854,6 +4860,18 @@ export type Database = {
           _life: number
           _line: string
           _name: string
+          _residual?: number
+          _start: string
+        }
+        Returns: string
+      }
+      fin_capitalize_purchase_line: {
+        Args: {
+          _asset_account: string
+          _life: number
+          _line_index: number
+          _name: string
+          _purchase: string
           _residual?: number
           _start: string
         }
