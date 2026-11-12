@@ -21,7 +21,7 @@ import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
 import { WorkOrderVideos } from "@/components/WorkOrderVideos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
-import { bestekFromWorkOrder, insuranceReportPdf, quoteFromTask } from "@/lib/quotes.functions";
+import { bestekFromWorkOrder, quoteFromTask } from "@/lib/quotes.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { completeTask } from "@/lib/task-completion";
 import { werkbonNr } from "@/lib/werkbon-number";
@@ -38,6 +38,8 @@ import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
 import { OnderwegSms } from '@/components/OnderwegSms';
 import { SearchSelect } from '@/components/SearchSelect';
 import { materialChoices } from '@/lib/material-options';
+import { InsuranceReportPanel } from '@/components/InsuranceReportPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export const Route = createFileRoute("/_authenticated/werkbonnen/$id")({
   head: () => ({ meta: [{ title: "Werkbon — Riory" }, { name: "description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:title", content: "Werkbon — Riory" }, { property: "og:description", content: "Klant en werfadres, tijdregistratie, materialen en aftekenen van een Riory-werkbon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -101,7 +103,6 @@ function Detail() {
   const mailWerkbon = useServerFn(sendWerkbonEmail);
   const makeQuote = useServerFn(quoteFromTask);
   const makeBestek = useServerFn(bestekFromWorkOrder);
-  const makeReport = useServerFn(insuranceReportPdf);
   const removePayment = useServerFn(removeWorkOrderPayment);
   const [removingPayment,setRemovingPayment] = useState(false);
   const [kmTried, setKmTried] = useState<string | null>(null);
@@ -251,22 +252,6 @@ function Detail() {
               variant="outline"
               onClick={async () => {
                 try {
-                  const r = await makeReport({ data: { workOrderId: id } });
-                  const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
-                  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-                  const a = document.createElement("a"); a.href = url; a.download = r.name; a.click();
-                  setTimeout(() => URL.revokeObjectURL(url), 1000);
-                } catch (e) { toast.error(e instanceof Error ? e.message : "Verslag maken mislukt"); }
-              }}
-            >
-              Verslag voor verzekering (zonder prijzen)
-            </Button>
-          )}
-          {isAdmin && locked && (
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
                   const q = await makeBestek({ data: { workOrderId: id } });
                   qc.invalidateQueries({ queryKey: ["quotes"] });
                   toast.success(`Bestek ${q.number} aangemaakt — vul het verder aan`);
@@ -295,6 +280,10 @@ function Detail() {
         </div>
       </div>
 
+      <Tabs defaultValue="werkbon">
+      {isAdmin && locked && <TabsList className="h-auto flex-wrap"><TabsTrigger value="werkbon">Werkbon</TabsTrigger><TabsTrigger value="verzekering">Verzekeringsverslag</TabsTrigger></TabsList>}
+      {isAdmin && locked && <TabsContent value="verzekering"><InsuranceReportPanel key={id} id={id} notes={wo.work_notes} initialText={wo.insurance_report_text} email={wo.email} /></TabsContent>}
+      <TabsContent value="werkbon" className="space-y-6">
       {(isAdmin || role === "technician") && !locked && <OnderwegSms workOrderId={id} />}
 
       <section className="grid gap-4 rounded-md border-2 border-primary bg-card p-4 sm:grid-cols-[1fr_10rem]">
@@ -729,6 +718,8 @@ function Detail() {
           </div>
         )}
       </section>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }
