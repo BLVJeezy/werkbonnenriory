@@ -102,12 +102,12 @@ export function TarievenBeheer() {
         {data?.acts.length === 0 && <li className="p-4 text-muted-foreground">Nog geen activiteiten.</li>}
         {data?.acts.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <Input
                 aria-label={`Naam van activiteit ${a.name}`}
                 title="Klik om de naam te bewerken"
                 defaultValue={a.name}
-                className="h-8 w-56 font-bold"
+                className="h-8 min-w-48 flex-1 font-bold sm:max-w-xl"
                 onBlur={async (e) => {
                   const typed = e.target.value;
                   const res = renameActivity(a.name, typed, (data?.acts ?? []).map((x) => x.name));
