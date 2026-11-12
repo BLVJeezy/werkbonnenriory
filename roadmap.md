@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Ontbrekende kaartadressen bij Simpla-storing herstellen: privé laatste succesvolle adreslijst bewaren, projectadressen onafhankelijk laden en Vernieuwen alle bronnen laten herladen; geen nieuwe Google-opzoekingen.
+- [x] Ontbrekende kaartadressen bij Simpla-storing hersteld: privé laatste succesvolle adreslijst opgeslagen, projecten onafhankelijk geladen en Vernieuwen herlaadt alle bronnen. Ingelogd 3093 Simpla-adressen + 334 projectadressen, 3210 unieke locaties teruggelezen; 31 tests en automatische controle geslaagd. Geen Google-opzoekingen; kaartweergave zelf niet live getest, niet gepubliceerd.
 
 - [x] Verzekeringsverslag-tab bij afgewerkte werkbonnen: bewerkbare AI-tekst uit techniekerbevindingen, bewaren, prijsloze PDF met foto's en expliciet verzenden via info@riory.be; echte AI-tekst, bewaren en PDF met drie foto's gecontroleerd, geen echte mail verzonden. Publicatie niet uitgevoerd.
 
