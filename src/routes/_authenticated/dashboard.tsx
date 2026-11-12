@@ -7,6 +7,10 @@ import { Label } from "@/components/ui/label";
 import { useRole } from "@/lib/use-role";
 import { euro } from "@/lib/billing";
 import { FinanceYear } from "@/components/FinanceYear";
+import { FinanceWeek } from "@/components/FinanceWeek";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { addDays, format, parseISO } from "date-fns";
 import { computeTotals } from "@/lib/billing";
 import { totalSeconds } from "@/lib/time";
 import { productRevenue, type ProductLine } from "@/lib/product-revenue";
@@ -16,8 +20,8 @@ import { fetchAll } from "@/lib/fetch-all";
 import { Button } from "@/components/ui/button";
 import { useServerFn } from "@tanstack/react-start";
 import { simplaDashboardProducts } from "@/lib/simpla-product-revenue.functions";
-import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
-import { closedDashboardRange, dashboardToday, lastClosedMonth } from "@/lib/dashboard-period";
+import { groupOmzet, groupWeekOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
+import { closedDashboardRange, closedWeekRange, dashboardToday, lastClosedMonth, lastClosedWeek } from "@/lib/dashboard-period";
 import {
   ResponsiveContainer,
   BarChart,
@@ -47,10 +51,15 @@ function Dashboard() {
   const role = useRole();
   const navigate = useNavigate();
   const [currentDay, setCurrentDay] = useState(dashboardToday);
-  const def = lastClosedMonth(currentDay);
+  const [mode, setMode] = useState<"month" | "week">("month");
+  const def = mode === "week" ? lastClosedWeek(currentDay) : lastClosedMonth(currentDay);
   const [selectedFrom, setFrom] = useState(def.from);
   const [selectedTo, setTo] = useState(def.to);
-  const { from, to } = closedDashboardRange(selectedFrom, selectedTo, currentDay);
+  const { from, to } = mode === "week" ? closedWeekRange(selectedFrom, selectedTo, currentDay) : closedDashboardRange(selectedFrom, selectedTo, currentDay);
+  const shiftWeek = (days: number) => {
+    setFrom(format(addDays(parseISO(from), days), "yyyy-MM-dd"));
+    setTo(format(addDays(parseISO(to), days), "yyyy-MM-dd"));
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentDay(dashboardToday()), 60_000);
@@ -132,16 +141,24 @@ function Dashboard() {
   const omzet = omzetRows.reduce((s, r) => s + Number(r.net), 0);
   const btw = rows.reduce((s, r) => s + sign(r) * Number(r.vat), 0);
   const openstaand = rows.reduce((s, r) => s + sign(r) * Math.max(0, Number(r.total) - Number(r.paid_amount)), 0);
-  const punten = groupOmzet(omzetRows, from, to);
+  const punten = mode === "week" ? groupWeekOmzet(omzetRows, from, to) : groupOmzet(omzetRows, from, to);
   const perMaand = punten.length > 62;
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-3 sm:p-4">
       <h1 className="text-2xl font-black uppercase">Dashboard</h1>
 
-      <FinanceYear />
+      <ToggleGroup type="single" value={mode} aria-label="Dashboardperiode" className="justify-start" onValueChange={value => {
+        if (value !== "month" && value !== "week") return;
+        setMode(value);
+        const range = value === "week" ? lastClosedWeek(currentDay) : lastClosedMonth(currentDay);
+        setFrom(range.from); setTo(range.to);
+      }}><ToggleGroupItem value="month" aria-label="Per maand">Maand</ToggleGroupItem><ToggleGroupItem value="week" aria-label="Per week">Week</ToggleGroupItem></ToggleGroup>
 
-      <h2 className="text-lg font-black uppercase">Facturen per periode</h2>
+      {mode === "month" && <FinanceYear />}
+
+      <h2 className="text-lg font-black uppercase">{mode === "week" ? "Cijfers per week" : "Facturen per periode"}</h2>
+      {mode === "week" && <div className="flex gap-2"><Button variant="outline" size="icon" aria-label="Vorige week" onClick={() => shiftWeek(-7)}><ChevronLeft /></Button><Button variant="outline" size="icon" aria-label="Volgende week" disabled={to >= def.to} onClick={() => shiftWeek(7)}><ChevronRight /></Button></div>}
 
       <div className="grid max-w-md grid-cols-2 gap-3">
         <div className="space-y-1">
@@ -154,7 +171,9 @@ function Dashboard() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">Afgesloten maanden · cijfers beschikbaar t/m {def.to.split("-").reverse().join("/")}</p>
+      <p className="text-xs text-muted-foreground">Afgesloten {mode === "week" ? "weken (maandag t/m zondag)" : "maanden"} · cijfers beschikbaar t/m {def.to.split("-").reverse().join("/")}</p>
+
+      {mode === "week" && <FinanceWeek from={from} to={to} />}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-md border bg-card p-3">
@@ -210,7 +229,7 @@ function Dashboard() {
 
       <div className="rounded-md border bg-card p-3 sm:p-4">
         <p className="mb-3 text-sm font-bold uppercase opacity-70">
-          Omzet per {perMaand ? "maand" : "dag"} volgens werkdag van de werkbonnen; zelf gemaakte facturen op hun factuurdatum (excl. btw)
+          Omzet per {mode === "week" ? "week" : perMaand ? "maand" : "dag"} volgens werkdag van de werkbonnen; zelf gemaakte facturen op hun factuurdatum (excl. btw)
         </p>
         <div className="h-72 w-full sm:h-96">
           <ResponsiveContainer width="100%" height="100%">
