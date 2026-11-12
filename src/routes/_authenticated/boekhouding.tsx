@@ -716,8 +716,11 @@ function Bank({ c }: { c: string }) {
   };
   // Automatisch afletteren: alleen als verrichting precies één passende factuur heeft én die factuur maar bij één verrichting past.
   const autoBusy = useRef(false); const autoTried = useRef(new Set<string>());
+  // Verrichtingen die de beheerder ooit losgekoppeld heeft, nooit meer automatisch koppelen (anders lijkt "Ongedaan maken" niet te werken).
+  const { data: undoneTx } = useQuery({ queryKey: ["fin", "bank-undone", c], queryFn: async () => new Set<string>(((await fetchAll((a, b) => db.from("fin_audit").select("entity_id").eq("company_id", c).eq("entity", "bankverrichting").in("action", ["koppeling_ongedaan", "verdeling_ongedaan"]).order("id").range(a, b))) as any[]).map((r) => r.entity_id)), refetchInterval: 30_000 });
   useEffect(() => {
-    if (autoBusy.current || !accounts.length || !tx.length) return;
+    if (autoBusy.current || !accounts.length || !tx.length || !undoneTx) return;
+    undoneTx.forEach((id) => autoTried.current.add(id));
     // Overboekingen tussen eigen rekeningen (bv. 550200 → 550700) altijd meteen intern verrekenen.
     const transfers = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && !t.allocated_amount && !autoTried.current.has(t.id) && ownTransfer(t));
     if (transfers.length) {
