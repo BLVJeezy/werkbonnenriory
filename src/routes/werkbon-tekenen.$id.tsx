@@ -60,23 +60,23 @@ function WerkbonTekenen() {
     return (
       <Shell>
         <h1 className="text-3xl font-black uppercase">Werkbon ondertekenen</h1>
-        <p className="text-muted-foreground">Vul de zescijferige code in uit de e-mail van Riory.</p>
+        <p className="text-muted-foreground">Vul de code (12 tekens) in uit de e-mail van Riory.</p>
         <form
           className="flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (/^\d{6}$/.test(code.trim())) setEnteredCode(code.trim());
+            if (/^[A-Z2-9]{12}$/.test(code.toUpperCase().replace(/[^A-Z0-9]/g, ""))) setEnteredCode(code.toUpperCase().replace(/[^A-Z0-9]/g, ""));
           }}
         >
           <Input
-            inputMode="numeric"
-            maxLength={6}
+            autoCapitalize="characters"
+            maxLength={16}
             placeholder="Code uit de e-mail"
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             className="font-mono text-lg tracking-widest"
           />
-          <Button type="submit" disabled={!/^\d{6}$/.test(code.trim())}>Open werkbon</Button>
+          <Button type="submit" disabled={!/^[A-Z2-9]{12}$/.test(code.toUpperCase().replace(/[^A-Z0-9]/g, ""))}>Open werkbon</Button>
         </form>
       </Shell>
     );
