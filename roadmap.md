@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Korting per offertelijn: percentage, nettoprijs en totalen, behoud bij bewerken, PDF en klantondertekening.
+- [x] Korting per offertelijn: percentage, nettoprijs en totalen, behoud bij bewerken, PDF en klantondertekening. 10 tests geslaagd; ingelogd €200 → €180 bij 10% gecontroleerd op bestaande offerte en kleiner scherm zonder opslaan/verzenden.
 
 - [x] Hans Anders: oude unieke factuurverwijzing blokkeerde resterende €39 van één betaling van €288 na €249; vervangen door niet-unieke zoekindex. Unieke betalingsledger en factuurtoewijzingen behouden; fout exact gereproduceerd en 11 tests geslaagd. Geen bestaande aflettering of bankbetaling uitgevoerd.
 
