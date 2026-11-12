@@ -27,4 +27,23 @@ describe("quoteTotals met opties", () => {
     const t = quoteTotals([main], 21);
     expect(t.total).toBe(302.5);
   });
+  it('past 10% lijnkorting toe vóór 6% btw', () => {
+    const line = quoteLine('Product', 2, 'st', 100, 10);
+    expect(line).toMatchObject({ unitPrice: 90, originalUnitPrice: 100, discount: 10, amount: 180 });
+    expect(quoteTotals([line], 6)).toEqual({ net: 180, vat: 10.8, total: 190.8 });
+  });
+  it('korting blijft hetzelfde bij opnieuw openen en opslaan', () => {
+    const saved = quoteLine('Product', 3, 'st', 19.99, 12.5);
+    expect(quoteLine(saved.description, saved.quantity, saved.unit, saved.originalUnitPrice ?? saved.unitPrice, saved.discount)).toEqual(saved);
+    expect(saved.amount).toBe(52.47);
+  });
+  it('houdt korting op opties buiten het basistotaal', () => {
+    const option = { ...quoteLine('Optie', 1, 'st', 100, 20), optional: true };
+    expect(quoteTotals([option], 21)).toEqual({ net: 0, vat: 0, total: 0 });
+    expect(quoteOptionsTotals([option], 21)).toEqual({ net: 80, vat: 16.8, total: 96.8 });
+  });
+  it('begrensd korting tot 0–100%', () => {
+    expect(quoteLine('Product', 1, 'st', 100, 150).amount).toBe(0);
+    expect(quoteLine('Product', 1, 'st', 100, -10).amount).toBe(100);
+  });
 });

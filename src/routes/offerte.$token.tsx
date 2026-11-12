@@ -64,6 +64,7 @@ function OfferteTekenen() {
             <li key={i} className="flex items-start gap-3 p-3">
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{title}</span>
+                {!!l.discount && <span className="block text-xs text-muted-foreground">Korting {l.discount}%</span>}
                 {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
                 <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
               </span>
@@ -101,6 +102,7 @@ function OfferteTekenen() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold">{title}</span>
+                      {!!l.discount && <span className="block text-xs text-muted-foreground">Korting {l.discount}%</span>}
                       {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
                       <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
                     </span>
