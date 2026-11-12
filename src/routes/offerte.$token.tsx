@@ -59,18 +59,29 @@ function OfferteTekenen() {
       <h1 className="text-3xl font-black uppercase">Offerte {q.number}</h1>
       <p className="text-muted-foreground">Voor {c.name} · {new Date(q.created_at).toLocaleDateString("nl-BE")}</p>
       <ul className="divide-y rounded-md border bg-card">
+        <li className="flex items-start gap-3 bg-muted/50 p-3 text-xs font-bold uppercase text-muted-foreground">
+          <span className="min-w-0 flex-1">Omschrijving</span>
+          <span className="w-16 text-right">Aantal</span>
+          <span className="w-20 text-right">Bruto</span>
+          <span className="w-24 text-right">Korting</span>
+          <span className="w-20 text-right">Netto</span>
+          <span className="w-24 text-right">Bedrag</span>
+        </li>
         {lines.map((l, i) => {
           const { title, detail } = splitLineText(l.description);
+          const disc = lineDiscount(l);
           return (
             <li key={i} className="flex items-start gap-3 p-3">
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{title}</span>
-                {discountLabel(l, euro) && <span className="mt-0.5 block text-sm font-semibold text-primary">{discountLabel(l, euro)}</span>}
                 {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
                 <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
               </span>
-              <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
-              <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>
+              <span className="w-16 whitespace-nowrap text-right font-mono text-sm">{l.quantity} {l.unit}</span>
+              <span className="w-20 whitespace-nowrap text-right font-mono text-sm">{euro(disc ? disc.originalUnitPrice : l.unitPrice)}</span>
+              <span className={`w-24 whitespace-nowrap text-right font-mono text-sm ${disc ? "font-semibold text-primary" : "text-muted-foreground"}`}>{disc ? `${disc.percent.toLocaleString("nl-BE")}% - ${euro(disc.saved)}` : "-"}</span>
+              <span className="w-20 whitespace-nowrap text-right font-mono text-sm">{euro(l.unitPrice)}</span>
+              <span className="w-24 whitespace-nowrap text-right font-mono text-sm">{euro(l.amount)}</span>
             </li>
           );
         })}
@@ -107,12 +118,16 @@ function OfferteTekenen() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold">{title}</span>
-                      {discountLabel(l, euro) && <span className="mt-0.5 block text-sm font-semibold text-primary">{discountLabel(l, euro)}</span>}
                       {detail && <span className="mt-1 block whitespace-pre-line border-l-2 border-primary/40 pl-3 text-sm leading-snug text-muted-foreground">{detail}</span>}
                       <ProductPhotoGallery paths={l.photoPaths ?? []} title={title} urls={q.photoUrls} />
                     </span>
-                    <span className="whitespace-nowrap font-mono text-sm">{l.quantity} {l.unit}</span>
-                    <span className="whitespace-nowrap font-mono text-sm">{euro(l.amount)}</span>
+                    {(() => { const disc = lineDiscount(l); return (<>
+                      <span className="w-16 whitespace-nowrap text-right font-mono text-sm">{l.quantity} {l.unit}</span>
+                      <span className="w-20 whitespace-nowrap text-right font-mono text-sm">{euro(disc ? disc.originalUnitPrice : l.unitPrice)}</span>
+                      <span className={`w-24 whitespace-nowrap text-right font-mono text-sm ${disc ? "font-semibold text-primary" : "text-muted-foreground"}`}>{disc ? `${disc.percent.toLocaleString("nl-BE")}% - ${euro(disc.saved)}` : "-"}</span>
+                      <span className="w-20 whitespace-nowrap text-right font-mono text-sm">{euro(l.unitPrice)}</span>
+                      <span className="w-24 whitespace-nowrap text-right font-mono text-sm">{euro(l.amount)}</span>
+                    </>); })()}
                   </label>
                 </li>
               );
