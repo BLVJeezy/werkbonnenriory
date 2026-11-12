@@ -1,5 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { describe, expect, it } from 'vitest';
+import migration from '../../drizzle/migrations/0147_allow_shared_purchase_bank_reference.sql?raw';
 
 describe('Eén bankbetaling voor meerdere aankoopfacturen', () => {
   it('laat Hans Anders €249 en €39 aan dezelfde betaling van €288 koppelen', async () => {
@@ -15,6 +16,7 @@ describe('Eén bankbetaling voor meerdere aankoopfacturen', () => {
         INSERT INTO public.ponto_reconciliations VALUES ('bank-288');
         INSERT INTO public.fin_bank_allocations VALUES ('bank-288','hans-249',249);
       `);
+      await db.exec(migration);
       await db.query(`UPDATE public.purchase_invoices SET bank_transaction_key='bank-288' WHERE id='hans-39'`);
       await db.query(`INSERT INTO public.fin_bank_allocations VALUES ('bank-288','hans-39',39)`);
       expect((await db.query<{ total: string }>(`SELECT sum(amount)::text AS total FROM public.fin_bank_allocations WHERE transaction_id='bank-288'`)).rows[0]?.total).toBe('288');

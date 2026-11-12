@@ -21,3 +21,4 @@
 - Insurance reports store reviewed text separately from technician notes; admin AI/save/send reuse the price-free photo PDF and info mailbox, never creating an estimate; explicitly consume the AI stream before reading its final output.
 - Supplier payment edits from either purchase review or supplier management use syncSupplierPaymentMethod for all linked review/approved invoices; paid and bank-staged invoices retain their payment history, and propagation errors are surfaced.
 - Manual purchase-paid flags use an admin-checked server function with explicit confirmation and paid date; they change only status/paid_at, never creating bank entries or payments, and payment exports reject paid invoices.
+- Purchase bank_transaction_key is a non-unique display reference because one payment can cover several invoices; unique transaction claims and invoice allocations remain in ponto_reconciliations and fin_bank_allocations.
