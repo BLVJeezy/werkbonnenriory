@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Dashboardweekcijfers: maand/weekkeuze, maandag-zondag, vorige/volgende week, volledige weekreeksen, omzet/kosten/resultaat/marge uit echte boekingsdatums en productomzet. 22 tests geslaagd; ingelogd week 45, navigatie, meerdere weken en uitsluiting lopende week gecontroleerd zonder JS-fouten. Niet gepubliceerd.
+
 - [x] Dashboard: alleen afgesloten maanden in cijfers en productomzet; volledige afgesloten jaren in jaarvergelijking. 16 tests geslaagd; ingelogd oktober standaard, november/december leeg, toekomstige datum begrensd en historische periodekeuze gecontroleerd. Niet gepubliceerd.
 
 - [x] Korting per offertelijn: percentage, nettoprijs en totalen, behoud bij bewerken, PDF en klantondertekening. 10 tests geslaagd; ingelogd €200 → €180 bij 10% gecontroleerd op bestaande offerte en kleiner scherm zonder opslaan/verzenden.

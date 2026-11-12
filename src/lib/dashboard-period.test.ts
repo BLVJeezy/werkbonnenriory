@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closedDashboardRange, dashboardToday, lastClosedMonth } from "./dashboard-period";
+import { closedDashboardRange, closedWeekRange, dashboardToday, dashboardWeeks, lastClosedMonth, lastClosedWeek } from "./dashboard-period";
 
 describe("afgesloten dashboardperiodes", () => {
   it("toont in november standaard de volledige oktobermaand", () => {
@@ -26,5 +26,26 @@ describe("afgesloten dashboardperiodes", () => {
   it("gebruikt Belgische middernacht bij een maandwissel", () => {
     expect(dashboardToday(new Date("2026-10-31T23:30:00Z"))).toBe("2026-11-01");
     expect(lastClosedMonth(dashboardToday(new Date("2026-10-31T22:30:00Z"))).to).toBe("2026-09-30");
+  });
+});
+
+describe("voorbije dashboardweken", () => {
+  it("laat op donderdag 12 november alleen weken tot zondag 8 november toe", () => {
+    expect(lastClosedWeek("2026-11-12")).toEqual({ from: "2026-11-02", to: "2026-11-08" });
+    expect(closedWeekRange("2026-11-09", "2026-11-15", "2026-11-12"))
+      .toEqual({ from: "2026-11-02", to: "2026-11-08" });
+  });
+  it("sluit de huidige week ook op zondag uit en opent haar pas op maandag", () => {
+    expect(lastClosedWeek("2026-11-15").to).toBe("2026-11-08");
+    expect(lastClosedWeek("2026-11-16").to).toBe("2026-11-15");
+  });
+  it("maakt historische keuzes volledig van maandag tot zondag", () => {
+    expect(closedWeekRange("2026-10-14", "2026-10-22", "2026-11-12"))
+      .toEqual({ from: "2026-10-12", to: "2026-10-25" });
+  });
+  it("behoudt volledige weken over een jaargrens met correcte ISO-weeknummers", () => {
+    expect(lastClosedWeek("2027-01-04")).toEqual({ from: "2026-12-28", to: "2027-01-03" });
+    expect(dashboardWeeks("2026-12-28", "2027-01-10").map(w => [w.label, w.from, w.to]))
+      .toEqual([["W53", "2026-12-28", "2027-01-03"], ["W1", "2027-01-04", "2027-01-10"]]);
   });
 });

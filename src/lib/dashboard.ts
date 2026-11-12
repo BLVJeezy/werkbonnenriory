@@ -1,3 +1,5 @@
+import { dashboardWeeks } from "./dashboard-period";
+
 export type InvoiceOmzetRow = {
   id: string;
   issue_date: string;
@@ -19,6 +21,14 @@ export function manualInvoiceRows(rows: InvoiceOmzetRow[]): InvoiceOmzetRow[] {
 }
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+export function groupWeekOmzet(rows: InvoiceOmzetRow[], from: string, to: string) {
+  return dashboardWeeks(from, to).map(week => ({
+    ...week,
+    omzet: Math.round(rows.filter(r => r.issue_date >= week.from && r.issue_date <= week.to)
+      .reduce((sum, r) => sum + (r.kind === "creditnota" ? -1 : 1) * Number(r.net), 0) * 100) / 100,
+  }));
+}
 
 /** Group invoices per day, or per month when the range spans more than 62 days. Credit notes count negative. */
 export function groupOmzet(rows: InvoiceOmzetRow[], from: string, to: string) {

@@ -23,4 +23,4 @@
 - Manual purchase-paid flags use an admin-checked server function with explicit confirmation and paid date; they change only status/paid_at, never creating bank entries or payments, and payment exports reject paid invoices.
 - Purchase bank_transaction_key is a non-unique display reference because one payment can cover several invoices; unique transaction claims and invoice allocations remain in ponto_reconciliations and fin_bank_allocations.
 - Quote line discounts use the invoice snapshot convention: discounted unitPrice/amount plus originalUnitPrice and percentage; editors restore the original price, so PDF, signing, totals and quote-based invoicing never apply discounts twice.
-- Dashboard date boundaries use dashboard-period.ts in Brussels time; closed months feed KPIs/products and only complete calendar years enter annual comparisons, preventing partial-period distortion.
+- Dashboard date boundaries use dashboard-period.ts in Brussels time; closed months or ISO Monday–Sunday weeks feed KPIs/products and only complete calendar years enter annual comparisons. Week finance reads date-filtered, id-paged journal lines, never apportions monthly summaries.
