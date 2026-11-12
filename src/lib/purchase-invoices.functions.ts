@@ -4,6 +4,7 @@ import { normalizePurchaseInvoice, type ParsedPurchaseInvoice } from "@/lib/purc
 import { canExportPurchase } from '@/lib/purchase-payment';
 import { paymentCommunication, creditorBank } from '@/lib/purchase-booking';
 import { syncSupplierPaymentMethod } from './supplier-payment';
+import { z } from 'zod';
 
 type Ctx = { supabase: any; userId: string };
 
@@ -80,6 +81,24 @@ export const updatePurchaseInvoice = createServerFn({ method: "POST" })
       }
     }
     return { ok: true as const, supplierSynced, supplierSyncError };
+  });
+
+/** Manual paid flag only: never creates a bank payment or reconciliation entry. */
+export const markPurchaseInvoicePaid = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), paidDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), confirmed: z.literal(true) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const paidAt = new Date(`${data.paidDate}T12:00:00Z`);
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
+    if (!Number.isFinite(paidAt.getTime()) || paidAt.toISOString().slice(0, 10) !== data.paidDate || data.paidDate > today) throw new Error('Kies een geldige betaaldatum, niet in de toekomst');
+    const { data: row, error } = await context.supabase.from('purchase_invoices').select('id,kind,status').eq('id', data.id).single();
+    if (error || !row) throw new Error('Factuur niet gevonden');
+    if (row.kind !== 'factuur') throw new Error('Een creditnota is geen te betalen factuur');
+    if (row.status === 'betaald') return { ok: true as const };
+    const { error: updateError } = await context.supabase.from('purchase_invoices').update({ status: 'betaald', paid_at: paidAt.toISOString() }).eq('id', data.id).neq('status', 'betaald');
+    if (updateError) throw new Error(updateError.message);
+    return { ok: true as const };
   });
 
 export const setPurchaseInvoiceStatus = createServerFn({ method: "POST" })
