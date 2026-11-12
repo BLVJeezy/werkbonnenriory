@@ -59,13 +59,14 @@ function Controle() {
   const [assetLine, setAssetLine] = useState<number | null>(null);
   const [asset, setAsset] = useState({ name: "", account: "230000", start: "", life: "60", residual: "0" });
   const { data: assets = [], refetch: refetchAssets } = useQuery({ queryKey: ["purchase-assets", id], queryFn: async () => ((await supabase.from("fin_investments").select("id,purchase_line_index").eq("purchase_invoice_id", id)).data ?? []) as { id: string; purchase_line_index: number | null }[] });
+  const locked = edit?.status === "betaald" || edit?.status === "betaling_klaargezet";
   async function capitalize() {
     if (!edit || assetLine == null) return;
     const life = Number(asset.life), residual = Number(asset.residual.replace(",", "."));
     if (!asset.name.trim() || !asset.start || !Number.isInteger(life) || life < 1 || life > 600 || !(residual >= 0)) return void toast.error("Vul naam, startdatum, levensduur (maanden) en restwaarde in");
     setBusy(true);
     try {
-      await save();
+      if (!locked) await save();
       const { error } = await supabase.rpc("fin_capitalize_purchase_line", { _purchase: edit.id, _line_index: assetLine, _asset_account: asset.account, _life: life, _start: asset.start, _name: asset.name.trim(), _residual: residual });
       if (error) throw new Error(error.message);
       toast.success("Afschrijving aangemaakt; het schema staat bij Investeringen");
@@ -161,7 +162,6 @@ function Controle() {
     lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
   }, edit.payment_method, edit.status)])];
   const isPaid = edit.status === "betaald";
-  const locked = isPaid || edit.status === "betaling_klaargezet";
   const signedTotal = edit.kind === "creditnota" ? -Math.abs(Number(edit.total)) : Number(edit.total);
   const upd = (i: number, patch: Partial<PurchaseLine>) => setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
   const isImage = edit.pdf_path && !edit.pdf_path.toLowerCase().endsWith(".pdf");
@@ -272,22 +272,6 @@ function Controle() {
                     </select>
                     {sources[i] && <span className="text-xs text-muted-foreground">{sources[i] === "geleerd" ? "geleerd" : "AI-voorstel"}</span>}
                   </div>
-                  {edit.kind === "factuur" && (assets.some((a) => a.purchase_line_index === i)
-                    ? <p className="text-xs text-primary">Als investering geboekt · afschrijving onder Investeringen</p>
-                    : assetLine === i
-                      ? <div className="grid gap-2 rounded-md border bg-muted/50 p-2 sm:grid-cols-2">
-                          <Field label="Naam investering"><Input className="h-8" value={asset.name} onChange={(e) => setAsset({ ...asset, name: e.target.value })} /></Field>
-                          <Field label="Investeringsrekening"><select aria-label="Investeringsrekening" className="h-8 w-full rounded-md border bg-background px-2 text-sm" value={asset.account} onChange={(e) => setAsset({ ...asset, account: e.target.value })}>{accounts.filter((a) => a.number.startsWith("2")).map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}</select></Field>
-                          <Field label="Start (factuurdatum)"><Input type="date" className="h-8" value={asset.start} onChange={(e) => setAsset({ ...asset, start: e.target.value })} /></Field>
-                          <Field label="Levensduur (maanden)"><Input type="number" className="h-8" value={asset.life} onChange={(e) => setAsset({ ...asset, life: e.target.value })} /></Field>
-                          <Field label="Restwaarde €"><Input className="h-8" value={asset.residual} onChange={(e) => setAsset({ ...asset, residual: e.target.value })} /></Field>
-                          <div className="flex items-end gap-2">
-                            <Button type="button" size="sm" disabled={busy} onClick={capitalize}>Afschrijving maken</Button>
-                            <Button type="button" size="sm" variant="ghost" onClick={() => setAssetLine(null)}>Annuleren</Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground sm:col-span-2">Bedrag {euro(Number(l.amount))} ex btw, per dag afgeschreven vanaf de startdatum.</p>
-                        </div>
-                      : <Button type="button" size="sm" variant="outline" className="self-start" onClick={() => { setAssetLine(i); setAsset({ name: l.description || `${edit.supplier_name} ${edit.invoice_number ?? ""}`.trim(), account: l.account?.startsWith("2") ? l.account : "230000", start: edit.invoice_date ?? "", life: "60", residual: "0" }); }}>Afschrijving maken</Button>)}
                 </div>
                 );
               })}
@@ -309,6 +293,27 @@ function Controle() {
               <span className="font-mono text-xl font-black">{euro(isPaid ? 0 : signedTotal)}</span>
             </div>
           </fieldset>
+          {edit.kind === "factuur" && (
+            <div className="mt-3 space-y-2 rounded-md border p-2">
+              <p className="text-sm font-bold">Afschrijving</p>
+              {edit.lines.map((l, i) => assets.some((a) => a.purchase_line_index === i)
+                ? <p key={i} className="text-xs text-primary">{l.description || `Lijn ${i + 1}`}: als investering geboekt · schema onder Investeringen</p>
+                : assetLine === i
+                  ? <div key={i} className="grid gap-2 rounded-md border bg-muted/50 p-2 sm:grid-cols-2">
+                      <Field label="Naam investering"><Input className="h-8" value={asset.name} onChange={(e) => setAsset({ ...asset, name: e.target.value })} /></Field>
+                      <Field label="Investeringsrekening"><select aria-label="Investeringsrekening" className="h-8 w-full rounded-md border bg-background px-2 text-sm" value={asset.account} onChange={(e) => setAsset({ ...asset, account: e.target.value })}>{accounts.filter((a) => a.number.startsWith("2")).map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}</select></Field>
+                      <Field label="Start (factuurdatum)"><Input type="date" className="h-8" value={asset.start} onChange={(e) => setAsset({ ...asset, start: e.target.value })} /></Field>
+                      <Field label="Levensduur (maanden)"><Input type="number" className="h-8" value={asset.life} onChange={(e) => setAsset({ ...asset, life: e.target.value })} /></Field>
+                      <Field label="Restwaarde €"><Input className="h-8" value={asset.residual} onChange={(e) => setAsset({ ...asset, residual: e.target.value })} /></Field>
+                      <div className="flex items-end gap-2">
+                        <Button type="button" size="sm" disabled={busy} onClick={capitalize}>Afschrijving maken</Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setAssetLine(null)}>Annuleren</Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:col-span-2">{l.description} · {euro(Number(l.amount))} ex btw, per dag afgeschreven vanaf de startdatum.</p>
+                    </div>
+                  : <Button key={i} type="button" size="sm" variant="outline" className="mr-2" onClick={() => { setAssetLine(i); setAsset({ name: l.description || `${edit.supplier_name} ${edit.invoice_number ?? ""}`.trim(), account: l.account?.startsWith("2") ? l.account : "230000", start: edit.invoice_date ?? "", life: "60", residual: "0" }); }}>Afschrijving maken{edit.lines.length > 1 ? `: ${(l.description || `lijn ${i + 1}`).slice(0, 40)}` : ""}</Button>)}
+            </div>
+          )}
           {!locked && (
             <div className="sticky bottom-0 mt-3 flex flex-wrap gap-2 border-t bg-background py-2">
               <Button disabled={busy || !sup || !canBook} title={!sup ? "Kies eerst een leverancier" : !canBook ? "Kies voor elke lijn een rekening" : undefined} onClick={() => save({ approve: true, bookLines: true, next: true })}>Opslaan en volgende →</Button>
