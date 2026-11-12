@@ -133,7 +133,7 @@ export const paymentFile = createServerFn({ method: "POST" })
     const { data: s } = await context.supabase.from("settings").select("company_name, company_iban, company_bic").eq("id", 1).single();
     if (!s?.company_iban) throw new Error("Vul eerst het IBAN van Riory in bij de factuurinstellingen");
     const { buildPain001 } = await import("@/lib/pain001");
-    const messageId = `RIORY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+    const messageId = `RIORY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomUUID().slice(0, 8)}`;
     const xml = buildPain001(
       { name: s.company_name ?? "Riory bv", iban: s.company_iban, bic: s.company_bic ?? null },
       rows.map((r: any, i: number) => ({

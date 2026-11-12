@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Fortis SEPA-export: ontbrekend verplicht DbtrAgt en ongeldige Belgische structured reference gereproduceerd en hersteld (BBA + 12 cijfers); BIC/datum/bedragvalidatie en unieke export-ID toegevoegd. 33 tests geslaagd; dezelfde XSD-controle faalt vóór en slaagt na herstel met/zonder BIC. Geen factuurstatus of betaling gewijzigd; origineel afgewezen bestand niet beschikbaar, bankacceptatie niet getest, niet gepubliceerd.
+
 - [x] Dashboardweekcijfers: maand/weekkeuze, maandag-zondag, vorige/volgende week, volledige weekreeksen, omzet/kosten/resultaat/marge uit echte boekingsdatums en productomzet. 22 tests geslaagd; ingelogd week 45, navigatie, meerdere weken en uitsluiting lopende week gecontroleerd zonder JS-fouten. Niet gepubliceerd.
 
 - [x] Dashboard: alleen afgesloten maanden in cijfers en productomzet; volledige afgesloten jaren in jaarvergelijking. 16 tests geslaagd; ingelogd oktober standaard, november/december leeg, toekomstige datum begrensd en historische periodekeuze gecontroleerd. Niet gepubliceerd.

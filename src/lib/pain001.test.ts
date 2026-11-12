@@ -17,6 +17,10 @@ describe("isValidOgm", () => {
 });
 
 describe("buildPain001", () => {
+  it("behoudt de verplichte rekeningbank wanneer de BIC niet beschikbaar is", () => {
+    const xml = buildPain001({ ...debtor, bic: null }, [{ creditorName: "Test", creditorIban: "BE68539007547034", amount: 1, remittance: null, executionDate: "2026-11-13", endToEndId: "E" }], "M1");
+    expect(xml).toContain("<DbtrAgt><FinInstnId><Othr><Id>NOTPROVIDED</Id></Othr></FinInstnId></DbtrAgt>");
+  });
   it("groepeert betalingen per vervaldag met juiste totalen", () => {
     const xml = buildPain001(debtor, [
       { creditorName: "Desco", creditorIban: "BE71 0961 2345 6769", amount: 30.25, remittance: "factuur 2026-1042", executionDate: "2026-11-03", endToEndId: "PI-1" },
@@ -30,7 +34,8 @@ describe("buildPain001", () => {
     expect(xml).toContain("<ReqdExctnDt>2026-11-03</ReqdExctnDt>");
     expect(xml).toContain("<ReqdExctnDt>2026-11-10</ReqdExctnDt>");
     expect(xml).toContain("<IBAN>BE71096123456769</IBAN>");
-    expect(xml).toContain("<Ref>+++123/4567/89002+++</Ref>");
+    expect(xml).toContain("<Issr>BBA</Issr>");
+    expect(xml).toContain("<Ref>123456789002</Ref>");
     expect(xml).toContain("<Ustrd>factuur 2026-1042</Ustrd>");
   });
 
@@ -44,5 +49,18 @@ describe("buildPain001", () => {
   it("weigert een leeg bestand en ongeldige bedragen", () => {
     expect(() => buildPain001(debtor, [], "M1")).toThrow();
     expect(() => buildPain001(debtor, [{ creditorName: "X", creditorIban: "BE1", amount: 0, remittance: null, executionDate: "2026-11-03", endToEndId: "E" }], "M1")).toThrow();
+  });
+  it("weigert ongeldige datums, BIC en bedragen voordat er een bestand ontstaat", () => {
+    const p = { creditorName: "Test", creditorIban: "BE68539007547034", amount: 1, remittance: null, executionDate: "2026-11-13", endToEndId: "E" };
+    expect(() => buildPain001(debtor, [{ ...p, executionDate: "2026-02-30" }], "M1")).toThrow("vervaldag");
+    expect(() => buildPain001({ ...debtor, bic: "fout" }, [p], "M1")).toThrow("BIC");
+    expect(() => buildPain001(debtor, [{ ...p, amount: NaN }], "M1")).toThrow("bedrag");
+    expect(() => buildPain001(debtor, [{ ...p, amount: 1.001 }], "M1")).toThrow("bedrag");
+  });
+  it("normaliseert een ingevulde BIC zonder haar te vervangen", () => {
+    const xml = buildPain001({ ...debtor, bic: " gebabebb " }, [{ creditorName: "Test", creditorIban: "BE68539007547034", creditorBic: " k redbebb ", amount: 1, remittance: "INV-123", executionDate: "2026-11-13", endToEndId: "E" }], "M1");
+    expect(xml).toContain("<BIC>GEBABEBB</BIC>");
+    expect(xml).toContain("<BIC>KREDBEBB</BIC>");
+    expect(xml).toContain("<Ustrd>INV-123</Ustrd>");
   });
 });
