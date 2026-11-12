@@ -148,10 +148,11 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       const w = cols.qty - cols.desc - 20;
       const split = splitLineText(l.description);
       const title = bestek && postNr ? `${postNr}.${sub}  ${split.title}` : split.title;
-      const detail = [split.detail, discountLabel(l, money)].filter(Boolean).join('\n');
+      const detail = split.detail;
+      const disc = discountLabel(l, money);
       const tl = wrap(title, 10.5, w, bold);
       const dl = detail ? wrap(detail, 9, w - 14) : [];
-      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
+      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + (disc ? 13 : 0) + 10;
       ensure(h);
       if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
       tl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
@@ -159,6 +160,10 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
         const top = y - tl.length * 14 - 5;
         page.drawRectangle({ x: cols.desc + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
         dl.forEach((t, j) => page.drawText(t, { x: cols.desc + 12, y: top - j * 11.5, size: 9, font, color: muted }));
+      }
+      if (disc) {
+        const dy = y - tl.length * 14 - (dl.length ? 5 + dl.length * 11.5 : 0) - 10;
+        page.drawText(pr(disc), { x: cols.desc + 12, y: dy, size: 9, font: bold, color: orange });
       }
       right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
       right(money(l.unitPrice), cols.price, y, 10);
