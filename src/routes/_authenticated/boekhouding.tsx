@@ -1098,6 +1098,7 @@ function PontoCard({ c, bankAcc, onDone }: { c: string; bankAcc: string; onDone:
     try {
       const r = await syncFn({ data: { companyId: c, bankAccount: bankAcc, since } });
       toast.success(`${r.inserted} nieuwe bankverrichtingen opgehaald (${r.fetched} bekeken)`);
+      for (const w of r.warnings ?? []) toast.warning(w, { duration: 10000 });
       onDone(); refetch();
     } catch (e: any) { toast.error(e.message ?? "Ophalen mislukt"); }
     finally { setBusy(false); }
