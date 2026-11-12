@@ -135,6 +135,11 @@ export async function createInvoicePdf(d: InvoicePdfData): Promise<Uint8Array> {
   } else tot(`Btw ${d.vatRate}%`, money(d.vat));
   page.drawLine({ start: { x: W - M - 230, y: y + 14 }, end: { x: W - M, y: y + 14 }, thickness: 1.5, color: orange });
   tot("Totaal incl. btw", money(d.total), true);
+  if (d.total > 0 && d.paidAmount > 0.005 && d.total - d.paidAmount > 0.005) {
+    ensure(40);
+    tot("Reeds betaald", `- ${money(d.paidAmount)}`);
+    tot("Nog te betalen", money(Math.round((d.total - d.paidAmount) * 100) / 100), true);
+  }
   if (d.note?.trim()) {
     const nl = wrap(d.note.trim(), 9.5, W - 2 * M);
     ensure(24 + nl.length * 13);
