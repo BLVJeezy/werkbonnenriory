@@ -4,9 +4,10 @@ import { resolutionEvidence, validateInvestment, validateLoan, buildFinanceTasks
 const base = { capitalizable_amount: 1000, start_date: "2026-01-20", useful_life_months: 3, residual_value: 0, opening_accumulated: 0, opening_cutoff: null, is_land: false, disposal_date: null };
 
 describe("afschrijving", () => {
-  it("lineair met afrondingscorrectie in laatste maand", () => {
+  it("per dag vanaf factuurdatum", () => {
+    // 20 jan – 20 apr 2026 = 90 dagen: jan 12, feb 28, mrt 31, apr 19
     const s = depreciationSchedule(base);
-    expect(s.map((r) => r.depreciation)).toEqual([333.33, 333.33, 333.34]);
+    expect(s.map((r) => r.depreciation)).toEqual([133.33, 311.11, 344.45, 211.11]);
     expect(s[0]?.month).toBe("2026-01-01");
     expect(s.at(-1)?.bookValue).toBe(0);
   });
@@ -16,13 +17,13 @@ describe("afschrijving", () => {
   });
   it("openingssaldo met cutoff verdeelt enkel het restant", () => {
     const s = depreciationSchedule({ ...base, useful_life_months: 10, opening_accumulated: 400, opening_cutoff: "2026-04-30" });
-    expect(s.length).toBe(6);
+    expect(s.length).toBe(7);
     expect(s[0]?.month).toBe("2026-05-01");
     expect(s.at(-1)?.accumulated).toBe(1000);
   });
   it("grond en buitengebruikstelling", () => {
     expect(depreciationSchedule({ ...base, is_land: true })).toEqual([]);
-    expect(depreciationSchedule({ ...base, disposal_date: "2026-02-10" }).length).toBe(2);
+    expect(depreciationSchedule({ ...base, disposal_date: "2026-02-10" }).map((r) => r.depreciation)).toEqual([133.33, 111.11]);
   });
   it("ontbrekende parameters geven geen schema", () => {
     expect(depreciationSchedule({ ...base, useful_life_months: null })).toEqual([]);

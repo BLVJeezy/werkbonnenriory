@@ -28,11 +28,12 @@ export const isPrivateCompany = (name: string | null | undefined) =>
   (name ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() === "prive";
 
 // ---------- Afschrijvingen ----------
-// Prorata-beleid: lineair per maand; de maand van de startdatum telt als volledige maand,
-// ongeacht de dag. Bij een openingssaldo (opening_accumulated per opening_cutoff) wordt enkel het
-// resterende afschrijfbare bedrag over de resterende maanden na de cutoff-maand verdeeld.
-// Laatste maand krijgt het afrondingsverschil; boekwaarde zakt nooit onder restwaarde.
-// Bij buitengebruikstelling (disposal_date) stopt de afschrijving na die maand. Grond: geen afschrijving.
+// Prorata-beleid: lineair per dag vanaf de startdatum (standaard de factuurdatum). De levensduur
+// loopt van startdatum tot dezelfde dag + levensduur maanden; elke maand krijgt het aandeel van haar
+// dagen. Bij een openingssaldo (opening_accumulated per opening_cutoff) wordt enkel het resterende
+// bedrag over de dagen na de cutoff-datum verdeeld. Afronding gebeurt cumulatief, zodat de laatste
+// maand exact uitkomt; boekwaarde zakt nooit onder restwaarde. Bij buitengebruikstelling
+// (disposal_date) stopt de afschrijving na die dag. Grond: geen afschrijving.
 export type Investment = {
   capitalizable_amount: number | null;
   purchase_amount?: number | null;
@@ -61,30 +62,32 @@ export function depreciationSchedule(i: Investment): DeprRow[] {
   const cost = i.capitalizable_amount ?? i.purchase_amount;
   const life = i.useful_life_months;
   if (cost == null || !i.start_date || life == null) return [];
-  const start = monthKey(i.start_date);
+  const DAY = 86400000;
+  const day = (d: string) => Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)));
+  const startD = i.start_date.slice(0, 10);
+  const startT = day(startD);
+  const endT = day(addMonths(monthKey(startD), life)) + (day(startD) - day(monthKey(startD)));
   const base = cost - i.residual_value;
   let acc = i.opening_accumulated;
-  let first = start;
-  let months = life;
-  if (i.opening_cutoff && i.opening_accumulated > 0) {
-    const cut = monthKey(i.opening_cutoff);
-    first = addMonths(cut, 1);
-    months = life - (monthDiff(start, cut) + 1);
-  }
+  let fromT = startT;
+  if (i.opening_cutoff && i.opening_accumulated > 0) fromT = day(i.opening_cutoff.slice(0, 10)) + DAY;
+  const totalDays = Math.round((endT - fromT) / DAY);
   const remaining = r2(base - acc);
-  if (months <= 0 || remaining <= 0) return [];
-  const monthly = r2(remaining / months);
-  const stop = i.disposal_date ? monthKey(i.disposal_date) : null;
+  if (totalDays <= 0 || remaining <= 0) return [];
+  const stopT = i.disposal_date ? Math.min(endT, day(i.disposal_date.slice(0, 10)) + DAY) : endT;
   const rows: DeprRow[] = [];
-  let done = 0;
-  for (let k = 0; k < months; k++) {
-    const month = addMonths(first, k);
-    if (stop && month > stop) break;
-    let d = k === months - 1 ? r2(remaining - done) : monthly;
-    if (done + d > remaining) d = r2(remaining - done);
-    done = r2(done + d);
+  let done = 0, daysSoFar = 0;
+  let month = monthKey(new Date(fromT).toISOString());
+  while (day(month) < stopT) {
+    const mStart = Math.max(day(month), fromT);
+    const mEnd = Math.min(day(addMonths(month, 1)), stopT);
+    daysSoFar += Math.round((mEnd - mStart) / DAY);
+    const target = daysSoFar >= totalDays ? remaining : r2((remaining * daysSoFar) / totalDays);
+    const d = r2(target - done);
+    done = target;
     acc = r2(acc + d);
     rows.push({ month, depreciation: d, accumulated: acc, bookValue: r2(cost - acc) });
+    month = addMonths(month, 1);
   }
   return rows;
 }
