@@ -158,6 +158,8 @@ function Detail() {
     const { error } = await supabase.from("work_orders").update(patch).eq("id", id);
     if (error) toast.error(error.message);
     refresh();
+    // Een nieuw ingetypt project werd bij de klant bewaard: laat de projectenlijst meeverversen.
+    if ("project_name" in patch) qc.invalidateQueries({ queryKey: ["customer_projects"] });
     return !error;
   }
 

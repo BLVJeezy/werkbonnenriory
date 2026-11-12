@@ -1051,6 +1051,13 @@
       "when": 1794481410654,
       "tag": "0149_loan_from_purchase",
       "breakpoints": true
+    },
+    {
+      "idx": 150,
+      "version": "7",
+      "when": 1794483694125,
+      "tag": "0150_auto_create_customer_project",
+      "breakpoints": true
     }
   ]
 }
