@@ -31,11 +31,11 @@ export function lineDiscount(l: InvoiceLine): { percent: number; originalUnitPri
   return saved > 0 ? { percent: l.discount, originalUnitPrice: l.originalUnitPrice, originalAmount, saved } : null;
 }
 
-/** Pure: customer-facing explanation of a line discount, e.g. "Korting 10%: € 50,00 → € 45,00 per stuk · u bespaart € 5,00 excl. btw". */
+/** Pure: customer-facing explanation of a line discount, e.g. "Korting 10% van € 50,00 naar € 45,00 per stuk · u bespaart € 5,00 excl. btw". */
 export function discountLabel(l: InvoiceLine, money: (n: number) => string): string {
   const d = lineDiscount(l);
   if (!d) return "";
-  return `Korting ${d.percent.toLocaleString("nl-BE")}%: ${money(d.originalUnitPrice)} → ${money(l.unitPrice)} per ${l.unit} · u bespaart ${money(d.saved)} excl. btw`;
+  return `Korting ${d.percent.toLocaleString("nl-BE")}% van ${money(d.originalUnitPrice)} naar ${money(l.unitPrice)} per ${l.unit} · u bespaart ${money(d.saved)} excl. btw`;
 }
 
 /** Pure: total discount over the offer (optional lines excluded) and the price before discount. */
