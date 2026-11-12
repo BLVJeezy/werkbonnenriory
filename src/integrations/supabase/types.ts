@@ -4985,6 +4985,7 @@ export type Database = {
         Args: { _transaction: string }
         Returns: Json
       }
+      fin_undo_purchase_bank: { Args: { _transaction: string }; Returns: Json }
       forward_external_appointment: {
         Args: { p_id: string; p_instruction: string }
         Returns: string
