@@ -25,3 +25,4 @@
 - Quote line discounts use the invoice snapshot convention: discounted unitPrice/amount plus originalUnitPrice and percentage; editors restore the original price, so PDF, signing, totals and quote-based invoicing never apply discounts twice.
 - SEPA pain.001.001.03 always includes DbtrAgt (NOTPROVIDED when BIC is absent), uses BBA with 12 bare digits for Belgian structured references, and unique per-export message IDs; invalid fields block staging, files never prove payment.
 - Dashboard date boundaries use dashboard-period.ts in Brussels time; closed months or ISO Monday–Sunday weeks feed KPIs/products and only complete calendar years enter annual comparisons. Week finance reads date-filtered, id-paged journal lines, never apportions monthly summaries.
+- Purchase-invoice lines become assets only via admin-checked `fin_capitalize_purchase_line` (unique per invoice+line index, sets the line's class-2 account), so a line can never be capitalized twice.
