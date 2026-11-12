@@ -7,6 +7,7 @@ import { usePerms, useRole } from '@/lib/use-role';
 import { completedWorkOrderRows } from '@/lib/task-list';
 import { destinationAddress } from '@/lib/address';
 import { werkbonNr } from '@/lib/werkbon-number';
+import { euro } from '@/lib/billing';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,7 @@ export const Route = createFileRoute('/_authenticated/afgewerkte-werkbonnen')({
 });
 
 const completedQuery = () => supabase.from('work_orders')
-  .select('id, number, customer_name, email, address, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, status, signed_at, paid_at, paid_method, scheduled_date, created_at, technician_id, technicians(name)')
+  .select('id, number, customer_name, email, address, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, status, signed_at, paid_at, paid_method, paid_amount, scheduled_date, created_at, technician_id, technicians(name)')
   .eq('status', 'afgetekend').order('signed_at', { ascending: false, nullsFirst: false }).order('id');
 type CompletedRow = NonNullable<Awaited<ReturnType<typeof completedQuery>>['data']>[number];
 const completionDate = (row: CompletedRow) => row.signed_at ?? row.paid_at ?? row.scheduled_date ?? row.created_at;
