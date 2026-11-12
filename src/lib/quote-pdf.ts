@@ -112,7 +112,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     block("VASTSTELLINGEN", d.damageFindings);
   }
 
-  const cols = { desc: M + 8, qty: W - M - 318, bruto: W - M - 220, korting: W - M - 150, price: W - M - 100, amt: W - M - 8 };
+  const cols = { desc: M + 8, qty: W - M - 320, bruto: W - M - 250, korting: W - M - 160, price: W - M - 85, amt: W - M - 8 };
   const productImages = new Map();
   for (const [path, bytes] of Object.entries(d.productPhotos ?? {})) {
     const kind = photoKind(bytes);
