@@ -16,6 +16,7 @@ describe('Interventiekaart servergrenzen', () => {
     vi.stubEnv('SIMPLA_API_TOKEN', 'test-token');
     vi.stubGlobal('fetch', vi.fn(async (url: URL) => ({ ok: true, json: async () => ({ status: 'OK', data: url.searchParams.get('dataType') === 'customer' ? Array.from({ length: 3045 }, (_, i) => ({ customerId: i + 1, customerName: `Klant ${i}`, customerStreetNr: `Kerkstraat ${i + 1}`, customerPostal: '9000', customerCity: 'Gent' })) : [] }) })));
     const from = vi.fn((table: string) => {
+      if (table === 'intervention_source_snapshots') return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }), upsert: async () => ({ error: null }) };
       if (table === 'customer_projects') return { select: () => ({ order: () => ({ range: async () => ({ data: [], error: null }) }) }) };
       if (table === 'intervention_locations') return { select: () => ({ in: async () => ({ data: [], error: null }) }) };
       throw new Error(`Onbekende tabel ${table}`);
@@ -26,7 +27,7 @@ describe('Interventiekaart servergrenzen', () => {
     expect(result.rows).toHaveLength(3045);
     expect(from).toHaveBeenCalledWith('customer_projects');
   });
-  it.each([['lijst',read,{offset:0}],['opslaan',save,{id:'id',lat:51,lon:5}],['geocoderen',lookup,{ids:['id'],refs:[]}]] as const)('weigert niet-admin vóór adreslezen of externe actie: %s', async (_name,run,data) => {
+  it.each([['lijst',read,{offset:0}],['Simpla',getSimplaMapLocations as unknown as (args:unknown)=>Promise<unknown>,{}],['opslaan',save,{id:'id',lat:51,lon:5}],['geocoderen',lookup,{ids:['id'],refs:[]}]] as const)('weigert niet-admin vóór adreslezen of externe actie: %s', async (_name,run,data) => {
     const from = vi.fn(); const fetch = vi.fn(); vi.stubGlobal('fetch',fetch);
     await expect(run({data,context:{userId:'user',supabase:{rpc:async()=>({data:false,error:null}),from}}})).rejects.toThrow('Alleen beheerders');
     expect(from).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
