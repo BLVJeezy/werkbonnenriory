@@ -68,6 +68,7 @@ function CompletedWorkOrders() {
     klant: (row: CompletedRow) => row.customer_name,
     ploeg: (row: CompletedRow) => row.technicians?.name,
     datum: (row: CompletedRow) => completionDate(row),
+    prijs: (row: CompletedRow) => row.paid_amount ?? -1,
   }, 'datum', 'desc');
   const crews = Array.from(new Map(data.filter(row => row.technician_id).map(row => [row.technician_id, row.technicians?.name ?? 'Onbekende ploeg'])).entries());
 
@@ -85,15 +86,16 @@ function CompletedWorkOrders() {
       <div className="space-y-1"><Label htmlFor="completed-until">Afgewerkt tot</Label><Input id="completed-until" type="date" value={until} onChange={e => setUntil(e.target.value)} /></div>
     </div>
     {error ? <p role="alert" className="text-destructive">Werkbonnen ophalen mislukt. Probeer opnieuw.</p> : isPending ? <p className="text-muted-foreground">Werkbonnen laden…</p> : <div className={tableWrap}>
-      <table className={tableCls}><thead><tr><SortTh k="nr" sort={sort}>Nummer</SortTh><SortTh k="klant" sort={sort}>Klant</SortTh><SortTh k="ploeg" sort={sort}>Ploeg</SortTh><SortTh k="datum" sort={sort}>Afgewerkt op</SortTh><Th>Status</Th><Th>Werkbon</Th></tr></thead>
+      <table className={tableCls}><thead><tr><SortTh k="nr" sort={sort}>Nummer</SortTh><SortTh k="klant" sort={sort}>Klant</SortTh><SortTh k="ploeg" sort={sort}>Ploeg</SortTh><SortTh k="datum" sort={sort}>Afgewerkt op</SortTh>{perms.showPrices && <SortTh k="prijs" sort={sort}>Afgerekend</SortTh>}<Th>Status</Th><Th>Werkbon</Th></tr></thead>
         <tbody>{sort.sorted.map(row => <tr key={row.id}>
           <td className="whitespace-nowrap font-mono"><span className="inline-flex items-center gap-1.5">{werkbonNr(row.number)}<OpenEye sent={!!opensW.data?.sent.has(row.id)} info={opensW.data?.opens[row.id]} /></span></td>
           <td className="min-w-48"><Link to="/werkbonnen/$id" params={{ id: row.id }} className="font-bold hover:underline">{row.customer_name}</Link><p className="text-xs text-muted-foreground">{destinationAddress(row)}</p></td>
           <td>{row.technicians?.name ?? 'Niet toegewezen'}</td>
           <td className="whitespace-nowrap">{new Date(completionDate(row)).toLocaleString('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'short', ...(row.signed_at || row.paid_at ? { timeStyle: 'short' as const } : {}) })}</td>
+          {perms.showPrices && <td className="whitespace-nowrap font-mono">{row.paid_amount != null ? euro(Number(row.paid_amount)) : '—'}</td>}
           <td><Badge variant="secondary">{row.paid_method ? 'Afgerekend' : 'Afgewerkt'}</Badge></td>
           <td><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" asChild><Link to="/werkbonnen/$id" params={{ id: row.id }}>Openen</Link></Button><WorkOrderPreview workOrderId={row.id} /><WerkbonMailButton workOrderId={row.id} email={row.email} /></div></td>
-        </tr>)}{sort.sorted.length === 0 && <tr><td colSpan={6} className="text-center text-muted-foreground">Geen afgewerkte werkbonnen gevonden.</td></tr>}</tbody>
+        </tr>)}{sort.sorted.length === 0 && <tr><td colSpan={perms.showPrices ? 7 : 6} className="text-center text-muted-foreground">Geen afgewerkte werkbonnen gevonden.</td></tr>}</tbody>
       </table>
     </div>}
   </div>;
