@@ -184,25 +184,40 @@ async function workOrderReport(supabase: any, wo: any) {
 }
 
 /** Price-free insurance report PDF (findings + photos) for a signed work order; no quote is created. */
-export const insuranceReportPdf = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: { workOrderId: string }) => i)
-  .handler(async ({ data, context }) => {
+async function renderInsuranceReport(context: Ctx, workOrderId: string) {
     await assertAdmin(context);
-    const { data: wo } = await context.supabase.from("work_orders").select("*").eq("id", data.workOrderId).single();
+    const { data: wo } = await context.supabase.from("work_orders").select("*").eq("id", workOrderId).single();
     if (!wo) throw new Error("Werkbon niet gevonden");
     if (wo.status !== "afgetekend") throw new Error("Alleen van een afgewerkte werkbon kan een verslag gemaakt worden");
     const { report, customer, photos } = await workOrderReport(context.supabase, wo);
     const { data: s } = await context.supabase.from("settings").select("company_name, company_vat").eq("id", 1).single();
     const today = new Date().toISOString().slice(0, 10);
-    const number = wo.number ? `Werkbon #${wo.number}` : "Verslag";
     const { createQuotePdf } = await import("@/lib/quote-pdf");
     const pdf = await createQuotePdf({
-      report: true, kind: "verzekering", number, issueDate: today, validUntil: today, customer, lines: [], vatRate: 0, net: 0, vat: 0, total: 0,
+      report: true, kind: "verzekering", number: wo.number ? `Werkbon #${wo.number}` : "Verslag", issueDate: today, validUntil: today, customer, lines: [], vatRate: 0, net: 0, vat: 0, total: 0,
       company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404", iban: null, bic: null }, terms: null,
-      intro: report.intro.replace(/^VERSLAG VOOR DE VERZEKERING\n\n/, ""), damageFindings: report.findings,
+      intro: report.intro.replace(/^VERSLAG VOOR DE VERZEKERING\n\n/, ""), damageFindings: wo.insurance_report_text?.trim() || report.findings,
     }, await quotePhotos(context.supabase, { kind: "verzekering", photo_paths: photos.map((p) => p.path).slice(0, 40) }));
     return { name: `Verslag-verzekering-${wo.number ?? "werkbon"}.pdf`, base64: b64(pdf) };
+}
+
+export const insuranceReportPdf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { workOrderId: string }) => i)
+  .handler(async ({ data, context }) => {
+    return renderInsuranceReport(context, data.workOrderId);
+  });
+
+export const sendInsuranceReport = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(async (input: unknown) => {
+    const { z } = await import('zod');
+    return z.object({ workOrderId: z.string().uuid(), email: z.string().trim().email() }).parse(input);
+  })
+  .handler(async ({ data, context }) => {
+    const pdf = await renderInsuranceReport(context, data.workOrderId);
+    await sendMail(data.email, 'Verslag voor de verzekering — Riory', 'Beste,\n\nIn bijlage vindt u het verslag van onze interventie voor uw verzekeringsdossier.\n\nMet vriendelijke groeten,\nRiory', { name: pdf.name, contentType: 'application/pdf', contentBytes: pdf.base64 });
+    return { accepted: true };
   });
 
 /** Creates a draft insurance estimate (bestek) from a completed work order, with its photos. */
