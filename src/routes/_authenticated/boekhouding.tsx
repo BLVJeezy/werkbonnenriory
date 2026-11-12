@@ -615,6 +615,12 @@ function Bank({ c }: { c: string }) {
   // Eén betaling kan meerdere facturen afletteren; afrondingsverschil tot 2 cent gaat naar 653000.
   const reconcile = async (t: any, inv: any | any[]) => {
     const list = Array.isArray(inv) ? inv : [inv];
+    // Al betaald gemarkeerde facturen (afrekening op werkbon): enkel de bankkant boeken, kaartcommissie naar 653000.
+    if (list.length > 1 && list.every((i) => i.status === 'betaald')) {
+      const { data, error } = await db.rpc('fin_settle_paid_invoices' as any, { _transaction: t.id, _invoices: list.map((i) => i.id), _bank_account: t.bank_account ?? bankAcc, _counter_account: list[0].direction === 'aankoop' ? ctl.leveranciers : ctl.klanten, _gross: grossOf(t) ?? undefined } as any);
+      if (error) throw new Error(error.message);
+      return data;
+    }
     if (grossOf(t) == null && list.every((i) => i.status !== 'betaald')) {
       let available = Math.abs(Number(t.amount));
       const allocations = [...list].sort((a, b) => String(a.id).localeCompare(String(b.id))).map((i) => { const amount = r2(Math.min(available, remaining(i))); available = r2(available - amount); return { type: 'finance', id: i.id, amount }; }).filter((a) => a.amount > 0);
@@ -795,8 +801,21 @@ function Bank({ c }: { c: string }) {
   const splitInvoices = invoiceChoices.filter((i) => splitAmounts[i.id] !== undefined);
   const splitSummary = bankSplitSummary(Number(manualTx?.amount ?? 0), splitInvoices.map((i) => parseAmount(splitAmounts[i.id]) ?? NaN));
   const splitError = splitInvoices.some((i) => (Number(manualTx?.amount) < 0) !== (i.direction === 'aankoop') || (i.purchase_id && !['goedgekeurd','betaling_klaargezet'].includes(i.status)) || (parseAmount(splitAmounts[i.id]) ?? 0) > Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
+  const cardGrossManual = manualTx ? grossOf(manualTx) : null;
+  const cardSplitOk = cardGrossManual != null && splitInvoices.length > 1 && Math.abs(splitInvoices.reduce((s2, i) => s2 + (i.status === 'betaald' ? total(i) : total(i) - Number(i.paid_amount ?? 0)), 0) - cardGrossManual) < 0.025;
   const linkSplit = async () => {
-    if (!manualTx || !splitSummary.valid || splitError || manualBusy) return;
+    if (!manualTx || manualBusy) return;
+    // Kaartuitbetaling (Europabank): facturen volledig op het bruto bedrag uit de mededeling, rest naar bankkosten.
+    const gross = grossOf(manualTx);
+    if (gross != null && splitInvoices.length > 1 && Math.abs(splitInvoices.reduce((s2, i) => s2 + (i.status === 'betaald' ? total(i) : total(i) - Number(i.paid_amount ?? 0)), 0) - gross) < 0.025) {
+      if (!confirm(`${splitInvoices.length} facturen volledig afletteren op bruto ${eur(gross)}; ${eur(r2(gross - Math.abs(Number(manualTx.amount))))} commissie naar 653000 Bankkosten.`)) return;
+      setManualBusy(true);
+      try { await reconcile(manualTx, splitInvoices); toast.success(`${splitInvoices.length} facturen afgeletterd op bruto ${eur(gross)}`); setManualTx(null); setSplitAmounts({}); await refresh(); }
+      catch (error) { toast.error(error instanceof Error ? error.message : 'Afletteren mislukt'); }
+      finally { setManualBusy(false); }
+      return;
+    }
+    if (!splitSummary.valid || splitError) return;
     if (!confirm(`${eur(splitSummary.sum)} afletteren over ${splitInvoices.length} facturen; ${eur(splitSummary.difference)} blijft open.\n${splitInvoices.map((i) => `${i.counterparty} ${i.number}: ${eur(parseAmount(splitAmounts[i.id]) ?? 0)}`).join('\n')}`)) return;
     setManualBusy(true);
     try {
@@ -869,7 +888,7 @@ function Bank({ c }: { c: string }) {
             {splitError && <p className="text-sm text-destructive">Kies passende facturen en overschrijd het openstaande bedrag niet.</p>}
           </div>}
           {manualPreview?.mode === 'refund' && <div className="text-sm" aria-live="polite">{manualPreview.error ? <p className="text-destructive">{manualPreview.error}</p> : <p>Terugstorting — factuur blijft betaald</p>}</div>}
-          <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{manualPreview?.mode !== 'refund' ? <Button disabled={!splitSummary.valid || splitError || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : 'Toegekend bedrag afletteren'}</Button> : <Button disabled={!!manualPreview.error || manualBusy || manualTx?.allocated_amount > 0} onClick={linkManual}>{manualBusy ? 'Koppelen…' : 'Terugstorting koppelen'}</Button>}</div>
+          <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{manualPreview?.mode !== 'refund' ? <Button disabled={(!cardSplitOk && (!splitSummary.valid || splitError)) || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : cardSplitOk ? `Afletteren op bruto ${eur(cardGrossManual ?? 0)}` : 'Toegekend bedrag afletteren'}</Button> : <Button disabled={!!manualPreview.error || manualBusy || manualTx?.allocated_amount > 0} onClick={linkManual}>{manualBusy ? 'Koppelen…' : 'Terugstorting koppelen'}</Button>}</div>
         </DialogContent>
       </Dialog>
       <AccountList accounts={accounts} />
