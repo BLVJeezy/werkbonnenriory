@@ -1640,35 +1640,50 @@ export type Database = {
       }
       fin_loans: {
         Row: {
+          account_long: string | null
+          account_short: string | null
           annual_rate: number
           company_id: string
           created_at: string
+          credit_number: string | null
           id: string
           months: number
           name: string
           principal: number
+          purchase_invoice_id: string | null
+          schedule_path: string | null
           start_date: string
           user_id: string
         }
         Insert: {
+          account_long?: string | null
+          account_short?: string | null
           annual_rate: number
           company_id: string
           created_at?: string
+          credit_number?: string | null
           id?: string
           months: number
           name: string
           principal: number
+          purchase_invoice_id?: string | null
+          schedule_path?: string | null
           start_date: string
           user_id?: string
         }
         Update: {
+          account_long?: string | null
+          account_short?: string | null
           annual_rate?: number
           company_id?: string
           created_at?: string
+          credit_number?: string | null
           id?: string
           months?: number
           name?: string
           principal?: number
+          purchase_invoice_id?: string | null
+          schedule_path?: string | null
           start_date?: string
           user_id?: string
         }

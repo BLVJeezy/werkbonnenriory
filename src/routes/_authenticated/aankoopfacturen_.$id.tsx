@@ -17,6 +17,7 @@ import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditor
 import { bankOfIban, nextBic } from "@/lib/iban-bic";
 import { attachPurchasePdf, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 import { PdfPreview } from "@/components/PdfPreview";
+import { readLoanSchedule, createLoanFromSchedule, type LoanDraft } from "@/lib/loans.functions";
 import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
@@ -56,6 +57,30 @@ function Controle() {
   const [allDiscount, setAllDiscount] = useState(0);
   const [allDiscountMode, setAllDiscountMode] = useState<"percent" | "amount">("percent");
   const [discountModes, setDiscountModes] = useState<Record<number, "percent" | "amount">>({});
+  const readLoan = useServerFn(readLoanSchedule);
+  const createLoan = useServerFn(createLoanFromSchedule);
+  const [loan, setLoan] = useState<LoanDraft | null>(null);
+  const { data: loans = [], refetch: refetchLoans } = useQuery({ queryKey: ["purchase-loans", id], queryFn: async () => ((await supabase.from("fin_loans").select("id,name,credit_number,account_long,account_short").eq("purchase_invoice_id", id)).data ?? []) as { id: string; name: string; credit_number: string | null; account_long: string | null; account_short: string | null }[] });
+  async function uploadLoan(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer()); let bin = "";
+      for (let i = 0; i < buf.length; i += 8192) bin += String.fromCharCode(...buf.subarray(i, i + 8192));
+      setLoan(await readLoan({ data: { purchaseId: id, base64: btoa(bin), mime: file.type } }));
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Uitlezen mislukt"); }
+    setBusy(false);
+  }
+  async function saveLoan() {
+    if (!loan) return;
+    setBusy(true);
+    try {
+      const r = await createLoan({ data: { purchaseId: id, draft: loan } });
+      toast.success(`Lening aangemaakt met rekeningen ${r.long} en ${r.short}`);
+      setLoan(null); await refetchLoans();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Lening aanmaken mislukt"); }
+    setBusy(false);
+  }
   const [assetLine, setAssetLine] = useState<number | null>(null);
   const [asset, setAsset] = useState({ name: "", account: "230000", start: "", life: "60", residual: "0" });
   const { data: assets = [], refetch: refetchAssets } = useQuery({ queryKey: ["purchase-assets", id], queryFn: async () => ((await supabase.from("fin_investments").select("id,purchase_line_index").eq("purchase_invoice_id", id)).data ?? []) as { id: string; purchase_line_index: number | null }[] });
@@ -293,6 +318,32 @@ function Controle() {
               <span className="font-mono text-xl font-black">{euro(isPaid ? 0 : signedTotal)}</span>
             </div>
           </fieldset>
+          {edit.kind === "factuur" && (
+            <div className="mt-3 space-y-2 rounded-md border p-2">
+              <p className="text-sm font-bold">Lening</p>
+              {loans.map((l) => <p key={l.id} className="text-xs text-primary">{l.name} · krediet {l.credit_number} · rekeningen {l.account_long} / {l.account_short} · staat bij Leningen</p>)}
+              {!loan ? (
+                <Button asChild type="button" size="sm" variant="outline" disabled={busy}>
+                  <label className="cursor-pointer">{busy ? "Bezig…" : "Aflossingstabel toevoegen"}<input type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={(e) => { void uploadLoan(e.target.files?.[0]); e.target.value = ""; }} /></label>
+                </Button>
+              ) : (
+                <div className="grid gap-2 rounded-md border bg-muted/50 p-2 sm:grid-cols-2">
+                  <Field label="Naam lening"><Input className="h-8" value={loan.name} onChange={(e) => setLoan({ ...loan, name: e.target.value })} /></Field>
+                  <Field label="Kredietnummer"><Input className="h-8" value={loan.creditNumber} onChange={(e) => setLoan({ ...loan, creditNumber: e.target.value })} /></Field>
+                  <Field label="Kapitaal €"><Input type="number" step="0.01" className="h-8" value={loan.principal} onChange={(e) => setLoan({ ...loan, principal: Number(e.target.value) })} /></Field>
+                  <Field label="Rentevoet % per jaar"><Input type="number" step="0.0001" className="h-8" value={loan.annualRate} onChange={(e) => setLoan({ ...loan, annualRate: Number(e.target.value) })} /></Field>
+                  <Field label="Startdatum"><Input type="date" className="h-8" value={loan.startDate} onChange={(e) => setLoan({ ...loan, startDate: e.target.value })} /></Field>
+                  <p className="self-end text-xs text-muted-foreground">{loan.rows.length} vervaldagen · kapitaal {euro(loan.rows.reduce((t, r) => t + r.capital, 0))} · interest {euro(loan.rows.reduce((t, r) => t + r.interest, 0))}</p>
+                  <div className="max-h-48 overflow-auto font-mono text-xs sm:col-span-2">{loan.rows.map((r, i) => <div key={i} className="flex justify-between gap-2"><span>{r.dueDate}</span><span>kapitaal {euro(r.capital)} · interest {euro(r.interest)}</span></div>)}</div>
+                  <p className="text-xs text-muted-foreground sm:col-span-2">Er worden twee nieuwe rekeningen aangemaakt: Financiering {loan.creditNumber || "…"} (&gt; 1 jaar, 173…) en (binnen het jaar, 423…).</p>
+                  <div className="flex gap-2 sm:col-span-2">
+                    <Button type="button" size="sm" disabled={busy} onClick={saveLoan}>Lening aanmaken</Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setLoan(null)}>Annuleren</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {edit.kind === "factuur" && (
             <div className="mt-3 space-y-2 rounded-md border p-2">
               <p className="text-sm font-bold">Afschrijving</p>

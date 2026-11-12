@@ -1044,6 +1044,13 @@
       "when": 1794480819783,
       "tag": "0148_capitalize_purchase_invoice",
       "breakpoints": true
+    },
+    {
+      "idx": 149,
+      "version": "7",
+      "when": 1794481410654,
+      "tag": "0149_loan_from_purchase",
+      "breakpoints": true
     }
   ]
 }

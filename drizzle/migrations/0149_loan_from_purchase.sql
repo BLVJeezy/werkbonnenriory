@@ -1,0 +1,1 @@
+ALTER TABLE public.fin_loans ADD COLUMN IF NOT EXISTS purchase_invoice_id uuid, ADD COLUMN IF NOT EXISTS credit_number text, ADD COLUMN IF NOT EXISTS schedule_path text, ADD COLUMN IF NOT EXISTS account_long text, ADD COLUMN IF NOT EXISTS account_short text;
