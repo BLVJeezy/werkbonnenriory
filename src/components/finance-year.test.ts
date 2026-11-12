@@ -4,9 +4,9 @@ import { statements, trialBalance } from "@/lib/boekhouding";
 describe("dashboard resultaat = balans resultaat", () => {
   it("laat de lopende novembermaand weg uit omzet, kosten en resultaat", () => {
     const lines = [
-      { account: "700000", debit: 0, credit: 100, entry_date: "2026-10-01" },
-      { account: "700000", debit: 0, credit: 999, entry_date: "2026-11-01" },
-      { account: "604000", debit: 500, credit: 0, entry_date: "2026-11-02" },
+      { account: "700000", debit: 0, credit: 100, entry_date: "2026-10-01", journal: "V" },
+      { account: "700000", debit: 0, credit: 999, entry_date: "2026-11-01", journal: "V" },
+      { account: "604000", debit: 500, credit: 0, entry_date: "2026-11-02", journal: "A" },
     ];
     const rows = journalMonthRows(lines, 2026, "2026-11-12");
     expect(rows[9]?.revenue).toBe(100);
@@ -18,8 +18,8 @@ describe("dashboard resultaat = balans resultaat", () => {
   });
   it("vergelijkt geen onafgewerkt jaar met volledige jaren", () => {
     const lines = [
-      { account: "700000", debit: 0, credit: 100, entry_date: "2025-10-01" },
-      { account: "700000", debit: 0, credit: 999, entry_date: "2026-01-01" },
+      { account: "700000", debit: 0, credit: 100, entry_date: "2025-10-01", journal: "V" },
+      { account: "700000", debit: 0, credit: 999, entry_date: "2026-01-01", journal: "V" },
     ];
     expect(yearRows(lines, "2026-11-12").map(r => r.year)).toEqual([2025]);
   });
