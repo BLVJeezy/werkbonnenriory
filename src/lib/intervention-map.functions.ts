@@ -70,7 +70,7 @@ async function loadSimplaLocations(): Promise<SimplaLocation[]> {
 async function loadProjectLocations(supabase: any): Promise<SimplaLocation[]> {
   const rows: ProjectRow[] = [];
   for (let from = 0; ; from += 1000) {
-    const res = await supabase.from('projects').select('id,name,street,house_number,postal_code,city,created_at,customers(name)').order('id').range(from, from + 999);
+    const res = await supabase.from('customer_projects').select('id,name,street,house_number,postal_code,city,created_at,customers(name)').order('id').range(from, from + 999);
     if (res.error) throw new Error(`Projecten: ${res.error.message}`);
     rows.push(...(res.data ?? [])); if ((res.data ?? []).length < 1000) break;
   }
