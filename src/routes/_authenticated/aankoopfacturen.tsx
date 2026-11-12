@@ -207,13 +207,14 @@ function Aankoopfacturen() {
     if (!edit) return;
     if (!silent) setBusy(true);
     try {
-      await update({
+      const result = await update({
         data: {
           id: edit.id, kind: edit.kind, paymentMethod: edit.payment_method, supplierId: edit.supplier_id ?? null, supplierName: edit.supplier_name, supplierVat: edit.supplier_vat, supplierIban: edit.supplier_iban, supplierBic: edit.supplier_bic,
           invoiceNumber: edit.invoice_number, invoiceDate: edit.invoice_date, dueDate: edit.due_date,
           lines: edit.lines, net: Number(edit.net), vat: Number(edit.vat), total: Number(edit.total), paymentRef: edit.payment_ref,
         },
       });
+      if (result.supplierSyncError) toast.warning(`Factuur opgeslagen, maar de leverancier of andere facturen zijn niet bijgewerkt: ${result.supplierSyncError}`);
       if (approve) await setStatus({ data: { ids: [edit.id], status: 'goedgekeurd' } });
       qc.invalidateQueries({ queryKey: ['suppliers'] });
       if (silent) return;
