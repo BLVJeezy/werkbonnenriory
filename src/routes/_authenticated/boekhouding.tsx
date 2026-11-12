@@ -23,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { dedupeKey, isPrivateCompany, parseAmount } from "@/lib/finance";
 import { MAR } from "@/lib/mar";
-import { undoEntry } from "@/lib/undo";
+import { undoEntry, undoPurchaseBankTx } from "@/lib/undo";
 import { pontoAccounts, pontoSync } from "@/lib/finance-ponto.functions";
 import { useFinanceSales } from "@/lib/use-finance-sales";
 import { useFinanceCompany } from "@/lib/use-finance-company";
