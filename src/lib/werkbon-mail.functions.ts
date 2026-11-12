@@ -102,7 +102,8 @@ async function ensureSigningCode(supabase: any, workOrderId: string, existing: s
     if (data?.signing_code) return data.signing_code;
     if (!error) {
       const { data: row } = await supabase.from("work_orders").select("signing_code").eq("id", workOrderId).single();
-      if (row?.signing_code) return row.signing_code;
+      if (row?.signing_code && /^[A-Z2-9]{12}$/.test(row.signing_code)) return row.signing_code;
+      existing = row?.signing_code ?? null;
     }
   }
   return null;
