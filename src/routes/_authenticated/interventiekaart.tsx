@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { ClientOnly, createFileRoute } from '@tanstack/react-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { List, MapPin, RefreshCw, Search, LocateFixed } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ function Choice({ label, value, onChange, options }: { label: string; value: str
   return <label className="min-w-0 text-xs font-semibold text-muted-foreground">{label}<Select value={value || 'all'} onValueChange={value => onChange(value === 'all' ? '' : value)}><SelectTrigger className="mt-1 w-full" aria-label={label}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Alle</SelectItem>{options.map(([id,name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}</SelectContent></Select></label>;
 }
 function InterventionPage() {
+  const simplaClient = useQueryClient();
   const role = useRole(); const allowed = canAccessInterventionMap(role);
   const fetchPage = useServerFn(getInterventionPage); const fetchSimpla = useServerFn(getSimplaMapLocations); const geocode = useServerFn(geocodeInterventionBatch);
   const [filters, setFilters] = useState<MapFilters>(emptyMapFilters); const [view,setView] = useState('map');

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Ontbrekende kaartadressen bij Simpla-storing herstellen: privé laatste succesvolle adreslijst bewaren, projectadressen onafhankelijk laden en Vernieuwen alle bronnen laten herladen; geen nieuwe Google-opzoekingen.
+
 - [x] Verzekeringsverslag-tab bij afgewerkte werkbonnen: bewerkbare AI-tekst uit techniekerbevindingen, bewaren, prijsloze PDF met foto's en expliciet verzenden via info@riory.be; echte AI-tekst, bewaren en PDF met drie foto's gecontroleerd, geen echte mail verzonden. Publicatie niet uitgevoerd.
 
 - [x] SMS-knop "wij zijn onderweg" op de taakkaart zelf (Kalender én ploegweergave), vóór openen; panelen op neutrale witte achtergrond zodat ze leesbaar blijven op gekleurde ploegtaken. 10 tests, typecontrole en ingelogde desktopcontrole geslaagd; geen SMS verzonden.
