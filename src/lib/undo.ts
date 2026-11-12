@@ -6,11 +6,11 @@ const db = supabase as any;
  *  gekoppelde factuur terug onbetaald, boeking (met lijnen) weg, en een auditregel. */
 export async function undoEntry(company: string, entryId: string): Promise<void> {
   const { data: txs } = await db.from("fin_bank_tx").select("id, matched_invoice_id, matched_purchase_invoice_id").eq("company_id", company).eq("entry_id", entryId);
-  const { data: allocations, error: allocationError } = await db.from('fin_bank_allocations').select('id').in('transaction_id', (txs ?? []).map((t: { id: string }) => t.id));
+  const { data: allocations, error: allocationError } = await db.from('fin_bank_allocations').select('id, transaction_id').or(`entry_id.eq.${entryId}${(txs ?? []).length ? `,transaction_id.in.(${(txs ?? []).map((t: { id: string }) => t.id).join(',')})` : ''}`);
   if (allocationError) throw new Error(allocationError.message);
   if (allocations?.length) {
     // Verdeelde betaling: alle verdelingen van deze verrichting samen terugdraaien (facturen terug open, bank terug te verwerken).
-    for (const t of txs ?? []) { const { error } = await db.rpc('fin_undo_bank_allocations', { _transaction: t.id }); if (error) throw new Error(error.message); }
+    for (const id of new Set<string>(allocations.map((a: { transaction_id: string }) => a.transaction_id))) { const { error } = await db.rpc('fin_undo_bank_allocations', { _transaction: id }); if (error) throw new Error(error.message); }
     return;
   }
   if ((txs ?? []).some((t: { matched_invoice_id: string | null; matched_purchase_invoice_id: string | null }) => t.matched_invoice_id || t.matched_purchase_invoice_id)) {
