@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Aankoopfactuur expliciet als al betaald aanduiden met betaaldatum en bevestiging; uitsluiten van betaalbestanden, zonder bankbetaling of bankboeking.
+- [x] Aankoopfactuur expliciet als al betaald aanduiden met betaaldatum en bevestiging op lijst en detail; uitsluiten van nieuwe betaalbestanden, zonder bankbetaling of bankboeking. 26 tests geslaagd; ingelogde bevestiging op desktop/kleiner scherm gecontroleerd, geen bestaande factuurstatus gewijzigd.
 
 - [x] Gewijzigde leveranciersbetaalwijze vanuit factuurcontrole en leveranciersbeheer overnemen op andere gekoppelde open aankoopfacturen; betaalde en bankklaargezette facturen behouden. 31 tests geslaagd; ingelogd opslaan en teruglezen gecontroleerd zonder betaalwijze te wijzigen.
 
