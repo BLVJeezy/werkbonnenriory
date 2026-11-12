@@ -950,6 +950,7 @@ export type Database = {
           entry_id: string | null
           id: string
           invoice_id: string | null
+          mode: string | null
           purchase_invoice_id: string | null
           transaction_id: string
           user_id: string
@@ -960,6 +961,7 @@ export type Database = {
           entry_id?: string | null
           id?: string
           invoice_id?: string | null
+          mode?: string | null
           purchase_invoice_id?: string | null
           transaction_id: string
           user_id: string
@@ -970,6 +972,7 @@ export type Database = {
           entry_id?: string | null
           id?: string
           invoice_id?: string | null
+          mode?: string | null
           purchase_invoice_id?: string | null
           transaction_id?: string
           user_id?: string
@@ -4976,6 +4979,10 @@ export type Database = {
       }
       fin_split_bank_payment: {
         Args: { _allocations: Json; _transaction: string }
+        Returns: Json
+      }
+      fin_undo_bank_allocations: {
+        Args: { _transaction: string }
         Returns: Json
       }
       forward_external_appointment: {

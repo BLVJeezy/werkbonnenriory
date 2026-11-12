@@ -1065,6 +1065,13 @@
       "when": 1794485400297,
       "tag": "0151_fin_settle_paid_invoices_multi",
       "breakpoints": true
+    },
+    {
+      "idx": 152,
+      "version": "7",
+      "when": 1794485536194,
+      "tag": "0152_fin_undo_bank_allocations",
+      "breakpoints": true
     }
   ]
 }
