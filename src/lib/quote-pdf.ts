@@ -112,7 +112,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     block("VASTSTELLINGEN", d.damageFindings);
   }
 
-  const cols = { desc: M + 8, qty: W - M - 250, price: W - M - 100, amt: W - M - 8 };
+  const cols = { desc: M + 8, qty: W - M - 318, bruto: W - M - 220, korting: W - M - 150, price: W - M - 100, amt: W - M - 8 };
   const productImages = new Map();
   for (const [path, bytes] of Object.entries(d.productPhotos ?? {})) {
     const kind = photoKind(bytes);
@@ -149,10 +149,10 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       const split = splitLineText(l.description);
       const title = bestek && postNr ? `${postNr}.${sub}  ${split.title}` : split.title;
       const detail = split.detail;
-      const disc = discountLabel(l, money);
+      const disc = lineDiscount(l);
       const tl = wrap(title, 10.5, w, bold);
       const dl = detail ? wrap(detail, 9, w - 14) : [];
-      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + (disc ? 13 : 0) + 10;
+      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
       ensure(h);
       if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
       tl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
