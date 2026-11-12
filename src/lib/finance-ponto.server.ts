@@ -22,8 +22,36 @@ export async function financePontoAccounts(db: any) {
   const result = await get(key, "/accounts?page[limit]=100");
   return (result.data ?? []).map((a: any) => ({ id: String(a.id), iban: String(a.attributes?.reference ?? ""), description: String(a.attributes?.description ?? ""), balance: Number(a.attributes?.currentBalance ?? 0), currency: String(a.attributes?.currency ?? "EUR"), synchronizedAt: a.meta?.synchronizedAt ?? null }));
 }
+/** Ponto toont alleen zijn eigen cache; vraag de bank expliciet om verse gegevens en wacht kort op het resultaat. */
+async function refreshFromBank(key: string, accountIds: string[]) {
+  const warnings: string[] = [];
+  const started: string[] = [];
+  for (const id of accountIds) for (const subtype of ["accountDetails", "accountTransactions"]) {
+    const response = await fetch(`${API}/synchronizations`, { method: "POST", headers: { "Content-Type": "application/vnd.api+json", Accept: "application/vnd.api+json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ data: { type: "synchronization", attributes: { resourceType: "account", resourceId: id, subtype } } }) });
+    const body = await response.json().catch(() => ({})) as any;
+    if (response.ok && body?.data?.id) { started.push(String(body.data.id)); continue; }
+    const code = String(body?.errors?.[0]?.code ?? response.status);
+    warnings.push(code === "accountRecentlySynchronized" ? "De bank werd net nog bijgewerkt; Ponto laat een nieuwe opvraging pas na enkele minuten toe." : code === "authorizationExpired" || code === "accountAuthorizationExpired" ? "De bankmachtiging in Ponto is verlopen: vernieuw ze in Ponto." : `Ponto kon de bank niet bijwerken (${code}).`);
+  }
+  const deadline = Date.now() + 25000;
+  const pending = new Set(started);
+  while (pending.size && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 1500));
+    for (const id of [...pending]) {
+      const response = await fetch(`${API}/synchronizations/${encodeURIComponent(id)}`, { headers: { Accept: "application/vnd.api+json", Authorization: `Bearer ${key}` } });
+      const status = String(((await response.json().catch(() => ({}))) as any)?.data?.attributes?.status ?? "");
+      if (status === "success") pending.delete(id);
+      else if (status === "error") { pending.delete(id); warnings.push("De bank gaf een fout bij het bijwerken; probeer later opnieuw of vernieuw de machtiging in Ponto."); }
+    }
+  }
+  if (pending.size) warnings.push("De bank is nog bezig; druk binnen een minuut opnieuw op ophalen.");
+  return [...new Set(warnings)];
+}
+
 export async function financePontoSync(db: any, userId: string, input: { companyId: string; bankAccount: string; since: string }) {
   const key = await token(db);
+  const initial = (await get(key, "/accounts?page[limit]=100")).data ?? [];
+  const warnings = await refreshFromBank(key, initial.map((a: any) => String(a.id)));
   const accounts = (await get(key, "/accounts?page[limit]=100")).data ?? [];
   // Koppel elke bankrekening via haar IBAN aan de juiste grootboekrekening (bv. 550200, 550400).
   const { data: ledger } = await db.from("fin_accounts").select("number, name").eq("company_id", input.companyId).like("number", "55%");
@@ -51,5 +79,5 @@ export async function financePontoSync(db: any, userId: string, input: { company
       path = result.links?.next ?? null;
     }
   }
-  return { accounts: accounts.length, fetched, inserted };
+  return { accounts: accounts.length, fetched, inserted, warnings };
 }
