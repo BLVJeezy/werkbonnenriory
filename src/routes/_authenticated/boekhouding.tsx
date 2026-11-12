@@ -777,7 +777,7 @@ function Bank({ c }: { c: string }) {
       await refresh();
       autoBusy.current = false;
     })();
-  }, [tx, open, paidNoTx, accounts.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tx, open, paidNoTx, accounts.length, undoneTx]); // eslint-disable-line react-hooks/exhaustive-deps
   // Factuurinfo bij afgeletterde verrichtingen + wachtrekening (499000) voor verrichtingen zonder factuur.
   const WACHT = "499000";
   const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).order("id").range(a, b))) as any[] });
