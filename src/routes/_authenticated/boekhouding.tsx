@@ -801,6 +801,8 @@ function Bank({ c }: { c: string }) {
   const splitInvoices = invoiceChoices.filter((i) => splitAmounts[i.id] !== undefined);
   const splitSummary = bankSplitSummary(Number(manualTx?.amount ?? 0), splitInvoices.map((i) => parseAmount(splitAmounts[i.id]) ?? NaN));
   const splitError = splitInvoices.some((i) => (Number(manualTx?.amount) < 0) !== (i.direction === 'aankoop') || (i.purchase_id && !['goedgekeurd','betaling_klaargezet'].includes(i.status)) || (parseAmount(splitAmounts[i.id]) ?? 0) > Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
+  const cardGrossManual = manualTx ? grossOf(manualTx) : null;
+  const cardSplitOk = cardGrossManual != null && splitInvoices.length > 1 && Math.abs(splitInvoices.reduce((s2, i) => s2 + (i.status === 'betaald' ? total(i) : total(i) - Number(i.paid_amount ?? 0)), 0) - cardGrossManual) < 0.025;
   const linkSplit = async () => {
     if (!manualTx || manualBusy) return;
     // Kaartuitbetaling (Europabank): facturen volledig op het bruto bedrag uit de mededeling, rest naar bankkosten.
@@ -886,7 +888,7 @@ function Bank({ c }: { c: string }) {
             {splitError && <p className="text-sm text-destructive">Kies passende facturen en overschrijd het openstaande bedrag niet.</p>}
           </div>}
           {manualPreview?.mode === 'refund' && <div className="text-sm" aria-live="polite">{manualPreview.error ? <p className="text-destructive">{manualPreview.error}</p> : <p>Terugstorting — factuur blijft betaald</p>}</div>}
-          <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{manualPreview?.mode !== 'refund' ? <Button disabled={!splitSummary.valid || splitError || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : 'Toegekend bedrag afletteren'}</Button> : <Button disabled={!!manualPreview.error || manualBusy || manualTx?.allocated_amount > 0} onClick={linkManual}>{manualBusy ? 'Koppelen…' : 'Terugstorting koppelen'}</Button>}</div>
+          <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{manualPreview?.mode !== 'refund' ? <Button disabled={(!cardSplitOk && (!splitSummary.valid || splitError)) || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : cardSplitOk ? `Afletteren op bruto ${eur(cardGrossManual ?? 0)}` : 'Toegekend bedrag afletteren'}</Button> : <Button disabled={!!manualPreview.error || manualBusy || manualTx?.allocated_amount > 0} onClick={linkManual}>{manualBusy ? 'Koppelen…' : 'Terugstorting koppelen'}</Button>}</div>
         </DialogContent>
       </Dialog>
       <AccountList accounts={accounts} />
