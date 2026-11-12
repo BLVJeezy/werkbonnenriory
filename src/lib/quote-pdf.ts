@@ -4,7 +4,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
 import { splitLineText } from "./line-text";
-import { discountLabel, quoteDiscountTotal } from "./quote";
+import { lineDiscount, quoteDiscountTotal } from "./quote";
 import { supplierFooterLine } from "./company-id";
 
 export type QuotePdfData = {
@@ -112,7 +112,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     block("VASTSTELLINGEN", d.damageFindings);
   }
 
-  const cols = { desc: M + 8, qty: W - M - 250, price: W - M - 100, amt: W - M - 8 };
+  const cols = { desc: M + 8, qty: W - M - 318, bruto: W - M - 220, korting: W - M - 150, price: W - M - 100, amt: W - M - 8 };
   const productImages = new Map();
   for (const [path, bytes] of Object.entries(d.productPhotos ?? {})) {
     const kind = photoKind(bytes);
@@ -149,10 +149,10 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       const split = splitLineText(l.description);
       const title = bestek && postNr ? `${postNr}.${sub}  ${split.title}` : split.title;
       const detail = split.detail;
-      const disc = discountLabel(l, money);
+      const disc = lineDiscount(l);
       const tl = wrap(title, 10.5, w, bold);
       const dl = detail ? wrap(detail, 9, w - 14) : [];
-      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + (disc ? 13 : 0) + 10;
+      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
       ensure(h);
       if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
       tl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
@@ -161,11 +161,14 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
         page.drawRectangle({ x: cols.desc + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
         dl.forEach((t, j) => page.drawText(t, { x: cols.desc + 12, y: top - j * 11.5, size: 9, font, color: muted }));
       }
-      if (disc) {
-        const dy = y - tl.length * 14 - (dl.length ? 5 + dl.length * 11.5 : 0) - 10;
-        page.drawText(pr(disc), { x: cols.desc + 12, y: dy, size: 9, font: bold, color: orange });
-      }
       right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
+      if (disc) {
+        right(money(disc.originalUnitPrice), cols.bruto, y, 10);
+        right(`${disc.percent.toLocaleString("nl-BE")}% - ${money(disc.saved)}`, cols.korting, y, 9, bold, orange);
+      } else {
+        right(money(l.unitPrice), cols.bruto, y, 10);
+        right("-", cols.korting, y, 10, font, muted);
+      }
       right(money(l.unitPrice), cols.price, y, 10);
       right(money(l.amount), cols.amt, y, 10);
       y -= h;
@@ -184,7 +187,9 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: ink });
   page.drawText("OMSCHRIJVING", { x: cols.desc, y, size: 8.5, font: bold, color: white });
   right("AANTAL", cols.qty + 40, y, 8.5, bold, white);
-  right("EENHEIDSPRIJS", cols.price, y, 8.5, bold, white);
+  right("BRUTO", cols.bruto, y, 8.5, bold, white);
+  right("KORTING", cols.korting, y, 8.5, bold, white);
+  right("NETTO", cols.price, y, 8.5, bold, white);
   right("BEDRAG", cols.amt, y, 8.5, bold, white);
   y -= 22;
   drawLines(mainLines);
