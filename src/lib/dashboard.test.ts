@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "./dashboard";
+import { groupOmzet, groupWeekOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "./dashboard";
 
 const inv = (issue_date: string, net: number, kind = "factuur", work_order_id: string | null = null): InvoiceOmzetRow => ({
   id: issue_date + net + kind,
@@ -13,6 +13,10 @@ const inv = (issue_date: string, net: number, kind = "factuur", work_order_id: s
 });
 
 describe("groupOmzet", () => {
+  it("telt volledige weken, trekt creditnota's af en sluit latere datums uit", () => {
+    const rows = [inv("2026-11-02", 100), inv("2026-11-08", 25), inv("2026-11-08", 10, "creditnota"), inv("2026-11-09", 999)];
+    expect(groupWeekOmzet(rows, "2026-10-26", "2026-11-08").map(r => r.omzet)).toEqual([0, 115]);
+  });
   it("groepeert per dag en vult lege dagen aan met 0", () => {
     const punten = groupOmzet([inv("2026-10-01", 100), inv("2026-10-03", 50)], "2026-10-01", "2026-10-03");
     expect(punten.map((p) => p.key)).toEqual(["2026-10-01", "2026-10-02", "2026-10-03"]);
