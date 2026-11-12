@@ -70,7 +70,11 @@ export function costGroupRows(lines: PostedLine[], year: number, until = today()
 /** Boekhouding at a glance: full monthly revenue and costs for one year, same posted journal as Boekhouding → Balans & resultaat. */
 export function FinanceYear() {
   const [currentDay, setCurrentDay] = useState(today);
-  const cutoff = lastClosedMonth(currentDay).to;
+  const [showOpen, setShowOpen] = useState(false);
+  // Standaard enkel afgesloten maanden; op vraag ook de lopende (onvolledige) maand tonen.
+  const nextMonth = (() => { const d = new Date(`${currentDay}T12:00:00Z`); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString().slice(0, 10); })();
+  const until = showOpen ? nextMonth : currentDay;
+  const cutoff = lastClosedMonth(until).to;
   const latestYear = Number(cutoff.slice(0, 4));
   const [year, setYear] = useState(latestYear);
   useEffect(() => {
@@ -105,7 +109,7 @@ export function FinanceYear() {
     },
   });
 
-  const rows = data ? journalMonthRows(data, year, currentDay) : [];
+  const rows = data ? journalMonthRows(data, year, until) : [];
   const sum = (k: "revenue" | "costs" | "profit") => { const v = rows.map((r) => r[k]).filter((x): x is number => x != null); return v.length ? r2(v.reduce((a, b) => a + b, 0)) : null; };
   const omzet = sum("revenue"), kosten = sum("costs"), resultaat = sum("profit");
   const marge = omzet && resultaat != null ? Math.round((resultaat / omzet) * 100) : null;
@@ -115,7 +119,7 @@ export function FinanceYear() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-black uppercase">Boekhouding {year}{year === latestYear && cutoff.slice(5) !== "12-31" ? ` t/m ${Number(cutoff.slice(8))}/${Number(cutoff.slice(5, 7))}` : ""}</h2>
-          <p className="text-xs text-muted-foreground">Afgesloten maanden · excl. btw · afschrijvingen per dag vanaf aankoopdatum, ook als ze nog niet geboekt zijn</p>
+          <p className="text-xs text-muted-foreground">{showOpen ? "Inclusief lopende, onvolledige maand" : "Afgesloten maanden"} · excl. btw · afschrijvingen per dag vanaf aankoopdatum, ook als ze nog niet geboekt zijn</p>
         </div>
         <div className="flex items-center gap-2">
           {(companies.data?.length ?? 0) > 1 && (
@@ -123,6 +127,7 @@ export function FinanceYear() {
               {companies.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
+          <Button variant={showOpen ? "default" : "outline"} size="sm" aria-pressed={showOpen} onClick={() => setShowOpen(!showOpen)}>{showOpen ? "Lopende maand verbergen" : "Lopende maand tonen"}</Button>
           <Button variant="outline" size="icon" aria-label="Vorig jaar" onClick={() => setYear(year - 1)}><ChevronLeft /></Button>
           <Button variant="outline" size="icon" aria-label="Volgend jaar" disabled={year >= latestYear} onClick={() => setYear(Math.min(year + 1, latestYear))}><ChevronRight /></Button>
         </div>
@@ -148,7 +153,7 @@ export function FinanceYear() {
                 {([["Omzet", "revenue"], ["Kosten", "costs"]] as const).map(([l, k]) => (
                   <tr key={k} className="border-b border-border/60"><th className="py-1.5 text-left font-semibold">{l}</th>{rows.map((r) => <td key={r.month} className="py-1.5 text-right tabular-nums">{fmt(r[k])}</td>)}</tr>
                 ))}
-                {costGroupRows(data, year, currentDay).map((g) => (
+                {costGroupRows(data, year, until).map((g) => (
                   <tr key={g.label} className="border-b border-border/40 text-muted-foreground"><th className="py-1 pl-3 text-left font-normal">{g.label}</th>{g.values.map((v, i) => <td key={i} className="py-1 text-right tabular-nums">{fmt(v)}</td>)}</tr>
                 ))}
                 <tr className="border-b border-border/60"><th className="py-1.5 text-left font-semibold">Resultaat</th>{rows.map((r) => <td key={r.month} className="py-1.5 text-right tabular-nums">{fmt(r.profit)}</td>)}</tr>
