@@ -35,8 +35,8 @@ export const Route = createFileRoute("/_authenticated/offertes")({
   component: Offertes,
 });
 
-type Line = { group?: string | undefined; title: string; detail: string; quantity: string; unit: string; unitPrice: string; optional: boolean; photoPaths?: string[] };
-const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", optional: false };
+type Line = { group?: string | undefined; title: string; detail: string; quantity: string; unit: string; unitPrice: string; discount: string; optional: boolean; photoPaths?: string[] };
+const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", discount: "0", optional: false };
 /** The stored line text keeps its old shape: product name on the first line, long description below it. */
 const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
 
@@ -134,7 +134,7 @@ function Offertes() {
       .filter((l) => lineText(l))
       .map((l, i) => ({ l, i }))
       .sort((a, b) => groupOrder(a.l.group) - groupOrder(b.l.group) || a.i - b.i)
-      .map(({ l }) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0), optional: l.optional, photoPaths: l.photoPaths ?? [], ...(l.group ? { group: l.group } : {}) })),
+      .map(({ l }) => ({ ...quoteLine(lineText(l), Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0, Number(l.discount.replace(",", ".")) || 0), optional: l.optional, photoPaths: l.photoPaths ?? [], ...(l.group ? { group: l.group } : {}) })),
     ...(kmOn && km ? [quoteLine(`Verplaatsing heen en terug (${km} km)`, km, "km", kmRate)] : []),
   ];
   const totals = quoteTotals(parsedLines, Number(vatRate));
@@ -188,7 +188,7 @@ function Offertes() {
     setKm(kmLine ? kmLine.quantity : null);
     const ls = all.filter((l) => l.unit !== "km").map((l) => {
       const t = splitLineText(l.description);
-      return { group: l.group ?? undefined, title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.unitPrice), optional: !!l.optional, photoPaths: l.photoPaths ?? [] };
+      return { group: l.group ?? undefined, title: t.title, detail: t.detail ?? "", quantity: String(l.quantity), unit: l.unit, unitPrice: String(l.originalUnitPrice ?? l.unitPrice), discount: String(l.discount ?? 0), optional: !!l.optional, photoPaths: l.photoPaths ?? [] };
     });
     setLines(ls.length ? ls : [{ ...emptyLine }]);
     setShowForm(true);
@@ -262,7 +262,7 @@ function Offertes() {
       const keep = lines.filter((l) => lineText(l));
       setLines([...keep, ...d.lines.map((l) => {
         const t = splitLineText(l.description);
-        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "", optional: false };
+        return { title: t.title, detail: t.detail ?? "", quantity: String(l.quantity || 1), unit: l.unit || "st", unitPrice: "", discount: "0", optional: false };
       })]);
       toast.success("Voorstel ingevuld — kijk alles na en vul de prijzen in");
     } catch (e) { toast.error(e instanceof Error ? e.message : "AI-voorstel mislukt"); }
@@ -392,6 +392,8 @@ function Offertes() {
                   <Input type="number" step="any" min="0" className="w-20" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} aria-label="Aantal" />
                   <Input className="w-16" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} aria-label="Eenheid" />
                   <Input type="number" step="0.01" min="0" placeholder="Prijs" className="w-28" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} aria-label="Prijs" />
+                  <div className="flex items-center gap-1"><Label htmlFor={`quote-discount-${i}`} className="text-xs">Korting</Label><Input id={`quote-discount-${i}`} type="number" min="0" max="100" step="0.01" className="w-20" value={l.discount} onChange={e => setLine(i, { discount: e.target.value })} aria-label={`Korting lijn ${i + 1}`} /><span className="text-sm">%</span></div>
+                  <span className="font-mono text-sm" aria-label={`Bedrag lijn ${i + 1}`}>{euro(quoteLine('', Number(l.quantity) || 1, l.unit, Number(l.unitPrice.replace(',', '.')) || 0, Number(l.discount.replace(',', '.')) || 0).amount)}</span>
                   <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
                 </div>
                 <Textarea placeholder="Lange omschrijving (optioneel, als bijvoegsel onder de productnaam)" rows={Math.min(8, Math.max(2, l.detail.split("\n").length))} className="min-h-10 text-sm" value={l.detail} onChange={(e) => setLine(i, { detail: e.target.value })} aria-label="Lange omschrijving" />

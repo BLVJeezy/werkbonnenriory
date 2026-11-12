@@ -147,7 +147,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       const w = cols.qty - cols.desc - 20;
       const split = splitLineText(l.description);
       const title = bestek && postNr ? `${postNr}.${sub}  ${split.title}` : split.title;
-      const detail = split.detail;
+      const detail = [split.detail, l.discount ? `Korting ${l.discount.toLocaleString('nl-BE')}%` : ''].filter(Boolean).join('\n');
       const tl = wrap(title, 10.5, w, bold);
       const dl = detail ? wrap(detail, 9, w - 14) : [];
       const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
