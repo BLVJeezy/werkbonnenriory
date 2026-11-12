@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Fortis SEPA-export: ongeldige XML reproduceren, structuur en betaalreferenties controleren en gericht herstellen zonder betaling of bestaande factuurstatus te wijzigen.
+
 - [x] Dashboardweekcijfers: maand/weekkeuze, maandag-zondag, vorige/volgende week, volledige weekreeksen, omzet/kosten/resultaat/marge uit echte boekingsdatums en productomzet. 22 tests geslaagd; ingelogd week 45, navigatie, meerdere weken en uitsluiting lopende week gecontroleerd zonder JS-fouten. Niet gepubliceerd.
 
 - [x] Dashboard: alleen afgesloten maanden in cijfers en productomzet; volledige afgesloten jaren in jaarvergelijking. 16 tests geslaagd; ingelogd oktober standaard, november/december leeg, toekomstige datum begrensd en historische periodekeuze gecontroleerd. Niet gepubliceerd.
