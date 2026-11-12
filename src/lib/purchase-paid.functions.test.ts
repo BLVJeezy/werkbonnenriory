@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@tanstack/react-start', () => ({ createServerFn: () => {
   let validate = (input: unknown) => input;
-  const b = { middleware: () => b, inputValidator: (fn: typeof validate) => { validate = fn; return b; }, handler: (fn: (arg: { data: unknown; context: unknown }) => unknown) => (arg: { data: unknown; context: unknown }) => fn({ ...arg, data: validate(arg.data) }) }; return b;
+  const b = { middleware: () => b, inputValidator: (fn: typeof validate) => { validate = fn; return b; }, handler: (fn: (arg: { data: unknown; context: unknown }) => unknown) => async (arg: { data: unknown; context: unknown }) => fn({ ...arg, data: validate(arg.data) }) }; return b;
 } }));
 vi.mock('@/integrations/supabase/auth-middleware', () => ({ requireSupabaseAuth: {} }));
 import { markPurchaseInvoicePaid, paymentFile } from './purchase-invoices.functions';
