@@ -742,6 +742,7 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
   const [deprAccount, setDeprAccount] = useState("630200");
   const [accumAccount, setAccumAccount] = useState("230900");
   const [postingDepr, setPostingDepr] = useState(false);
+  const [pick, setPick] = useState<Set<string>>(new Set());
   const { data: assetAccounts = [] } = useQuery({ queryKey: ["fin", "accounts", inv.company_id], queryFn: async () => (await fetchAll((a, b) => db.from("fin_accounts").select("*").eq("company_id", inv.company_id).order("number").range(a, b))) as any[] });
   const toTyped = (f: any) => ({ ...f, capitalizable_amount: f.capitalizable_amount == null || f.capitalizable_amount === "" ? null : Number(f.capitalizable_amount), purchase_amount: f.purchase_amount == null || f.purchase_amount === "" ? null : Number(f.purchase_amount), useful_life_months: f.useful_life_months ? Number(f.useful_life_months) : null, residual_value: Number(f.residual_value || 0), opening_accumulated: Number(f.opening_accumulated || 0) });
   const typed = toTyped(f);
@@ -752,8 +753,9 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
     if (JSON.stringify(sched) !== JSON.stringify(origSched)) return void toast.error("Sla wijzigingen aan het afschrijvingsschema eerst op");
     if (!assetAccounts.some((a: any) => a.number === deprAccount && a.active && a.number.startsWith("630")) || !assetAccounts.some((a: any) => a.number === accumAccount && a.active && a.number.startsWith("2"))) return void toast.error("Kies geldige afschrijvings- en cumulatieve rekeningen");
     const todayMonth = monthKey(new Date());
-    const due = sched.filter((r) => r.month <= todayMonth && r.depreciation > 0 && !bookedMonths.includes(`${inv.id}:${r.month}`));
-    if (!due.length) return void toast.info("Geen openstaande afschrijvingen tot en met deze maand");
+    const open = sched.filter((r) => r.month <= todayMonth && r.depreciation > 0 && !bookedMonths.includes(`${inv.id}:${r.month}`));
+    const due = pick.size ? open.filter((r) => pick.has(r.month)) : open;
+    if (!due.length) return void toast.info("Geen openstaande afschrijvingen geselecteerd");
     setPostingDepr(true);
     let count = 0;
     for (const r of due) {
@@ -762,7 +764,7 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
       count++;
     }
     setPostingDepr(false);
-    if (count) { toast.success(`${count} maand(en) afschrijving geboekt`); onDone(); }
+    if (count) { toast.success(`${count} maand(en) afschrijving geboekt`); setPick(new Set()); onDone(); }
   };
   const fld = (k: string, label: string, type = "text") => <label className="text-xs">{label}<Input type={type} value={f[k] ?? ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></label>;
   return (
@@ -783,7 +785,7 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
         <Button size="sm" onClick={async () => { const errs = typed.useful_life_months || typed.start_date || typed.capitalizable_amount != null ? validateInvestment(typed) : []; if (!String(f.name ?? "").trim()) return void toast.error("Naam is verplicht"); if (errs.length) return void toast.error(errs.join("; ")); if (inv.invoice_line_id && bookedMonths.length && JSON.stringify(sched) !== JSON.stringify(origSched)) return void toast.error("Reeds geboekte afschrijvingen: wijzig het schema alleen via een boekhoudkundige correctie"); const { id, created_at, user_id, company_id, invoice_line_id, ...rest } = f; void created_at; void user_id; void company_id; void invoice_line_id; const { error } = await db.from("fin_investments").update({ ...rest, ...inv.invoice_line_id ? { purchase_amount: inv.purchase_amount, capitalizable_amount: inv.capitalizable_amount } : { purchase_amount: numOrNull(String(f.purchase_amount ?? "")), capitalizable_amount: numOrNull(String(f.capitalizable_amount ?? "")) }, useful_life_months: typed.useful_life_months, residual_value: typed.residual_value, opening_accumulated: typed.opening_accumulated, start_date: f.start_date || null, opening_cutoff: f.opening_cutoff || null, disposal_date: f.disposal_date || null }).eq("id", id); if (error) return void toast.error(`Opslaan mislukt: ${error.message}`); toast.success("Opgeslagen"); onDone(); }}>Opslaan</Button>
         <Button size="sm" variant="outline" onClick={async () => { if (!confirm(inv.invoice_line_id ? "Deze investering is gekoppeld aan een factuurlijn en er kunnen al afschrijvingen geboekt zijn. Verwijderen maakt die boekingen niet ongedaan. Toch verwijderen?" : "Verwijderen?")) return; await db.from("fin_investments").delete().eq("id", inv.id); onDone(); }}>Verwijderen</Button>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Prorata: de startmaand telt als volledige maand. Laatste maand krijgt het afrondingsverschil; boekwaarde zakt nooit onder restwaarde.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Prorata per dag vanaf de aankoopdatum; de eerste maand telt enkel de resterende dagen. Laatste maand krijgt het afrondingsverschil; boekwaarde zakt nooit onder restwaarde.</p>
       </details>
       {inv.invoice_line_id && <div className="mt-3 space-y-2 border-t border-border pt-3">
         <p className="text-sm font-semibold">Afschrijvingen in dagboek</p>
@@ -791,7 +793,8 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
           <label className="text-xs">Afschrijvingskost<select className="w-full rounded border border-border bg-background p-2 text-sm" value={deprAccount} onChange={(e) => setDeprAccount(e.target.value)}>{assetAccounts.filter((a: any) => a.active && a.number.startsWith("630")).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</select></label>
           <label className="text-xs">Gecumuleerde afschrijving<select className="w-full rounded border border-border bg-background p-2 text-sm" value={accumAccount} onChange={(e) => setAccumAccount(e.target.value)}>{assetAccounts.filter((a: any) => a.active && a.number.startsWith("2") && /afschrijv/i.test(a.name)).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</select></label>
         </div>
-        <Button size="sm" disabled={postingDepr || !sched.length} onClick={postDepreciation}>{postingDepr ? "Boeken…" : "Afschrijvingen boeken t/m vandaag"}</Button>
+        {(() => { const tm = monthKey(new Date()); const open = sched.filter((r) => r.month <= tm && r.depreciation > 0 && !bookedMonths.includes(`${inv.id}:${r.month}`)); return open.length ? <div className="space-y-1"><p className="text-xs font-semibold">Kies de maanden om te boeken (per dag berekend vanaf aankoopdatum)</p><div className="flex flex-wrap gap-2">{open.map((r) => <label key={r.month} className="flex items-center gap-1 rounded border border-border px-2 py-1 text-xs"><input type="checkbox" checked={pick.has(r.month)} onChange={(e) => { const n = new Set(pick); if (e.target.checked) n.add(r.month); else n.delete(r.month); setPick(n); }} />{r.month.slice(0, 7)} · {eur(r.depreciation)}</label>)}</div></div> : null; })()}
+        <Button size="sm" disabled={postingDepr || !sched.length} onClick={postDepreciation}>{postingDepr ? "Boeken…" : pick.size ? `${pick.size} gekozen maand(en) boeken` : "Alle open maanden boeken t/m vandaag"}</Button>
         <p className="text-xs text-muted-foreground">{bookedMonths.length} maand(en) al geboekt. Elke maand wordt maar één keer geboekt.</p>
       </div>}
     </Card>
