@@ -1998,6 +1998,24 @@ export type Database = {
         }
         Relationships: []
       }
+      intervention_source_snapshots: {
+        Row: {
+          fetched_at: string
+          rows: Json
+          source: string
+        }
+        Insert: {
+          fetched_at?: string
+          rows: Json
+          source: string
+        }
+        Update: {
+          fetched_at?: string
+          rows?: Json
+          source?: string
+        }
+        Relationships: []
+      }
       invoice_reminders: {
         Row: {
           created_at: string

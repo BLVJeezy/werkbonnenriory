@@ -1023,6 +1023,13 @@
       "when": 1794467383707,
       "tag": "0145_work_order_insurance_report",
       "breakpoints": true
+    },
+    {
+      "idx": 146,
+      "version": "7",
+      "when": 1794468507618,
+      "tag": "0146_private_simpla_map_snapshot",
+      "breakpoints": true
     }
   ]
 }
