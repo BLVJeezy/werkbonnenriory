@@ -688,7 +688,7 @@ function Bank({ c }: { c: string }) {
   };
   const [sel, setSel] = useState<Set<string>>(new Set());
   const bulkBook = async (account: string, label?: string) => {
-    const lijst = tx.filter((t) => sel.has(t.id) && !t.entry_id);
+    const lijst = tx.filter((t) => sel.has(t.id) && !t.entry_id && !t.matched_purchase_invoice_id);
     if (lijst.some((t) => t.allocated_amount > 0)) return void toast.error('Letter gedeeltelijk verwerkte betalingen verder af via Factuur kiezen.');
     if (!confirm(label ? `${lijst.length} verrichtingen tegen elkaar verrekenen via rekening ${account}?` : `${lijst.length} verrichting(en) boeken op rekening ${account}?`)) return;
     let ok = 0, fout = 0;
@@ -706,7 +706,7 @@ function Bank({ c }: { c: string }) {
   const [zoek, setZoek] = useState("");
   const [selInv, setSelInv] = useState<Set<string>>(new Set());
   const zq = zoek.trim().toLowerCase();
-  const vis = tx.filter((t) => !t.entry_id && (!zq || `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount}`.toLowerCase().includes(zq))).slice(0, zq ? 1000 : 200);
+  const vis = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && (!zq || `${t.counterparty ?? ""} ${t.description ?? ""} ${t.amount}`.toLowerCase().includes(zq))).slice(0, zq ? 1000 : 200);
   const invHits = zq.length >= 2 ? open.filter((i: any) => `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zq)) : [];
   const afpunten = async (lijst: any[], facturen: any[]) => {
     if (lijst.length !== 1 || !facturen.length) return void toast.error("Kies één betaling en één of meer facturen.");
@@ -719,7 +719,7 @@ function Bank({ c }: { c: string }) {
   useEffect(() => {
     if (autoBusy.current || !accounts.length || !tx.length) return;
     // Overboekingen tussen eigen rekeningen (bv. 550200 → 550700) altijd meteen intern verrekenen.
-    const transfers = tx.filter((t) => !t.entry_id && !t.allocated_amount && !autoTried.current.has(t.id) && ownTransfer(t));
+    const transfers = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && !t.allocated_amount && !autoTried.current.has(t.id) && ownTransfer(t));
     if (transfers.length) {
       transfers.forEach((t) => autoTried.current.add(t.id));
       autoBusy.current = true;
@@ -735,7 +735,7 @@ function Bank({ c }: { c: string }) {
       return;
     }
     if (!open.length && !paidNoTx.length) return;
-    const todo = tx.filter((t) => !t.entry_id && !t.allocated_amount && !ownTransfer(t));
+    const todo = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && !t.allocated_amount && !ownTransfer(t));
     const fresh = (t: any) => !autoTried.current.has(t.id);
     const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025); };
     const pairs = todo.map((t) => [t, candOf(t)] as const).filter(([, cs]) => cs.length === 1);
