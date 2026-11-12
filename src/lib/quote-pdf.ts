@@ -148,10 +148,11 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
       const w = cols.qty - cols.desc - 20;
       const split = splitLineText(l.description);
       const title = bestek && postNr ? `${postNr}.${sub}  ${split.title}` : split.title;
-      const detail = [split.detail, discountLabel(l, money)].filter(Boolean).join('\n');
+      const detail = split.detail;
+      const disc = discountLabel(l, money);
       const tl = wrap(title, 10.5, w, bold);
       const dl = detail ? wrap(detail, 9, w - 14) : [];
-      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + 10;
+      const h = tl.length * 14 + (dl.length ? 5 + dl.length * 11.5 : 0) + (disc ? 13 : 0) + 10;
       ensure(h);
       if (i % 2 === 0) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
       tl.forEach((t, j) => page.drawText(t, { x: cols.desc, y: y - j * 14, size: 10.5, font: bold, color: ink }));
