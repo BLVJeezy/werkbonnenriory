@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Dashboardweekcijfers toevoegen met uitsluitend volledig voorbije weken, inclusief periodekeuze, grafiek en tests.
+
 - [x] Dashboard: alleen afgesloten maanden in cijfers en productomzet; volledige afgesloten jaren in jaarvergelijking. 16 tests geslaagd; ingelogd oktober standaard, november/december leeg, toekomstige datum begrensd en historische periodekeuze gecontroleerd. Niet gepubliceerd.
 
 - [x] Korting per offertelijn: percentage, nettoprijs en totalen, behoud bij bewerken, PDF en klantondertekening. 10 tests geslaagd; ingelogd €200 → €180 bij 10% gecontroleerd op bestaande offerte en kleiner scherm zonder opslaan/verzenden.
