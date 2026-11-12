@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { euro } from "@/lib/billing";
+import { renameActivity } from "@/lib/activity-name";
 
 export function TarievenBeheer() {
   const qc = useQueryClient();
@@ -74,7 +75,30 @@ export function TarievenBeheer() {
         {data?.acts.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold">{a.name}</span>
+              <Input
+                aria-label={`Naam van activiteit ${a.name}`}
+                title="Klik om de naam te bewerken"
+                defaultValue={a.name}
+                className="h-8 w-56 font-bold"
+                onBlur={async (e) => {
+                  const typed = e.target.value;
+                  const res = renameActivity(a.name, typed, (data?.acts ?? []).map((x) => x.name));
+                  if (!res.ok) {
+                    if (res.reason === "empty") toast.error("Geef de activiteit een naam");
+                    else if (res.reason === "duplicate") toast.error(`Er is al een activiteit met de naam ${typed.trim()}`);
+                    e.target.value = a.name;
+                    return;
+                  }
+                  const { error } = await supabase.from("activities").update({ name: res.name }).eq("id", a.id);
+                  if (error) {
+                    toast.error(error.message);
+                    e.target.value = a.name;
+                    return;
+                  }
+                  toast.success(`Naam opgeslagen als ${res.name}`);
+                  refresh();
+                }}
+              />
               <Input
                 type="number"
                 step="0.01"
