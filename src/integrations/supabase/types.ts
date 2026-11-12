@@ -4741,6 +4741,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_price_index: { Args: { _pct: number }; Returns: Json }
       attribution_invoices: {
         Args: { _after: string; _after_id: string; _limit: number }
         Returns: {

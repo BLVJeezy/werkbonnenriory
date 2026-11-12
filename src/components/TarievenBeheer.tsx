@@ -12,6 +12,7 @@ export function TarievenBeheer() {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [rate, setRate] = useState("");
+  const [index, setIndex] = useState("");
   const { data } = useQuery({
     queryKey: ["tarieven"],
     queryFn: async () => {
@@ -43,6 +44,25 @@ export function TarievenBeheer() {
     refresh();
   }
 
+  async function applyIndex() {
+    const pct = Number(index.replace(",", "."));
+    if (!(pct > 0 && pct <= 50)) {
+      toast.error("Vul een index tussen 0 en 50% in");
+      return;
+    }
+    if (!confirm(`Alle productprijzen en uurtarieven ${pct}% verhogen? Dit kan niet automatisch ongedaan gemaakt worden. Reeds opgemaakte offertes en facturen blijven ongewijzigd.`)) return;
+    const { data: res, error } = await supabase.rpc("apply_price_index", { _pct: pct });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const r = res as { products: number; activities: number };
+    toast.success(`Verhoogd met ${pct}%: ${r.products} producten en ${r.activities} activiteiten`);
+    setIndex("");
+    refresh();
+    qc.invalidateQueries({ queryKey: ["products"] });
+  }
+
   const s = data?.settings;
   return (
     <div className="space-y-6">
@@ -64,6 +84,14 @@ export function TarievenBeheer() {
           </div>
         </section>
       )}
+      <section className="flex flex-wrap items-end gap-2 rounded-md border bg-card p-4">
+        <div className="space-y-1">
+          <Label htmlFor="prijsindex">Prijsindex (%) voor producten en activiteiten</Label>
+          <Input id="prijsindex" inputMode="decimal" placeholder="bv. 3,5" value={index} onChange={(e) => setIndex(e.target.value)} className="w-40" />
+        </div>
+        <Button type="button" onClick={applyIndex}>Prijzen verhogen</Button>
+        <p className="w-full text-sm text-muted-foreground">Verhoogt eenmalig alle productprijzen en uurtarieven, afgerond op de cent. Bestaande offertes en facturen veranderen niet.</p>
+      </section>
       <h3 className="text-xl font-black uppercase">Activiteiten</h3>
       <form onSubmit={add} className="flex flex-wrap gap-2 rounded-md border bg-card p-4">
         <Input placeholder="Activiteit (bv. Herstelling)" required value={name} onChange={(e) => setName(e.target.value)} className="min-w-48 flex-1" />

@@ -1107,6 +1107,13 @@
       "when": 1794488628517,
       "tag": "0157_guard_next_quote_number",
       "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "7",
+      "when": 1794489758697,
+      "tag": "0158_apply_price_index",
+      "breakpoints": true
     }
   ]
 }
