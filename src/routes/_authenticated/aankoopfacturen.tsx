@@ -18,6 +18,7 @@ import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoi
 import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, sendPeppyrusTestInvoice, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { canSendPeppolTest, creditorBank, daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { deletePurchaseInvoices, attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
+import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
   head: () => ({ meta: [{ title: "Aankoopfacturen — Riory Werkbonnen" }, { name: "description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:title", content: "Aankoopfacturen — Riory Werkbonnen" }, { property: "og:description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -317,6 +318,7 @@ function Aankoopfacturen() {
             </span>
             {r.paid_at && <span className="text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
             <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen/$id" params={{ id: r.id }}>{paid ? 'Bekijken' : 'Controleren'}</Link></Button>
+            {!paid && r.kind === 'factuur' && <MarkPurchasePaid id={r.id} staged={r.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { setSel(s => s.filter(id => id !== r.id)); await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
           </li>);
         })}
       </ul>

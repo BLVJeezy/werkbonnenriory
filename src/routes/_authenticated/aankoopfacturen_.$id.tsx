@@ -17,6 +17,7 @@ import { paymentCommunication, paymentMethodLock, supplierBankWarnings, creditor
 import { bankOfIban, nextBic } from "@/lib/iban-bic";
 import { attachPurchasePdf, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 import { PdfPreview } from "@/components/PdfPreview";
+import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
   head: () => ({ meta: [{ title: "Aankoopfactuur controleren — Riory Werkbonnen" }, { name: "description", content: "Aankoopfactuur naast het originele document controleren en boeken." }, { property: "og:title", content: "Aankoopfactuur controleren — Riory Werkbonnen" }, { property: "og:description", content: "Aankoopfactuur naast het originele document controleren en boeken." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -164,6 +165,7 @@ function Controle() {
         <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen">← Lijst</Link></Button>
         <h1 className="text-xl font-black uppercase">{edit.supplier_name} <span className="font-mono text-base">{edit.invoice_number ?? ""}</span></h1>
         {queue.length > 0 && <span className="text-sm text-muted-foreground">{queue.length} te controleren</span>}
+        {!isPaid && edit.kind === 'factuur' && <MarkPurchasePaid id={edit.id} staged={edit.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { await Promise.all([qc.invalidateQueries({ queryKey: ['purchase_invoices'] }), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); await load(); }} />}
         {nextId && <Button variant="ghost" size="sm" className="ml-auto" onClick={() => nav({ to: "/aankoopfacturen/$id", params: { id: nextId } })}>Overslaan →</Button>}
       </div>
       <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-2">
@@ -271,7 +273,7 @@ function Controle() {
             <p className="text-xs text-muted-foreground">Aftrekbare btw: {euro(deductibleVat(Number(edit.vat), Number(edit.vat_deductible_percent)))} ({edit.vat_deductible_percent}%){supplierVatWarning(Number(edit.net), Number(edit.vat), edit.supplier_vat_rule) ? ` — ${supplierVatWarning(Number(edit.net), Number(edit.vat), edit.supplier_vat_rule)}` : ""}</p>
             <div className="flex items-center justify-between rounded-md border-2 border-primary p-2">
               <span className="font-black uppercase">{edit.kind === "creditnota" ? "Te ontvangen" : "Te betalen"}</span>
-              <span className="font-mono text-xl font-black">{euro(signedTotal)}</span>
+              <span className="font-mono text-xl font-black">{euro(isPaid ? 0 : signedTotal)}</span>
             </div>
           </fieldset>
           {!locked && (
