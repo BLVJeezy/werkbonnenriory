@@ -112,7 +112,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
     block("VASTSTELLINGEN", d.damageFindings);
   }
 
-  const cols = { desc: M + 8, qty: W - M - 318, bruto: W - M - 220, korting: W - M - 150, price: W - M - 100, amt: W - M - 8 };
+  const cols = { desc: M + 8, qty: W - M - 330, bruto: W - M - 240, korting: W - M - 160, price: W - M - 85, amt: W - M - 8 };
   const productImages = new Map();
   for (const [path, bytes] of Object.entries(d.productPhotos ?? {})) {
     const kind = photoKind(bytes);
@@ -161,7 +161,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
         page.drawRectangle({ x: cols.desc + 2, y: top - dl.length * 11.5 + 3, width: 2, height: dl.length * 11.5, color: annex, opacity: 0.6 });
         dl.forEach((t, j) => page.drawText(t, { x: cols.desc + 12, y: top - j * 11.5, size: 9, font, color: muted }));
       }
-      right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 40, y, 10);
+      right(`${l.quantity.toLocaleString("nl-BE")} ${l.unit}`, cols.qty + 25, y, 10);
       if (disc) {
         right(money(disc.originalUnitPrice), cols.bruto, y, 10);
         right(`${disc.percent.toLocaleString("nl-BE")}% - ${money(disc.saved)}`, cols.korting, y, 9, bold, orange);
@@ -186,7 +186,7 @@ export async function createQuotePdf(d: QuotePdfData, photos: readonly Uint8Arra
   if (!report) {
   page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: ink });
   page.drawText("OMSCHRIJVING", { x: cols.desc, y, size: 8.5, font: bold, color: white });
-  right("AANTAL", cols.qty + 40, y, 8.5, bold, white);
+  right("AANTAL", cols.qty + 25, y, 8.5, bold, white);
   right("BRUTO", cols.bruto, y, 8.5, bold, white);
   right("KORTING", cols.korting, y, 8.5, bold, white);
   right("NETTO", cols.price, y, 8.5, bold, white);
