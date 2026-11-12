@@ -9,7 +9,7 @@ import { euro } from "@/lib/billing";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
 import { splitLineText } from "@/lib/line-text";
 import { getQuoteByToken, signQuote } from "@/lib/quotes.functions";
-import { discountLabel, quoteDiscountTotal } from "@/lib/quote";
+import { lineDiscount, quoteDiscountTotal } from "@/lib/quote";
 import { ProductPhotoGallery } from "@/components/ProductPhotos";
 
 export const Route = createFileRoute("/offerte/$token")({

@@ -4,7 +4,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { RIORY_LOGO_PNG_BASE64 } from "./riory-logo";
 import type { InvoiceCustomer, InvoiceLine } from "./invoice";
 import { splitLineText } from "./line-text";
-import { discountLabel, quoteDiscountTotal } from "./quote";
+import { lineDiscount, quoteDiscountTotal } from "./quote";
 import { supplierFooterLine } from "./company-id";
 
 export type QuotePdfData = {
