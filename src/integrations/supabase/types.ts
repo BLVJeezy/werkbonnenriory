@@ -4964,6 +4964,16 @@ export type Database = {
         }
         Returns: string
       }
+      fin_settle_paid_invoices: {
+        Args: {
+          _bank_account: string
+          _counter_account: string
+          _gross?: number
+          _invoices: string[]
+          _transaction: string
+        }
+        Returns: string
+      }
       fin_split_bank_payment: {
         Args: { _allocations: Json; _transaction: string }
         Returns: Json
