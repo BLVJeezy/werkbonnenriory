@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useServerFn } from "@tanstack/react-start";
 import { simplaDashboardProducts } from "@/lib/simpla-product-revenue.functions";
 import { groupOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
+import { closedDashboardRange, dashboardToday, lastClosedMonth } from "@/lib/dashboard-period";
 import {
   ResponsiveContainer,
   BarChart,
@@ -42,19 +43,19 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-
-function defaultRange(): { from: string; to: string } {
-  const now = new Date();
-  return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(now) };
-}
-
 function Dashboard() {
   const role = useRole();
   const navigate = useNavigate();
-  const def = defaultRange();
-  const [from, setFrom] = useState(def.from);
-  const [to, setTo] = useState(def.to);
+  const [currentDay, setCurrentDay] = useState(dashboardToday);
+  const def = lastClosedMonth(currentDay);
+  const [selectedFrom, setFrom] = useState(def.from);
+  const [selectedTo, setTo] = useState(def.to);
+  const { from, to } = closedDashboardRange(selectedFrom, selectedTo, currentDay);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDay(dashboardToday()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     // Marketing must never pass through the crew calendar: the layout would hide it.
@@ -149,9 +150,11 @@ function Dashboard() {
         </div>
         <div className="space-y-1">
           <Label htmlFor="tot">Tot</Label>
-          <Input id="tot" type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+          <Input id="tot" type="date" value={to} min={from} max={def.to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </div>
+
+      <p className="text-xs text-muted-foreground">Afgesloten maanden · cijfers beschikbaar t/m {def.to.split("-").reverse().join("/")}</p>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-md border bg-card p-3">

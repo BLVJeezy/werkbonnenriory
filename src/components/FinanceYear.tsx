@@ -10,27 +10,29 @@ import { monthNames, MonthlyBars, MonthlyProfit } from "@/components/FinanceChar
 import { fetchAll } from "@/lib/fetch-all";
 import { statements, trialBalance, type PostedLine } from "@/lib/boekhouding";
 import { Bar, BarChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { dashboardToday, lastClosedMonth } from "@/lib/dashboard-period";
 
 const db = supabase as any;
-const today = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Brussels" });
+const today = dashboardToday;
 
 /** Same posted journal lines and statements() as Boekhouding → Balans & resultaat, per month. */
 export function journalMonthRows(lines: PostedLine[], year: number, until = today()) {
+  const cutoff = lastClosedMonth(until).to;
   return monthNames.map((label, i) => {
     const from = `${year}-${String(i + 1).padStart(2, "0")}-01`;
     const end = new Date(Date.UTC(year, i + 1, 0)).toISOString().slice(0, 10);
-    const to = end < until ? end : until;
-    if (from > until) return { label, month: from, revenue: null, costs: null, profit: null };
+    const to = end;
+    if (end > cutoff) return { label, month: from, revenue: null, costs: null, profit: null };
     const st = statements(trialBalance(lines.filter((l) => l.entry_date >= from), from, to));
     return { label, month: from, revenue: st.opbrengsten, costs: r2(st.kosten + st.belastingen), profit: st.resultaat };
   });
 }
 
-/** Whole-year totals per calendar year that has posted lines; the current year runs until today. */
+/** Compare only completed calendar years, never a partial year against a full one. */
 export function yearRows(lines: PostedLine[], until = today()) {
-  const years = [...new Set(lines.map((l) => Number(l.entry_date.slice(0, 4))))].filter((y) => `${y}-01-01` <= until).sort();
+  const years = [...new Set(lines.map((l) => Number(l.entry_date.slice(0, 4))))].filter((y) => `${y}-12-31` < until).sort();
   return years.map((y) => {
-    const from = `${y}-01-01`, end = `${y}-12-31`, to = end < until ? end : until;
+    const from = `${y}-01-01`, end = `${y}-12-31`, to = end;
     const st = statements(trialBalance(lines.filter((l) => l.entry_date >= from), from, to));
     const revenue = st.opbrengsten, costs = r2(st.kosten + st.belastingen), profit = st.resultaat;
     return { label: to < end ? `${y} (t/m ${to.slice(8, 10)}/${to.slice(5, 7)})` : String(y), year: y, revenue, costs, profit, marge: revenue ? Math.round((profit / revenue) * 100) : null };
@@ -50,15 +52,16 @@ const COST_GROUPS: [string, string[]][] = [
   ["Uitzonderlijk & belastingen (66–67)", ["66", "67"]],
 ];
 
-/** Monthly cost per account class (debit − credit), capped at today like journalMonthRows. */
+/** Monthly cost per account class (debit − credit), completed months only. */
 export function costGroupRows(lines: PostedLine[], year: number, until = today()) {
+  const cutoff = lastClosedMonth(until).to;
   return COST_GROUPS.map(([label, prefixes]) => ({
     label,
     values: monthNames.map((_, i) => {
       const from = `${year}-${String(i + 1).padStart(2, "0")}-01`;
-      if (from > until) return null;
       const end = new Date(Date.UTC(year, i + 1, 0)).toISOString().slice(0, 10);
-      const to = end < until ? end : until;
+      if (end > cutoff) return null;
+      const to = end;
       return r2(lines.filter((l) => l.entry_date >= from && l.entry_date <= to && prefixes.some((p) => l.account.startsWith(p))).reduce((s, l) => s + l.debit - l.credit, 0));
     }),
   })).filter((g) => g.values.some((v) => v));
@@ -66,7 +69,14 @@ export function costGroupRows(lines: PostedLine[], year: number, until = today()
 
 /** Boekhouding at a glance: full monthly revenue and costs for one year, same posted journal as Boekhouding → Balans & resultaat. */
 export function FinanceYear() {
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [currentDay, setCurrentDay] = useState(today);
+  const cutoff = lastClosedMonth(currentDay).to;
+  const latestYear = Number(cutoff.slice(0, 4));
+  const [year, setYear] = useState(latestYear);
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDay(today()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const [companyId, setCompanyId] = useState("");
   const companies = useQuery({
     queryKey: ["fin-companies"],
@@ -77,17 +87,17 @@ export function FinanceYear() {
     if (!companyId && list.length) setCompanyId((list.find((c) => c.name.trim().toLowerCase() === "riory bv") ?? list[0])?.id ?? "");
   }, [companies.data, companyId]);
   const { data, error } = useQuery({
-    queryKey: ["fin", "posted", companyId],
+    queryKey: ["fin", "posted", companyId, cutoff],
     enabled: !!companyId,
     queryFn: async () => {
       // Maandtotalen per rekening en bron, opgevraagd in de database. Duizenden losse boekingsregels
       // hoeven niet meer één voor één binnen; same posted journaalregels, zelfde statements()-berekening.
-      const rows = (await fetchAll((a, b) => db.rpc("fin_journal_summary", { _company: companyId, _until: today() }).range(a, b))) as any[];
+      const rows = (await fetchAll((a, b) => db.rpc("fin_journal_summary", { _company: companyId, _until: cutoff }).range(a, b))) as any[];
       return rows.map((r) => ({ entry_date: r.entry_date, account: r.account, source: r.source ?? null, debit: Number(r.debit), credit: Number(r.credit), journal: "" })) as PostedLine[];
     },
   });
 
-  const rows = data ? journalMonthRows(data, year) : [];
+  const rows = data ? journalMonthRows(data, year, currentDay) : [];
   const sum = (k: "revenue" | "costs" | "profit") => { const v = rows.map((r) => r[k]).filter((x): x is number => x != null); return v.length ? r2(v.reduce((a, b) => a + b, 0)) : null; };
   const omzet = sum("revenue"), kosten = sum("costs"), resultaat = sum("profit");
   const marge = omzet && resultaat != null ? Math.round((resultaat / omzet) * 100) : null;
@@ -96,8 +106,8 @@ export function FinanceYear() {
     <section className="space-y-4 rounded-md border bg-card p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-black uppercase">Boekhouding {year}</h2>
-          <p className="text-xs text-muted-foreground">Geboekte opbrengsten en kosten per maand, excl. btw — gelijk aan Balans & resultaat</p>
+          <h2 className="text-lg font-black uppercase">Boekhouding {year}{year === latestYear && cutoff.slice(5) !== "12-31" ? ` t/m ${Number(cutoff.slice(8))}/${Number(cutoff.slice(5, 7))}` : ""}</h2>
+          <p className="text-xs text-muted-foreground">Afgesloten maanden · excl. btw</p>
         </div>
         <div className="flex items-center gap-2">
           {(companies.data?.length ?? 0) > 1 && (
@@ -106,7 +116,7 @@ export function FinanceYear() {
             </select>
           )}
           <Button variant="outline" size="icon" aria-label="Vorig jaar" onClick={() => setYear(year - 1)}><ChevronLeft /></Button>
-          <Button variant="outline" size="icon" aria-label="Volgend jaar" onClick={() => setYear(year + 1)}><ChevronRight /></Button>
+          <Button variant="outline" size="icon" aria-label="Volgend jaar" disabled={year >= latestYear} onClick={() => setYear(Math.min(year + 1, latestYear))}><ChevronRight /></Button>
         </div>
       </div>
 
@@ -130,14 +140,14 @@ export function FinanceYear() {
                 {([["Omzet", "revenue"], ["Kosten", "costs"]] as const).map(([l, k]) => (
                   <tr key={k} className="border-b border-border/60"><th className="py-1.5 text-left font-semibold">{l}</th>{rows.map((r) => <td key={r.month} className="py-1.5 text-right tabular-nums">{fmt(r[k])}</td>)}</tr>
                 ))}
-                {costGroupRows(data, year).map((g) => (
+                {costGroupRows(data, year, currentDay).map((g) => (
                   <tr key={g.label} className="border-b border-border/40 text-muted-foreground"><th className="py-1 pl-3 text-left font-normal">{g.label}</th>{g.values.map((v, i) => <td key={i} className="py-1 text-right tabular-nums">{fmt(v)}</td>)}</tr>
                 ))}
                 <tr className="border-b border-border/60"><th className="py-1.5 text-left font-semibold">Resultaat</th>{rows.map((r) => <td key={r.month} className="py-1.5 text-right tabular-nums">{fmt(r.profit)}</td>)}</tr>
               </tbody>
             </table>
           </div>
-          <YearComparison rows={yearRows(data)} />
+          <YearComparison rows={yearRows(data, currentDay)} />
           <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }} className="text-sm font-semibold text-primary underline-offset-2 hover:underline">Volledig overzicht in Finance →</Link>
         </>}
     </section>
@@ -155,7 +165,7 @@ function YearComparison({ rows }: { rows: ReturnType<typeof yearRows> }) {
     <div className="space-y-3 border-t pt-4">
       <div>
         <h3 className="text-sm font-semibold">Vergelijking met vorige jaren</h3>
-        <p className="text-xs text-muted-foreground">Volledige jaartotalen uit de boekhouding; het lopende jaar telt tot vandaag.</p>
+        <p className="text-xs text-muted-foreground">Alleen volledige, afgesloten kalenderjaren.</p>
       </div>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -177,7 +187,8 @@ function YearComparison({ rows }: { rows: ReturnType<typeof yearRows> }) {
           <thead><tr className="border-b text-left text-muted-foreground"><th className="py-1.5">Jaar</th><th className="text-right">Omzet</th><th className="text-right">Kosten</th><th className="text-right">Resultaat</th><th className="text-right">Marge</th><th className="text-right">Omzet t.o.v. vorig jaar</th></tr></thead>
           <tbody>
             {rows.map((r, i) => {
-              const d = i ? pct(r.revenue, rows[i - 1]!.revenue) : null;
+              const previous = rows[i - 1];
+              const d = previous && previous.year === r.year - 1 ? pct(r.revenue, previous.revenue) : null;
               return (
                 <tr key={r.year} className="border-b border-border/60">
                   <th className="py-1.5 text-left font-semibold">{r.label}</th>
