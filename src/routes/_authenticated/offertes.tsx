@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
-import { quoteLine, quoteOptionsTotals, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
+import { discountLabel, quoteLine, quoteOptionsTotals, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { splitLineText } from "@/lib/line-text";
 import { assignQuoteCrew, convertQuoteToTask, createQuote, deleteQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
@@ -37,6 +37,8 @@ export const Route = createFileRoute("/_authenticated/offertes")({
 
 type Line = { group?: string | undefined; title: string; detail: string; quantity: string; unit: string; unitPrice: string; discount: string; optional: boolean; photoPaths?: string[] };
 const emptyLine: Line = { title: "", detail: "", quantity: "1", unit: "st", unitPrice: "", discount: "0", optional: false };
+/** What the customer will read under this line in the PDF and on the signing page; "" without a real discount. */
+const lineDiscountText = (l: Line) => discountLabel(quoteLine("", Number(l.quantity) || 1, l.unit || "st", Number(l.unitPrice.replace(",", ".")) || 0, Number(l.discount.replace(",", ".")) || 0), euro);
 /** The stored line text keeps its old shape: product name on the first line, long description below it. */
 const lineText = (l: Line) => [l.title.trim(), l.detail.trim()].filter(Boolean).join("\n");
 
@@ -396,6 +398,7 @@ function Offertes() {
                   <span className="font-mono text-sm" aria-label={`Bedrag lijn ${i + 1}`}>{euro(quoteLine('', Number(l.quantity) || 1, l.unit, Number(l.unitPrice.replace(',', '.')) || 0, Number(l.discount.replace(',', '.')) || 0).amount)}</span>
                   <Button type="button" size="sm" variant="ghost" disabled={lines.length === 1} onClick={() => setLines((ls) => ls.filter((_, n) => n !== i))}>✕</Button>
                 </div>
+                {lineDiscountText(l) && <p className="text-xs font-semibold text-primary">{lineDiscountText(l)}</p>}
                 <Textarea placeholder="Lange omschrijving (optioneel, als bijvoegsel onder de productnaam)" rows={Math.min(8, Math.max(2, l.detail.split("\n").length))} className="min-h-10 text-sm" value={l.detail} onChange={(e) => setLine(i, { detail: e.target.value })} aria-label="Lange omschrijving" />
                 <ProductPhotoGallery paths={l.photoPaths ?? []} title={l.title} />
                 <label className="flex items-center gap-2 text-sm">
