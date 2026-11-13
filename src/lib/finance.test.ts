@@ -228,6 +228,6 @@ describe("leaseSchedule", () => {
   it("financiële leasing eindigt op de aankoopoptie", () => {
     const r = leaseSchedule({ kind: "financieel", start_date: "2026-01-01", months: 36, principal: 30000, annual_rate: 5, purchase_option: 3000 });
     expect(r.at(-1)!.balance).toBe(3000);
-    expect(r[0].cost).toBe(125);
+    expect(r[0]!.cost).toBe(125);
   });
 });
