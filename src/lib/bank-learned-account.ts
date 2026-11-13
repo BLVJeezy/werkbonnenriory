@@ -19,7 +19,7 @@ export function learnedAccount(history: BankHistory[], tx: { counterparty?: stri
   const same = history.filter((h) => partyKey(h) === key && Math.sign(h.amount) === Math.sign(tx.amount));
   if (same.length < 2) return null;
   const recent = same.slice(0, 5);
-  const first = recent[0].accounts;
-  if (first.length !== 1 || excluded(first[0])) return null;
-  return recent.every((h) => h.accounts.length === 1 && h.accounts[0] === first[0]) ? first[0] : null;
+  const account = recent[0]?.accounts.length === 1 ? recent[0].accounts[0] : undefined;
+  if (!account || excluded(account)) return null;
+  return recent.every((h) => h.accounts.length === 1 && h.accounts[0] === account) ? account : null;
 }
