@@ -17,6 +17,7 @@ import { purchaseBankChoices } from "@/lib/bank-purchase-choice";
 import { isInvoiceReconciled } from "@/lib/bank-reconciliation-status";
 import { Badge } from "@/components/ui/badge";
 import { bankSplitSummary } from "@/lib/bank-split";
+import { learnedAccount, type BankHistory } from "@/lib/bank-learned-account";
 import { PontoConnection } from "@/components/PontoConnection";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -718,8 +719,18 @@ function Bank({ c }: { c: string }) {
   const autoBusy = useRef(false); const autoTried = useRef(new Set<string>());
   // Verrichtingen die de beheerder ooit losgekoppeld heeft, nooit meer automatisch koppelen (anders lijkt "Ongedaan maken" niet te werken).
   const { data: undoneTx } = useQuery({ queryKey: ["fin", "bank-undone", c], queryFn: async () => new Set<string>(((await fetchAll((a, b) => db.from("fin_audit").select("entity_id").eq("company_id", c).eq("entity", "bankverrichting").in("action", ["koppeling_ongedaan", "verdeling_ongedaan"]).order("id").range(a, b))) as any[]).map((r) => r.entity_id)), refetchInterval: 30_000 });
+  // Geschiedenis van handmatig geboekte verrichtingen (zonder factuur): leert vaste kosten per tegenpartij.
+  const { data: bankHistory } = useQuery({ queryKey: ["fin", "bank-history", c], queryFn: async () => {
+    const booked = tx.filter((t) => t.entry_id && !t.matched_invoice_id && !t.matched_purchase_invoice_id && !t.allocated_amount);
+    const ids = booked.map((t) => t.entry_id);
+    const lines: any[] = [];
+    for (let i = 0; i < ids.length; i += 200) lines.push(...(((await db.from("fin_journal_lines").select("entry_id,account").in("entry_id", ids.slice(i, i + 200))).data) ?? []));
+    const byEntry = new Map<string, string[]>();
+    for (const l of lines) if (!String(l.account).startsWith("55")) byEntry.set(l.entry_id, [...new Set([...(byEntry.get(l.entry_id) ?? []), String(l.account)])]);
+    return booked.map((t): BankHistory => ({ counterparty: t.counterparty, counterparty_account: t.counterparty_account, amount: Number(t.amount), accounts: byEntry.get(t.entry_id) ?? [] }));
+  }, enabled: tx.length > 0 });
   useEffect(() => {
-    if (autoBusy.current || !accounts.length || !tx.length || !undoneTx) return;
+    if (autoBusy.current || !accounts.length || !tx.length || !undoneTx || !bankHistory) return;
     undoneTx.forEach((id) => autoTried.current.add(id));
     // Overboekingen tussen eigen rekeningen (bv. 550200 → 550700) altijd meteen intern verrekenen.
     const transfers = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && !t.allocated_amount && !autoTried.current.has(t.id) && ownTransfer(t));
@@ -759,9 +770,15 @@ function Bank({ c }: { c: string }) {
     const pc = new Map<string, any[]>();
     for (const t of todo) { if (candOf(t).length) continue; const cs = paidCands(t).filter((i: any) => sameParty(t, i)); pc.set(t.id, cs); for (const i of cs) pUse.set(i.id, (pUse.get(i.id) ?? 0) + 1); }
     const surePaid = todo.filter((t) => fresh(t) && pc.get(t.id)?.length === 1 && pUse.get(pc.get(t.id)![0].id) === 1).map((t) => [t, pc.get(t.id)!] as const);
+    // Vaste kosten: geen passende factuur, geen open factuur op naam van deze partij, en eerdere boekingen altijd op dezelfde rekening.
+    const taken = new Set([...sure.map(([t]) => t.id), ...surePaid.map(([t]) => t.id)]);
+    const hasOpenFor = (t: any) => open.some((i: any) => (Number(t.amount) < 0) === (i.direction === "aankoop") && sameParty({ ...t, description: t.counterparty }, i));
+    const sureFixed = todo.filter((t) => fresh(t) && !taken.has(t.id) && !candOf(t).length && !paidCands(t).length && grossOf(t) == null && !hasOpenFor(t))
+      .map((t) => [t, learnedAccount(bankHistory, t)] as const).filter((x): x is readonly [any, string] => !!x[1]);
     sure.forEach(([t]) => autoTried.current.add(t.id));
     surePaid.forEach(([t]) => autoTried.current.add(t.id));
-    if (!sure.length && !surePaid.length) return;
+    sureFixed.forEach(([t]) => autoTried.current.add(t.id));
+    if (!sure.length && !surePaid.length && !sureFixed.length) return;
     autoBusy.current = true;
     (async () => {
       let n = 0;
@@ -773,11 +790,15 @@ function Bank({ c }: { c: string }) {
         } catch { /* blijft manueel te verwerken */ }
       }
       for (const [t, cs] of surePaid) { try { await settle(t, cs[0]); n++; } catch { /* manueel */ } }
+      for (const [t, account] of sureFixed) {
+        try { const id = await post(c, "bank", t.tx_date, `Automatisch (vaste kost) · ${t.description || t.counterparty || "Bankverrichting"}`, null, "bank", t.id, paymentEntry(Number(t.amount), t.bank_account ?? bankAcc, account)); await linkEntry(t.id, id); n++; }
+        catch { /* blijft manueel */ }
+      }
       if (n) toast.success(`${n} betalingen automatisch afgeletterd`);
       await refresh();
       autoBusy.current = false;
     })();
-  }, [tx, open, paidNoTx, accounts.length, undoneTx]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tx, open, paidNoTx, accounts.length, undoneTx, bankHistory]); // eslint-disable-line react-hooks/exhaustive-deps
   // Factuurinfo bij afgeletterde verrichtingen + wachtrekening (499000) voor verrichtingen zonder factuur.
   const WACHT = "499000";
   const { data: allInv = [] } = useQuery({ queryKey: ["fin", "inv-all", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_invoices").select("*, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).order("id").range(a, b))) as any[] });
