@@ -1585,6 +1585,62 @@ export type Database = {
           },
         ]
       }
+      fin_leases: {
+        Row: {
+          annual_rate: number | null
+          company_id: string
+          created_at: string
+          id: string
+          kind: string
+          monthly_amount: number | null
+          months: number
+          name: string
+          object: string | null
+          principal: number | null
+          purchase_option: number
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          annual_rate?: number | null
+          company_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          monthly_amount?: number | null
+          months: number
+          name: string
+          object?: string | null
+          principal?: number | null
+          purchase_option?: number
+          start_date: string
+          user_id?: string
+        }
+        Update: {
+          annual_rate?: number | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          monthly_amount?: number | null
+          months?: number
+          name?: string
+          object?: string | null
+          principal?: number | null
+          purchase_option?: number
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_leases_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_loan_schedule: {
         Row: {
           capital: number
