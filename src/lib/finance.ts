@@ -126,6 +126,29 @@ export function loanSchedule(principal: number, annualRate: number, months: numb
   return rows;
 }
 
+// ---------- Leasing ----------
+// Operationeel: volledige maandhuur is kost (617400). Financieel: annuïteit met aankoopoptie als slottermijn;
+// enkel interest is kost (650), kapitaal lost de schuld af; het goed zelf wordt als investering afgeschreven.
+export type LeaseRow = { month: string; payment: number; interest: number; principal: number; balance: number; cost: number };
+export function leaseSchedule(l: { kind: string; start_date: string; months: number; monthly_amount?: number | null; principal?: number | null; annual_rate?: number | null; purchase_option?: number | null }): LeaseRow[] {
+  const n = l.months, start = monthKey(l.start_date);
+  if (l.kind === "operationeel") {
+    const m = r2(Number(l.monthly_amount ?? 0));
+    return Array.from({ length: n }, (_, k) => ({ month: addMonths(start, k), payment: m, interest: 0, principal: 0, balance: 0, cost: m }));
+  }
+  const P = Number(l.principal ?? 0), O = Number(l.purchase_option ?? 0), i = Number(l.annual_rate ?? 0) / 100 / 12;
+  const pay = i === 0 ? (P - O) / n : ((P - O * Math.pow(1 + i, -n)) * i) / (1 - Math.pow(1 + i, -n));
+  let bal = P; const rows: LeaseRow[] = [];
+  for (let k = 0; k < n; k++) {
+    const interest = r2(bal * i);
+    let pr = r2(pay - interest);
+    if (k === n - 1) pr = r2(bal - O);
+    bal = r2(bal - pr);
+    rows.push({ month: addMonths(start, k), payment: r2(pr + interest), interest, principal: pr, balance: bal, cost: interest });
+  }
+  return rows;
+}
+
 // ---------- Boekingsregels (deterministisch, geen AI-training) ----------
 export type Rule = { id: string; supplier_key: string; keyword: string; account: string; category: string; scope: string; hits: number; enabled: boolean };
 export type Suggestion = { account: string; category: string; confidence: number; ruleId: string; reason: string } | null;

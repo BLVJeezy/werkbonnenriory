@@ -45,6 +45,7 @@ const fmt = (n: number | null | undefined) => (n == null ? "–" : new Intl.Numb
 const COST_GROUPS: [string, string[]][] = [
   ["Aankopen (60)", ["60"]],
   ["Diensten & diverse goederen (61)", ["61"]],
+  ["Leasing & renting (6174)", ["6174"]],
   ["Personeel & zaakvoerder (62)", ["62"]],
   ["Afschrijvingen (63)", ["63"]],
   ["Andere bedrijfskosten (64)", ["64"]],
@@ -62,7 +63,7 @@ export function costGroupRows(lines: PostedLine[], year: number, until = today()
       const end = new Date(Date.UTC(year, i + 1, 0)).toISOString().slice(0, 10);
       if (end > cutoff) return null;
       const to = end;
-      return r2(lines.filter((l) => l.entry_date >= from && l.entry_date <= to && prefixes.some((p) => l.account.startsWith(p))).reduce((s, l) => s + l.debit - l.credit, 0));
+      return r2(lines.filter((l) => l.entry_date >= from && l.entry_date <= to && prefixes.some((p) => l.account.startsWith(p)) && !(prefixes.includes("61") && l.account.startsWith("6174"))).reduce((s, l) => s + l.debit - l.credit, 0));
     }),
   })).filter((g) => g.values.some((v) => v));
 }

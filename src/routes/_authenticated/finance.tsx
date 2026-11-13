@@ -22,7 +22,7 @@ import {
   parseAmount, r2, depreciationByYear, type DeprRow, signedAmount, suggest, summarizeMonth, type Entry, type InvLine, type Rule,
 } from "@/lib/finance";
 import { syncFinanceTasks } from "@/lib/finance-tasks";
-import { validateInvestment, validateLoan } from "@/lib/finance";
+import { validateInvestment, validateLoan, leaseSchedule } from "@/lib/finance";
 import { useServerFn } from "@tanstack/react-start";
 import { fetchNbbAccounts, parseAccountsPdf } from "@/lib/nbb.functions";
 import { normalizeEnterpriseNumber } from "@/lib/nbb";
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/_authenticated/finance")({
   component: Finance,
 });
 
-const TABS = ["overzicht", "invoer", "budget", "facturen", "regels", "investeringen", "leningen", "concurrenten", "koppelingen"] as const;
+const TABS = ["overzicht", "invoer", "budget", "facturen", "regels", "investeringen", "leningen", "leasing", "concurrenten", "koppelingen"] as const;
 const eur = (n: number | null | undefined) => (n == null ? "onbekend" : new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" }).format(n));
 const db = supabase as any;
 
@@ -113,6 +113,7 @@ function Finance() {
             {search.tab === "regels" && <Regels c={company.id} />}
             {search.tab === "investeringen" && <Investeringen c={company.id} focus={search.id} onDone={refresh} />}
             {search.tab === "leningen" && <Leningen c={company.id} />}
+            {search.tab === "leasing" && <Leasing c={company.id} />}
             {search.tab === "concurrenten" && <Concurrenten />}
             {search.tab === "koppelingen" && <Koppelingen c={company.id} bound={!!company.simpla_bound} onDone={() => { qc.invalidateQueries({ queryKey: ["fin-companies"] }); refresh(); }} />}
           </>
@@ -820,6 +821,47 @@ function Leningen({ c }: { c: string }) {
         {data?.loans.map((l: any) => <div key={l.id} className="mt-1 flex justify-between text-sm"><Button variant="ghost" onClick={() => setSel(l.id)}>{l.name} · {eur(Number(l.principal))}</Button><Button variant="ghost" className="text-destructive" onClick={async () => { await db.from("fin_loans").delete().eq("id", l.id); refetch(); }}>×</Button></div>)}
       </Card>
       {cur && <Card title={cur.name}><p className="mb-1 text-xs text-muted-foreground">Enkel interest is een kost; kapitaalaflossing is kasstroom.</p><div className="max-h-80 overflow-auto text-xs">{loanSchedule(Number(cur.principal), Number(cur.annual_rate), cur.months, cur.start_date).map((r) => <div key={r.month} className="flex justify-between"><span>{r.month.slice(0, 7)}</span><span>kapitaal {eur(r.principal)} · interest {eur(r.interest)} · saldo {eur(r.balance)}</span></div>)}</div></Card>}
+    </div>
+  );
+}
+
+function Leasing({ c }: { c: string }) {
+  const { data, refetch } = useQuery({ queryKey: ["fin-leases", c], queryFn: async () => (await db.from("fin_leases").select("*").eq("company_id", c).order("start_date")).data ?? [] });
+  const empty = { kind: "operationeel", name: "", object: "", start_date: "", months: "", monthly_amount: "", principal: "", annual_rate: "", purchase_option: "" };
+  const [f, setF] = useState(empty);
+  const [sel, setSel] = useState<string>();
+  const cur = (data as any[] | undefined)?.find((l) => l.id === sel);
+  const fin = f.kind === "financieel";
+  const save = async () => {
+    const months = Number(f.months);
+    if (!f.name || !f.start_date || !(months > 0)) return void toast.error("Naam, startdatum en looptijd zijn verplicht");
+    const row: any = { company_id: c, kind: f.kind, name: f.name, object: f.object || null, start_date: f.start_date, months };
+    if (fin) { row.principal = parseAmount(f.principal); row.annual_rate = parseAmount(f.annual_rate) ?? 0; row.purchase_option = parseAmount(f.purchase_option) ?? 0; if (!(row.principal > 0)) return void toast.error("Geef de financierde waarde in"); }
+    else { row.monthly_amount = parseAmount(f.monthly_amount); if (!(row.monthly_amount > 0)) return void toast.error("Geef het maandbedrag excl. btw in"); }
+    const { error } = await db.from("fin_leases").insert(row);
+    if (error) return void toast.error(error.message);
+    setF(empty); refetch(); toast.success("Leasing toegevoegd");
+  };
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      <Card title="Leasingen">
+        <div className="mb-2 flex gap-2">{(["operationeel", "financieel"] as const).map((k) => <Button key={k} size="sm" variant={f.kind === k ? "default" : "outline"} onClick={() => setF({ ...f, kind: k })}>{k === "operationeel" ? "Operationeel / renting" : "Financiële leasing"}</Button>)}</div>
+        <p className="mb-2 text-xs text-muted-foreground">{fin ? "Interest is kost (65), kapitaal lost de schuld af. Voeg het goed zelf ook toe bij Investeringen voor de afschrijving." : "De volledige maandhuur (excl. btw) is kost op 617400 en staat apart als Leasing & renting op het dashboard."}</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input placeholder="Naam / contractnr." value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <Input placeholder="Voertuig / toestel (bv. nummerplaat)" value={f.object} onChange={(e) => setF({ ...f, object: e.target.value })} />
+          <Input type="date" aria-label="Startdatum" value={f.start_date} onChange={(e) => setF({ ...f, start_date: e.target.value })} />
+          <Input placeholder="Looptijd (maanden)" value={f.months} onChange={(e) => setF({ ...f, months: e.target.value })} />
+          {fin ? <>
+            <Input placeholder="Gefinancierde waarde" value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} />
+            <Input placeholder="Jaarrente %" value={f.annual_rate} onChange={(e) => setF({ ...f, annual_rate: e.target.value })} />
+            <Input placeholder="Aankoopoptie (restwaarde)" value={f.purchase_option} onChange={(e) => setF({ ...f, purchase_option: e.target.value })} />
+          </> : <Input placeholder="Maandbedrag excl. btw" value={f.monthly_amount} onChange={(e) => setF({ ...f, monthly_amount: e.target.value })} />}
+        </div>
+        <Button size="sm" className="mt-2" onClick={save}>Toevoegen</Button>
+        {(data as any[] | undefined)?.map((l) => <div key={l.id} className="mt-1 flex justify-between text-sm"><Button variant="ghost" onClick={() => setSel(l.id)}>{l.name}{l.object ? ` · ${l.object}` : ""} · {l.kind === "operationeel" ? `${eur(Number(l.monthly_amount))}/maand` : `financieel ${eur(Number(l.principal))}`}</Button><Button variant="ghost" className="text-destructive" onClick={async () => { if (!confirm(`Leasing ${l.name} verwijderen?`)) return; await db.from("fin_leases").delete().eq("id", l.id); refetch(); }}>×</Button></div>)}
+      </Card>
+      {cur && <Card title={cur.name}><p className="mb-1 text-xs text-muted-foreground">{cur.kind === "operationeel" ? "Volledige termijn is kost (617400)." : `Enkel interest is kost; aankoopoptie ${eur(Number(cur.purchase_option))} blijft als slotbetaling.`}</p><div className="max-h-80 overflow-auto text-xs">{leaseSchedule(cur).map((r) => <div key={r.month} className="flex justify-between"><span>{r.month.slice(0, 7)}</span><span>{cur.kind === "operationeel" ? `huur ${eur(r.payment)}` : `termijn ${eur(r.payment)} · kapitaal ${eur(r.principal)} · interest ${eur(r.interest)} · saldo ${eur(r.balance)}`}</span></div>)}</div></Card>}
     </div>
   );
 }

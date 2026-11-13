@@ -218,3 +218,16 @@ describe("geplande afschrijving in maandkosten", () => {
     expect(unbookedDepreciationLines([inv], new Set(), new Set(["2026"]), "2026-12-31")).toEqual([]);
   });
 });
+
+import { leaseSchedule } from "./finance";
+describe("leaseSchedule", () => {
+  it("operationele leasing: volledige huur is kost", () => {
+    const r = leaseSchedule({ kind: "operationeel", start_date: "2026-01-15", months: 3, monthly_amount: 500 });
+    expect(r.map((x) => x.cost)).toEqual([500, 500, 500]);
+  });
+  it("financiële leasing eindigt op de aankoopoptie", () => {
+    const r = leaseSchedule({ kind: "financieel", start_date: "2026-01-01", months: 36, principal: 30000, annual_rate: 5, purchase_option: 3000 });
+    expect(r.at(-1)!.balance).toBe(3000);
+    expect(r[0].cost).toBe(125);
+  });
+});
