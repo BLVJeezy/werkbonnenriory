@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Dashboardgrafiek maandelijkse tikklokuren en personeelskostenraming; volgt jaar en lopende-maandkeuze, alleen lezen. 14 tests geslaagd; echte oktober- en novembercijfers op desktop/mobiel gecontroleerd zonder paginafouten of horizontale overflow. Geen boekingen gewijzigd, niet gepubliceerd.
+
 - [x] Personeelsbudget: contracturen én geklokte uren uit geïntegreerde tikklok in Finance, gedeelde loonberekening en admin+bedrijfcontrole; bestaande loonbudgetposten blokkeren overnemen tegen dubbeltelling. Echte novemberraming op desktop/mobiel teruggelezen; geen budget of boekingen gewijzigd.
 
 - [x] Fortis SEPA-export: ontbrekend verplicht DbtrAgt en ongeldige Belgische structured reference gereproduceerd en hersteld (BBA + 12 cijfers); BIC/datum/bedragvalidatie en unieke export-ID toegevoegd. 33 tests geslaagd; dezelfde XSD-controle faalt vóór en slaagt na herstel met/zonder BIC. Geen factuurstatus of betaling gewijzigd; origineel afgewezen bestand niet beschikbaar, bankacceptatie niet getest, niet gepubliceerd.
