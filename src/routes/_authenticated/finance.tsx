@@ -1,5 +1,6 @@
 import { VAT_RATES, detectVatRate, vatFor, vatSide, type VatRate } from "@/lib/vat-rate";
 import { FinanceTasks } from "@/components/FinanceTasks";
+import { PersonnelBudget } from '@/components/PersonnelBudget';
 import { useFinanceSales } from "@/lib/use-finance-sales";
 import { useFinanceCompany } from "@/lib/use-finance-company";
 import { syncFinancePurchases } from "@/lib/finance-purchases.functions";
@@ -285,6 +286,7 @@ function Budget({ c, month, onDone }: { c: string; month: string; onDone: () => 
   const rows = data?.budgets.filter((b: any) => b.month === month) ?? [];
   return (
     <Card title={`Budget ${month.slice(0, 7)}`}>
+      <PersonnelBudget companyId={c} period={month.slice(0, 7)} onDone={onDone} />
       <div className="flex flex-wrap gap-2">
         <Input className="w-48" placeholder="Categorie" value={cat} onChange={(e) => setCat(e.target.value)} />
         <Input className="w-32" placeholder="Bedrag" value={amt} onChange={(e) => setAmt(e.target.value)} />

@@ -17,6 +17,8 @@ import {
 import { splitWorkedMinutes } from "@/lib/tikklok/special-hours";
 import { normalizeSimulation, simulationSchema, monthlyOvertimeMinutes } from "@/lib/tikklok/payroll-simulation";
 import { normalizeAdvances } from "@/lib/tikklok/salary-advances";
+import { fetchAll } from '@/lib/fetch-all';
+import { contractMonth, personnelCost, completePersonnelTotal } from './personnel-budget';
 
 async function ensureAdmin(client: AuthClient, userId: string) {
   await assertAccountAdmin(client, userId);
@@ -418,6 +420,84 @@ export const exportPayrollCsv = createServerFn({ method: "POST" })
     const lines = rows.map((r) => [r.period_month, `"${r.employee_name.replace(/"/g, '""')}"`, r.status,
       n(r.worked_minutes / 60), n((r.breakdown?.regularMinutes ?? r.worked_minutes) / 60), n(r.gross), n(r.breakdown?.rszBasis ?? r.gross), n(r.rsz_employee), n(r.rsz_employer), n(r.taxable), n(r.bv), n(r.breakdown?.netAllowances ?? 0), n(r.breakdown?.deductions ?? 0), n(r.net), n(r.breakdown?.advances ?? 0), n(r.payable), n(r.employer_cost), n(r.banked_overtime_minutes / 60), n(r.overtime_open_minutes / 60), n(r.overtime_value)].join(";"));
     return { csv: [header, ...lines].join("\n"), filename: `loonexport-${data.period}.csv` };
+  });
+
+// Finance estimates: no payroll runs or journal entries are written.
+const personnelInput = z.object({ companyId: z.string().uuid(), period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) });
+
+async function personnelEstimate(client: AuthClient, userId: string, companyId: string, period: string) {
+  await ensureAdmin(client, userId);
+  const { data: company, error } = await client.from('companies').select('id').eq('id', companyId).eq('user_id', userId).eq('name', 'Riory BV').maybeSingle();
+  if (error || !company) throw new Error('Geen toegang tot dit Riory-bedrijf');
+  const settings = await loadSettings();
+  const month = Number(period.slice(5));
+  const next = new Date(Date.UTC(Number(period.slice(0, 4)), month, 1)).toISOString().slice(0, 7);
+  const offset = (m: number) => m >= 4 && m <= 10 ? '+02:00' : '+01:00';
+  const from = new Date(`${period}-01T00:00:00${offset(month)}`).toISOString();
+  const to = new Date(`${next}-01T00:00:00${offset(Number(next.slice(5)))}`).toISOString();
+  const [employees, profiles, hrProfiles, history, entries] = await Promise.all([
+    fetchAll((a, b) => client.from('tk_employees').select('id,name,active').order('id').range(a, b)),
+    fetchAll((a, b) => client.from('tk_payroll_profiles').select('*').order('id').range(a, b)),
+    fetchAll((a, b) => client.from('tk_employee_profiles').select('employee_id,weekly_hours,daily_schedule,employment_start_date,is_contractor,overtime_calculation_mode').order('employee_id').range(a, b)),
+    fetchAll((a, b) => client.from('tk_employee_hours_history').select('id,employee_id,effective_from,weekly_hours,daily_schedule').order('id').range(a, b)),
+    fetchAll((a, b) => client.from('tk_time_entries').select('id,employee_id,clock_in,clock_out').lt('clock_in', to).or(`clock_out.gte.${from},clock_out.is.null`).order('id').range(a, b)),
+  ]);
+  const rows = [];
+  for (const e of employees) {
+    const employeeEntries = entries.filter(r => r.employee_id === e.id);
+    if (!e.active && !employeeEntries.length) continue;
+    const p = profiles.find(r => r.employee_id === e.id);
+    const hr = hrProfiles.find(r => r.employee_id === e.id);
+    if (hr?.is_contractor) continue;
+    const contract = contractMonth(period, hr?.weekly_hours ?? p?.weekly_hours ?? null, hr?.daily_schedule, hr?.employment_start_date ?? null, history.filter(h => h.employee_id === e.id));
+    let minutes = 0;
+    const workedDays = new Set<string>();
+    for (const entry of employeeEntries) {
+      if (!entry.clock_out) continue;
+      const start = new Date(Math.max(Date.parse(from), Date.parse(entry.clock_in)));
+      const end = new Date(Math.min(Date.parse(to), Date.parse(entry.clock_out)));
+      const duration = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
+      minutes += duration;
+      if (duration) workedDays.add(start.toLocaleDateString('en-CA', { timeZone: 'Europe/Brussels' }));
+    }
+    const warnings = [];
+    let budget: number | null = null, estimated: number | null = null;
+    if (!p) warnings.push('Loonprofiel ontbreekt');
+    else {
+      const input = { profile: { ...p, status: p.status as PayrollStatus, wage_mode: p.wage_mode as 'monthly' | 'hourly', bv_scale: p.bv_scale as 'I' | 'II' | 'III' }, settings, simulation: normalizeSimulation(p.simulation_parameters) };
+      budget = !e.active ? null : contract.complete || p.wage_mode === 'monthly' || p.status === 'director'
+        ? personnelCost({ ...input, workedMinutes: contract.minutes, workedDays: contract.workdays }, contract.employedFraction) : null;
+      if (!contract.complete) warnings.push('Contracturen ontbreken');
+      let bankedMinutes = 0;
+      if (p.status !== 'temp' && p.status !== 'director') {
+        const { buildOvertime } = await import('@/lib/tikklok/hr.functions');
+        const o = await buildOvertime(client, e.id, hr?.weekly_hours ?? null, hr?.employment_start_date, hr?.daily_schedule, hr?.overtime_calculation_mode === 'weekly' ? 'weekly' : 'daily', true);
+        bankedMinutes = monthlyOvertimeMinutes(o.weeks, period);
+      }
+      const studentYearHoursSoFar = p.status === 'student' ? Math.max(0, (await studentHoursThisYear(e.id, period)) - minutes / 60) : undefined;
+      estimated = personnelCost({ ...input, workedMinutes: minutes, workedDays: workedDays.size, bankedOvertimeMinutes: bankedMinutes, studentYearHoursSoFar }, contract.employedFraction);
+      if (p.status === 'student') warnings.push('Contractbudget met studentbijdrage: jaarquotum afzonderlijk controleren');
+      if (p.status === 'temp') warnings.push('Uitzendkost vereist het tarief van het uitzendkantoor');
+      if (budget == null || estimated == null) warnings.push('Kostenraming onvolledig');
+    }
+    if (employeeEntries.some(r => !r.clock_out)) warnings.push('Open klokregistratie niet meegerekend');
+    rows.push({ id: e.id, name: e.name, contractHours: contract.minutes / 60, workedHours: minutes / 60, budget, estimated, warnings });
+  }
+  return { rows, budget: completePersonnelTotal(rows.map(r => r.budget)), estimated: completePersonnelTotal(rows.map(r => r.estimated)) };
+}
+
+export const getPersonnelBudget = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => personnelInput.parse(data))
+  .handler(({ data, context }) => personnelEstimate(context.supabase, context.userId, data.companyId, data.period));
+
+export const savePersonnelBudget = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => personnelInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const estimate = await personnelEstimate(context.supabase, context.userId, data.companyId, data.period);
+    if (estimate.budget == null) throw new Error('Vul eerst de ontbrekende loon- en contractgegevens aan');
+    const { error } = await context.supabase.from('fin_budgets').upsert({ company_id: data.companyId, month: `${data.period}-01`, category: 'Personeel & zaakvoerder (62)', amount: estimate.budget }, { onConflict: 'company_id,month,category' });
+    if (error) throw new Error('Personeelsbudget opslaan mislukt');
+    return { amount: estimate.budget };
   });
 
 // ---------- Employee-side (via PIN) ----------
