@@ -18,7 +18,7 @@ import { splitWorkedMinutes } from "@/lib/tikklok/special-hours";
 import { normalizeSimulation, simulationSchema, monthlyOvertimeMinutes } from "@/lib/tikklok/payroll-simulation";
 import { normalizeAdvances } from "@/lib/tikklok/salary-advances";
 import { fetchAll } from '@/lib/fetch-all';
-import { contractMonth, personnelCost, completePersonnelTotal } from './personnel-budget';
+import { contractMonth, personnelCost, completePersonnelTotal, overlappingPersonnelCategories, personnelCategory } from './personnel-budget';
 
 async function ensureAdmin(client: AuthClient, userId: string) {
   await assertAccountAdmin(client, userId);
@@ -467,7 +467,7 @@ async function personnelEstimate(client: AuthClient, userId: string, companyId: 
       const input = { profile: { ...p, status: p.status as PayrollStatus, wage_mode: p.wage_mode as 'monthly' | 'hourly', bv_scale: p.bv_scale as 'I' | 'II' | 'III' }, settings, simulation: normalizeSimulation(p.simulation_parameters) };
       budget = !e.active ? null : contract.complete || p.wage_mode === 'monthly' || p.status === 'director'
         ? personnelCost({ ...input, workedMinutes: contract.minutes, workedDays: contract.workdays }, contract.employedFraction) : null;
-      if (!contract.complete) warnings.push('Contracturen ontbreken');
+      if (!contract.complete && p.status !== 'director') warnings.push('Contracturen ontbreken');
       let bankedMinutes = 0;
       if (p.status !== 'temp' && p.status !== 'director') {
         const { buildOvertime } = await import('@/lib/tikklok/hr.functions');
@@ -483,7 +483,9 @@ async function personnelEstimate(client: AuthClient, userId: string, companyId: 
     if (employeeEntries.some(r => !r.clock_out)) warnings.push('Open klokregistratie niet meegerekend');
     rows.push({ id: e.id, name: e.name, contractHours: contract.minutes / 60, workedHours: minutes / 60, budget, estimated, warnings });
   }
-  return { rows, budget: completePersonnelTotal(rows.map(r => r.budget)), estimated: completePersonnelTotal(rows.map(r => r.estimated)) };
+  const { data: budgets, error: budgetError } = await client.from('fin_budgets').select('category').eq('company_id', companyId).eq('month', `${period}-01`);
+  if (budgetError) throw new Error('Bestaande budgetposten controleren mislukt');
+  return { rows, overlaps: overlappingPersonnelCategories((budgets ?? []).map(b => b.category)), budget: completePersonnelTotal(rows.map(r => r.budget)), estimated: completePersonnelTotal(rows.map(r => r.estimated)) };
 }
 
 export const getPersonnelBudget = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
@@ -495,7 +497,8 @@ export const savePersonnelBudget = createServerFn({ method: 'POST' }).middleware
   .handler(async ({ data, context }) => {
     const estimate = await personnelEstimate(context.supabase, context.userId, data.companyId, data.period);
     if (estimate.budget == null) throw new Error('Vul eerst de ontbrekende loon- en contractgegevens aan');
-    const { error } = await context.supabase.from('fin_budgets').upsert({ company_id: data.companyId, month: `${data.period}-01`, category: 'Personeel & zaakvoerder (62)', amount: estimate.budget }, { onConflict: 'company_id,month,category' });
+    if (estimate.overlaps.length) throw new Error('Bestaande personeelsbudgetten overlappen: pas deze eerst aan om dubbeltelling te voorkomen');
+    const { error } = await context.supabase.from('fin_budgets').upsert({ company_id: data.companyId, month: `${data.period}-01`, category: personnelCategory, amount: estimate.budget }, { onConflict: 'company_id,month,category' });
     if (error) throw new Error('Personeelsbudget opslaan mislukt');
     return { amount: estimate.budget };
   });

@@ -1,6 +1,10 @@
 import { computePayroll, type PayrollComputationInput } from './payroll-engine';
 
 const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+export const personnelCategory = 'Personeel & zaakvoerder (62)';
+export function overlappingPersonnelCategories(categories: string[]) {
+  return categories.filter(category => category !== personnelCategory && /personeel|werknemer|bezoldiging|zaakvoerder|loon/i.test(category));
+}
 export type HoursRegime = { effective_from: string; weekly_hours: number | null; daily_schedule: unknown };
 
 /** Calendar-day contract calculation; hours history overrides the current regime. */

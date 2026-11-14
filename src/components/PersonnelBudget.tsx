@@ -27,7 +27,8 @@ export function PersonnelBudget({ companyId, period, onDone }: { companyId: stri
         <tfoot><tr className="border-t border-border font-semibold"><td className="py-2" colSpan={3}>Totaal</td><td className="text-right">{eur(query.data.budget)}</td><td className="text-right">{eur(query.data.estimated)}</td></tr></tfoot>
       </table></div>
       {!query.data.rows.length && <p className="text-sm text-muted-foreground">Geen medewerkers voor deze maand.</p>}
-      <Button className="mt-3" size="sm" disabled={query.data.budget == null || saving || query.isFetching} onClick={async () => {
+      {!!query.data.overlaps.length && <p className="mt-3 text-sm text-destructive">Overnemen geblokkeerd om dubbeltelling te vermijden: {query.data.overlaps.join(', ')} staat al in het maandbudget.</p>}
+      <Button className="mt-3" size="sm" disabled={query.data.budget == null || saving || query.isFetching || !!query.data.overlaps.length} onClick={async () => {
         if (!window.confirm(`Maandbudget Personeel & zaakvoerder (62) voor ${period} vervangen door de actuele contractraming? Andere budgetposten en boekingen blijven behouden.`)) return;
         setSaving(true);
         try { await save({ data: { companyId, period } }); onDone(); toast.success('Personeelsbudget opgeslagen'); } catch (error) { toast.error(error instanceof Error ? error.message : 'Opslaan mislukt'); } finally { setSaving(false); }
