@@ -11,6 +11,7 @@ import { fetchAll } from "@/lib/fetch-all";
 import { statements, trialBalance, type PostedLine } from "@/lib/boekhouding";
 import { Bar, BarChart, CartesianGrid, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { dashboardToday, lastClosedMonth } from "@/lib/dashboard-period";
+import { PersonnelHoursChart } from '@/components/PersonnelHoursChart';
 
 const db = supabase as any;
 const today = dashboardToday;
@@ -161,6 +162,7 @@ export function FinanceYear() {
               </tbody>
             </table>
           </div>
+          <PersonnelHoursChart companyId={companyId} year={year} today={currentDay} showOpen={showOpen} />
           <YearComparison rows={yearRows(data, currentDay)} />
           <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }} className="text-sm font-semibold text-primary underline-offset-2 hover:underline">Volledig overzicht in Finance →</Link>
         </>}

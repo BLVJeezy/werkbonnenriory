@@ -51,3 +51,4 @@
 - Supplier payment details resolve through `creditorBank` (what the admin typed on the invoice first, then the supplier record), and a corrected invoice writes those details back to `suppliers`; the BIC is only ever derived from the static bank-code table in `src/lib/iban-bic.ts`, so a hand-typed BIC is never overwritten.
 - Product-sales rules: src/lib/AGENTS.md.
 - Personnel budgets reuse the tikklok payroll engine and calendar-day hours history; admin+company-owner checks protect reads/saves, estimates stay separate from journal costs and saving replaces one monthly budget category, never payroll or bank entries.
+- Dashboard personnel charts reuse the protected personnel-budget read and its query cache, serialize monthly reads, and follow the accounting year/open-month toggle; estimates never enter journal totals.
