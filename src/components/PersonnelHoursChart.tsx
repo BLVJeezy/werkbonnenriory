@@ -47,15 +47,15 @@ export function PersonnelHoursChart({ companyId, year, today, showOpen }: { comp
             <YAxis yAxisId="cost" orientation="right" width={58} tick={{ fontSize: 11 }} tickFormatter={value => `€${Number(value).toLocaleString('nl-BE', { notation: 'compact' })}`} />
             <Tooltip formatter={(value, name) => [name === 'Klokuren' ? `${Number(value).toLocaleString('nl-BE', { maximumFractionDigits: 2 })} uur` : euro(Number(value)), name]} labelFormatter={(_, payload) => payload[0]?.payload?.period ?? ''} contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar yAxisId="hours" dataKey="hours" name="Klokuren" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-            <Line yAxisId="cost" dataKey="cost" name="Kostenraming" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+            <Bar yAxisId="hours" dataKey="hours" name="Klokuren" fill="var(--primary)" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+            <Line yAxisId="cost" dataKey="cost" name="Kostenraming" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
       <details>
         <summary className="cursor-pointer text-xs font-semibold">Maandbedragen en controlepunten</summary>
         <div className="mt-2 overflow-x-auto"><table className="w-full text-xs">
-          <thead><tr className="border-b border-border text-left"><th className="py-2">Maand</th><th className="text-right">Klokuren</th><th className="text-right">Kostenraming</th></tr></thead>
+          <thead><tr className="border-b border-border text-left"><th className="py-2">Maand</th><th className="px-2 text-right">Klokuren</th><th className="text-right">Kostenraming</th></tr></thead>
           <tbody>{rows.map(row => <tr key={row.period} className="border-b border-border"><td className="py-2">{row.period}{row.warnings.map(w => <span key={w} className="block text-destructive">{w}</span>)}</td><td className="text-right tabular-nums">{row.hours.toLocaleString('nl-BE')}</td><td className="text-right tabular-nums">{row.cost == null ? 'Onvolledig' : euro(row.cost)}</td></tr>)}</tbody>
         </table></div>
       </details>
