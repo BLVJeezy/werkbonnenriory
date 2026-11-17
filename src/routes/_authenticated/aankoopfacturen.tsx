@@ -20,6 +20,7 @@ import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusS
 import { canSendPeppolTest, creditorBank, daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { deletePurchaseInvoices, attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
+import { SortTh, Th, rowTint, tableCls, tableWrap, useSort } from "@/components/SortTable";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
   head: () => ({ meta: [{ title: "Aankoopfacturen — Riory Werkbonnen" }, { name: "description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:title", content: "Aankoopfacturen — Riory Werkbonnen" }, { property: "og:description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -239,6 +240,14 @@ function Aankoopfacturen() {
   const visible = rows.filter((r) => tab === 'alle' ? true : r.status === tab);
   const count = (t: string) => rows.filter((r) => r.status === t).length;
   const payable = visible.filter((r) => canExportPurchase({ ...r, total: Number(r.total) }));
+  const sort = useSort(visible, {
+    leverancier: (r: Row) => r.supplier_name,
+    nummer: (r: Row) => r.invoice_number,
+    factuurdatum: (r: Row) => r.invoice_date,
+    vervaldag: (r: Row) => r.due_date,
+    bedrag: (r: Row) => (r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total)),
+    status: (r: Row) => STATUS[r.status] ?? r.status,
+  }, 'vervaldag');
   const isPaid = edit?.status === 'betaald';
   const signedTotal = edit ? (edit.kind === 'creditnota' ? -Math.abs(Number(edit.total)) : Number(edit.total)) : 0;
   const upd = (i: number, patch: Partial<PurchaseLine>) => edit && setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
