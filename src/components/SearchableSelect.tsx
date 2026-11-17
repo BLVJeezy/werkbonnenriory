@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 /** Lists with at least this many options get a search field; shorter lists stay a plain dropdown. */
 export const SEARCH_THRESHOLD = 7;
 
-type Opt = { value: string; label: string; disabled?: boolean };
+type Opt = { value: string; label: string; disabled?: boolean | undefined };
 
 const text = (node: ReactNode): string => {
   if (node == null || typeof node === "boolean") return "";
@@ -38,7 +38,7 @@ export function SearchableSelect(props: SelectHTMLAttributes<HTMLSelectElement>)
   if (multiple || options.length < SEARCH_THRESHOLD) return <select {...props} />;
   const current = value == null ? (options[0]?.value ?? "") : String(value);
   const selected = options.find(o => o.value === current);
-  const matches = filterChoices(options, query);
+  const matches = filterChoices(options, query) as Opt[];
   const pick = (v: string) => {
     setOpen(false); setQuery("");
     onChange?.({ target: { value: v }, currentTarget: { value: v } } as unknown as ChangeEvent<HTMLSelectElement>);

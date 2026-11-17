@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { parseContacts, upsertContact } from "@/lib/customer-contacts";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -291,7 +292,7 @@ function Detail() {
       <section className="grid gap-4 rounded-md border-2 border-primary bg-card p-4 sm:grid-cols-[1fr_10rem]">
         <div className="space-y-1">
           <Label>Activiteit</Label>
-          <select
+          <SearchableSelect
             className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"
             value={wo.activity_id ?? ""}
             disabled={infoLocked}
@@ -303,11 +304,11 @@ function Detail() {
                 {a.name}{perms.showPrices && (a.hourly_rate === null ? " — geen tarief" : ` — ${money(Number(a.hourly_rate))}/u`)}
               </option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
         <div className="space-y-1">
           <Label>Btw-tarief</Label>
-          <select
+          <SearchableSelect
             className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"
             value={String(Number(wo.vat_rate))}
             disabled={infoLocked}
@@ -318,7 +319,7 @@ function Detail() {
                 {r}%
               </option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
       </section>
 
@@ -380,7 +381,7 @@ function Detail() {
         </div>
         <div className="space-y-1">
           <Label>Ploeg</Label>
-          <select
+          <SearchableSelect
             className="h-9 w-full rounded-md border bg-background px-2"
             value={wo.technician_id ?? ""}
             disabled={infoLocked}
@@ -394,7 +395,7 @@ function Detail() {
                 {t.name}
               </option>
             ))}
-          </select>
+          </SearchableSelect>
         </div>
         {wo.source_subject && (
           <div className="text-sm text-muted-foreground sm:self-end">Mail: “{wo.source_subject}”</div>
@@ -614,7 +615,7 @@ function Detail() {
                 />
                 <div className="space-y-1">
                   <Label>Betaalwijze</Label>
-                  <select
+                  <SearchableSelect
                     className="h-9 w-full rounded-md border bg-background px-2"
                     value={wo.paid_method ?? ""}
                     onChange={(e) => update({ paid_method: e.target.value })}
@@ -622,7 +623,7 @@ function Detail() {
                     {["cash", "Bancontact", "overschrijving"].map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
               </>
             )}
