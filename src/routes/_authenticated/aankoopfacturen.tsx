@@ -326,7 +326,7 @@ function Aankoopfacturen() {
               return (
               <tr key={r.id} className={paid ? rowTint.paid : due.overdue ? rowTint.overdue : rowTint.open}>
                 <td><input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} disabled={r.status === 'betaling_klaargezet'} title={r.status === 'betaling_klaargezet' ? 'Betaling al ingepland via betaalbestand' : undefined} onChange={() => toggle(r.id)} /></td>
-                <td className="min-w-[160px]">
+                <td className="min-w-[140px]">
                   <span className="font-bold">{r.supplier_name}</span>
                   {(r.kind === 'creditnota' || dups.has(r.id) || bankMissing || lock) && (
                     <span className="mt-0.5 flex flex-wrap items-center gap-1">
