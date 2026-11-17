@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -232,10 +233,10 @@ function Controle() {
 
             <div className="space-y-1">
               <Label htmlFor="purchase-supplier">Leverancier</Label>
-              <select id="purchase-supplier" className={`h-10 w-full rounded-md border bg-background px-3 ${!sup ? "border-destructive" : ""}`} value={edit.supplier_id ?? ""} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) { const iban = s2.iban ?? edit.supplier_iban; setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: iban, supplier_bic: s2.bic ?? nextBic(edit.supplier_iban, edit.supplier_bic, iban), payment_method: s2.payment_method }); } }}>
+              <SearchableSelect id="purchase-supplier" className={`h-10 w-full rounded-md border bg-background px-3 ${!sup ? "border-destructive" : ""}`} value={edit.supplier_id ?? ""} onChange={(e) => { const s2 = suppliers.find((x) => x.id === e.target.value); if (s2) { const iban = s2.iban ?? edit.supplier_iban; setEdit({ ...edit, supplier_id: s2.id, supplier_name: s2.name, supplier_vat: s2.vat_number, supplier_iban: iban, supplier_bic: s2.bic ?? nextBic(edit.supplier_iban, edit.supplier_bic, iban), payment_method: s2.payment_method }); } }}>
                 {!sup && <option value="">— Kies uit leverancierslijst (uitgelezen: {edit.supplier_name}) —</option>}
                 {suppliers.map((x) => <option key={x.id} value={x.id}>{x.name}{x.vat_number ? ` (${x.vat_number})` : ""}</option>)}
-              </select>
+              </SearchableSelect>
               {!sup && <p className="text-xs text-muted-foreground">Staat de leverancier er niet tussen? <Link to="/leveranciers" className="underline">Voeg ze toe in de leverancierslijst</Link>.</p>}
             </div>
 
@@ -247,7 +248,7 @@ function Controle() {
                 <div className="space-y-1"><Label>BIC</Label><Input placeholder="Bijv. GKCCBEBB" value={shownBic} onChange={(e) => setEdit({ ...edit, supplier_bic: e.target.value.toUpperCase().replace(/\s/g, "") || null })} />
                   {shownBic && shownBic === derived.bic && <p className="text-xs text-muted-foreground">uit IBAN — {derived.bank}</p>}
                 </div>
-                <div className="space-y-1"><Label htmlFor="purchase-payment">Betaalwijze</Label><select id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={(e) => setEdit({ ...edit, payment_method: e.target.value })}>{Object.entries(PAYMENT_METHODS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+                <div className="space-y-1"><Label htmlFor="purchase-payment">Betaalwijze</Label><SearchableSelect id="purchase-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={(e) => setEdit({ ...edit, payment_method: e.target.value })}>{Object.entries(PAYMENT_METHODS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</SearchableSelect></div>
                 <p className="text-xs text-muted-foreground sm:col-span-2">Bewerkte gegevens worden automatisch ook in de leverancierslijst bewaard.</p>
               </div>
             </details>
@@ -291,10 +292,10 @@ function Controle() {
                     <Field label="Incl btw"><p className="h-8 px-1 font-mono text-sm font-bold leading-8">{euro(t.total)}</p></Field>
                   </div>
                   <div className="flex items-center gap-2">
-                    <select aria-label="Grootboekrekening" className={`h-9 flex-1 rounded-md border bg-background px-2 text-sm ${!l.account ? "border-destructive" : ""}`} value={l.account ?? ""} onChange={(e) => upd(i, { account: e.target.value || null })}>
+                    <SearchableSelect aria-label="Grootboekrekening" className={`h-9 flex-1 rounded-md border bg-background px-2 text-sm ${!l.account ? "border-destructive" : ""}`} value={l.account ?? ""} onChange={(e) => upd(i, { account: e.target.value || null })}>
                       <option value="">— Kies rekening —</option>
                       {accounts.map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}
-                    </select>
+                    </SearchableSelect>
                     {sources[i] && <span className="text-xs text-muted-foreground">{sources[i] === "geleerd" ? "geleerd" : "AI-voorstel"}</span>}
                   </div>
                 </div>
@@ -352,7 +353,7 @@ function Controle() {
                 : assetLine === i
                   ? <div key={i} className="grid gap-2 rounded-md border bg-muted/50 p-2 sm:grid-cols-2">
                       <Field label="Naam investering"><Input className="h-8" value={asset.name} onChange={(e) => setAsset({ ...asset, name: e.target.value })} /></Field>
-                      <Field label="Investeringsrekening"><select aria-label="Investeringsrekening" className="h-8 w-full rounded-md border bg-background px-2 text-sm" value={asset.account} onChange={(e) => setAsset({ ...asset, account: e.target.value })}>{accounts.filter((a) => a.number.startsWith("2")).map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}</select></Field>
+                      <Field label="Investeringsrekening"><SearchableSelect aria-label="Investeringsrekening" className="h-8 w-full rounded-md border bg-background px-2 text-sm" value={asset.account} onChange={(e) => setAsset({ ...asset, account: e.target.value })}>{accounts.filter((a) => a.number.startsWith("2")).map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}</SearchableSelect></Field>
                       <Field label="Start (factuurdatum)"><Input type="date" className="h-8" value={asset.start} onChange={(e) => setAsset({ ...asset, start: e.target.value })} /></Field>
                       <Field label="Levensduur (maanden)"><Input type="number" className="h-8" value={asset.life} onChange={(e) => setAsset({ ...asset, life: e.target.value })} /></Field>
                       <Field label="Restwaarde €"><Input className="h-8" value={asset.residual} onChange={(e) => setAsset({ ...asset, residual: e.target.value })} /></Field>

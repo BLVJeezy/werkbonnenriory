@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -36,11 +37,11 @@ export function SiteAddressFields({ value, disabled = false, onChange, saveOnBlu
     {value.use_site_address && <div className="grid grid-cols-2 gap-3">{address.map(([k, l]) => input(k, l))}</div>}
     {list.length > 0 && <div className="space-y-1">
       <Label htmlFor="contact-kiezen">Bewaarde contactpersoon kiezen</Label>
-      <select id="contact-kiezen" disabled={disabled} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value=""
+      <SearchableSelect id="contact-kiezen" disabled={disabled} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value=""
         onChange={(e) => { const c = list[Number(e.target.value)]; if (c) onChange({ site_contact_name: c.name, site_contact_phone: c.phone }); }}>
         <option value="">— kies wie gebeld moet worden —</option>
         {list.map((c, i) => <option key={i} value={i}>{[c.name, c.role && `(${c.role})`, c.phone].filter(Boolean).join(" ")}</option>)}
-      </select>
+      </SearchableSelect>
     </div>}
     <div className="grid grid-cols-2 gap-3">{contact.map(([k, l]) => input(k, l))}</div>
     {canSave && <Button type="button" size="sm" variant="outline" onClick={() => onSaveContact!({ name, phone })}>Contactpersoon bewaren bij klant</Button>}

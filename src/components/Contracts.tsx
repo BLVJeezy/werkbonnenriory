@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -91,13 +92,13 @@ export function Contracts({ opts }: { opts: Opts }) {
             <CustomerPicker id="ct-klant" customers={customers} value={customers.find(c => label(c) === f.customer)?.id ?? ""} placeholder="Kies klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) setF({ ...f, customer: label(c) }); }} /></div>
           <div className="grid gap-1"><Label htmlFor="ct-naam">Naam opdracht</Label><Input id="ct-naam" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="bv. Onderhoud dakgoten" /></div>
           <div className="grid gap-1"><Label htmlFor="ct-freq">Frequentie</Label>
-            <select id="ct-freq" className={sel} value={`${f.every}-${f.unit}`} onChange={(e) => { const [ev, u] = e.target.value.split("-"); if (ev && u) setF({ ...f, every: ev, unit: u as RepeatUnit }); }}>
+            <SearchableSelect id="ct-freq" className={sel} value={`${f.every}-${f.unit}`} onChange={(e) => { const [ev, u] = e.target.value.split("-"); if (ev && u) setF({ ...f, every: ev, unit: u as RepeatUnit }); }}>
               {REPEAT_PRESETS.map((p) => <option key={p.label} value={`${p.every}-${p.unit}`}>{p.label}</option>)}
               {!REPEAT_PRESETS.some((p) => String(p.every) === f.every && p.unit === f.unit) && <option value={`${f.every}-${f.unit}`}>{repeatLabel(Number(f.every), f.unit)}</option>}
-            </select></div>
+            </SearchableSelect></div>
           <div className="grid grid-cols-[5rem_1fr] gap-2 sm:col-span-2">
             <div className="grid gap-1"><Label htmlFor="ct-om">Om de</Label><Input id="ct-om" type="number" min={1} value={f.every} onChange={(e) => setF({ ...f, every: e.target.value || "1" })} /></div>
-            <div className="grid gap-1"><Label htmlFor="ct-unit">Eenheid</Label><select id="ct-unit" className={sel} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value as RepeatUnit })}><option value="week">weken</option><option value="maand">maanden</option><option value="jaar">jaar</option></select></div>
+            <div className="grid gap-1"><Label htmlFor="ct-unit">Eenheid</Label><SearchableSelect id="ct-unit" className={sel} value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value as RepeatUnit })}><option value="week">weken</option><option value="maand">maanden</option><option value="jaar">jaar</option></SearchableSelect></div>
           </div>
           {f.unit !== "week" && (
             <div className="grid gap-2 sm:col-span-2">
@@ -107,12 +108,12 @@ export function Contracts({ opts }: { opts: Opts }) {
                 <label className="flex items-center gap-1"><input type="radio" name="ct-mode" checked={f.mode === "weekdag"} onChange={() => setF({ ...f, mode: "weekdag" })} /> Bepaalde weekdag</label>
                 {f.mode === "weekdag" && (
                   <span className="flex items-center gap-1">
-                    <select aria-label="Welke" className={sel + " !w-auto"} value={f.ordinal} onChange={(e) => setF({ ...f, ordinal: e.target.value })}>
+                    <SearchableSelect aria-label="Welke" className={sel + " !w-auto"} value={f.ordinal} onChange={(e) => setF({ ...f, ordinal: e.target.value })}>
                       {ORDINALS.map((o, i) => <option key={o} value={String(i + 1)}>{o}</option>)}
-                    </select>
-                    <select aria-label="Weekdag" className={sel + " !w-auto"} value={f.weekday} onChange={(e) => setF({ ...f, weekday: e.target.value })}>
+                    </SearchableSelect>
+                    <SearchableSelect aria-label="Weekdag" className={sel + " !w-auto"} value={f.weekday} onChange={(e) => setF({ ...f, weekday: e.target.value })}>
                       {WEEKDAYS.map((w, i) => <option key={w} value={String(i)}>{w}</option>)}
-                    </select>
+                    </SearchableSelect>
                     <span className="text-muted-foreground">van de {f.unit === "jaar" ? "maand van de eerste beurt" : "maand"}</span>
                   </span>
                 )}
@@ -121,8 +122,8 @@ export function Contracts({ opts }: { opts: Opts }) {
           )}
           <div className="grid gap-1"><Label htmlFor="ct-start">Eerste beurt</Label><Input id="ct-start" type="date" required value={f.next_date} onChange={(e) => setF({ ...f, next_date: e.target.value })} /></div>
           <div className="grid gap-1"><Label htmlFor="ct-eind">Einde contract (optioneel)</Label><Input id="ct-eind" type="date" value={f.end_date} onChange={(e) => setF({ ...f, end_date: e.target.value })} /></div>
-          <div className="grid gap-1"><Label htmlFor="ct-ploeg">Ploeg</Label><select id="ct-ploeg" className={sel} value={f.technician_id} onChange={(e) => setF({ ...f, technician_id: e.target.value })}><option value="">— Later —</option>{opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
-          <div className="grid gap-1"><Label htmlFor="ct-act">Activiteit</Label><select id="ct-act" className={sel} value={f.activity_id} onChange={(e) => setF({ ...f, activity_id: e.target.value })}><option value="">— Kies —</option>{opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
+          <div className="grid gap-1"><Label htmlFor="ct-ploeg">Ploeg</Label><SearchableSelect id="ct-ploeg" className={sel} value={f.technician_id} onChange={(e) => setF({ ...f, technician_id: e.target.value })}><option value="">— Later —</option>{opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</SearchableSelect></div>
+          <div className="grid gap-1"><Label htmlFor="ct-act">Activiteit</Label><SearchableSelect id="ct-act" className={sel} value={f.activity_id} onChange={(e) => setF({ ...f, activity_id: e.target.value })}><option value="">— Kies —</option>{opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</SearchableSelect></div>
           <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-oms">Omschrijving voor de ploeg</Label><Textarea id="ct-oms" rows={2} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
           <Button type="submit" className="sm:col-span-2">Opslaan en inplannen</Button>
         </form>

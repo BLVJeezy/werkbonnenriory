@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -55,9 +56,9 @@ function Page() {
     <div className="space-y-4">
       <h1 className="text-2xl font-black uppercase">Producten per ploeg</h1>
       <p className="text-sm text-muted-foreground">Bepaal welke producten een ploeg op een werkbon mag zien en kiezen. Dit is geen voorraad: er worden geen aantallen bijgehouden of afgeboekt. Beheerders zien altijd alle producten; producten "enkel admin" zijn nooit zichtbaar voor ploegen.</p>
-      <select className="h-10 w-full rounded-md border bg-background px-2 sm:w-72" value={techId} onChange={(e) => setTech(e.target.value)}>
+      <SearchableSelect className="h-10 w-full rounded-md border bg-background px-2 sm:w-72" value={techId} onChange={(e) => setTech(e.target.value)}>
         {(techs.data ?? []).map((x) => <option key={x.id} value={x.id}>{x.name}{x.product_scope === "gekozen" ? " (gekozen producten)" : ""}</option>)}
-      </select>
+      </SearchableSelect>
       {t && (
         <div className="space-y-2 rounded-md border bg-card p-3">
           <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={!limited} disabled={busy} onChange={() => setScope("alle")} /><span><b>Alle ploegproducten</b> — standaard voor een ploeg die nog niet ingesteld is (alle producten behalve "enkel admin").</span></label>

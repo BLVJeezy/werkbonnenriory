@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { VAT_RATES, detectVatRate, vatFor, vatSide, type VatRate } from "@/lib/vat-rate";
 import { FinanceTasks } from "@/components/FinanceTasks";
 import { PersonnelBudget } from '@/components/PersonnelBudget';
@@ -97,9 +98,9 @@ function Finance() {
           <Link to="/boekhouding" search={{ tab: "rekeningen" }}><Button variant="outline" size="sm">Boekhouding</Button></Link>
           <h1 className="text-xl font-bold">Finance</h1>
           <span className="text-sm text-muted-foreground">Riory BV</span>
-          {search.tab === "overzicht" ? <select aria-label="Jaar" className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          {search.tab === "overzicht" ? <SearchableSelect aria-label="Jaar" className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {Array.from({ length: Math.max(5, new Date().getFullYear() - 2025 + 2) }, (_, i) => new Date().getFullYear() + 1 - i).map((y) => <option key={y} value={y}>{y}</option>)}
-          </select> : <Input type="month" aria-label="Maand" className="w-40" value={month.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value + "-01")} />}
+          </SearchableSelect> : <Input type="month" aria-label="Maand" className="w-40" value={month.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value + "-01")} />}
         </div>
         <div className="flex gap-1 overflow-x-auto pb-1">
           {TABS.map((t) => <Button key={t} size="sm" variant={search.tab === t ? "default" : "outline"} onClick={() => setTab(t)} className="capitalize">{t}</Button>)}
@@ -240,8 +241,8 @@ function Invoer({ c, month, onDone }: { c: string; month: string; onDone: () => 
     <div className="grid gap-3 lg:grid-cols-2">
       <Card title={`Handmatige invoer ${month.slice(0, 7)}`}>
         <div className="grid gap-2 sm:grid-cols-2">
-          <select className="rounded border border-border bg-background p-2 text-sm" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}><option value="omzet">Omzet</option><option value="kost">Kost</option><option value="kas">Kassaldo</option></select>
-          <select className="rounded border border-border bg-background p-2 text-sm" value={f.level} onChange={(e) => setF({ ...f, level: e.target.value })}><option value="totaal">Maandtotaal</option><option value="detail">Detailregel</option></select>
+          <SearchableSelect className="rounded border border-border bg-background p-2 text-sm" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}><option value="omzet">Omzet</option><option value="kost">Kost</option><option value="kas">Kassaldo</option></SearchableSelect>
+          <SearchableSelect className="rounded border border-border bg-background p-2 text-sm" value={f.level} onChange={(e) => setF({ ...f, level: e.target.value })}><option value="totaal">Maandtotaal</option><option value="detail">Detailregel</option></SearchableSelect>
           <Input placeholder="Categorie (bv. Huur)" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
           <Input placeholder="Rekening (bv. 611120)" value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} />
           <Input placeholder="Bedrag excl. btw" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} />
@@ -263,10 +264,10 @@ function Invoer({ c, month, onDone }: { c: string; month: string; onDone: () => 
         {rows.length > 0 && (
           <div className="mt-2 space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <select className="rounded border border-border bg-background p-1 text-sm" value={imp.kind} onChange={(e) => setImp({ ...imp, kind: e.target.value })}><option value="kost">Kosten</option><option value="omzet">Omzet</option><option value="kas">Bank/kas</option></select>
-              <select className="rounded border border-border bg-background p-1 text-sm" value={imp.level} onChange={(e) => setImp({ ...imp, level: e.target.value })}><option value="detail">Grootboekdetail</option><option value="totaal">Samenvattende totalen</option></select>
+              <SearchableSelect className="rounded border border-border bg-background p-1 text-sm" value={imp.kind} onChange={(e) => setImp({ ...imp, kind: e.target.value })}><option value="kost">Kosten</option><option value="omzet">Omzet</option><option value="kas">Bank/kas</option></SearchableSelect>
+              <SearchableSelect className="rounded border border-border bg-background p-1 text-sm" value={imp.level} onChange={(e) => setImp({ ...imp, level: e.target.value })}><option value="detail">Grootboekdetail</option><option value="totaal">Samenvattende totalen</option></SearchableSelect>
               {COLS.map((k) => (
-                <label key={k} className="text-xs">{k}<select className="w-full rounded border border-border bg-background p-1" value={map[k] ?? ""} onChange={(e) => setMap({ ...map, [k]: e.target.value })}><option value="">—</option>{headers.map((h) => <option key={h}>{h}</option>)}</select></label>
+                <label key={k} className="text-xs">{k}<SearchableSelect className="w-full rounded border border-border bg-background p-1" value={map[k] ?? ""} onChange={(e) => setMap({ ...map, [k]: e.target.value })}><option value="">—</option>{headers.map((h) => <option key={h}>{h}</option>)}</SearchableSelect></label>
               ))}
             </div>
             <div className="max-h-60 overflow-auto text-xs">
@@ -422,8 +423,8 @@ function Facturen({ c, focus, onDone }: { c: string; focus?: string | undefined;
         </Card>
         <Card title="Nieuwe factuur / creditnota">
           <div className="grid gap-2 sm:grid-cols-2">
-            <select className="rounded border border-border bg-background p-2 text-sm" value={n.direction} onChange={(e) => setN({ ...n, direction: e.target.value })}><option value="aankoop">Aankoop</option><option value="verkoop">Verkoop</option></select>
-            <select className="rounded border border-border bg-background p-2 text-sm" value={n.doc_type} onChange={(e) => setN({ ...n, doc_type: e.target.value })}><option value="factuur">Factuur</option><option value="creditnota">Creditnota</option></select>
+            <SearchableSelect className="rounded border border-border bg-background p-2 text-sm" value={n.direction} onChange={(e) => setN({ ...n, direction: e.target.value })}><option value="aankoop">Aankoop</option><option value="verkoop">Verkoop</option></SearchableSelect>
+            <SearchableSelect className="rounded border border-border bg-background p-2 text-sm" value={n.doc_type} onChange={(e) => setN({ ...n, doc_type: e.target.value })}><option value="factuur">Factuur</option><option value="creditnota">Creditnota</option></SearchableSelect>
             <Input placeholder="Leverancier/klant" value={n.counterparty} onChange={(e) => setN({ ...n, counterparty: e.target.value })} />
             <Input placeholder="Nummer" value={n.number} onChange={(e) => setN({ ...n, number: e.target.value })} />
             <label className="text-xs">Datum<Input type="date" value={n.invoice_date} onChange={(e) => setN({ ...n, invoice_date: e.target.value })} /></label>
@@ -431,7 +432,7 @@ function Facturen({ c, focus, onDone }: { c: string; focus?: string | undefined;
             <Input placeholder="Omschrijving lijn" value={n.description} onChange={(e) => setN({ ...n, description: e.target.value })} />
             <Input placeholder="Excl. btw" value={n.ex_vat} onChange={(e) => setN({ ...n, ex_vat: e.target.value })} />
             <Input placeholder="Btw" value={n.vat} onChange={(e) => setN({ ...n, vat: e.target.value })} />
-            {n.doc_type === "creditnota" && <select className="rounded border border-border bg-background p-2 text-sm" value={n.original} onChange={(e) => setN({ ...n, original: e.target.value })}><option value="">Oorspronkelijke factuur…</option>{inv.filter((i: any) => i.doc_type === "factuur").map((i: any) => <option key={i.id} value={i.id}>{i.counterparty} {i.number}</option>)}</select>}
+            {n.doc_type === "creditnota" && <SearchableSelect className="rounded border border-border bg-background p-2 text-sm" value={n.original} onChange={(e) => setN({ ...n, original: e.target.value })}><option value="">Oorspronkelijke factuur…</option>{inv.filter((i: any) => i.doc_type === "factuur").map((i: any) => <option key={i.id} value={i.id}>{i.counterparty} {i.number}</option>)}</SearchableSelect>}
           </div>
           <Button size="sm" className="mt-2" onClick={create}>Aanmaken</Button>
         </Card>
@@ -550,9 +551,9 @@ function InvoiceEdit({ c, inv, rules, onDone }: { c: string; inv: any; rules: Ru
           <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.description ?? ""} onChange={(e) => upd(i, "description", e.target.value)} placeholder="Omschrijving" />
           <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.ex_vat} onChange={(e) => upd(i, "ex_vat", parseAmount(e.target.value) ?? 0)} placeholder="Excl. btw" />
           <div className="flex gap-1">
-            <select aria-label="Btw-tarief" disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} className="rounded border border-border bg-background p-1 text-sm" value={l.vat_rate ?? detectVatRate(Number(l.ex_vat), Number(l.vat)) ?? ""} onChange={(e) => { const r = e.target.value === "" ? null : (Number(e.target.value) as VatRate); setLines(lines.map((x, j) => (j === i ? { ...x, vat_rate: r, vat: r == null ? x.vat : vatFor(Number(x.ex_vat), r) } : x))); }}>
+            <SearchableSelect aria-label="Btw-tarief" disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} className="rounded border border-border bg-background p-1 text-sm" value={l.vat_rate ?? detectVatRate(Number(l.ex_vat), Number(l.vat)) ?? ""} onChange={(e) => { const r = e.target.value === "" ? null : (Number(e.target.value) as VatRate); setLines(lines.map((x, j) => (j === i ? { ...x, vat_rate: r, vat: r == null ? x.vat : vatFor(Number(x.ex_vat), r) } : x))); }}>
               <option value="">?</option>{VAT_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
-            </select>
+            </SearchableSelect>
             <Input disabled={linkedAssets.some((a) => a.invoice_line_id === l.id)} value={l.vat} onChange={(e) => upd(i, "vat", parseAmount(e.target.value) ?? 0)} placeholder="Btw" />
           </div>
           {Number(l.ex_vat) !== 0 && detectVatRate(Number(l.ex_vat), Number(l.vat)) == null && <p className="text-xs text-warning sm:col-span-3">Btw past niet bij 0, 6 of 21% — waarschijnlijk fout uitgelezen, controleer de lijn.</p>}
@@ -570,7 +571,7 @@ function InvoiceEdit({ c, inv, rules, onDone }: { c: string; inv: any; rules: Ru
         <p className="text-xs text-muted-foreground">Een al geboekte kost krijgt een afzonderlijke correctieboeking. Het bedrag excl. btw gaat naar de balans; alleen de maandelijkse afschrijving telt als kost. Controleer de rekening en termijn met je boekhouder.</p>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="text-xs">Naam<Input value={asset.name} onChange={(e) => setAsset({ ...asset, name: e.target.value })} /></label>
-          <label className="text-xs">Balansrekening<select aria-label="Balansrekening" className="w-full rounded border border-border bg-background p-2 text-sm" value={asset.account} onChange={(e) => setAsset({ ...asset, account: e.target.value })}>{!accounts.some((a: any) => a.number === asset.account) && <option value={asset.account}>{asset.account} (niet beschikbaar)</option>}{accounts.filter((a: any) => a.active && a.number.startsWith("2") && !a.number.endsWith("900") && !a.number.endsWith("590")).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</select></label>
+          <label className="text-xs">Balansrekening<SearchableSelect aria-label="Balansrekening" className="w-full rounded border border-border bg-background p-2 text-sm" value={asset.account} onChange={(e) => setAsset({ ...asset, account: e.target.value })}>{!accounts.some((a: any) => a.number === asset.account) && <option value={asset.account}>{asset.account} (niet beschikbaar)</option>}{accounts.filter((a: any) => a.active && a.number.startsWith("2") && !a.number.endsWith("900") && !a.number.endsWith("590")).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</SearchableSelect></label>
           <label className="text-xs">Startdatum afschrijving<Input type="date" value={asset.start} onChange={(e) => setAsset({ ...asset, start: e.target.value })} /></label>
           <label className="text-xs">Levensduur (maanden)<Input type="number" min="1" max="600" value={asset.life} onChange={(e) => setAsset({ ...asset, life: e.target.value })} /></label>
           <label className="text-xs">Restwaarde excl. btw<Input value={asset.residual} onChange={(e) => setAsset({ ...asset, residual: e.target.value })} /></label>
@@ -599,7 +600,7 @@ function InvoiceEdit({ c, inv, rules, onDone }: { c: string; inv: any; rules: Ru
       )}
       <div className="mt-3 space-y-2">
         <label className="block text-xs">Correctie onthouden voor
-          <select className="ml-2 rounded border border-border bg-background p-1" value={scope} onChange={(e) => setScope(e.target.value as any)}><option value="factuur">Enkel deze factuur</option><option value="soortgelijk">Soortgelijke facturen (leverancier + omschrijving)</option><option value="leverancier">Hele leverancier</option></select>
+          <SearchableSelect className="ml-2 rounded border border-border bg-background p-1" value={scope} onChange={(e) => setScope(e.target.value as any)}><option value="factuur">Enkel deze factuur</option><option value="soortgelijk">Soortgelijke facturen (leverancier + omschrijving)</option><option value="leverancier">Hele leverancier</option></SearchableSelect>
         </label>
         <Input placeholder="Bankreferentie (koppelt betaling, telt niet opnieuw als kost)" value={bank} onChange={(e) => setBank(e.target.value)} />
         <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => save(false)}>Bewaren</Button><Button size="sm" onClick={() => save(true)}>Goedkeuren</Button>
@@ -793,8 +794,8 @@ function InvestmentEdit({ inv, onDone }: { inv: any; onDone: () => void }) {
       {inv.invoice_line_id && <div className="mt-3 space-y-2 border-t border-border pt-3">
         <p className="text-sm font-semibold">Afschrijvingen in dagboek</p>
         <div className="grid gap-2 sm:grid-cols-2">
-          <label className="text-xs">Afschrijvingskost<select className="w-full rounded border border-border bg-background p-2 text-sm" value={deprAccount} onChange={(e) => setDeprAccount(e.target.value)}>{assetAccounts.filter((a: any) => a.active && a.number.startsWith("630")).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</select></label>
-          <label className="text-xs">Gecumuleerde afschrijving<select className="w-full rounded border border-border bg-background p-2 text-sm" value={accumAccount} onChange={(e) => setAccumAccount(e.target.value)}>{assetAccounts.filter((a: any) => a.active && a.number.startsWith("2") && /afschrijv/i.test(a.name)).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</select></label>
+          <label className="text-xs">Afschrijvingskost<SearchableSelect className="w-full rounded border border-border bg-background p-2 text-sm" value={deprAccount} onChange={(e) => setDeprAccount(e.target.value)}>{assetAccounts.filter((a: any) => a.active && a.number.startsWith("630")).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</SearchableSelect></label>
+          <label className="text-xs">Gecumuleerde afschrijving<SearchableSelect className="w-full rounded border border-border bg-background p-2 text-sm" value={accumAccount} onChange={(e) => setAccumAccount(e.target.value)}>{assetAccounts.filter((a: any) => a.active && a.number.startsWith("2") && /afschrijv/i.test(a.name)).map((a: any) => <option key={a.id} value={a.number}>{a.number} · {a.name}</option>)}</SearchableSelect></label>
         </div>
         {(() => { const tm = monthKey(new Date()); const open = sched.filter((r) => r.month <= tm && r.depreciation > 0 && !bookedMonths.includes(`${inv.id}:${r.month}`)); return open.length ? <div className="space-y-1"><p className="text-xs font-semibold">Kies de maanden om te boeken (per dag berekend vanaf aankoopdatum)</p><div className="flex flex-wrap gap-2">{open.map((r) => <label key={r.month} className="flex items-center gap-1 rounded border border-border px-2 py-1 text-xs"><input type="checkbox" checked={pick.has(r.month)} onChange={(e) => { const n = new Set(pick); if (e.target.checked) n.add(r.month); else n.delete(r.month); setPick(n); }} />{r.month.slice(0, 7)} · {eur(r.depreciation)}</label>)}</div></div> : null; })()}
         <Button size="sm" disabled={postingDepr || !sched.length} onClick={postDepreciation}>{postingDepr ? "Boeken…" : pick.size ? `${pick.size} gekozen maand(en) boeken` : "Alle open maanden boeken t/m vandaag"}</Button>

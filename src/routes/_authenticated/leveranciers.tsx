@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
@@ -61,8 +62,8 @@ function Suppliers() {
       <div><Label htmlFor="supplier-iban">IBAN</Label><Input id="supplier-iban" value={edit.iban??''} onChange={e=>{const v=e.target.value||null; setEdit({...edit,iban:v,bic:nextBic(edit.iban,edit.bic,v)});}}/></div>
       <div><Label htmlFor="supplier-bic">BIC</Label><Input id="supplier-bic" value={edit.bic??''} onChange={e=>setEdit({...edit,bic:e.target.value.toUpperCase()||null})}/>{edit.bic && edit.bic === bankOfIban(edit.iban).bic && <p className="text-xs text-muted-foreground">uit IBAN — {bankOfIban(edit.iban).bank}</p>}</div>
       {supplierBankWarnings(edit).length>0 && <p className="text-sm font-bold text-destructive sm:col-span-2">⚠ {supplierBankWarnings(edit).join(' · ')} — nodig om te betalen.</p>}
-      <div><Label htmlFor="supplier-payment">Standaard betaalwijze</Label><select id="supplier-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={e=>setEdit({...edit,payment_method:e.target.value})}>{Object.entries(PAYMENT_METHODS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
-      <div><Label htmlFor="supplier-rule">Btw-regel</Label><select id="supplier-rule" className="h-10 w-full rounded-md border bg-background px-3" value={edit.vat_rule} onChange={e=>setEdit({...edit,vat_rule:e.target.value})}>{Object.entries(VAT_RULES).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
+      <div><Label htmlFor="supplier-payment">Standaard betaalwijze</Label><SearchableSelect id="supplier-payment" className="h-10 w-full rounded-md border bg-background px-3" value={edit.payment_method} onChange={e=>setEdit({...edit,payment_method:e.target.value})}>{Object.entries(PAYMENT_METHODS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</SearchableSelect></div>
+      <div><Label htmlFor="supplier-rule">Btw-regel</Label><SearchableSelect id="supplier-rule" className="h-10 w-full rounded-md border bg-background px-3" value={edit.vat_rule} onChange={e=>setEdit({...edit,vat_rule:e.target.value})}>{Object.entries(VAT_RULES).map(([v,l])=><option key={v} value={v}>{l}</option>)}</SearchableSelect></div>
       <div><Label htmlFor="supplier-deductible">Btw aftrekbaar (%)</Label><Input id="supplier-deductible" type="number" min="0" max="100" value={edit.vat_deductible_percent} onChange={e=>setEdit({...edit,vat_deductible_percent:Number(e.target.value)})}/></div>
     </div><div className="flex gap-2"><Button disabled={busy} onClick={submit}>Opslaan</Button><Button variant="outline" onClick={()=>setEdit(null)}>Annuleren</Button></div></section>}
   </div>;

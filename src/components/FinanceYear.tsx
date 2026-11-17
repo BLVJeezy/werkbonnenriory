@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -125,9 +126,9 @@ export function FinanceYear() {
         </div>
         <div className="flex items-center gap-2">
           {(companies.data?.length ?? 0) > 1 && (
-            <select aria-label="Administratie" className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+            <SearchableSelect aria-label="Administratie" className="rounded-md border border-border bg-card px-2 py-1 text-sm" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
               {companies.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </SearchableSelect>
           )}
           <Button variant={showOpen ? "default" : "outline"} size="sm" aria-pressed={showOpen} onClick={() => setShowOpen(!showOpen)}>{showOpen ? "Lopende maand verbergen" : "Lopende maand tonen"}</Button>
           <Button variant="outline" size="icon" aria-label="Vorig jaar" onClick={() => setYear(year - 1)}><ChevronLeft /></Button>
