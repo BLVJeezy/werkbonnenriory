@@ -341,7 +341,7 @@ function Aankoopfacturen() {
                 </td>
                 <td className="whitespace-nowrap font-mono text-sm">{r.invoice_number ?? "—"}</td>
                 <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{d(r.invoice_date)}</td>
-                <td className="whitespace-nowrap">{d(r.due_date)}{!paid && <span className={`block text-xs font-bold ${due.overdue ? 'text-overdue-foreground' : due.soon ? 'text-primary' : 'text-muted-foreground'}`} title={due.text}>{dueShort(daysUntilDue(r.due_date, today))}</span>}</td>
+                <td className="whitespace-nowrap">{d(r.due_date)}{!paid && <span className={`block text-xs font-bold ${due.overdue ? 'text-overdue-foreground' : due.soon ? 'text-foreground' : 'text-muted-foreground'}`} title={due.text}>{due.soon && <span className="text-primary">●</span>} {dueShort(daysUntilDue(r.due_date, today))}</span>}</td>
                 <td className="whitespace-nowrap text-right font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</td>
                 <td className="whitespace-nowrap">
                   <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
