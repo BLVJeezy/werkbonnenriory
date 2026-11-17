@@ -347,7 +347,7 @@ function Aankoopfacturen() {
                   <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                     {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
                   </span>
-                  {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="block text-xs font-bold text-primary" title="Betaalbestand gemaakt op deze datum">Bestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
+                  {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="block text-xs font-bold text-foreground" title="Betaalbestand gemaakt op deze datum"><span className="text-primary">●</span> Bestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
                   {r.paid_at && <span className={`block text-xs ${sub}`} title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
                   {r.booked_at && <span className={`block text-xs ${sub}`}>Geboekt</span>}
                 </td>
