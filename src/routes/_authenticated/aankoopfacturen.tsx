@@ -323,6 +323,8 @@ function Aankoopfacturen() {
               const lock = paymentMethodLock(r.payment_method, r.status);
               const sup = suppliers.find((x) => x.id === r.supplier_id);
               const bankMissing = !paid && supplierBankWarnings(creditorBank(r, sup), r.payment_method, r.status).length > 0;
+              // Kleine labels binnen een gekleurde regel volgen de regeltekst, niet een vaste grijstint.
+              const sub = paid ? 'text-paid-foreground/70' : due.overdue ? 'text-overdue-foreground/70' : 'text-muted-foreground';
               return (
               <tr key={r.id} className={paid ? rowTint.paid : due.overdue ? rowTint.overdue : rowTint.open}>
                 <td><input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} disabled={r.status === 'betaling_klaargezet'} title={r.status === 'betaling_klaargezet' ? 'Betaling al ingepland via betaalbestand' : undefined} onChange={() => toggle(r.id)} /></td>
@@ -339,15 +341,15 @@ function Aankoopfacturen() {
                 </td>
                 <td className="whitespace-nowrap font-mono text-sm">{r.invoice_number ?? "—"}</td>
                 <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{d(r.invoice_date)}</td>
-                <td className="whitespace-nowrap">{d(r.due_date)}{!paid && <span className={`block text-xs font-bold ${due.overdue ? 'text-destructive' : due.soon ? 'text-primary' : 'text-muted-foreground'}`} title={due.text}>{dueShort(daysUntilDue(r.due_date, today))}</span>}</td>
+                <td className="whitespace-nowrap">{d(r.due_date)}{!paid && <span className={`block text-xs font-bold ${due.overdue ? 'text-overdue-foreground' : due.soon ? 'text-primary' : 'text-muted-foreground'}`} title={due.text}>{dueShort(daysUntilDue(r.due_date, today))}</span>}</td>
                 <td className="whitespace-nowrap text-right font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</td>
                 <td className="whitespace-nowrap">
                   <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                     {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
                   </span>
                   {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="block text-xs font-bold text-primary" title="Betaalbestand gemaakt op deze datum">Bestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
-                  {r.paid_at && <span className="block text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
-                  {r.booked_at && <span className="block text-xs text-muted-foreground">Geboekt</span>}
+                  {r.paid_at && <span className={`block text-xs ${sub}`} title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
+                  {r.booked_at && <span className={`block text-xs ${sub}`}>Geboekt</span>}
                 </td>
                 <td className="text-right">
                   <span className="flex flex-col items-stretch gap-1 sm:items-end">
