@@ -21,6 +21,7 @@ import { canSendPeppolTest, creditorBank, daysUntilDue, dueLabel, paymentCommuni
 import { deletePurchaseInvoices, attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
 import { SortTh, Th, rowTint, tableCls, tableWrap, useSort } from "@/components/SortTable";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen")({
   head: () => ({ meta: [{ title: "Aankoopfacturen — Riory Werkbonnen" }, { name: "description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:title", content: "Aankoopfacturen — Riory Werkbonnen" }, { property: "og:description", content: "Inkomende facturen inlezen, controleren en in bulk betalen op de vervaldag." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -304,7 +305,7 @@ function Aankoopfacturen() {
       </div>
 
       <div className={tableWrap}>
-        <table className={tableCls}>
+        <table className={cn(tableCls, "[&_td]:px-2 [&_th]:px-2")}>
           <thead><tr>
             <Th className="w-8" />
             <SortTh k="leverancier" sort={sort}>Leverancier</SortTh>
@@ -325,7 +326,7 @@ function Aankoopfacturen() {
               return (
               <tr key={r.id} className={paid ? rowTint.paid : due.overdue ? rowTint.overdue : rowTint.open}>
                 <td><input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} disabled={r.status === 'betaling_klaargezet'} title={r.status === 'betaling_klaargezet' ? 'Betaling al ingepland via betaalbestand' : undefined} onChange={() => toggle(r.id)} /></td>
-                <td className="min-w-[180px]">
+                <td className="min-w-[160px]">
                   <span className="font-bold">{r.supplier_name}</span>
                   {(r.kind === 'creditnota' || dups.has(r.id) || bankMissing || lock) && (
                     <span className="mt-0.5 flex flex-wrap items-center gap-1">
