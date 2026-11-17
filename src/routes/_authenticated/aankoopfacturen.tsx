@@ -34,7 +34,7 @@ type Row = {
   payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number; supplier_id?: string | null; booked_at?: string | null;
 };
 
-const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Afgeletterd", betaling_klaargezet: 'Betaling klaargezet' };
+const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Afgeletterd", betaling_klaargezet: 'Betaling ingepland' };
 const d = (s: string | null) => (s ? new Date(`${s}T12:00:00Z`).toLocaleDateString("nl-BE") : "—");
 
 function Aankoopfacturen() {
@@ -55,7 +55,7 @@ function Aankoopfacturen() {
   const { data: accounts = [] } = useQuery({ queryKey: ['expense-accounts'], queryFn: () => getAccounts() });
   const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: async () => (await supabase.from('suppliers').select('*').order('name')).data ?? [] });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [tab, setTab] = useState<'te_controleren' | 'goedgekeurd' | 'betaald' | 'alle'>('te_controleren');
+  const [tab, setTab] = useState<'te_controleren' | 'goedgekeurd' | 'betaling_klaargezet' | 'betaald' | 'alle'>('te_controleren');
   const [drag, setDrag] = useState(false);
   const [sources, setSources] = useState<Record<number, string>>({});
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
@@ -236,8 +236,8 @@ function Aankoopfacturen() {
   const editSupplier = edit ? suppliers.find((x) => x.id === edit.supplier_id) : null;
   const bankWarnings = edit ? supplierBankWarnings(editSupplier ? creditorBank(edit, editSupplier) : null, edit.payment_method, edit.status) : [];
   const dups = findPurchaseDuplicates(rows);
-  const visible = rows.filter((r) => tab === 'alle' ? true : tab === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === tab);
-  const count = (t: string) => rows.filter((r) => t === 'goedgekeurd' ? ['goedgekeurd', 'betaling_klaargezet'].includes(r.status) : r.status === t).length;
+  const visible = rows.filter((r) => tab === 'alle' ? true : r.status === tab);
+  const count = (t: string) => rows.filter((r) => r.status === t).length;
   const payable = visible.filter((r) => canExportPurchase({ ...r, total: Number(r.total) }));
   const isPaid = edit?.status === 'betaald';
   const signedTotal = edit ? (edit.kind === 'creditnota' ? -Math.abs(Number(edit.total)) : Number(edit.total)) : 0;
@@ -276,7 +276,7 @@ function Aankoopfacturen() {
       <p className="text-sm text-muted-foreground">Afletteren van betalingen gebeurt automatisch in Boekhouding → Bank.</p>
 
       <div className="flex flex-wrap items-center gap-2">
-        {([['te_controleren', 'Te controleren'], ['goedgekeurd', 'Gecontroleerd'], ['betaald', 'Betaald'], ['alle', 'Alle']] as const).map(([k, l]) => (
+        {([['te_controleren', 'Te controleren'], ['goedgekeurd', 'Gecontroleerd'], ['betaling_klaargezet', 'Betaling ingepland'], ['betaald', 'Betaald'], ['alle', 'Alle']] as const).map(([k, l]) => (
           <Button key={k} size="sm" variant={tab === k ? 'default' : 'outline'} onClick={() => { setTab(k); setSel([]); }}>{l}{k !== 'alle' ? ` (${count(k)})` : ''}</Button>
         ))}
         <div className="ml-auto flex flex-wrap gap-2">
@@ -302,7 +302,7 @@ function Aankoopfacturen() {
           const bankMissing = !paid && supplierBankWarnings(creditorBank(r, sup), r.payment_method, r.status).length > 0;
           return (
           <li key={r.id} className={`flex flex-wrap items-center gap-3 p-3 ${paid ? 'bg-accent/40' : due.overdue ? 'bg-destructive/10' : ''}`}>
-            <input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} onChange={() => toggle(r.id)} />
+            <input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} disabled={r.status === 'betaling_klaargezet'} title={r.status === 'betaling_klaargezet' ? 'Betaling al ingepland via betaalbestand' : undefined} onChange={() => toggle(r.id)} />
             <span className="font-bold">{r.supplier_name}</span>
             <span className="font-mono text-sm">{r.invoice_number ?? "—"}</span>
             {r.kind === 'creditnota' && <span className="text-sm font-bold text-destructive">Creditnota</span>}
@@ -317,6 +317,7 @@ function Aankoopfacturen() {
             <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
               {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
             </span>
+            {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="text-xs font-bold text-primary">betaalbestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
             {r.paid_at && <span className="text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
             <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen/$id" params={{ id: r.id }}>{paid ? 'Bekijken' : 'Controleren'}</Link></Button>
             {!paid && r.kind === 'factuur' && <MarkPurchasePaid id={r.id} staged={r.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { setSel(s => s.filter(id => id !== r.id)); await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
