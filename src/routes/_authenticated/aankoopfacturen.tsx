@@ -338,13 +338,13 @@ function Aankoopfacturen() {
                 </td>
                 <td className="whitespace-nowrap font-mono text-sm">{r.invoice_number ?? "—"}</td>
                 <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{d(r.invoice_date)}</td>
-                <td className="whitespace-nowrap">{d(r.due_date)}{!paid && <span className={`block text-xs font-bold ${due.overdue ? 'text-destructive' : due.soon ? 'text-primary' : 'text-muted-foreground'}`}>{due.text}</span>}</td>
+                <td className="whitespace-nowrap">{d(r.due_date)}{!paid && <span className={`block text-xs font-bold ${due.overdue ? 'text-destructive' : due.soon ? 'text-primary' : 'text-muted-foreground'}`} title={due.text}>{dueShort(daysUntilDue(r.due_date, today))}</span>}</td>
                 <td className="whitespace-nowrap text-right font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</td>
                 <td className="whitespace-nowrap">
                   <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                     {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
                   </span>
-                  {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="block text-xs font-bold text-primary">betaalbestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
+                  {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="block text-xs font-bold text-primary" title="Betaalbestand gemaakt op deze datum">Bestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
                   {r.paid_at && <span className="block text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
                   {r.booked_at && <span className="block text-xs text-muted-foreground">Geboekt</span>}
                 </td>
