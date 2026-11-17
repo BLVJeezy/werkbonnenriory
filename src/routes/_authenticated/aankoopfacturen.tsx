@@ -55,7 +55,7 @@ function Aankoopfacturen() {
   const { data: accounts = [] } = useQuery({ queryKey: ['expense-accounts'], queryFn: () => getAccounts() });
   const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: async () => (await supabase.from('suppliers').select('*').order('name')).data ?? [] });
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [tab, setTab] = useState<'te_controleren' | 'goedgekeurd' | 'betaald' | 'alle'>('te_controleren');
+  const [tab, setTab] = useState<'te_controleren' | 'goedgekeurd' | 'betaling_klaargezet' | 'betaald' | 'alle'>('te_controleren');
   const [drag, setDrag] = useState(false);
   const [sources, setSources] = useState<Record<number, string>>({});
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' });
