@@ -37,6 +37,8 @@ type Row = {
 
 const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Afgeletterd", betaling_klaargezet: 'Betaling ingepland' };
 const d = (s: string | null) => (s ? new Date(`${s}T12:00:00Z`).toLocaleDateString("nl-BE") : "—");
+/** Korte versie van de saldotekst, zodat de vervaldagkolom niet meeuwt met de langste melding. */
+const dueShort = (days: number | null) => (days === null ? 'Geen vervaldag' : days < 0 ? 'Vervallen' : days === 0 ? 'Vandaag' : `Nog ${days} d`);
 
 function Aankoopfacturen() {
   const qc = useQueryClient();
