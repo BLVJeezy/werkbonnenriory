@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -216,9 +217,9 @@ export function NewInvoice({ onCreated, invoice, creditNote = false, copyFrom, c
               <Input value={it.unit} onChange={(e) => setItem(i, { unit: e.target.value })} placeholder="eenheid" aria-label="Eenheid" />
               <Input value={it.unitPrice} onChange={(e) => setItem(i, { unitPrice: e.target.value })} placeholder="Prijs" aria-label="Prijs" inputMode="decimal" />
               <Input value={it.discount} onChange={(e) => setItem(i, { discount: e.target.value })} placeholder="Korting %" aria-label="Korting %" inputMode="decimal" />
-              <select aria-label="Btw" className="h-10 w-full rounded-md border bg-background px-2" value={it.vatRate} onChange={(e) => setItem(i, { vatRate: e.target.value })}>
+              <SearchableSelect aria-label="Btw" className="h-10 w-full rounded-md border bg-background px-2" value={it.vatRate} onChange={(e) => setItem(i, { vatRate: e.target.value })}>
                 {VAT_OPTIONS.map((v) => <option key={v} value={v}>{v}%</option>)}
-              </select>
+              </SearchableSelect>
               <Button variant="outline" size="icon" aria-label="Lijn verwijderen" disabled={items.filter((x) => x.kind === "line").length === 1} onClick={() => setItems((ls) => ls.filter((_, j) => j !== i))}>✕</Button>
             </div>
             {num(it.unitPrice) > 0 && (() => {

@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { OpenEye, useOpens } from "@/components/OpenEye";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -336,9 +337,9 @@ function Offertes() {
             </div>
             <div className="space-y-1">
               <Label>Btw</Label>
-              <select className="h-10 w-full rounded-md border bg-background px-2" value={vatRate} onChange={(e) => setVatRate(e.target.value)}>
+              <SearchableSelect className="h-10 w-full rounded-md border bg-background px-2" value={vatRate} onChange={(e) => setVatRate(e.target.value)}>
                 {VAT_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
-              </select>
+              </SearchableSelect>
             </div>
           </div>
           {bestek && (
@@ -447,7 +448,7 @@ function Offertes() {
               {q.signed_name && <p className="text-xs text-muted-foreground">Getekend door {q.signed_name}</p>}
               {q.status === "verzonden" && Number(q.reminder_stage) > 0 && <p className="text-xs text-muted-foreground">{q.reminder_stage}e herinnering verstuurd{q.reminder_sent_at ? ` op ${new Date(q.reminder_sent_at).toLocaleDateString("nl-BE")}` : ""}</p>}
               {q.reminder_error && <p className="text-xs font-bold text-destructive">Herinnering mislukt: {q.reminder_error}</p>}
-              <select aria-label={`Ploeg offerte ${q.number}`} className="h-10 w-full min-w-0 rounded-md border bg-background px-2 text-foreground sm:h-9 sm:w-56" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
+              <SearchableSelect aria-label={`Ploeg offerte ${q.number}`} className="h-10 w-full min-w-0 rounded-md border bg-background px-2 text-foreground sm:h-9 sm:w-56" disabled={busy} value={q.technician_id ?? ""} onChange={async (e) => {
                 setBusy(true);
                 try {
                   await assignCrew({ data: { quoteId: q.id, technicianId: e.target.value || null } });
@@ -458,7 +459,7 @@ function Offertes() {
               }}>
                 <option value="">— Ploeg —</option>
                 {crews.map((crew) => <option key={crew.id} value={crew.id}>{crew.name}</option>)}
-              </select>
+              </SearchableSelect>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                 {q.status !== "akkoord" && <Button size="sm" disabled={busy} onClick={() => verstuur(q.id)}>{q.status === "verzonden" ? "Opnieuw versturen" : "Versturen"}</Button>}
                 {q.status === "akkoord" && !q.work_order_id && <Button size="sm" disabled={busy} onClick={() => naarTaak(q.id)}>Omzetten in taak</Button>}

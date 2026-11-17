@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { LoaderCircle, Search } from "lucide-react";
@@ -407,10 +408,10 @@ function Klanten() {
               <div className="flex flex-wrap items-end gap-2">
                 <label className="min-w-52 flex-1 space-y-1">
                   <span className="block text-xs font-bold uppercase text-muted-foreground">Bekende syndicus</span>
-                  <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={assignTemplate} onChange={(e) => pickTemplate(e.target.value)}>
+                  <SearchableSelect className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={assignTemplate} onChange={(e) => pickTemplate(e.target.value)}>
                     <option value="">— nieuwe syndicus —</option>
                     {templates.map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}
-                  </select>
+                  </SearchableSelect>
                 </label>
                 <label className="min-w-48 flex-[2] space-y-1">
                   <span className="block text-xs font-bold uppercase text-muted-foreground">Bedrijfsnaam</span>

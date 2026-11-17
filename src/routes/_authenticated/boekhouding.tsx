@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { CardFeeReport } from "@/components/CardFeeReport";
 import { SAVINGS_ACCOUNT, markSavingsQuarterDone } from "@/lib/savings-quarter";
 import { cardGross } from "@/lib/card-gross";
@@ -277,7 +278,7 @@ function Rekeningen({ c }: { c: string }) {
             <div className="grid grid-cols-2 gap-2 text-xs">
               {(["nr", "naam", "saldo", "debet", "credit"] as const).map((k) => (
                 <label key={k}>{k === "nr" ? "Rekening" : k === "naam" ? "Naam" : (k[0] ?? "").toUpperCase() + k.slice(1)}
-                  <select className="w-full rounded border border-border bg-background p-1" value={imp.map[k]} onChange={(e) => setImp({ ...imp, map: { ...imp.map, [k]: e.target.value } })}><option value="">—</option>{imp.cols.map((x) => <option key={x}>{x}</option>)}</select>
+                  <SearchableSelect className="w-full rounded border border-border bg-background p-1" value={imp.map[k]} onChange={(e) => setImp({ ...imp, map: { ...imp.map, [k]: e.target.value } })}><option value="">—</option>{imp.cols.map((x) => <option key={x}>{x}</option>)}</SearchableSelect>
                 </label>
               ))}
               <label>Datum openingsbalans<Input type="date" value={imp.date} onChange={(e) => setImp({ ...imp, date: e.target.value })} /></label>
@@ -353,7 +354,7 @@ function Dagboeken({ c }: { c: string }) {
         </Card>
         <Card title="Manuele boeking (divers)">
           <div className="flex gap-2">
-            <select className="rounded border border-border bg-background p-1 text-sm" value={m.journal} onChange={(e) => setM({ ...m, journal: e.target.value })}>{["divers", "bank", "aankoop", "verkoop"].map((j) => <option key={j}>{j}</option>)}</select>
+            <SearchableSelect className="rounded border border-border bg-background p-1 text-sm" value={m.journal} onChange={(e) => setM({ ...m, journal: e.target.value })}>{["divers", "bank", "aankoop", "verkoop"].map((j) => <option key={j}>{j}</option>)}</SearchableSelect>
             <Input type="date" value={m.date} onChange={(e) => setM({ ...m, date: e.target.value })} />
           </div>
           <Input className="mt-2" placeholder="Omschrijving" value={m.description} onChange={(e) => setM({ ...m, description: e.target.value })} />
@@ -375,7 +376,7 @@ function Dagboeken({ c }: { c: string }) {
         <VasteBoekingen c={c} onChange={refresh} />
       </div>
       <Card title="Boekingen">
-        <select className="mb-2 rounded border border-border bg-background p-1 text-sm" value={journal} onChange={(e) => setJournal(e.target.value)}>{["alle", "aankoop", "verkoop", "bank", "divers", "opening"].map((j) => <option key={j}>{j}</option>)}</select>
+        <SearchableSelect className="mb-2 rounded border border-border bg-background p-1 text-sm" value={journal} onChange={(e) => setJournal(e.target.value)}>{["alle", "aankoop", "verkoop", "bank", "divers", "opening"].map((j) => <option key={j}>{j}</option>)}</SearchableSelect>
         <div className="max-h-[70dvh] space-y-2 overflow-y-auto text-xs">
           {entries.slice(0, 300).map((x) => (
             <div key={x.id} className="rounded border border-border p-2">

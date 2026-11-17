@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -283,10 +284,10 @@ function Aankoopfacturen() {
           <Button size="sm" variant="outline" disabled={!sel.length || busy} onClick={() => markeer("goedgekeurd")}>Gecontroleerd ({sel.length})</Button>
           {dups.size > 0 && <Button size="sm" variant="outline" onClick={() => setSel(visible.filter((r) => dups.has(r.id)).map((r) => r.id))}>Dubbele selecteren ({visible.filter((r) => dups.has(r.id)).length})</Button>}
           <Button size="sm" variant="outline" className="text-destructive" disabled={!sel.length || busy} onClick={verwijder}>Verwijderen ({sel.length})</Button>
-          <select aria-label="Betaaldatum" className="h-9 rounded-md border bg-background px-2 text-sm" value={onDue ? 'due' : 'now'} onChange={(e) => setOnDue(e.target.value === 'due')}>
+          <SearchableSelect aria-label="Betaaldatum" className="h-9 rounded-md border bg-background px-2 text-sm" value={onDue ? 'due' : 'now'} onChange={(e) => setOnDue(e.target.value === 'due')}>
             <option value="due">Betalen op vervaldag</option>
             <option value="now">Zo snel mogelijk betalen</option>
-          </select>
+          </SearchableSelect>
           <Button size="sm" disabled={!sel.length || busy} onClick={betaal}>SEPA-betaalbestand maken</Button>
         </div>
       </div>

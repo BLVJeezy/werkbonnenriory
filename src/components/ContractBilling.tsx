@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { useState } from 'react';
 import { useServerFn } from '@tanstack/react-start';
 import { useQuery,useQueryClient } from '@tanstack/react-query';
@@ -32,7 +33,7 @@ export function ContractBilling({contract}:{contract:{id:string;billing_enabled:
     <div><Label>Eenheid</Label><Input value={l.unit} onChange={e=>change(i,{unit:e.target.value})}/></div>
     <div><Label>Prijs</Label><Input aria-label={`Prijs regel ${i+1}`} type="number" min="0" step="0.01" value={l.unitPrice} onChange={e=>change(i,{unitPrice:Number(e.target.value)})}/></div>
     <div><Label>Korting %</Label><Input type="number" min="0" max="100" value={l.discount} onChange={e=>change(i,{discount:Number(e.target.value)})}/></div>
-    <div><Label>Btw %</Label><select aria-label={`Btw regel ${i+1}`} className="h-10 w-full rounded border bg-background text-foreground" value={l.vatRate} onChange={e=>change(i,{vatRate:Number(e.target.value) as ContractLine['vatRate']})}>{[0,6,12,21].map(v=><option key={v} value={v}>{v}%</option>)}</select></div>
+    <div><Label>Btw %</Label><SearchableSelect aria-label={`Btw regel ${i+1}`} className="h-10 w-full rounded border bg-background text-foreground" value={l.vatRate} onChange={e=>change(i,{vatRate:Number(e.target.value) as ContractLine['vatRate']})}>{[0,6,12,21].map(v=><option key={v} value={v}>{v}%</option>)}</SearchableSelect></div>
     <Button variant="outline" size="icon" title="Regel verwijderen" onClick={()=>setLines(a=>a.filter((_,j)=>j!==i))}><Trash2 className="h-4 w-4"/></Button>
    </div>)}
    <Button variant="outline" onClick={()=>setLines(a=>[...a,{description:'',quantity:1,unit:'stuk',unitPrice:0,discount:0,vatRate:21}])}><Plus className="h-4 w-4"/>Regel toevoegen</Button>

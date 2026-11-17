@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
@@ -72,9 +73,9 @@ export function PaymentReminders({ invoiceId }: { invoiceId: string }) {
           <h3 className="font-bold">{next}. {reminderTitles[next]}</h3>
           <div className="space-y-2">
             <Label htmlFor={`kind-${invoiceId}`}>Klanttype voor deze opdracht</Label>
-            <select id={`kind-${invoiceId}`} className="w-full rounded border bg-background p-2 text-foreground" value={kind} disabled={busy || history.length > 0} onChange={e => { setKind(e.target.value as DebtorKind); clear(); }}>
+            <SearchableSelect id={`kind-${invoiceId}`} className="w-full rounded border bg-background p-2 text-foreground" value={kind} disabled={busy || history.length > 0} onChange={e => { setKind(e.target.value as DebtorKind); clear(); }}>
               <option value="consumer">Particulier / consument</option><option value="business">Onderneming — opdracht voor beroepsdoeleinden</option>
-            </select>
+            </SearchableSelect>
             <Label className="flex items-start gap-2"><Checkbox checked={undisputed} disabled={busy} onCheckedChange={v => { setUndisputed(v === true); clear(); }} />Het saldo, betalingen en creditnota's zijn gecontroleerd; er is geen lopende betwisting, betalingsregeling of schuldbemiddeling.</Label>
             <Label className="flex items-start gap-2"><Checkbox checked={terms} disabled={busy} onCheckedChange={v => { setTerms(v === true); clear(); }} />De voorwaarden van 18/09/2026 waren vóór de opdracht geldig overeengekomen en zijn op deze klant van toepassing.</Label>
           </div>

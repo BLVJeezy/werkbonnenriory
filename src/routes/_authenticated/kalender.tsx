@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -216,17 +217,17 @@ function Kalender() {
       <div className={horizontal ? "grid min-w-0 content-start gap-2 sm:grid-cols-2" : "grid min-w-0 grid-cols-2 gap-1.5"}>
       {showOnderwegSms(w.status) && <div className="col-span-full"><OnderwegSms compact workOrderId={w.id} /></div>}
       <Input key={w.scheduled_date ?? "none"} type="date" aria-label={`Dag taak ${w.number ?? "nieuw"}`} className="mt-0 h-9 min-w-0 bg-background text-xs text-foreground" defaultValue={w.scheduled_date ?? ""} onChange={(e) => { const v = e.target.value || null; if (v !== (w.scheduled_date ?? null)) plan(w.id, v); }} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
-      <select aria-label={`Ploeg taak ${w.number ?? "nieuw"}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
+      <SearchableSelect aria-label={`Ploeg taak ${w.number ?? "nieuw"}`} className={sel} value={w.technician_id ?? ""} onChange={(e) => set(w.id, { technician_id: e.target.value || null, status: e.target.value ? "toegewezen" : "nieuw" })}>
         <option value="">— Ploeg —</option>
         {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-      </select>
-      <select aria-label={`Activiteit taak ${w.number ?? "nieuw"}`} className={sel} value={w.activity_id ?? ""} onChange={(e) => set(w.id, { activity_id: e.target.value || null })}>
+      </SearchableSelect>
+      <SearchableSelect aria-label={`Activiteit taak ${w.number ?? "nieuw"}`} className={sel} value={w.activity_id ?? ""} onChange={(e) => set(w.id, { activity_id: e.target.value || null })}>
         <option value="">— Activiteit —</option>
         {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-      </select>
-      <select className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
+      </SearchableSelect>
+      <SearchableSelect className={sel} value={String(Number(w.vat_rate))} onChange={(e) => set(w.id, { vat_rate: Number(e.target.value) })}>
         {VAT_RATES.map((r) => <option key={r} value={r}>Btw {r}%</option>)}
-      </select>
+      </SearchableSelect>
       <div className="col-span-full flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" variant="outline" className="h-8 text-xs" disabled={quotingId !== null} onClick={async () => {
           setQuotingId(w.id);
@@ -249,7 +250,7 @@ function Kalender() {
   if (!role) return <p className="text-muted-foreground">Laden…</p>;
   if (role === "technician") return <CrewTasks rows={data} />;
   if (role !== "admin") return null;
-  const crewPicker = <label className="flex flex-wrap items-center gap-2 text-sm font-bold">Ploegweergave<select aria-label="Ploegweergave" className="h-9 rounded border bg-background px-2 text-foreground" value={crewView} onChange={e => setCrewView(e.target.value)}><option value="">Uit (beheer)</option>{opts?.techs.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>;
+  const crewPicker = <label className="flex flex-wrap items-center gap-2 text-sm font-bold">Ploegweergave<SearchableSelect aria-label="Ploegweergave" className="h-9 rounded border bg-background px-2 text-foreground" value={crewView} onChange={e => setCrewView(e.target.value)}><option value="">Uit (beheer)</option>{opts?.techs.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</SearchableSelect></label>;
   if (crewView) return <div className="space-y-4">{crewPicker}<CrewTasks rows={data.filter(w => w.technician_id === crewView)} /></div>;
 
   return (
@@ -269,7 +270,7 @@ function Kalender() {
       <div className="flex flex-wrap gap-3">{crewPicker}<Input aria-label="Taken zoeken" placeholder="Klant, adres, omschrijving…" className="min-w-0 sm:max-w-xs" value={search} onChange={e => setSearch(e.target.value)} /><Button variant={onlyRunning ? "default" : "outline"} aria-pressed={onlyRunning} onClick={() => setOnlyRunning(!onlyRunning)}>Bezig ({data.filter(w => activeTimeEntry(w.time_entries)).length})</Button></div>
       <section {...drop(null)} className="space-y-3 border-t pt-4">
         <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
-        <div className="flex flex-wrap gap-2"><select aria-label="Taken sorteren" className="h-9 rounded border bg-background px-2 text-sm text-foreground" value={taskSort} onChange={e => setTaskSort(e.target.value)}><option value="nieuwste">Ontvangstdatum</option><option value="klant">Klant</option><option value="plaats">Plaats</option><option value="datum">Geplande dag</option></select><Button size="sm" variant="outline" onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button></div>
+        <div className="flex flex-wrap gap-2"><SearchableSelect aria-label="Taken sorteren" className="h-9 rounded border bg-background px-2 text-sm text-foreground" value={taskSort} onChange={e => setTaskSort(e.target.value)}><option value="nieuwste">Ontvangstdatum</option><option value="klant">Klant</option><option value="plaats">Plaats</option><option value="datum">Geplande dag</option></SearchableSelect><Button size="sm" variant="outline" onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button></div>
         {!unplanned.length && <p className="text-sm text-muted-foreground">Geen taken om in te plannen.</p>}
         <div className="grid gap-2">{unplanned.map((w) => card(w, undefined, undefined, true))}</div>
       </section>

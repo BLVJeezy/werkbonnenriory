@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -84,9 +85,9 @@ export function VestigingenBeheer() {
         <div className="space-y-1 sm:col-span-2"><Label>Plaats</Label><Input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
         <div className="space-y-1">
           <Label>Land</Label>
-          <select className="h-9 w-full rounded-md border bg-background px-2" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value, dutch_billing: e.target.value === "NL" })}>
+          <SearchableSelect className="h-9 w-full rounded-md border bg-background px-2" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value, dutch_billing: e.target.value === "NL" })}>
             <option value="BE">België</option><option value="NL">Nederland</option>
-          </select>
+          </SearchableSelect>
         </div>
         <label className="flex items-center gap-2 text-sm sm:col-span-2">
           <input type="checkbox" checked={form.dutch_billing} onChange={(e) => setForm({ ...form, dutch_billing: e.target.checked })} />

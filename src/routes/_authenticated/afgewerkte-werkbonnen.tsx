@@ -1,3 +1,4 @@
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { OpenEye, useOpens } from "@/components/OpenEye";
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -81,7 +82,7 @@ function CompletedWorkOrders() {
     </div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div className="space-y-1"><Label htmlFor="completed-search">Zoeken</Label><Input id="completed-search" placeholder="Klant, nummer, adres…" value={search} onChange={e => setSearch(e.target.value)} /></div>
-      {role === 'admin' && <div className="space-y-1"><Label htmlFor="completed-crew">Ploeg</Label><select id="completed-crew" className="h-10 w-full rounded-md border bg-background px-2 text-foreground" value={crew} onChange={e => setCrew(e.target.value)}><option value="">Alle ploegen</option>{crews.map(([id, name]) => <option key={id} value={id ?? ''}>{name}</option>)}</select></div>}
+      {role === 'admin' && <div className="space-y-1"><Label htmlFor="completed-crew">Ploeg</Label><SearchableSelect id="completed-crew" className="h-10 w-full rounded-md border bg-background px-2 text-foreground" value={crew} onChange={e => setCrew(e.target.value)}><option value="">Alle ploegen</option>{crews.map(([id, name]) => <option key={id} value={id ?? ''}>{name}</option>)}</SearchableSelect></div>}
       <div className="space-y-1"><Label htmlFor="completed-from">Afgewerkt vanaf</Label><Input id="completed-from" type="date" value={from} onChange={e => setFrom(e.target.value)} /></div>
       <div className="space-y-1"><Label htmlFor="completed-until">Afgewerkt tot</Label><Input id="completed-until" type="date" value={until} onChange={e => setUntil(e.target.value)} /></div>
     </div>
