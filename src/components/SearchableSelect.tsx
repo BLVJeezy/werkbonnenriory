@@ -58,7 +58,7 @@ export function SearchableSelect(props: SelectHTMLAttributes<HTMLSelectElement>)
           <CommandList>
             {matches.length === 0 && <p className="p-4 text-sm text-muted-foreground">Geen resultaten.</p>}
             {matches.slice(0, 150).map(o => (
-              <CommandItem key={o.value} value={o.value} disabled={o.disabled} onSelect={() => pick(o.value)} className="items-start py-2">
+              <CommandItem key={o.value} value={o.value} disabled={!!o.disabled} onSelect={() => pick(o.value)} className="items-start py-2">
                 <span className="min-w-0 flex-1 break-words">{o.label}</span>
                 {o.value === current && <Check className="mt-0.5 size-4 shrink-0" />}
               </CommandItem>
