@@ -324,7 +324,7 @@ function Aankoopfacturen() {
               const sup = suppliers.find((x) => x.id === r.supplier_id);
               const bankMissing = !paid && supplierBankWarnings(creditorBank(r, sup), r.payment_method, r.status).length > 0;
               // Kleine labels binnen een gekleurde regel volgen de regeltekst, niet een vaste grijstint.
-              const sub = paid ? 'text-paid-foreground/70' : due.overdue ? 'text-overdue-foreground/70' : 'text-muted-foreground';
+              const sub = paid ? 'text-paid-foreground' : due.overdue ? 'text-overdue-foreground' : 'text-muted-foreground';
               return (
               <tr key={r.id} className={paid ? rowTint.paid : due.overdue ? rowTint.overdue : rowTint.open}>
                 <td><input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} disabled={r.status === 'betaling_klaargezet'} title={r.status === 'betaling_klaargezet' ? 'Betaling al ingepland via betaalbestand' : undefined} onChange={() => toggle(r.id)} /></td>
