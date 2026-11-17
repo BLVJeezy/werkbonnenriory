@@ -301,38 +301,63 @@ function Aankoopfacturen() {
         </div>
       </div>
 
-      <ul className="divide-y rounded-md border bg-card">
-        {visible.length === 0 && <li className="p-4 text-muted-foreground">Geen aankoopfacturen in deze lijst.</li>}
-        {visible.map((r) => {
-          const paid = r.status === 'betaald';
-          const due = dueLabel(daysUntilDue(r.due_date, today));
-          const lock = paymentMethodLock(r.payment_method, r.status);
-          const sup = suppliers.find((x) => x.id === r.supplier_id);
-          const bankMissing = !paid && supplierBankWarnings(creditorBank(r, sup), r.payment_method, r.status).length > 0;
-          return (
-          <li key={r.id} className={`flex flex-wrap items-center gap-3 p-3 ${paid ? 'bg-accent/40' : due.overdue ? 'bg-destructive/10' : ''}`}>
-            <input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} disabled={r.status === 'betaling_klaargezet'} title={r.status === 'betaling_klaargezet' ? 'Betaling al ingepland via betaalbestand' : undefined} onChange={() => toggle(r.id)} />
-            <span className="font-bold">{r.supplier_name}</span>
-            <span className="font-mono text-sm">{r.invoice_number ?? "—"}</span>
-            {r.kind === 'creditnota' && <span className="text-sm font-bold text-destructive">Creditnota</span>}
-            <span className="text-sm text-muted-foreground">Factuurdatum {d(r.invoice_date)}</span>
-            <span className="text-sm text-muted-foreground">vervaldag {d(r.due_date)}</span>
-            {!paid && <span className={`rounded px-2 py-0.5 text-xs font-bold ${due.overdue ? 'bg-destructive text-destructive-foreground' : due.soon ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>{due.text}</span>}
-            {lock && <span className="rounded border border-destructive px-2 py-0.5 text-xs font-bold text-destructive">{lock}</span>}
-            {bankMissing && <span className="text-xs font-bold text-destructive">⚠ IBAN/BIC leverancier</span>}
-            {dups.has(r.id) && <span className="rounded bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground" title="Zelfde leverancier en factuurnummer (of datum en bedrag) als een eerder ingelezen factuur">Dubbel?</span>}
-            {r.booked_at && <span className="text-xs text-muted-foreground">Geboekt</span>}
-            <span className="ml-auto font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</span>
-            <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
-            </span>
-            {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="text-xs font-bold text-primary">betaalbestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
-            {r.paid_at && <span className="text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
-            <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen/$id" params={{ id: r.id }}>{paid ? 'Bekijken' : 'Controleren'}</Link></Button>
-            {!paid && r.kind === 'factuur' && <MarkPurchasePaid id={r.id} staged={r.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { setSel(s => s.filter(id => id !== r.id)); await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
-          </li>);
-        })}
-      </ul>
+      <div className={tableWrap}>
+        <table className={tableCls}>
+          <thead><tr>
+            <Th className="w-8" />
+            <SortTh k="leverancier" sort={sort}>Leverancier</SortTh>
+            <SortTh k="nummer" sort={sort}>Factuurnummer</SortTh>
+            <SortTh k="factuurdatum" sort={sort} className="hidden lg:table-cell">Factuurdatum</SortTh>
+            <SortTh k="vervaldag" sort={sort}>Vervaldag</SortTh>
+            <SortTh k="bedrag" sort={sort} right>Bedrag</SortTh>
+            <SortTh k="status" sort={sort}>Status</SortTh>
+            <Th right>Acties</Th>
+          </tr></thead>
+          <tbody>
+            {sort.sorted.map((r) => {
+              const paid = r.status === 'betaald';
+              const due = dueLabel(daysUntilDue(r.due_date, today));
+              const lock = paymentMethodLock(r.payment_method, r.status);
+              const sup = suppliers.find((x) => x.id === r.supplier_id);
+              const bankMissing = !paid && supplierBankWarnings(creditorBank(r, sup), r.payment_method, r.status).length > 0;
+              return (
+              <tr key={r.id} className={paid ? rowTint.paid : due.overdue ? rowTint.overdue : rowTint.open}>
+                <td><input type="checkbox" aria-label={`Selecteer factuur ${r.invoice_number ?? r.supplier_name}`} className="h-5 w-5 accent-primary" checked={sel.includes(r.id)} disabled={r.status === 'betaling_klaargezet'} title={r.status === 'betaling_klaargezet' ? 'Betaling al ingepland via betaalbestand' : undefined} onChange={() => toggle(r.id)} /></td>
+                <td className="min-w-[180px]">
+                  <span className="font-bold">{r.supplier_name}</span>
+                  {(r.kind === 'creditnota' || dups.has(r.id) || bankMissing || lock) && (
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                      {r.kind === 'creditnota' && <span className="rounded bg-destructive px-1.5 py-0.5 text-xs font-bold text-destructive-foreground">Creditnota</span>}
+                      {dups.has(r.id) && <span className="rounded bg-destructive px-1.5 py-0.5 text-xs font-bold text-destructive-foreground" title="Zelfde leverancier en factuurnummer (of datum en bedrag) als een eerder ingelezen factuur">Dubbel?</span>}
+                      {bankMissing && <span className="text-xs font-bold text-destructive">⚠ IBAN/BIC leverancier</span>}
+                      {lock && <span className="rounded border border-destructive px-1.5 py-0.5 text-xs font-bold text-destructive">{lock}</span>}
+                    </span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap font-mono text-sm">{r.invoice_number ?? "—"}</td>
+                <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{d(r.invoice_date)}</td>
+                <td className="whitespace-nowrap">{d(r.due_date)}{!paid && <span className={`block text-xs font-bold ${due.overdue ? 'text-destructive' : due.soon ? 'text-primary' : 'text-muted-foreground'}`}>{due.text}</span>}</td>
+                <td className="whitespace-nowrap text-right font-mono">{euro(r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total))}</td>
+                <td className="whitespace-nowrap">
+                  <span className={`rounded px-2 py-0.5 text-xs font-bold ${paid ? "bg-accent text-accent-foreground" : r.status === "goedgekeurd" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    {paid ? '✓ BETAALD' : STATUS[r.status] ?? r.status}
+                  </span>
+                  {r.status === 'betaling_klaargezet' && r.payment_file_at && <span className="block text-xs font-bold text-primary">betaalbestand {new Date(r.payment_file_at).toLocaleDateString('nl-BE')}</span>}
+                  {r.paid_at && <span className="block text-xs text-muted-foreground" title={r.bank_payment_ref ?? undefined}>op {new Date(r.paid_at).toLocaleDateString('nl-BE')}</span>}
+                  {r.booked_at && <span className="block text-xs text-muted-foreground">Geboekt</span>}
+                </td>
+                <td className="text-right">
+                  <span className="flex flex-col items-stretch gap-1 sm:items-end">
+                    <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen/$id" params={{ id: r.id }}>{paid ? 'Bekijken' : 'Controleren'}</Link></Button>
+                    {!paid && r.kind === 'factuur' && <MarkPurchasePaid id={r.id} staged={r.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { setSel(s => s.filter(id => id !== r.id)); await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
+                  </span>
+                </td>
+              </tr>);
+            })}
+            {!sort.sorted.length && <tr><td colSpan={8} className="text-muted-foreground">Geen aankoopfacturen in deze lijst.</td></tr>}
+          </tbody>
+        </table>
+      </div>
 
     </div>
   );
