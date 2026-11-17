@@ -309,7 +309,7 @@ function Aankoopfacturen() {
           <thead><tr>
             <Th className="w-8" />
             <SortTh k="leverancier" sort={sort}>Leverancier</SortTh>
-            <SortTh k="nummer" sort={sort}>Factuurnummer</SortTh>
+            <SortTh k="nummer" sort={sort}>Factuur-nr.</SortTh>
             <SortTh k="factuurdatum" sort={sort} className="hidden lg:table-cell">Factuurdatum</SortTh>
             <SortTh k="vervaldag" sort={sort}>Vervaldag</SortTh>
             <SortTh k="bedrag" sort={sort} right>Bedrag</SortTh>
