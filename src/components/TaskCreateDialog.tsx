@@ -116,7 +116,7 @@ export function TaskCreateDialog({ open, day, direct = false, onClose }: { open:
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-klant">Bestaande klant kiezen</Label>
-                <CustomerPicker id="nb-klant" customers={customers} value={selectedCustomer?.id ?? ""} placeholder="Kies bestaande klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) pickCustomer(customerLabel(c)); }} />
+                <CustomerPicker id="nb-klant" modal customers={customers} value={selectedCustomer?.id ?? ""} placeholder="Kies bestaande klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) pickCustomer(customerLabel(c)); }} />
               </div>
               <div className="grid gap-1">
                 <Label htmlFor="nb-name">Naam klant</Label>
