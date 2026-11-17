@@ -241,12 +241,12 @@ function Aankoopfacturen() {
   const count = (t: string) => rows.filter((r) => r.status === t).length;
   const payable = visible.filter((r) => canExportPurchase({ ...r, total: Number(r.total) }));
   const sort = useSort(visible, {
-    leverancier: (r: Row) => r.supplier_name,
-    nummer: (r: Row) => r.invoice_number,
-    factuurdatum: (r: Row) => r.invoice_date,
-    vervaldag: (r: Row) => r.due_date,
-    bedrag: (r: Row) => (r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total)),
-    status: (r: Row) => STATUS[r.status] ?? r.status,
+    leverancier: (r) => r.supplier_name,
+    nummer: (r) => r.invoice_number,
+    factuurdatum: (r) => r.invoice_date,
+    vervaldag: (r) => r.due_date,
+    bedrag: (r) => (r.kind === 'creditnota' ? -Math.abs(Number(r.total)) : Number(r.total)),
+    status: (r) => STATUS[r.status] ?? r.status,
   }, 'vervaldag');
   const isPaid = edit?.status === 'betaald';
   const signedTotal = edit ? (edit.kind === 'creditnota' ? -Math.abs(Number(edit.total)) : Number(edit.total)) : 0;
