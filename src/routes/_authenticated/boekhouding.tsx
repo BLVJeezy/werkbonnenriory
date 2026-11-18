@@ -18,6 +18,7 @@ import { purchaseBankChoices } from "@/lib/bank-purchase-choice";
 import { isInvoiceReconciled } from "@/lib/bank-reconciliation-status";
 import { Badge } from "@/components/ui/badge";
 import { bankSplitSummary } from "@/lib/bank-split";
+import { partialInvoiceCandidates } from "@/lib/bank-partial";
 import { learnedAccount, type BankHistory } from "@/lib/bank-learned-account";
 import { PontoConnection } from "@/components/PontoConnection";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
@@ -671,6 +672,16 @@ function Bank({ c }: { c: string }) {
     toast.success("Afgeletterd met betaalde factuur"); refresh();
   };
   const remaining = (i: any) => r2(Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
+  // Deelbetaling: betaling kleiner dan het openstaande bedrag, enkel voorstellen bij overeenkomende naam of nummer.
+  const partialCands = (t: any) => grossOf(t) == null ? partialInvoiceCandidates(t, open, remaining, effAmt(t)).slice(0, 3) : [];
+  const partialMatch = async (t: any, inv: any) => {
+    const rest = remaining(inv);
+    const deel = r2(Math.min(Math.abs(Number(t.amount)), rest));
+    if (deel <= 0) return void toast.error("Niets meer af te letteren");
+    if (!confirm(`Deelbetaling ${eur(deel)} afletteren op ${inv.counterparty} ${inv.number}?\nVan de factuur blijft ${eur(r2(rest - deel))} open.`)) return;
+    try { await reconcile(t, inv); toast.success(`Deelbetaling afgeletterd; ${eur(r2(rest - deel))} blijft open op ${inv.number}`); refresh(); }
+    catch (e: any) { toast.error(e.message); }
+  };
   const match = async (t: any, inv: any) => {
     const counter = inv.direction === "aankoop" ? ctl.leveranciers : ctl.klanten;
     try {
@@ -904,7 +915,7 @@ function Bank({ c }: { c: string }) {
             {invoiceChoices.filter((i) => i.doc_type === 'factuur' && `${i.number ?? ''} ${i.counterparty ?? ''}`.toLowerCase().includes(invoiceSearch.trim().toLowerCase())).sort((a, b) => String(b.invoice_date).localeCompare(String(a.invoice_date))).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
               <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) { const available = Math.max(0, r2(Math.abs(Number(manualTx?.amount ?? 0)) - Object.values(current).reduce((sum, value) => sum + (parseAmount(value) ?? 0), 0))); next[i.id] = String(Math.min(available, Math.max(0, r2(total(i) - Number(i.paid_amount ?? 0))))); } else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
               <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
-              <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))}</span></span>
+              <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))} · nog open {eur(Math.max(0, r2(total(i) - Number(i.paid_amount ?? 0))))}</span></span>
             </label>)}
           </div>
           {splitInvoices.length >= 1 && manualPreview?.mode !== 'refund' && <div className="space-y-2 border-t border-border pt-3">
@@ -996,6 +1007,7 @@ function Bank({ c }: { c: string }) {
                 <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {cands.map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => match(t, i)}>Afletteren: {i.counterparty} {i.number}</Button>)}
+                  {!cands.length && partialCands(t).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => partialMatch(t, i)}>Deelbetaling: {i.counterparty} {i.number} · nog open {eur(remaining(i))}</Button>)}
                   {!!t.allocated_amount && <span className="w-full text-xs text-muted-foreground">Oorspronkelijk {eur(t.original_amount)} · afgeletterd {eur(t.allocated_amount)} · nog open {eur(Math.abs(amt))}</span>}
                   {!t.allocated_amount && !cands.length && paidCands(t).slice(0, 3).map((i: any) => <Button key={i.id} size="sm" variant="outline" onClick={() => settleClick(t, i)}>Afletteren (al betaald): {i.counterparty} {i.number}</Button>)}
                   <Button size="sm" variant="outline" onClick={() => { setManualTx(t); setInvoiceSearch(''); setManualInvoiceId(''); setSplitAmounts({}); }}>Factuur kiezen</Button>
