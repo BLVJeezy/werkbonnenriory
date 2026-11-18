@@ -52,3 +52,15 @@ export const QUOTE_STATUS: Record<string, string> = {
   akkoord: "Akkoord",
   geweigerd: "Geweigerd",
 };
+
+/**
+ * Uitvoeringsstatus van de taak die uit een offerte ontstond. Null zonder
+ * gekoppelde taak; anders "Uitgevoerd", "Gepland op …" of "Nog niet uitgevoerd".
+ */
+export function quoteExecution(wo: { status: string; scheduled_date: string | null; signed_at: string | null } | null | undefined): { done: boolean; label: string } | null {
+  if (!wo) return null;
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString("nl-BE");
+  if (wo.status === "afgetekend") return { done: true, label: `Uitgevoerd${wo.signed_at ? ` op ${fmt(wo.signed_at)}` : ""}` };
+  if (wo.scheduled_date) return { done: false, label: `Gepland op ${fmt(wo.scheduled_date)}` };
+  return { done: false, label: "Nog niet uitgevoerd" };
+}

@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { quoteLine, quoteOptionsTotals, quoteTotals } from "./quote";
+import { quoteExecution, quoteLine, quoteOptionsTotals, quoteTotals } from "./quote";
+
+describe("quoteExecution: zijn de werken al uitgevoerd?", () => {
+  it("toont niets zonder gekoppelde taak", () => {
+    expect(quoteExecution(null)).toBeNull();
+    expect(quoteExecution(undefined)).toBeNull();
+  });
+  it("markeert een afgetekende werkbon als uitgevoerd met de datum", () => {
+    expect(quoteExecution({ status: "afgetekend", scheduled_date: "2026-11-10", signed_at: "2026-11-10T14:30:00Z" }))
+      .toEqual({ done: true, label: "Uitgevoerd op 10/11/2026" });
+  });
+  it("toont de geplande datum voor een nog open taak", () => {
+    expect(quoteExecution({ status: "toegewezen", scheduled_date: "2026-11-25", signed_at: null }))
+      .toEqual({ done: false, label: "Gepland op 25/11/2026" });
+  });
+  it("toont 'nog niet uitgevoerd' voor een taak zonder datum", () => {
+    expect(quoteExecution({ status: "nieuw", scheduled_date: null, signed_at: null }))
+      .toEqual({ done: false, label: "Nog niet uitgevoerd" });
+  });
+});
 
 describe("quoteTotals met opties", () => {
   const main = quoteLine("Dieptereiniging regenput", 1, "st", 250);

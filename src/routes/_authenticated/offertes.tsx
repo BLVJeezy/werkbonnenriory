@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { euro, VAT_RATES } from "@/lib/billing";
 import { formatAddress } from "@/lib/address";
 import type { InvoiceCustomer, InvoiceLine } from "@/lib/invoice";
-import { discountLabel, quoteLine, quoteOptionsTotals, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
+import { discountLabel, quoteExecution, quoteLine, quoteOptionsTotals, quoteTotals, QUOTE_STATUS } from "@/lib/quote";
 import { splitLineText } from "@/lib/line-text";
 import { assignQuoteCrew, convertQuoteToTask, createQuote, deleteQuote, quotePdf, sendQuote, updateQuote } from "@/lib/quotes.functions";
 import { quoteDistance } from "@/lib/distance.functions";
@@ -85,6 +85,14 @@ function Offertes() {
     queryKey: ["customers"],
     queryFn: () => allCustomers(supabase),
   });
+  // Uitvoeringsstatus van de taken die uit goedgekeurde offertes ontstonden.
+  const quoteTaskIds = quotes.map((q) => q.work_order_id).filter(Boolean) as string[];
+  const { data: quoteTasks = [] } = useQuery({
+    queryKey: ["quote_tasks", quoteTaskIds.join(",")],
+    enabled: quoteTaskIds.length > 0,
+    queryFn: async () => (await supabase.from("work_orders").select("id, status, scheduled_date, signed_at").in("id", quoteTaskIds)).data ?? [],
+  });
+  const taskById = new Map(quoteTasks.map((t) => [t.id, t]));
   const { data: crews = [] } = useQuery({
     queryKey: ["quote_crews"],
     queryFn: async () => (await supabase.from("technicians").select("id, name").order("name")).data ?? [],
@@ -439,6 +447,11 @@ function Offertes() {
                   <span className="min-w-0 break-words font-semibold">{c.name}</span>
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
+                  {(() => { const exec = quoteExecution(q.work_order_id ? taskById.get(q.work_order_id) : null); return exec && (
+                    <span className={`rounded px-2 py-0.5 text-xs font-bold ${exec.done ? "bg-accent text-accent-foreground" : "border border-primary text-primary"}`}>
+                      {exec.done ? "✓ " : ""}{exec.label}
+                    </span>
+                  ); })()}
                   <span className={`rounded px-2 py-0.5 text-xs font-bold ${q.status === "akkoord" ? "bg-accent text-accent-foreground" : "bg-muted"}`}>
                     {QUOTE_STATUS[q.status] ?? q.status}
                   </span>
