@@ -20,6 +20,16 @@ export function closedDashboardRange(from: string, to: string, today = dashboard
   return { from: from && from <= end ? from : `${end.slice(0, 7)}-01`, to: end };
 }
 
+/**
+ * Omzet per dag loopt tot en met vandaag door, ook in de lopende maand:
+ * de daggrafiek mag nooit verder dan vandaag, maar wordt niet begrensd op
+ * afgesloten maanden zoals de boekhoudkundige cijfers.
+ */
+export function dailyOmzetRange(from: string, to: string, today = dashboardToday()) {
+  const end = to && to < today ? to : today;
+  return { from: from && from <= end ? from : end, to: end };
+}
+
 export function weekRange(day: string) {
   const monday = startOfISOWeek(parseISO(day));
   return { from: format(monday, "yyyy-MM-dd"), to: format(addDays(monday, 6), "yyyy-MM-dd") };

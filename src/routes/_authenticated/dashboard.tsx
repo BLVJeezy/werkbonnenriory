@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useServerFn } from "@tanstack/react-start";
 import { simplaDashboardProducts } from "@/lib/simpla-product-revenue.functions";
 import { groupOmzet, groupWeekOmzet, manualInvoiceRows, type InvoiceOmzetRow } from "@/lib/dashboard";
-import { closedDashboardRange, closedWeekRange, dashboardToday, lastClosedMonth, lastClosedWeek } from "@/lib/dashboard-period";
+import { closedDashboardRange, closedWeekRange, dailyOmzetRange, dashboardToday, lastClosedMonth, lastClosedWeek } from "@/lib/dashboard-period";
 import {
   ResponsiveContainer,
   BarChart,
@@ -54,8 +54,11 @@ function Dashboard() {
   const [mode, setMode] = useState<"month" | "week">("month");
   const def = mode === "week" ? lastClosedWeek(currentDay) : lastClosedMonth(currentDay);
   const [selectedFrom, setFrom] = useState(def.from);
-  const [selectedTo, setTo] = useState(def.to);
+  // De omzetgrafiek loopt standaard tot vandaag; boekhoudcijfers blijven op afgesloten periodes.
+  const [selectedTo, setTo] = useState(currentDay);
   const { from, to } = mode === "week" ? closedWeekRange(selectedFrom, selectedTo, currentDay) : closedDashboardRange(selectedFrom, selectedTo, currentDay);
+  // Omzet per dag loopt tot vandaag door, ook in de lopende maand.
+  const { from: omzetFrom, to: omzetTo } = dailyOmzetRange(selectedFrom, selectedTo, currentDay);
   const shiftWeek = (days: number) => {
     setFrom(format(addDays(parseISO(from), days), "yyyy-MM-dd"));
     setTo(format(addDays(parseISO(to), days), "yyyy-MM-dd"));
@@ -73,14 +76,14 @@ function Dashboard() {
   }, [role, navigate]);
 
   const { data: rows = [] } = useQuery({
-    queryKey: ["dashboard-omzet", from, to],
-    enabled: role === "admin" && !!from && !!to && from <= to,
+    queryKey: ["dashboard-omzet", omzetFrom, omzetTo],
+    enabled: role === "admin" && !!omzetFrom && !!omzetTo && omzetFrom <= omzetTo,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
         .select("id, issue_date, net, vat, total, paid_amount, kind, work_order_id")
-        .gte("issue_date", from)
-        .lte("issue_date", to);
+        .gte("issue_date", omzetFrom)
+        .lte("issue_date", omzetTo);
       if (error) throw error;
       return (data ?? []) as InvoiceOmzetRow[];
     },
@@ -88,10 +91,10 @@ function Dashboard() {
 
   // Omzet per dag volgens de werkdag van de afgewerkte werkbon, niet de factuurdatum.
   const { data: woRows = [] } = useQuery({
-    queryKey: ["dashboard-omzet-werkbonnen", from, to],
-    enabled: role === "admin" && !!from && !!to && from <= to,
+    queryKey: ["dashboard-omzet-werkbonnen", omzetFrom, omzetTo],
+    enabled: role === "admin" && !!omzetFrom && !!omzetTo && omzetFrom <= omzetTo,
     queryFn: async () => {
-      const early = new Date(`${from}T12:00:00Z`); early.setUTCDate(early.getUTCDate() - 60);
+      const early = new Date(`${omzetFrom}T12:00:00Z`); early.setUTCDate(early.getUTCDate() - 60);
       const [w, s, a] = await Promise.all([
         supabase.from("work_orders").select("id, scheduled_date, signed_at, paid_amount, activity_id, distance_km, vat_rate, warranty, no_invoice, time_entries(started_at, ended_at), materials(quantity, unit_price)").eq("status", "afgetekend").eq("no_invoice", false).gte("signed_at", early.toISOString()).limit(5000),
         supabase.from("settings").select("km_rate").eq("id", 1).single(),
@@ -101,7 +104,7 @@ function Dashboard() {
       const kmRate = Number(s.data?.km_rate ?? 0);
       return (w.data ?? []).flatMap((o) => {
         const day = (o.scheduled_date ?? o.signed_at ?? "").slice(0, 10);
-        if (!day || day < from || day > to) return [];
+        if (!day || day < omzetFrom || day > omzetTo) return [];
         const vatRate = Number(o.vat_rate);
         const net = o.paid_amount != null
           ? Number(o.paid_amount) / (1 + vatRate / 100)
@@ -141,7 +144,7 @@ function Dashboard() {
   const omzet = omzetRows.reduce((s, r) => s + Number(r.net), 0);
   const btw = rows.reduce((s, r) => s + sign(r) * Number(r.vat), 0);
   const openstaand = rows.reduce((s, r) => s + sign(r) * Math.max(0, Number(r.total) - Number(r.paid_amount)), 0);
-  const punten = mode === "week" ? groupWeekOmzet(omzetRows, from, to) : groupOmzet(omzetRows, from, to);
+  const punten = mode === "week" ? groupWeekOmzet(omzetRows, omzetFrom, omzetTo) : groupOmzet(omzetRows, omzetFrom, omzetTo);
   const perMaand = punten.length > 62;
 
   return (
@@ -152,7 +155,7 @@ function Dashboard() {
         if (value !== "month" && value !== "week") return;
         setMode(value);
         const range = value === "week" ? lastClosedWeek(currentDay) : lastClosedMonth(currentDay);
-        setFrom(range.from); setTo(range.to);
+        setFrom(range.from); setTo(currentDay);
       }}><ToggleGroupItem value="month" aria-label="Per maand">Maand</ToggleGroupItem><ToggleGroupItem value="week" aria-label="Per week">Week</ToggleGroupItem></ToggleGroup>
 
       {mode === "month" && <FinanceYear />}
@@ -163,15 +166,15 @@ function Dashboard() {
       <div className="grid max-w-md grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label htmlFor="van">Van</Label>
-          <Input id="van" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          <Input id="van" type="date" value={selectedFrom} max={selectedTo} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className="space-y-1">
           <Label htmlFor="tot">Tot</Label>
-          <Input id="tot" type="date" value={to} min={from} max={def.to} onChange={(e) => setTo(e.target.value)} />
+          <Input id="tot" type="date" value={selectedTo} min={selectedFrom} max={currentDay} onChange={(e) => setTo(e.target.value)} />
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">Afgesloten {mode === "week" ? "weken (maandag t/m zondag)" : "maanden"} · cijfers beschikbaar t/m {def.to.split("-").reverse().join("/")}</p>
+      <p className="text-xs text-muted-foreground">Omzet per dag loopt tot vandaag · boekhoud- en productcijfers alleen over afgesloten {mode === "week" ? "weken (maandag t/m zondag)" : "maanden"} t/m {def.to.split("-").reverse().join("/")}</p>
 
       {mode === "week" && <FinanceWeek from={from} to={to} />}
 
@@ -229,7 +232,7 @@ function Dashboard() {
 
       <div className="rounded-md border bg-card p-3 sm:p-4">
         <p className="mb-3 text-sm font-bold uppercase opacity-70">
-          Omzet per {mode === "week" ? "week" : perMaand ? "maand" : "dag"} volgens werkdag van de werkbonnen; zelf gemaakte facturen op hun factuurdatum (excl. btw)
+          Omzet per {mode === "week" ? "week" : perMaand ? "maand" : "dag"} tot en met vandaag, volgens werkdag van de werkbonnen; zelf gemaakte facturen op hun factuurdatum (excl. btw)
         </p>
         <div className="h-72 w-full sm:h-96">
           <ResponsiveContainer width="100%" height="100%">

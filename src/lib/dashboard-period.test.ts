@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closedDashboardRange, closedWeekRange, dashboardToday, dashboardWeeks, lastClosedMonth, lastClosedWeek } from "./dashboard-period";
+import { closedDashboardRange, closedWeekRange, dailyOmzetRange, dashboardToday, dashboardWeeks, lastClosedMonth, lastClosedWeek } from "./dashboard-period";
 
 describe("afgesloten dashboardperiodes", () => {
   it("toont in november standaard de volledige oktobermaand", () => {
@@ -26,6 +26,24 @@ describe("afgesloten dashboardperiodes", () => {
   it("gebruikt Belgische middernacht bij een maandwissel", () => {
     expect(dashboardToday(new Date("2026-10-31T23:30:00Z"))).toBe("2026-11-01");
     expect(lastClosedMonth(dashboardToday(new Date("2026-10-31T22:30:00Z"))).to).toBe("2026-09-30");
+  });
+});
+
+describe("omzet per dag tot vandaag", () => {
+  it("laat de lopende maand doorlopen tot en met vandaag", () => {
+    expect(dailyOmzetRange("2026-11-01", "2026-11-30", "2026-11-18"))
+      .toEqual({ from: "2026-11-01", to: "2026-11-18" });
+  });
+  it("toont nooit dagen in de toekomst", () => {
+    expect(dailyOmzetRange("2026-11-01", "2027-03-31", "2026-11-18").to).toBe("2026-11-18");
+  });
+  it("behoudt een volledig verleden periode ongewijzigd", () => {
+    expect(dailyOmzetRange("2026-09-01", "2026-10-31", "2026-11-18"))
+      .toEqual({ from: "2026-09-01", to: "2026-10-31" });
+  });
+  it("herstelt een periode volledig in de toekomst naar enkel vandaag", () => {
+    expect(dailyOmzetRange("2027-01-01", "2027-12-31", "2026-11-18"))
+      .toEqual({ from: "2026-11-18", to: "2026-11-18" });
   });
 });
 
