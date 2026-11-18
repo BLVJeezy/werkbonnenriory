@@ -18,6 +18,10 @@ describe("quoteExecution: zijn de werken al uitgevoerd?", () => {
     expect(quoteExecution({ status: "nieuw", scheduled_date: null, signed_at: null }))
       .toEqual({ done: false, label: "Nog niet uitgevoerd" });
   });
+  it("toont 'nog niet uitgevoerd' als de gekoppelde taak niet meer bestaat", () => {
+    expect(quoteExecution({ status: "", scheduled_date: null, signed_at: null }))
+      .toEqual({ done: false, label: "Nog niet uitgevoerd" });
+  });
 });
 
 describe("quoteTotals met opties", () => {

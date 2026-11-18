@@ -447,7 +447,7 @@ function Offertes() {
                   <span className="min-w-0 break-words font-semibold">{c.name}</span>
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
-                  {(() => { const exec = quoteExecution(q.work_order_id ? taskById.get(q.work_order_id) : null); return exec && (
+                  {(() => { const exec = quoteExecution(q.work_order_id ? taskById.get(q.work_order_id) ?? { status: "", scheduled_date: null, signed_at: null } : null); return exec && (
                     <span className={`rounded px-2 py-0.5 text-xs font-bold ${exec.done ? "bg-accent text-accent-foreground" : "border border-primary text-primary"}`}>
                       {exec.done ? "✓ " : ""}{exec.label}
                     </span>
