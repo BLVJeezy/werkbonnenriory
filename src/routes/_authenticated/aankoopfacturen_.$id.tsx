@@ -203,16 +203,16 @@ function Controle() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-7rem)] min-h-0 flex-col gap-3">
+    <div className="flex min-h-0 flex-col gap-3 md:h-[calc(100dvh-7rem)]">
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen">← Lijst</Link></Button>
-        <h1 className="text-xl font-black uppercase">{edit.supplier_name} <span className="font-mono text-base">{edit.invoice_number ?? ""}</span></h1>
+        <h1 className="min-w-0 basis-full break-words text-lg font-black uppercase sm:basis-auto sm:text-xl">{edit.supplier_name} <span className="font-mono text-base">{edit.invoice_number ?? ""}</span></h1>
         {queue.length > 0 && <span className="text-sm text-muted-foreground">{queue.length} te controleren</span>}
         {!isPaid && edit.kind === 'factuur' && <MarkPurchasePaid id={edit.id} staged={edit.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { await Promise.all([qc.invalidateQueries({ queryKey: ['purchase_invoices'] }), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); await load(); }} />}
         {nextId && <Button variant="ghost" size="sm" className="ml-auto" onClick={() => nav({ to: "/aankoopfacturen/$id", params: { id: nextId } })}>Overslaan →</Button>}
       </div>
-      <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-2">
-        <div className="flex min-h-[50vh] flex-col gap-2 md:min-h-0">
+      <div className="grid min-h-0 min-w-0 flex-1 gap-4 md:grid-cols-2">
+        <div className="flex h-[45dvh] min-w-0 flex-col gap-2 md:h-auto md:min-h-0">
           {pdfUrl
             ? (isImage
               ? <img alt="Origineel aankoopdocument" src={pdfUrl} className="min-h-0 flex-1 border object-contain" />
@@ -220,13 +220,13 @@ function Controle() {
             : <div className="flex flex-1 items-center justify-center border border-dashed p-4 text-sm text-destructive">Het originele document ontbreekt.</div>}
           <div className="flex flex-wrap items-center gap-2">
             <Label htmlFor="purchase-pdf" className="text-xs">{edit.pdf_path ? "Ander PDF" : "Origineel PDF toevoegen"}</Label>
-            <Input id="purchase-pdf" className="h-8 max-w-60" type="file" accept="application/pdf,.pdf" disabled={busy} onChange={(e) => { void voegPdfToe(e.target.files?.[0]); e.target.value = ""; }} />
+            <Input id="purchase-pdf" className="h-8 min-w-0 max-w-60" type="file" accept="application/pdf,.pdf" disabled={busy} onChange={(e) => { void voegPdfToe(e.target.files?.[0]); e.target.value = ""; }} />
             {pdfUrl && <Button asChild variant="outline" size="sm"><a href={pdfUrl} target="_blank" rel="noreferrer">In nieuw venster</a></Button>}
           </div>
         </div>
 
-        <div className="min-h-0 min-w-0 overflow-y-auto pr-2">
-          <fieldset disabled={locked} className="space-y-3">
+        <div className="min-h-0 min-w-0 md:overflow-y-auto md:pr-2">
+          <fieldset disabled={locked} className="min-w-0 space-y-3">
             {isPaid && <div className="rounded-md border-2 border-accent bg-accent p-3 font-black text-accent-foreground">✓ BETAALD{edit.paid_at ? ` op ${new Date(edit.paid_at).toLocaleDateString("nl-BE")}` : ""}</div>}
             {!isPaid && paymentMethodLock(edit.payment_method, edit.status) && <div className="rounded-md border-2 border-destructive p-2 text-sm font-bold text-destructive">{paymentMethodLock(edit.payment_method, edit.status)}</div>}
             {warnings.length > 0 && <ul className="space-y-1 rounded-md border border-destructive bg-destructive/10 p-2 text-sm">{warnings.map((w) => <li key={w}>⚠ {w}</li>)}</ul>}
@@ -278,7 +278,7 @@ function Controle() {
                 return (
                 <div key={i} className="space-y-1 rounded-md border p-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Input className="min-w-32 flex-1" placeholder="Omschrijving" value={l.description} onChange={(e) => upd(i, { description: e.target.value })} />
+                    <Input className="min-w-0 flex-1" placeholder="Omschrijving" value={l.description} onChange={(e) => upd(i, { description: e.target.value })} />
                     <Button type="button" size="sm" variant="ghost" aria-label="Lijn verwijderen" onClick={() => setEdit({ ...edit, lines: edit.lines.filter((_, n) => n !== i) })}>✕</Button>
                   </div>
                   <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
@@ -291,8 +291,8 @@ function Controle() {
                     <Field label="Btw"><p className="h-8 px-1 font-mono text-sm leading-8">{euro(t.vat)}</p></Field>
                     <Field label="Incl btw"><p className="h-8 px-1 font-mono text-sm font-bold leading-8">{euro(t.total)}</p></Field>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <SearchableSelect aria-label="Grootboekrekening" className={`h-9 flex-1 rounded-md border bg-background px-2 text-sm ${!l.account ? "border-destructive" : ""}`} value={l.account ?? ""} onChange={(e) => upd(i, { account: e.target.value || null })}>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <SearchableSelect aria-label="Grootboekrekening" className={`h-9 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm ${!l.account ? "border-destructive" : ""}`} value={l.account ?? ""} onChange={(e) => upd(i, { account: e.target.value || null })}>
                       <option value="">— Kies rekening —</option>
                       {accounts.map((a) => <option key={a.number} value={a.number}>{a.number} {a.name}</option>)}
                     </SearchableSelect>
@@ -308,7 +308,7 @@ function Controle() {
               <Button type="button" size="sm" variant="outline" onClick={() => setEdit({ ...edit, lines: [...edit.lines, { description: "", quantity: 1, unit: "st", unitPrice: 0, amount: 0 }] })}>+ Lijn toevoegen</Button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-1 gap-2 text-sm min-[380px]:grid-cols-3">
               <div><Label>Netto</Label><Input type="number" step="0.01" value={edit.net} onChange={(e) => setEdit({ ...edit, net: Number(e.target.value) })} /></div>
               <div><Label>Btw</Label><Input type="number" step="0.01" value={edit.vat} onChange={(e) => setEdit({ ...edit, vat: Number(e.target.value) })} /></div>
               <div><Label>Totaal</Label><Input type="number" step="0.01" value={edit.total} onChange={(e) => setEdit({ ...edit, total: Number(e.target.value) })} /></div>
@@ -367,7 +367,7 @@ function Controle() {
             </div>
           )}
           {!locked && (
-            <div className="sticky bottom-0 mt-3 flex flex-wrap gap-2 border-t bg-background py-2">
+            <div className="sticky bottom-0 z-10 mt-3 flex flex-wrap gap-2 border-t bg-background py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               <Button disabled={busy || !sup || !canBook} title={!sup ? "Kies eerst een leverancier" : !canBook ? "Kies voor elke lijn een rekening" : undefined} onClick={() => save({ approve: true, bookLines: true, next: true })}>Opslaan en volgende →</Button>
               <Button variant="outline" disabled={busy} onClick={() => save()}>Opslaan</Button>
             </div>
