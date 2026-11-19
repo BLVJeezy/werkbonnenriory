@@ -290,7 +290,7 @@ function Detail() {
       {(isAdmin || role === "technician") && !locked && <OnderwegSms workOrderId={id} />}
 
       <section className="grid gap-4 rounded-md border-2 border-primary bg-card p-4 sm:grid-cols-[1fr_10rem]">
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <Label>Activiteit</Label>
           <SearchableSelect
             className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"
@@ -306,7 +306,7 @@ function Detail() {
             ))}
           </SearchableSelect>
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <Label>Btw-tarief</Label>
           <SearchableSelect
             className="h-10 w-full rounded-md border bg-background px-2 text-lg font-bold"

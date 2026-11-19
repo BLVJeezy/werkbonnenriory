@@ -175,21 +175,21 @@ export function TaskCreateDialog({ open, day, direct = false, onClose }: { open:
                 <Textarea id="nb-desc" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="grid gap-1">
+                <div className="grid min-w-0 gap-1">
                   <Label htmlFor="nb-ploeg">Ploeg</Label>
                   <SearchableSelect id="nb-ploeg" className="h-10 w-full rounded-md border bg-background px-2" value={form.technician_id} onChange={(e) => setForm({ ...form, technician_id: e.target.value })}>
                     <option value="">— Later —</option>
                     {opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </SearchableSelect>
                 </div>
-                <div className="grid gap-1">
+                <div className="grid min-w-0 gap-1">
                   <Label htmlFor="nb-act">Activiteit</Label>
                   <SearchableSelect id="nb-act" className="h-10 w-full rounded-md border bg-background px-2" value={form.activity_id} onChange={(e) => setForm({ ...form, activity_id: e.target.value })}>
                     <option value="">— Kies —</option>
                     {opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </SearchableSelect>
                 </div>
-                <div className="grid gap-1">
+                <div className="grid min-w-0 gap-1">
                   <Label htmlFor="nb-btw">Btw</Label>
                   <SearchableSelect id="nb-btw" className="h-10 w-full rounded-md border bg-background px-2" value={form.vat_rate} onChange={(e) => setForm({ ...form, vat_rate: e.target.value })}>
                     {VAT_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
