@@ -1149,6 +1149,13 @@
       "when": 1795100595702,
       "tag": "0163_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 164,
+      "version": "7",
+      "when": 1795103953609,
+      "tag": "0164_no_intervention_fee",
+      "breakpoints": true
     }
   ]
 }

@@ -20,18 +20,21 @@ export type Database = {
           hourly_rate: number | null
           id: string
           name: string
+          no_intervention_fee: number
         }
         Insert: {
           created_at?: string
           hourly_rate?: number | null
           id?: string
           name: string
+          no_intervention_fee?: number
         }
         Update: {
           created_at?: string
           hourly_rate?: number | null
           id?: string
           name?: string
+          no_intervention_fee?: number
         }
         Relationships: []
       }
@@ -4580,6 +4583,7 @@ export type Database = {
           insurance_report_saved_at: string | null
           insurance_report_text: string | null
           no_answer_at: string | null
+          no_intervention: boolean
           no_invoice: boolean
           not_needed: boolean
           number: number | null
@@ -4642,6 +4646,7 @@ export type Database = {
           insurance_report_saved_at?: string | null
           insurance_report_text?: string | null
           no_answer_at?: string | null
+          no_intervention?: boolean
           no_invoice?: boolean
           not_needed?: boolean
           number?: number | null
@@ -4704,6 +4709,7 @@ export type Database = {
           insurance_report_saved_at?: string | null
           insurance_report_text?: string | null
           no_answer_at?: string | null
+          no_intervention?: boolean
           no_invoice?: boolean
           not_needed?: boolean
           number?: number | null

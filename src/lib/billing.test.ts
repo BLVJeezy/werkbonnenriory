@@ -50,3 +50,18 @@ describe("workOrderRevenue", () => {
     expect(workOrderRevenue({ ...base, paidAmount: null })).toBe(102.85);
   });
 });
+
+import { noInterventionFee } from "./invoice";
+describe("geen interventie mogelijk", () => {
+  it("rekent standaard € 80 forfait in plaats van uren", () => {
+    const fee = noInterventionFee({ no_intervention: true }, { no_intervention_fee: null });
+    expect(fee).toBe(80);
+    expect(computeTotals({ seconds: 7200, hourlyRate: 60, distanceKm: 0, kmRate: 0, materials: [], vatRate: 0, flatLabour: fee }).labour).toBe(80);
+  });
+  it("gebruikt het forfait van de activiteit", () => {
+    expect(noInterventionFee({ no_intervention: true }, { no_intervention_fee: 95 })).toBe(95);
+  });
+  it("geen forfait als er wel gewerkt is", () => {
+    expect(noInterventionFee({ no_intervention: false }, { no_intervention_fee: 95 })).toBeNull();
+  });
+});

@@ -96,9 +96,9 @@ function Dashboard() {
     queryFn: async () => {
       const early = new Date(`${omzetFrom}T12:00:00Z`); early.setUTCDate(early.getUTCDate() - 60);
       const [w, s, a] = await Promise.all([
-        supabase.from("work_orders").select("id, scheduled_date, signed_at, paid_amount, activity_id, distance_km, vat_rate, warranty, no_invoice, time_entries(started_at, ended_at), materials(quantity, unit_price)").eq("status", "afgetekend").eq("no_invoice", false).gte("signed_at", early.toISOString()).limit(5000),
+        supabase.from("work_orders").select("id, scheduled_date, signed_at, paid_amount, activity_id, distance_km, vat_rate, warranty, no_invoice, no_intervention, time_entries(started_at, ended_at), materials(quantity, unit_price)").eq("status", "afgetekend").eq("no_invoice", false).gte("signed_at", early.toISOString()).limit(5000),
         supabase.from("settings").select("km_rate").eq("id", 1).single(),
-        supabase.from("activities").select("id, hourly_rate"),
+        supabase.from("activities").select("id, hourly_rate, no_intervention_fee"),
       ]);
       if (w.error) throw w.error;
       const kmRate = Number(s.data?.km_rate ?? 0);
@@ -108,7 +108,7 @@ function Dashboard() {
         const vatRate = Number(o.vat_rate);
         const net = o.paid_amount != null
           ? Number(o.paid_amount) / (1 + vatRate / 100)
-          : computeTotals({ seconds: totalSeconds(o.time_entries as never, Date.now()), hourlyRate: Number(a.data?.find((x) => x.id === o.activity_id)?.hourly_rate ?? 0), distanceKm: o.distance_km == null ? null : Number(o.distance_km), kmRate, materials: o.materials.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })), vatRate, warranty: o.warranty }).net;
+          : computeTotals({ seconds: totalSeconds(o.time_entries as never, Date.now()), hourlyRate: Number(a.data?.find((x) => x.id === o.activity_id)?.hourly_rate ?? 0), distanceKm: o.distance_km == null ? null : Number(o.distance_km), kmRate, materials: o.materials.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })), vatRate, warranty: o.warranty, flatLabour: o.no_intervention ? Number(a.data?.find((x) => x.id === o.activity_id)?.no_intervention_fee ?? 80) : null }).net;
         return [{ id: o.id, issue_date: day, net, vat: 0, total: 0, paid_amount: 0, kind: "werkbon" } as InvoiceOmzetRow];
       });
     },

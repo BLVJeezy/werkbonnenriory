@@ -17,6 +17,7 @@ import { SiteAddressFields } from "@/components/SiteAddressFields";
 import { destinationAddress, destinationLabel, destinationLines, formatAddress, type AddressParts, type SiteAddressParts } from "@/lib/address";
 import { usePerms, useRole } from "@/lib/use-role";
 import { billableHours, computeTotals, euro, VAT_RATES } from "@/lib/billing";
+import { noInterventionFee } from "@/lib/invoice";
 import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
@@ -153,6 +154,7 @@ function Detail() {
     materials: mats.map((m) => ({ quantity: Number(m.quantity), unit_price: Number(m.unit_price) })),
     vatRate: Number(wo.vat_rate),
     warranty: wo.warranty,
+    flatLabour: noInterventionFee(wo, activity ?? null),
   });
 
   async function update(patch: Database["public"]["Tables"]["work_orders"]["Update"]) {
@@ -576,7 +578,7 @@ function Detail() {
         <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
         {perms.showPrices && <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
           <dt>
-            Arbeid: {billableHours(total).toLocaleString("nl-BE")} u{wo.warranty && " − 1 u garantie"} × {activity?.hourly_rate === null ? "geen tarief" : euro(Number(activity?.hourly_rate ?? 0))}
+            {wo.no_intervention ? <>Forfait niet gestarte interventie</> : <>Arbeid: {billableHours(total).toLocaleString("nl-BE")} u{wo.warranty && " − 1 u garantie"} × {activity?.hourly_rate === null ? "geen tarief" : euro(Number(activity?.hourly_rate ?? 0))}</>}
             {!activity && <span className="text-destructive"> (kies activiteit)</span>}
           </dt>
           <dd className="text-right">{euro(totals.labour)}</dd>
@@ -699,6 +701,10 @@ function Detail() {
               if (!confirm("Niemand aanwezig om af te tekenen. Bon afsluiten zonder handtekening?")) return;
               await finishTask({ signature: null, signed_name: "Niemand aanwezig", signed_at: new Date().toISOString(), status: "afgetekend" });
             }}>Niemand aanwezig</Button>
+            <Button size="lg" variant={wo.no_intervention ? "default" : "outline"} aria-pressed={!!wo.no_intervention} onClick={async () => {
+              if (!wo.no_intervention && !confirm(`Geen interventie mogelijk? Dan wordt een forfait${perms.showPrices ? ` van ${euro(Number(activity?.no_intervention_fee ?? 80))}` : ""} aangerekend in plaats van de gewerkte uren.`)) return;
+              await update({ no_intervention: !wo.no_intervention });
+            }}>{wo.no_intervention ? "✓ Geen interventie mogelijk (ongedaan maken)" : "Geen interventie mogelijk"}</Button>
             {running && <p className="w-full text-sm text-muted-foreground">Stop eerst de tijd.</p>}
           </div>
         ) : (

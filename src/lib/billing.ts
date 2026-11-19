@@ -16,10 +16,12 @@ export function computeTotals(o: {
   vatRate: number;
   /** Warranty: first hour and kilometres are not charged. */
   warranty?: boolean;
+  /** Geen interventie mogelijk: vast forfait in plaats van uren × tarief. */
+  flatLabour?: number | null;
 }): Totals {
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const hours = Math.max(0, billableHours(o.seconds) - (o.warranty ? 1 : 0));
-  const labour = r2(hours * o.hourlyRate);
+  const labour = o.flatLabour != null ? r2(o.flatLabour) : r2(hours * o.hourlyRate);
   const km = o.warranty ? 0 : r2((o.distanceKm ?? 0) * o.kmRate);
   const materials = r2(o.materials.reduce((s, m) => s + Number(m.quantity) * Number(m.unit_price), 0));
   const net = r2(labour + km + materials);
@@ -39,6 +41,7 @@ export function workOrderRevenue(o: {
   materials: { quantity: number; unit_price: number }[];
   vatRate: number;
   warranty?: boolean;
+  flatLabour?: number | null;
 }): number {
   if (o.paidAmount != null) return Math.round(Number(o.paidAmount) * 100) / 100;
   return computeTotals(o).total;

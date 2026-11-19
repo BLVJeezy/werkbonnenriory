@@ -147,6 +147,18 @@ export function TarievenBeheer() {
                 }}
               />
               <span className="font-mono text-sm text-muted-foreground">{a.hourly_rate === null ? "geen tarief" : `${euro(Number(a.hourly_rate))}/u`}</span>
+              <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Forfait wanneer de ploeg 'Geen interventie mogelijk' kiest">
+                Forfait geen interventie
+                <Input type="number" step="0.01" min="0" aria-label={`Forfait geen interventie ${a.name}`} className="h-8 w-24 font-mono text-sm"
+                  defaultValue={a.no_intervention_fee ?? 80}
+                  onBlur={async (e) => {
+                    const next = Math.max(0, Number(e.target.value) || 0);
+                    if (next === Number(a.no_intervention_fee)) return;
+                    const { error } = await supabase.from("activities").update({ no_intervention_fee: next }).eq("id", a.id);
+                    if (error) toast.error(error.message); else toast.success("Forfait opgeslagen");
+                    refresh();
+                  }} />
+              </label>
             </div>
             <Button
               variant="ghost"

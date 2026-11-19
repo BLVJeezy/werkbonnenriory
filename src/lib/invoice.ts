@@ -12,29 +12,31 @@ type InvoiceWorkOrder = SiteAddressParts & {
   postal_code: string | null; city: string | null; vat_number: string | null; email: string | null; billing_email: string | null;
   /** Facturatiemail van de gekoppelde klant; gaat vóór het algemene adres van de werkbon. */
   customer_billing_email?: string | null;
-  distance_km: number | null; warranty: boolean; vat_rate: number; paid_amount: number | null; paid_at: string | null;
+  distance_km: number | null; warranty: boolean; no_intervention?: boolean | null; vat_rate: number; paid_amount: number | null; paid_at: string | null;
 };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Pure: turns a signed work order into invoice lines and totals using the same billing rules as the app. */
 export function buildInvoice(o: {
-  wo: InvoiceWorkOrder; activity: { name: string; hourly_rate: number | null } | null; seconds: number;
+  wo: InvoiceWorkOrder; activity: { name: string; hourly_rate: number | null; no_intervention_fee?: number | null } | null; seconds: number;
   materials: { name: string; quantity: number; unit: string; unit_price: number }[]; kmRate: number;
 }) {
   const { wo } = o;
   const rate = Number(o.activity?.hourly_rate ?? 0);
   // Garantie: volledige arbeid en verplaatsing tonen, daarna zichtbare reductielijnen zodat de klant ziet wat verrekend is.
-  const allHours = billableHours(o.seconds);
+  const flat = noInterventionFee(wo, o.activity);
+  const allHours = flat != null ? 0 : billableHours(o.seconds);
   const freeHours = wo.warranty ? Math.min(1, allHours) : 0;
   const km = Number(wo.distance_km ?? 0);
   const lines: InvoiceLine[] = [];
+  if (flat != null) lines.push({ description: `Forfait niet gestarte interventie${o.activity ? ` – ${o.activity.name}` : ""} (werkbon #${wo.number})`, quantity: 1, unit: "st", unitPrice: flat, amount: flat });
   if (allHours > 0) lines.push({ description: `Arbeid${o.activity ? ` – ${o.activity.name}` : ""} (werkbon #${wo.number})`, quantity: allHours, unit: "u", unitPrice: rate, amount: r2(allHours * rate) });
   if (km > 0) lines.push({ description: "Verplaatsing (km heen en terug)", quantity: km, unit: "km", unitPrice: o.kmRate, amount: r2(km * o.kmRate) });
   if (freeHours > 0 && rate > 0) lines.push({ description: "Reductie garantie – eerste uur arbeid", quantity: freeHours, unit: "u", unitPrice: -rate, amount: -r2(freeHours * rate) });
   if (wo.warranty && km > 0 && o.kmRate > 0) lines.push({ description: "Reductie garantie – verplaatsing", quantity: km, unit: "km", unitPrice: -o.kmRate, amount: -r2(km * o.kmRate) });
   for (const m of o.materials) lines.push({ description: m.name, quantity: Number(m.quantity), unit: m.unit, unitPrice: Number(m.unit_price), amount: r2(Number(m.quantity) * Number(m.unit_price)) });
-  const t = computeTotals({ seconds: o.seconds, hourlyRate: rate, distanceKm: wo.distance_km, kmRate: o.kmRate, materials: o.materials, vatRate: Number(wo.vat_rate), warranty: wo.warranty });
+  const t = computeTotals({ seconds: o.seconds, hourlyRate: rate, distanceKm: wo.distance_km, kmRate: o.kmRate, materials: o.materials, vatRate: Number(wo.vat_rate), warranty: wo.warranty, flatLabour: flat });
   const customer: InvoiceCustomer = {
     name: wo.customer_name, address: wo.address, siteAddress: wo.use_site_address ? formatSiteAddress(wo) : null,
     vatNumber: wo.vat_number?.trim() || null, email: wo.billing_email?.trim() || wo.customer_billing_email?.trim() || wo.email?.trim() || null,
@@ -42,6 +44,12 @@ export function buildInvoice(o: {
   };
   const paid = wo.paid_at ? Number(wo.paid_amount ?? 0) : 0;
   return { lines, customer, vatRate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total, paidAmount: paid };
+}
+
+/** Forfait voor een niet gestarte interventie (standaard € 80, per activiteit aanpasbaar), of null als er wel gewerkt is. */
+export function noInterventionFee(wo: { no_intervention?: boolean | null }, activity: { no_intervention_fee?: number | null } | null): number | null {
+  if (!wo.no_intervention) return null;
+  return r2(Number(activity?.no_intervention_fee ?? 80));
 }
 
 /** Pure: credit note that reverses an existing invoice (negative lines and totals, same numbering sequence). */

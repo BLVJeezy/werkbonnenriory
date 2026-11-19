@@ -1,0 +1,2 @@
+ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS no_intervention_fee numeric NOT NULL DEFAULT 80;
+ALTER TABLE public.work_orders ADD COLUMN IF NOT EXISTS no_intervention boolean NOT NULL DEFAULT false;
