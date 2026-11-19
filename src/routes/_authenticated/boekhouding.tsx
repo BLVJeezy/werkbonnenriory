@@ -317,7 +317,7 @@ function Rekeningen({ c }: { c: string }) {
 function Dagboeken({ c }: { c: string }) {
   const qc = useQueryClient();
   const { data: accounts = [] } = useAccounts(c);
-  const { data: posted = [] } = usePosted(c);
+  const { data: posted = [], isLoading: postedLoading } = usePosted(c);
   const { data: inv = [] } = useQuery({ queryKey: ["fin", "inv-post", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(*)").eq("company_id", c).eq("review_status", "goedgekeurd").order("invoice_date")).data ?? [] });
   const [journal, setJournal] = useState("alle");
   const [exFrom, setExFrom] = useState(yearStart()); const [exTo, setExTo] = useState(today());
@@ -381,7 +381,7 @@ function Dagboeken({ c }: { c: string }) {
         <SearchableSelect className="mb-2 rounded border border-border bg-background p-1 text-sm" value={journal} onChange={(e) => setJournal(e.target.value)}>{["alle", "aankoop", "verkoop", "bank", "divers", "opening"].map((j) => <option key={j}>{j}</option>)}</SearchableSelect>
         <div className="mb-3 flex flex-wrap items-end gap-2 rounded border border-border p-2">
           <Period from={exFrom} to={exTo} setFrom={setExFrom} setTo={setExTo} />
-          <Button size="sm" variant="outline" onClick={() => {
+          <Button size="sm" variant="outline" disabled={postedLoading} onClick={() => {
             const inP = posted.filter((l) => l.entry_date >= exFrom && l.entry_date <= exTo);
             const wb = XLSX.utils.book_new();
             for (const j of ["aankoop", "verkoop"]) {
@@ -392,7 +392,7 @@ function Dagboeken({ c }: { c: string }) {
               XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ls.length ? rows : [{ info: "Geen boekingen in deze periode" }]), j === "aankoop" ? "Aankoopdagboek" : "Verkoopdagboek");
             }
             XLSX.writeFile(wb, `aankoop_verkoopdagboek_${exFrom}_${exTo}.xlsx`);
-          }}>Aankoop- en verkoopdagboek exporteren (Excel)</Button>
+          }}>{postedLoading ? "Boekingen laden…" : "Aankoop- en verkoopdagboek exporteren (Excel)"}</Button>
         </div>
         <div className="max-h-[70dvh] space-y-2 overflow-y-auto text-xs">
           {entries.slice(0, 300).map((x) => (
