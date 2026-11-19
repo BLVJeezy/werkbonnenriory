@@ -320,6 +320,7 @@ function Dagboeken({ c }: { c: string }) {
   const { data: posted = [] } = usePosted(c);
   const { data: inv = [] } = useQuery({ queryKey: ["fin", "inv-post", c], queryFn: async () => (await db.from("fin_invoices").select("*, fin_invoice_lines(*)").eq("company_id", c).eq("review_status", "goedgekeurd").order("invoice_date")).data ?? [] });
   const [journal, setJournal] = useState("alle");
+  const [exFrom, setExFrom] = useState(yearStart()); const [exTo, setExTo] = useState(today());
   const [m, setM] = useState({ journal: "divers", date: today(), description: "", lines: [{ account: "", debit: "", credit: "" }, { account: "", debit: "", credit: "" }] });
   const { data: invRefs = [] } = useQuery({ queryKey: ["fin", "inv-refs", c, posted.length], queryFn: async () => ((await db.from("fin_journal_entries").select("source, source_ref").eq("company_id", c).in("source", ["factuur", "simpla"])).data ?? []).map((r: any) => `${r.source}:${r.source_ref}`) });
   // Een factuur is al geboekt via de facturenlijst (factuur:<id>) of rechtstreeks bij Simpla-sync (simpla:<simpla-id>) — nooit dubbel boeken.
@@ -378,6 +379,21 @@ function Dagboeken({ c }: { c: string }) {
       </div>
       <Card title="Boekingen">
         <SearchableSelect className="mb-2 rounded border border-border bg-background p-1 text-sm" value={journal} onChange={(e) => setJournal(e.target.value)}>{["alle", "aankoop", "verkoop", "bank", "divers", "opening"].map((j) => <option key={j}>{j}</option>)}</SearchableSelect>
+        <div className="mb-3 flex flex-wrap items-end gap-2 rounded border border-border p-2">
+          <Period from={exFrom} to={exTo} setFrom={setExFrom} setTo={setExTo} />
+          <Button size="sm" variant="outline" onClick={() => {
+            const inP = posted.filter((l) => l.entry_date >= exFrom && l.entry_date <= exTo);
+            const wb = XLSX.utils.book_new();
+            for (const j of ["aankoop", "verkoop"]) {
+              const ls = inP.filter((l) => l.journal === j).sort((a, b) => a.entry_date.localeCompare(b.entry_date) || a.entry_id.localeCompare(b.entry_id) || a.account.localeCompare(b.account));
+              const rows: Record<string, unknown>[] = ls.map((l) => ({ datum: l.entry_date, omschrijving: l.fin_journal_entries.description ?? "", referentie: l.fin_journal_entries.reference ?? "", rekening: l.account, naam: name(l.account), debet: Math.round(l.debit * 100) / 100, credit: Math.round(l.credit * 100) / 100, btw_rooster: (l as any).vat_grid ?? "" }));
+              const d = ls.reduce((s, l) => s + l.debit, 0), cr = ls.reduce((s, l) => s + l.credit, 0);
+              rows.push({ datum: "TOTAAL", debet: Math.round(d * 100) / 100, credit: Math.round(cr * 100) / 100 });
+              XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ls.length ? rows : [{ info: "Geen boekingen in deze periode" }]), j === "aankoop" ? "Aankoopdagboek" : "Verkoopdagboek");
+            }
+            XLSX.writeFile(wb, `aankoop_verkoopdagboek_${exFrom}_${exTo}.xlsx`);
+          }}>Aankoop- en verkoopdagboek exporteren (Excel)</Button>
+        </div>
         <div className="max-h-[70dvh] space-y-2 overflow-y-auto text-xs">
           {entries.slice(0, 300).map((x) => (
             <div key={x.id} className="rounded border border-border p-2">
