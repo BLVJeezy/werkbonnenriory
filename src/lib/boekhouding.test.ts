@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, statements, trialBalance, vatReport } from "./boekhouding";
+import { controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, statements, trialBalance, vatBoxes, vatReport } from "./boekhouding";
 
 const post = (lines: any[], date = "2026-03-10", journal = "aankoop") => lines.map((l) => ({ ...l, entry_date: date, journal }));
 
@@ -71,5 +71,28 @@ describe("jaarafsluiting vorig jaar", () => {
     const st = statements(trialBalance([...close, ...open26], "2026-01-01", "2026-12-31"));
     expect(st.opbrengsten + 0).toBe(0);
     expect(st.activa).toBe(1000);
+  });
+});
+
+describe("btw-vakken voor export", () => {
+  const koop = invoiceToEntry({ direction: "verkoop", doc_type: "factuur", lines: [{ account: "700000", ex_vat: 1000, vat: 210 }] }).lines;
+  const aankoop = invoiceToEntry({ direction: "aankoop", doc_type: "factuur", lines: [{ account: "613260", ex_vat: 400, vat: 84 }] }).lines;
+  const all = [...post(koop, "2026-03-01", "verkoop"), ...post(aankoop, "2026-03-05", "aankoop")];
+
+  it("één rij per btw-vak met naam en bedrag, afgesloten met 71", () => {
+    expect(vatBoxes(all, "2026-01-01", "2026-03-31").rows).toEqual([
+      { vak: "03", naam: "Verkoop 21%", bedrag: 1000 },
+      { vak: "54", naam: "Verschuldigde btw", bedrag: 210 },
+      { vak: "59", naam: "Aftrekbare btw", bedrag: 84 },
+      { vak: "82", naam: "Aankoop diensten en diverse", bedrag: 400 },
+      { vak: "71", naam: "Te betalen", bedrag: 126 },
+    ]);
+  });
+  it("boekingen buiten de periode komen niet in de vakken", () => {
+    expect(vatBoxes(all, "2026-04-01", "2026-06-30").rows).toEqual([{ vak: "71", naam: "Te betalen", bedrag: 0 }]);
+  });
+  it("meer aftrekbare dan verschuldigde btw geeft vak 72", () => {
+    const r = vatBoxes(post(aankoop, "2026-03-05", "aankoop"), "2026-01-01", "2026-03-31").rows;
+    expect(r[r.length - 1]).toEqual({ vak: "72", naam: "Terug te vorderen", bedrag: 84 });
   });
 });

@@ -116,6 +116,29 @@ export function vatReport(lines: PostedLine[], from: string, to: string) {
   return { grids: g, verschuldigd, aftrekbaar, saldo: r2(verschuldigd - aftrekbaar) }; // >0 te betalen (71), <0 terug (72)
 }
 
+/** Belgische btw-vakken (roosters) zoals getoond in het Btw-scherm. */
+export const VAT_GRID_LABELS: Record<string, string> = {
+  "01": "Verkoop 6%", "02": "Verkoop 12%", "03": "Verkoop 21%", "45": "Verkoop medecontractant/0%",
+  "49": "Uitgereikte creditnota's", "54": "Verschuldigde btw", "59": "Aftrekbare btw",
+  "63": "Btw op ontvangen creditnota's", "64": "Btw op uitgereikte creditnota's",
+  "81": "Aankoop goederen", "82": "Aankoop diensten en diverse", "83": "Investeringen",
+  "85": "Ontvangen creditnota's",
+};
+
+/** Volgorde van de btw-vakken zoals op de aangifte. Object.keys sorteert cijfersleesten anders, dus deze lijst is leidend. */
+export const VAT_GRID_ORDER = ["01", "02", "03", "45", "49", "54", "59", "63", "64", "81", "82", "83", "85"];
+
+/** Btw-vakken voor een periode als bladrijen: één rij per vak met bedrag, plus 71/72. */
+export type VatBoxRow = { vak: string; naam: string; bedrag: number };
+export function vatBoxes(lines: PostedLine[], from: string, to: string) {
+  const v = vatReport(lines, from, to);
+  const rows: VatBoxRow[] = VAT_GRID_ORDER
+    .filter((k) => v.grids[k])
+    .map((k) => ({ vak: k, naam: VAT_GRID_LABELS[k] ?? k, bedrag: v.grids[k] ?? 0 }));
+  rows.push({ vak: v.saldo >= 0 ? "71" : "72", naam: v.saldo >= 0 ? "Te betalen" : "Terug te vorderen", bedrag: r2(Math.abs(v.saldo)) });
+  return { rows, ...v };
+}
+
 /** Rekeningschema/balans-import: kolommen rekening, naam en optioneel saldo of debet/credit. */
 export type ImportedAccount = { number: string; name: string; saldo: number | null; err?: string };
 export function parseAccountRows(rows: Record<string, unknown>[], map: { nr: string; naam: string; saldo?: string; debet?: string; credit?: string }): ImportedAccount[] {

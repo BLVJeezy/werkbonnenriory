@@ -32,7 +32,7 @@ import { useFinanceSales } from "@/lib/use-finance-sales";
 import { useFinanceCompany } from "@/lib/use-finance-company";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  accountClass, controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, r2, statements, trialBalance, vatReport,
+  accountClass, controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, r2, statements, trialBalance, vatBoxes, VAT_GRID_LABELS,
   type ImportedAccount, type JLine, type PostedLine,
 } from "@/lib/boekhouding";
 
@@ -386,11 +386,13 @@ function Dagboeken({ c }: { c: string }) {
             const wb = XLSX.utils.book_new();
             for (const j of ["aankoop", "verkoop"]) {
               const ls = inP.filter((l) => l.journal === j).sort((a, b) => a.entry_date.localeCompare(b.entry_date) || a.entry_id.localeCompare(b.entry_id) || a.account.localeCompare(b.account));
-              const rows: Record<string, unknown>[] = ls.map((l) => ({ datum: l.entry_date, omschrijving: l.fin_journal_entries.description ?? "", referentie: l.fin_journal_entries.reference ?? "", rekening: l.account, naam: name(l.account), debet: Math.round(l.debit * 100) / 100, credit: Math.round(l.credit * 100) / 100, btw_rooster: (l as any).vat_grid ?? "" }));
+              const rows: Record<string, unknown>[] = ls.map((l) => ({ datum: l.entry_date, omschrijving: l.fin_journal_entries.description ?? "", referentie: l.fin_journal_entries.reference ?? "", rekening: l.account, naam: name(l.account), debet: Math.round(l.debit * 100) / 100, credit: Math.round(l.credit * 100) / 100, btw_vak: (l as any).vat_grid ?? "", btw_vak_naam: (l as any).vat_grid ? VAT_GRID_LABELS[(l as any).vat_grid] ?? "" : "" }));
               const d = ls.reduce((s, l) => s + l.debit, 0), cr = ls.reduce((s, l) => s + l.credit, 0);
               rows.push({ datum: "TOTAAL", debet: Math.round(d * 100) / 100, credit: Math.round(cr * 100) / 100 });
               XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ls.length ? rows : [{ info: "Geen boekingen in deze periode" }]), j === "aankoop" ? "Aankoopdagboek" : "Verkoopdagboek");
             }
+            const bt = vatBoxes(inP, exFrom, exTo);
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bt.rows.length > 1 ? bt.rows : [{ info: "Geen btw-boekingen in deze periode" }]), "Btw");
             XLSX.writeFile(wb, `aankoop_verkoopdagboek_${exFrom}_${exTo}.xlsx`);
           }}>{postedLoading ? "Boekingen laden…" : "Aankoop- en verkoopdagboek exporteren (Excel)"}</Button>
         </div>
@@ -547,14 +549,14 @@ function Btw({ c }: { c: string }) {
   const y = new Date().getFullYear(); const q = Math.floor(new Date().getMonth() / 3);
   const [from, setFrom] = useState(`${y}-${String(q * 3 + 1).padStart(2, "0")}-01`);
   const [to, setTo] = useState(new Date(y, q * 3 + 3, 0).toISOString().slice(0, 10));
-  const v = vatReport(posted, from, to);
-  const labels: Record<string, string> = { "01": "Verkoop 6%", "02": "Verkoop 12%", "03": "Verkoop 21%", "45": "Verkoop medecontractant/0%", "49": "Uitgereikte creditnota's", "54": "Verschuldigde btw", "59": "Aftrekbare btw", "63": "Btw op ontvangen creditnota's", "64": "Btw op uitgereikte creditnota's", "81": "Aankoop goederen", "82": "Aankoop diensten en diverse", "83": "Investeringen", "85": "Ontvangen creditnota's" };
+  const v = vatBoxes(posted, from, to);
+  const last = v.rows[v.rows.length - 1] ?? { vak: "71", naam: "Te betalen", bedrag: 0 };
   return (
     <Card title="Btw-overzicht per rooster">
       <Period {...{ from, to, setFrom, setTo }} />
       <table className="mt-3 w-full text-sm"><tbody>
-        {Object.keys(labels).filter((k) => v.grids[k]).map((k) => <tr key={k} className="border-t border-border"><td className="w-12 font-mono">{k}</td><td>{labels[k]}</td><td className="text-right">{eur(v.grids[k] ?? 0)}</td></tr>)}
-        <tr className="border-t-2 border-border font-semibold"><td className="font-mono">{v.saldo >= 0 ? "71" : "72"}</td><td>{v.saldo >= 0 ? "Te betalen" : "Terug te vorderen"}</td><td className="text-right">{eur(Math.abs(v.saldo))}</td></tr>
+        {v.rows.slice(0, -1).map((r) => <tr key={r.vak} className="border-t border-border"><td className="w-12 font-mono">{r.vak}</td><td>{r.naam}</td><td className="text-right">{eur(r.bedrag)}</td></tr>)}
+        <tr className="border-t-2 border-border font-semibold"><td className="font-mono">{last.vak}</td><td>{last.naam}</td><td className="text-right">{eur(last.bedrag)}</td></tr>
       </tbody></table>
       <p className="mt-2 text-xs text-muted-foreground">Gebaseerd op geboekte facturen. Controle-overzicht — indienen gebeurt door je boekhouder via Intervat. Medecontractant, intracommunautair en niet-aftrekbare btw zijn niet apart verwerkt.</p>
     </Card>
