@@ -53,8 +53,8 @@ async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) 
   const today = new Date().toISOString().slice(0, 10);
   const tb = trialBalance(posted, from, to < today ? to : today);
   const refSet = new Set(refs.map((r: any) => `${r.source}:${r.source_ref}`));
-  // A document booked under another source label (e.g. a manual correction) still counts as booked when its number appears in the sales/purchase journal.
-  const docNumbers = new Set(refs.filter((r: any) => (r.journal === "aankoop" || r.journal === "verkoop") && r.reference).map((r: any) => String(r.reference).trim()));
+  // A document booked under another source label (e.g. a manual correction) still counts as booked when its number appears in a sales, purchase or miscellaneous booking (not a payment).
+  const docNumbers = new Set(refs.filter((r: any) => ["aankoop", "verkoop", "divers"].includes(r.journal) && !["bank", "bank-part", "wacht"].includes(r.source) && r.reference).map((r: any) => String(r.reference).trim()));
   const monthMap = new Map(months.map((m: any) => [String(m.month).slice(0, 7), m]));
   const periodLines = posted.filter((l: any) => l.entry_date >= from && l.entry_date <= to);
   const warnings = accountantWarnings({
