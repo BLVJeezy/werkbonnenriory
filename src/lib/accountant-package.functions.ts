@@ -41,12 +41,12 @@ async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) 
   const [sales, purchases, finInv, months, bank, invs, accounts, refs, lines] = await Promise.all([
     fetchAll(docQ("invoices", "issue_date")),
     fetchAll(docQ("purchase_invoices", "invoice_date")),
-    c ? fetchAll((a, b) => supabase.from("fin_invoices").select("id,review_status,source,source_ref,invoice_date").eq("company_id", c).gte("invoice_date", from).lte("invoice_date", to).order("id").range(a, b)) : [],
+    c ? fetchAll((a, b) => supabase.from("fin_invoices").select("id,review_status,source,source_ref,invoice_date").eq("company_id", c).neq("source", "simpla").gte("invoice_date", from).lte("invoice_date", to).order("id").range(a, b)) : [],
     c ? supabase.from("fin_months").select("*").eq("company_id", c).gte("month", from).lte("month", to).then((r: any) => r.data ?? []) : [],
     c ? fetchAll((a, b) => supabase.from("fin_bank_tx").select("*").eq("company_id", c).gte("tx_date", from).lte("tx_date", to).order("id").range(a, b)) : [],
     c ? supabase.from("fin_investments").select("*").eq("company_id", c).then((r: any) => r.data ?? []) : [],
     c ? supabase.from("fin_accounts").select("number,name").eq("company_id", c).then((r: any) => r.data ?? []) : [],
-    c ? fetchAll((a, b) => supabase.from("fin_journal_entries").select("source,source_ref").eq("company_id", c).in("source", ["factuur", "simpla"]).order("id").range(a, b)) : [],
+    c ? fetchAll((a, b) => supabase.from("fin_journal_entries").select("source,source_ref").eq("company_id", c).order("id").range(a, b)) : [],
     c ? fetchAll((a, b) => supabase.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", c).lte("fin_journal_entries.entry_date", to).order("id").range(a, b)) : [],
   ]);
   const posted = lines.map((l: any) => ({ ...l, debit: Number(l.debit), credit: Number(l.credit), entry_date: l.fin_journal_entries.entry_date, journal: l.fin_journal_entries.journal, source: l.fin_journal_entries.source }));
@@ -59,7 +59,7 @@ async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) 
     purchasesToCheck: purchases.filter((p: any) => p.status === "te_controleren").length,
     salesUnsent: sales.filter((s: any) => !s.sent_at).length,
     financeToReview: finInv.filter((i: any) => i.review_status === "te_beoordelen").length,
-    financeUnbooked: finInv.filter((i: any) => i.review_status !== "te_beoordelen" && !refSet.has(`factuur:${i.id}`) && !(i.source === "simpla" && i.source_ref && refSet.has(`simpla:${i.source_ref}`))).length,
+    financeUnbooked: finInv.filter((i: any) => i.review_status !== "te_beoordelen" && !refSet.has(`factuur:${i.id}`) && !(i.source_ref && refSet.has(`${i.source}:${i.source_ref}`))).length,
     bankUnbooked: bank.filter((t: any) => !t.entry_id).length,
     monthsIncomplete: c ? monthsInPeriod(from, to, today).filter((m) => { const r: any = monthMap.get(m); return !r || !r.revenue_complete || !r.costs_complete || !r.bank_complete; }) : [],
     investmentsIncomplete: invs.filter((i: any) => missingDeprParams(i).length).map((i: any) => i.name),
