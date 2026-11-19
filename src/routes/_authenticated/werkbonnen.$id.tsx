@@ -693,6 +693,7 @@ function Detail() {
             <p>
               {wo.signed_name ? <>Afgetekend door <strong>{wo.signed_name}</strong></> : wo.paid_at ? "Afgesloten na betaling" : "Werkbon afgesloten"} op {wo.signed_at && new Date(wo.signed_at).toLocaleString("nl-BE")}
             </p>
+            {isAdmin && <Button size="sm" variant={wo.no_intervention ? "default" : "outline"} aria-pressed={!!wo.no_intervention} onClick={() => update({ no_intervention: !wo.no_intervention })}>{wo.no_intervention ? "✓ Geen interventie mogelijk (ongedaan maken)" : "Geen interventie mogelijk"}</Button>}
           </div>
         ) : !signing ? (
           <div className="flex flex-wrap gap-2">
