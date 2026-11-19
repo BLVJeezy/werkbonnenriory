@@ -32,8 +32,8 @@ import { useFinanceSales } from "@/lib/use-finance-sales";
 import { useFinanceCompany } from "@/lib/use-finance-company";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  accountClass, controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, r2, statements, trialBalance, vatBoxes, VAT_GRID_LABELS,
-  type ImportedAccount, type JLine, type PostedLine,
+  accountClass, controlAccounts, invoiceToEntry, isBalanced, lineVat, openingEntry, parseAccountRows, paymentEntry, r2, statements, trialBalance, vatBoxes, VAT_GRID_LABELS,
+  type DocLine, type ImportedAccount, type JLine, type PostedLine,
 } from "@/lib/boekhouding";
 
 export const Route = createFileRoute("/_authenticated/boekhouding")({
@@ -109,8 +109,8 @@ function usePosted(c: string) {
   return useQuery({
     queryKey: ["fin", "posted", c],
     queryFn: async () => {
-      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source)").eq("company_id", c).order("id").range(a, b))) as any[];
-      return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal, source: r.fin_journal_entries.source })) as (PostedLine & { entry_id: string; fin_journal_entries: any })[];
+      const rows = (await fetchAll((a, b) => db.from("fin_journal_lines").select("*, fin_journal_entries!inner(entry_date, journal, description, reference, source, source_ref)").eq("company_id", c).order("id").range(a, b))) as any[];
+      return rows.map((r) => ({ ...r, debit: Number(r.debit), credit: Number(r.credit), entry_date: r.fin_journal_entries.entry_date, journal: r.fin_journal_entries.journal, source: r.fin_journal_entries.source, source_ref: r.fin_journal_entries.source_ref })) as (PostedLine & { entry_id: string; source_ref?: string | null; fin_journal_entries: any })[];
     },
   });
 }
@@ -383,12 +383,16 @@ function Dagboeken({ c }: { c: string }) {
           <Period from={exFrom} to={exTo} setFrom={setExFrom} setTo={setExTo} />
           <Button size="sm" variant="outline" disabled={postedLoading} onClick={() => {
             const inP = posted.filter((l) => l.entry_date >= exFrom && l.entry_date <= exTo);
+            const docs: Record<string, DocLine[]> = {};
+            for (const i of inv as any[]) docs[i.id] = ((i.fin_invoice_lines ?? []) as any[]).map((l) => ({ account: (l.account ?? null) as string | null, ex_vat: Number(l.ex_vat), vat: Number(l.vat), vat_rate: l.vat_rate }));
             const wb = XLSX.utils.book_new();
             for (const j of ["aankoop", "verkoop"]) {
               const ls = inP.filter((l) => l.journal === j).sort((a, b) => a.entry_date.localeCompare(b.entry_date) || a.entry_id.localeCompare(b.entry_id) || a.account.localeCompare(b.account));
-              const rows: Record<string, unknown>[] = ls.map((l) => ({ datum: l.entry_date, omschrijving: l.fin_journal_entries.description ?? "", referentie: l.fin_journal_entries.reference ?? "", rekening: l.account, naam: name(l.account), debet: Math.round(l.debit * 100) / 100, credit: Math.round(l.credit * 100) / 100, btw_vak: (l as any).vat_grid ?? "", btw_vak_naam: (l as any).vat_grid ? VAT_GRID_LABELS[(l as any).vat_grid] ?? "" : "" }));
+              const vi = lineVat(ls, docs);
+              const rows: Record<string, unknown>[] = ls.map((l, i) => { const v = vi[i] ?? { btw_tarief: "", btw_bedrag: 0 }; return ({ datum: l.entry_date, omschrijving: l.fin_journal_entries.description ?? "", referentie: l.fin_journal_entries.reference ?? "", rekening: l.account, naam: name(l.account), debet: Math.round(l.debit * 100) / 100, credit: Math.round(l.credit * 100) / 100, btw_tarief: v.btw_tarief, btw_bedrag: v.btw_bedrag, btw_vak: (l as any).vat_grid ?? "", btw_vak_naam: (l as any).vat_grid ? VAT_GRID_LABELS[(l as any).vat_grid] ?? "" : "" }); });
               const d = ls.reduce((s, l) => s + l.debit, 0), cr = ls.reduce((s, l) => s + l.credit, 0);
-              rows.push({ datum: "TOTAAL", debet: Math.round(d * 100) / 100, credit: Math.round(cr * 100) / 100 });
+              const btwT = r2(ls.filter((l) => l.account === "411000" || l.account === "451000").reduce((s, l) => s + l.debit + l.credit, 0));
+              rows.push({ datum: "TOTAAL", debet: Math.round(d * 100) / 100, credit: Math.round(cr * 100) / 100, btw_bedrag: btwT });
               XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ls.length ? rows : [{ info: "Geen boekingen in deze periode" }]), j === "aankoop" ? "Aankoopdagboek" : "Verkoopdagboek");
             }
             const bt = vatBoxes(inP, exFrom, exTo);

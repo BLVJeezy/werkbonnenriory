@@ -139,6 +139,44 @@ export function vatBoxes(lines: PostedLine[], from: string, to: string) {
   return { rows, ...v };
 }
 
+/** Factuurlijn zoals nodig om btw per boekingsregel te tonen. */
+export type DocLine = { account: string | null; ex_vat: number; vat: number; vat_rate?: number | null };
+/** Boekingsregel zoals lineVat die nodig heeft (entry_id + herkomst van de boeking). */
+export type LineVatKey = { entry_id: string; account: string; debit: number; credit: number; source?: string | null; source_ref?: string | null };
+export type LineVat = { btw_tarief: string; btw_bedrag: number };
+
+/** Koppel per boekingsregel het btw-tarief en -bedrag van de onderliggende factuurlijn.
+ *  Btw-regels (411000/451000) dragen hun eigen bedrag. Kosten-, omzet- en investeringsregels worden
+ *  één-voor-één gekoppeld opzelfde rekening en netto-bedrag, zodat twee gelijke lijnen elk hun eigen btw krijgen. */
+export function lineVat(lines: LineVatKey[], docs: Record<string, DocLine[]>): LineVat[] {
+  const out: LineVat[] = lines.map(() => ({ btw_tarief: "", btw_bedrag: 0 }));
+  const byEntry = new Map<string, number[]>();
+  lines.forEach((l, i) => { const a = byEntry.get(l.entry_id) ?? []; a.push(i); byEntry.set(l.entry_id, a); });
+  for (const idxs of byEntry.values()) {
+    const firstIdx = idxs[0];
+    if (firstIdx === undefined) continue;
+    const first = lines[firstIdx];
+    if (!first) continue;
+    const ref = first.source_ref;
+    const doc = first.source === "factuur" && ref ? docs[ref] : undefined;
+    const free = doc ? doc.map(() => true) : [];
+    idxs.forEach((i) => {
+      const l = lines[i];
+      if (!l) return;
+      const amount = r2(l.debit || l.credit);
+      if (l.account === "411000" || l.account === "451000") { out[i] = { btw_tarief: "", btw_bedrag: amount }; return; }
+      if (!doc || !amount || ![2, 6, 7].includes(accountClass(l.account))) return;
+      const k = doc.findIndex((d, j) => free[j] && d.account === l.account && r2(Math.abs(d.ex_vat)) === amount);
+      const k2 = k >= 0 ? k : doc.findIndex((d, j) => free[j] && r2(Math.abs(d.ex_vat)) === amount);
+      const d = k2 >= 0 ? doc[k2] : undefined;
+      if (!d) return;
+      free[k2] = false;
+      out[i] = { btw_tarief: d.vat_rate == null ? "" : String(d.vat_rate), btw_bedrag: r2(Math.abs(d.vat)) };
+    });
+  }
+  return out;
+}
+
 /** Rekeningschema/balans-import: kolommen rekening, naam en optioneel saldo of debet/credit. */
 export type ImportedAccount = { number: string; name: string; saldo: number | null; err?: string };
 export function parseAccountRows(rows: Record<string, unknown>[], map: { nr: string; naam: string; saldo?: string; debet?: string; credit?: string }): ImportedAccount[] {

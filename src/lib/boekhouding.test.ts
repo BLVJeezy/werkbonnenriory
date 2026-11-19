@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { controlAccounts, invoiceToEntry, isBalanced, openingEntry, parseAccountRows, paymentEntry, statements, trialBalance, vatBoxes, vatReport } from "./boekhouding";
+import { controlAccounts, invoiceToEntry, isBalanced, lineVat, openingEntry, parseAccountRows, paymentEntry, statements, trialBalance, vatBoxes, vatReport } from "./boekhouding";
 
 const post = (lines: any[], date = "2026-03-10", journal = "aankoop") => lines.map((l) => ({ ...l, entry_date: date, journal }));
 
@@ -94,5 +94,45 @@ describe("btw-vakken voor export", () => {
   it("meer aftrekbare dan verschuldigde btw geeft vak 72", () => {
     const r = vatBoxes(post(aankoop, "2026-03-05", "aankoop"), "2026-01-01", "2026-03-31").rows;
     expect(r[r.length - 1]).toEqual({ vak: "72", naam: "Terug te vorderen", bedrag: 84 });
+  });
+});
+
+describe("btw per boekingsregel", () => {
+  const keysOf = (lines: any[], entry: string, src: string, ref: string) =>
+    lines.map((l) => ({ entry_id: entry, account: l.account, debit: l.debit, credit: l.credit, source: src, source_ref: ref }));
+
+  it("kostenlijn krijgt tarief en btw van haar factuurlijn, btw-regel haar eigen bedrag", () => {
+    const fact = invoiceToEntry({ direction: "aankoop", doc_type: "factuur", lines: [{ account: "611120", ex_vat: 275, vat: 57.75 }] }).lines;
+    expect(lineVat(keysOf(fact, "e1", "factuur", "f1"), { f1: [{ account: "611120", ex_vat: 275, vat: 57.75, vat_rate: 21 }] })).toEqual([
+      { btw_tarief: "21", btw_bedrag: 57.75 },
+      { btw_tarief: "", btw_bedrag: 57.75 },
+      { btw_tarief: "", btw_bedrag: 0 },
+    ]);
+  });
+  it("twee gelijke lijnen krijgen elk hun eigen btw", () => {
+    const two = invoiceToEntry({ direction: "verkoop", doc_type: "factuur", lines: [{ account: "700000", ex_vat: 100, vat: 21 }, { account: "700000", ex_vat: 100, vat: 21 }] }).lines;
+    const docs = { f2: [{ account: "700000", ex_vat: 100, vat: 21, vat_rate: 21 }, { account: "700000", ex_vat: 100, vat: 21, vat_rate: 21 }] };
+    expect(lineVat(keysOf(two, "e2", "factuur", "f2"), docs)).toEqual([
+      { btw_tarief: "21", btw_bedrag: 21 },
+      { btw_tarief: "21", btw_bedrag: 21 },
+      { btw_tarief: "", btw_bedrag: 42 },
+      { btw_tarief: "", btw_bedrag: 0 },
+    ]);
+  });
+  it("creditnota met omgekeerde richting krijgt ook btw per regel", () => {
+    const cr = invoiceToEntry({ direction: "aankoop", doc_type: "creditnota", lines: [{ account: "601000", ex_vat: 100, vat: 21 }] }).lines;
+    expect(lineVat(keysOf(cr, "e3", "factuur", "f3"), { f3: [{ account: "601000", ex_vat: 100, vat: 21, vat_rate: 21 }] })).toEqual([
+      { btw_tarief: "21", btw_bedrag: 21 },
+      { btw_tarief: "", btw_bedrag: 21 },
+      { btw_tarief: "", btw_bedrag: 0 },
+    ]);
+  });
+  it("0%-lijn toont tarief 0 zonder btw-bedrag", () => {
+    expect(lineVat([{ entry_id: "e5", account: "700000", debit: 500, credit: 0, source: "factuur", source_ref: "f5" }], { f5: [{ account: "700000", ex_vat: 500, vat: 0, vat_rate: 0 }] }))
+      .toEqual([{ btw_tarief: "0", btw_bedrag: 0 }]);
+  });
+  it("simpla-boeking zonder factuurlijn blijft leeg", () => {
+    expect(lineVat([{ entry_id: "e4", account: "700000", debit: 0, credit: 100, source: "simpla", source_ref: "sale-3003" }], {}))
+      .toEqual([{ btw_tarief: "", btw_bedrag: 0 }]);
   });
 });
