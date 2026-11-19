@@ -4929,6 +4929,7 @@ export type Database = {
         Args: { _allocated: number; _parts: number; _transaction: string }
         Returns: string
       }
+      fin_book_reconciled_sales_tx: { Args: { _tx: string }; Returns: string }
       fin_capitalize_invoice_line: {
         Args: {
           _asset_account: string
