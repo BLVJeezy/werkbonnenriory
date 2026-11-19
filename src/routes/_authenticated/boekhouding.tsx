@@ -605,7 +605,12 @@ function Bank({ c }: { c: string }) {
     // Eén betaling voor meerdere facturen: de journaalreferentie bevat alle factuurnummers.
     const refs = ((await fetchAll((a, b) => db.from("fin_journal_entries").select("reference").eq("company_id", c).eq("source", "bank").not("reference", "is", null).order("id").range(a, b))) as any[]);
     const nums = new Set(refs.flatMap((r) => String(r.reference).split(",").map((x: string) => x.trim()).filter(Boolean)));
-    return paid.filter((i) => !linked.has(i.id) && !(i.number && nums.has(i.number)));
+    // Met een creditnota verrekend: dat deel hoeft niet meer via de bank afgeletterd te worden.
+    const credited = new Map<string, number>();
+    const add = (k: string | null | undefined, v: number) => { if (k) credited.set(k, r2((credited.get(k) ?? 0) + Math.abs(v))); };
+    ((await fetchAll((a, b) => db.from("invoices").select("credit_for, total").eq("kind", "creditnota").not("credit_for", "is", null).order("id").range(a, b))) as any[]).forEach((r) => add(`wb-${r.credit_for}`, Number(r.total)));
+    ((await fetchAll((a, b) => db.from("fin_invoices").select("original_invoice_id, fin_invoice_lines(ex_vat, vat)").eq("company_id", c).eq("doc_type", "creditnota").not("original_invoice_id", "is", null).order("id").range(a, b))) as any[]).forEach((r) => add(r.original_invoice_id, (r.fin_invoice_lines ?? []).reduce((s: number, l: any) => s + Number(l.ex_vat) + Number(l.vat), 0)));
+    return paid.map((i) => ({ ...i, credited: r2((credited.get(i.id) ?? 0) + (i.source_ref ? credited.get(i.source_ref) ?? 0 : 0)) })).filter((i) => !linked.has(i.id) && !(i.number && nums.has(i.number)) && total(i) - i.credited > 0.005);
   } });
   const [bankAcc, setBankAcc] = useState("550200");
   const ctl = controlAccounts(accounts.map((a) => a.number));
@@ -682,7 +687,7 @@ function Bank({ c }: { c: string }) {
   const settleClick = async (t: any, inv: any) => { try { await settle(t, inv); toast.success("Afgeletterd met betaalde factuur"); refresh(); } catch (e: any) { toast.error(e.message); } };
   // Betaald gemarkeerde factuur afletteren met (een deel van) een willekeurige openstaande betaling.
   const paidBankDone = (i: any) => r2(paymentAllocations.filter((a) => a.invoice_id === i.id).reduce((s, a) => s + Number(a.amount), 0));
-  const paidRest = (i: any) => r2(Math.max(0, total(i) - paidBankDone(i)));
+  const paidRest = (i: any) => r2(Math.max(0, total(i) - Number(i.credited ?? 0) - paidBankDone(i)));
   const settlePaidWith = async (t: any, inv: any) => {
     const rest = paidRest(inv);
     if (!t.allocated_amount && !paidBankDone(inv) && Math.abs(effAmt(t) - rest) < 0.025) return settleClick(t, inv);
