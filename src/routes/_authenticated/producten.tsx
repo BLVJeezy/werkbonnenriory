@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
+import { PriceListActions } from "@/components/PriceListActions";
 import { ProductPhotoEditor, ProductPhotoGallery } from "@/components/ProductPhotos";
 
 export const Route = createFileRoute("/_authenticated/producten")({
@@ -56,6 +57,7 @@ function Producten() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-black uppercase">Producten</h1>
+      <PriceListActions />
       <form onSubmit={add} className="flex flex-wrap gap-2 rounded-md border bg-card p-4">
         <Input placeholder="Productnaam" required value={name} onChange={(e) => setName(e.target.value)} className="min-w-48 flex-1" />
         <Input placeholder="Alias voor ploegen (bv. 'grijze buis')" value={alias} onChange={(e) => setAlias(e.target.value)} className="min-w-48 flex-1" />

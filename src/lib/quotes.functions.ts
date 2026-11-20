@@ -378,3 +378,45 @@ export const deleteQuote = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+async function renderPriceList(ctx: Ctx, sel: { productIds: string[]; activityIds: string[] }) {
+  if (!sel.productIds.length && !sel.activityIds.length) throw new Error("Vink minstens één product of activiteit aan");
+  await assertAdmin(ctx);
+  const [{ data: s }, { data: acts }, { data: prods }] = await Promise.all([
+    ctx.supabase.from("settings").select("company_name,company_vat").eq("id", 1).single(),
+    ctx.supabase.from("activities").select("name,hourly_rate").in("id", sel.activityIds.length ? sel.activityIds : ["00000000-0000-0000-0000-000000000000"]).order("name"),
+    ctx.supabase.from("products").select("name,unit,price,description").in("id", sel.productIds.length ? sel.productIds : ["00000000-0000-0000-0000-000000000000"]).order("name"),
+  ]);
+  const { createPriceListPdf } = await import("@/lib/price-list-pdf");
+  const today = new Date().toISOString().slice(0, 10);
+  const pdf = await createPriceListPdf({
+    date: today,
+    company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404" },
+    activities: (acts ?? []).filter((a: any) => a.hourly_rate != null).map((a: any) => ({ name: a.name, hourlyRate: Number(a.hourly_rate) })),
+    products: (prods ?? []).map((p: any) => ({ name: p.name, unit: p.unit, price: Number(p.price), description: p.description })),
+  });
+  return { name: `Prijslijst-Riory-${today}.pdf`, base64: b64(pdf) };
+}
+
+const priceListSel = async (input: unknown) => {
+  const { z } = await import("zod");
+  return z.object({ productIds: z.array(z.string().uuid()).max(2000), activityIds: z.array(z.string().uuid()).max(500) }).parse(input);
+};
+
+export const priceListPdf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(priceListSel)
+  .handler(async ({ data, context }) => renderPriceList(context, data));
+
+export const sendPriceList = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(async (input: unknown) => {
+    const { z } = await import("zod");
+    const sel = await priceListSel(input);
+    return { ...sel, email: z.string().trim().email().parse((input as any)?.email) };
+  })
+  .handler(async ({ data, context }) => {
+    const pdf = await renderPriceList(context, data);
+    await sendMail(data.email, "Prijslijst — Riory", "Beste,\n\nIn bijlage vindt u onze actuele prijslijst.\n\nMet vriendelijke groeten,\nRiory", { name: pdf.name, contentType: "application/pdf", contentBytes: pdf.base64 });
+    return { accepted: true };
+  });
