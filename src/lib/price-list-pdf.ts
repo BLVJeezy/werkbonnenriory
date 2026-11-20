@@ -7,7 +7,23 @@ export type PriceListData = {
   company: { name: string; vat: string };
   activities: { name: string; hourlyRate: number; description?: string | null }[];
   products: { name: string; unit: string; price: number; description?: string | null }[];
+  travel?: { kmRate: number; baseAddress?: string | null } | null;
 };
+
+/** Pure: the travel-cost line shown on the price list, or null when no km rate is configured. */
+export function priceListTravelRow(t?: { kmRate: number; baseAddress?: string | null } | null) {
+  const rate = Number(t?.kmRate ?? 0);
+  if (!(rate > 0)) return null;
+  const address = (t?.baseAddress ?? "").trim();
+  return {
+    name: "Voorrijkosten (rit heen en terug)",
+    unit: "per km",
+    price: money(rate),
+    note: address
+      ? `Vertrek vanaf ${address}. De afstand wordt heen en terug berekend.`
+      : "De afstand wordt heen en terug berekend.",
+  };
+}
 
 const W = 595.28, H = 841.89, M = 48;
 const money = (n: number) => `EUR ${n.toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -101,6 +117,13 @@ export async function createPriceListPdf(d: PriceListData): Promise<Uint8Array> 
   if (d.products.length) {
     section("PRODUCTEN EN MATERIALEN", ["Product", "Eenheid", "Prijs"]);
     d.products.forEach((p, i) => row(i, p.name, p.unit, money(p.price), p.description?.trim() || null));
+  }
+  const travel = priceListTravelRow(d.travel);
+  if (travel) {
+    ensure(60);
+    y -= 6;
+    section("VERPLAATSKOSTEN", ["Voorrijkosten", "Eenheid", "Prijs"]);
+    row(0, travel.name, travel.unit, travel.price, travel.note);
   }
   return doc.save();
 }
