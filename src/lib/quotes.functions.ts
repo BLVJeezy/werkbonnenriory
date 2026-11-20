@@ -74,15 +74,29 @@ async function quotePhotos(supabase: any, q: any): Promise<Uint8Array[]> {
   return out;
 }
 
-type QuoteExtra = { kind?: string; customerId?: string | null; damageCause?: string; damageFindings?: string; photoPaths?: string[] };
+type QuoteExtra = {
+  kind?: string;
+  customerId?: string | null;
+  damageCause?: string;
+  damageFindings?: string;
+  photoPaths?: string[];
+  contractRepeatEvery?: number;
+  contractRepeatUnit?: string;
+  contractStartDate?: string | null;
+  contractEndDate?: string | null;
+};
 const extraFields = (i: QuoteExtra) => {
-  const kind = i.kind === "verzekering" ? "verzekering" : "offerte";
+  const kind = i.kind === "verzekering" ? "verzekering" : i.kind === "contract" ? "contract" : "offerte";
   return {
     kind,
     customer_id: i.customerId || null,
     damage_cause: kind === "verzekering" ? i.damageCause?.trim() || null : null,
     damage_findings: kind === "verzekering" ? i.damageFindings?.trim() || null : null,
     photo_paths: kind === "verzekering" ? (i.photoPaths ?? []).filter((p) => typeof p === "string").slice(0, 40) : [],
+    contract_repeat_every: kind === "contract" ? Math.max(1, Number(i.contractRepeatEvery) || 6) : 6,
+    contract_repeat_unit: kind === "contract" && ["week", "maand", "jaar"].includes(i.contractRepeatUnit ?? "") ? i.contractRepeatUnit! : "maand",
+    contract_start_date: kind === "contract" ? i.contractStartDate || null : null,
+    contract_end_date: kind === "contract" ? i.contractEndDate || null : null,
   };
 };
 
@@ -259,6 +273,41 @@ export const bestekFromWorkOrder = createServerFn({ method: "POST" })
     return row;
   });
 
+/** Renders either a standard/insurance quote PDF or an airtight Riory maintenance contract PDF when kind === "contract". */
+async function renderQuotePdfBytes(supabase: any, q: any): Promise<Uint8Array> {
+  if (q.kind === "contract") {
+    const { data: s } = await supabase.from("settings").select("company_name,company_vat,base_address,km_rate").eq("id", 1).maybeSingle();
+    const { createContractPdf } = await import("@/lib/contract-pdf");
+    const c = (q.customer ?? {}) as InvoiceCustomer;
+    const lines = ((q.lines as InvoiceLine[]) ?? []).filter((l) => !l.optional && l.description.trim().length > 0).map((l) => ({
+      description: l.description,
+      quantity: Number(l.quantity) || 1,
+      unit: l.unit || "st",
+      unitPrice: Number(l.originalUnitPrice ?? l.unitPrice) || 0,
+      discount: Number(l.discount) || 0,
+      vatRate: ([0, 6, 12, 21].includes(Number(l.vatRate ?? q.vat_rate)) ? Number(l.vatRate ?? q.vat_rate) : 21) as 0 | 6 | 12 | 21,
+    }));
+    return createContractPdf({
+      number: q.number,
+      name: q.intro?.trim() || lines[0]?.description || `Onderhoudscontract ${q.number}`,
+      date: (q.created_at as string).slice(0, 10),
+      startDate: q.contract_start_date ?? null,
+      endDate: q.contract_end_date ?? null,
+      repeatEvery: Number(q.contract_repeat_every) || 6,
+      repeatUnit: (q.contract_repeat_unit || "maand") as "week" | "maand" | "jaar",
+      description: q.intro?.trim() || null,
+      company: { name: s?.company_name ?? "Riory BV", vat: s?.company_vat ?? "BE0840931404", address: s?.base_address ?? "Natveld 47, 3740 Bilzen", kmRate: s?.km_rate ?? 1.45 },
+      customer: { name: c.name, address: c.siteAddress || c.address || null, vatNumber: c.vatNumber ?? null, email: c.email ?? null },
+      lines,
+      fallbackAmount: Number(q.net) || null,
+      signedName: q.signed_name ?? null,
+      signedAt: q.signed_at ?? null,
+    });
+  }
+  const { createQuotePdf } = await import("@/lib/quote-pdf");
+  return createQuotePdf(await quotePdfData(supabase, q), await quotePhotos(supabase, q));
+}
+
 /** Sends the quote PDF from info@riory.be with a signing link the customer can use to approve. */
 export const sendQuote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -269,17 +318,17 @@ export const sendQuote = createServerFn({ method: "POST" })
     if (!q) throw new Error("Offerte niet gevonden");
     const to = (q.customer as InvoiceCustomer).email;
     if (!to) throw new Error("Deze offerte heeft geen e-mailadres van de klant");
-    const { createQuotePdf } = await import("@/lib/quote-pdf");
-    const pdf = b64(await createQuotePdf(await quotePdfData(context.supabase, q), await quotePhotos(context.supabase, q)));
+    const pdf = b64(await renderQuotePdfBytes(context.supabase, q));
     const link = quoteSigningLink(q.token);
     const { prepareDocument } = await import('./document-tracking.server');
     const { linkText } = await import('./document-tracking');
     const tracking = await prepareDocument('offerte', q.id, `Offerte ${q.number}`, to, pdf);
+    const docLabel = q.kind === "verzekering" ? "Bestek" : q.kind === "contract" ? "Onderhoudscontract" : "Offerte";
     await tracking.send(() => sendMail(
       to,
-      `${q.kind === "verzekering" ? "Bestek" : "Offerte"} ${q.number} — Riory`,
+      `${docLabel} ${q.number} — Riory`,
       linkText(quoteMailText({ kind: q.kind, number: q.number as string, customerName: (q.customer as InvoiceCustomer).name, link, lines: (q.lines as InvoiceLine[]) ?? [] }), tracking.url),
-      { name: `Offerte-${q.number}.pdf`, contentType: "application/pdf", contentBytes: pdf },
+      { name: `${docLabel}-${q.number}.pdf`, contentType: "application/pdf", contentBytes: pdf },
     ));
     const { error } = await context.supabase.from("quotes").update({ status: "verzonden", sent_at: new Date().toISOString(), reminder_stage: 0, reminder_error: null }).eq("id", q.id);
     if (error) throw new Error(error.message);
@@ -293,8 +342,7 @@ export const quotePdf = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { data: q } = await context.supabase.from("quotes").select("*").eq("id", data.quoteId).single();
     if (!q) throw new Error("Offerte niet gevonden");
-    const { createQuotePdf } = await import("@/lib/quote-pdf");
-    return { number: q.number as string, base64: b64(await createQuotePdf(await quotePdfData(context.supabase, q), await quotePhotos(context.supabase, q))) };
+    return { number: q.number as string, base64: b64(await renderQuotePdfBytes(context.supabase, q)) };
   });
 
 /** Converts an approved quote into a planned task with the quote's customer data and lines as description. */
@@ -349,7 +397,7 @@ export const signQuote = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: q } = await supabaseAdmin.from("quotes").select("id, status, lines, vat_rate").eq("token", data.token).maybeSingle();
+    const { data: q } = await supabaseAdmin.from("quotes").select("id, number, kind, status, lines, vat_rate, customer_id, customer, intro, technician_id, contract_id, contract_repeat_every, contract_repeat_unit, contract_start_date, contract_end_date").eq("token", data.token).maybeSingle();
     if (!q) throw new Error("Offerte niet gevonden");
     if (q.status === "akkoord") return { ok: true as const };
     // The customer picks optional lines by clicking; chosen options become part of the offer and its total.
@@ -357,9 +405,49 @@ export const signQuote = createServerFn({ method: "POST" })
       l.optional && data.options.includes(i) ? { ...l, optional: false } : l,
     );
     const t = quoteTotals(lines, Number(q.vat_rate));
+    let contractId = q.contract_id as string | null;
+    if (q.kind === "contract" && !contractId) {
+      const { nextContractNumber } = await import("@/lib/contract-pdf");
+      const { data: existingNums } = await supabaseAdmin.from("contracts").select("number");
+      const contractNumber = nextContractNumber((existingNums ?? []).map((x: { number: string | null }) => x.number));
+      const billingLines = lines.filter((l) => !l.optional && l.description.trim().length > 0).map((l) => ({
+        description: l.description,
+        quantity: Number(l.quantity) || 1,
+        unit: l.unit || "st",
+        unitPrice: Number(l.originalUnitPrice ?? l.unitPrice) || 0,
+        discount: Number(l.discount) || 0,
+        vatRate: ([0, 6, 12, 21].includes(Number(l.vatRate ?? q.vat_rate)) ? Number(l.vatRate ?? q.vat_rate) : 21) as 0 | 6 | 12 | 21,
+      }));
+      const cust = (q.customer ?? {}) as InvoiceCustomer;
+      const unit = ["week", "maand", "jaar"].includes(q.contract_repeat_unit ?? "") ? q.contract_repeat_unit : "maand";
+      const every = Math.max(1, Number(q.contract_repeat_every) || 6);
+      const nextDate = q.contract_start_date || new Date().toISOString().slice(0, 10);
+      const { data: created, error: ce } = await supabaseAdmin.from("contracts").insert({
+        number: contractNumber,
+        name: q.intro?.trim() || billingLines[0]?.description || `Onderhoudscontract ${q.number}`,
+        customer_id: q.customer_id,
+        customer_name: cust.name,
+        description: [q.intro?.trim(), ...billingLines.map((l) => `${l.quantity} ${l.unit} ${l.description}`)].filter(Boolean).join("\n"),
+        repeat_every: every,
+        repeat_unit: unit,
+        invoice_every: every,
+        invoice_unit: unit,
+        invoice_amount: t.net,
+        next_date: nextDate,
+        end_date: q.contract_end_date ?? null,
+        technician_id: q.technician_id,
+        active: true,
+        scheduling_ready: true,
+        billing_enabled: billingLines.length > 0,
+        billing_enabled_at: billingLines.length > 0 ? new Date().toISOString() : null,
+        billing_lines: billingLines,
+      }).select("id").single();
+      if (ce) throw new Error(ce.message);
+      contractId = created.id;
+    }
     const { error } = await supabaseAdmin.from("quotes").update({
       status: "akkoord", signature: data.signature, signed_name: data.name, signed_at: new Date().toISOString(),
-      lines, net: t.net, vat: t.vat, total: t.total,
+      lines, net: t.net, vat: t.vat, total: t.total, contract_id: contractId,
     }).eq("id", q.id);
     if (error) throw new Error(error.message);
     return { ok: true as const };

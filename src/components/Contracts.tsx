@@ -12,16 +12,24 @@ import { planContracts, PLAN_AHEAD_DAYS } from "@/lib/contracts";
 import { REPEAT_PRESETS, repeatLabel, nthWeekdayOfMonth, addInterval, WEEKDAYS, ORDINALS, type RepeatUnit } from "@/lib/recurrence";
 import { ContractBilling } from './ContractBilling';
 import { CustomerPicker } from './CustomerPicker';
+import { downloadContractPdf } from "@/lib/contracts.functions";
+import { nextContractNumber } from "@/lib/contract-pdf";
+import { contractLineSchema, type ContractLine } from "@/lib/contract-billing";
+import { vatRateForCustomer } from "@/lib/vat-number";
+import { FileDown, Plus, Trash2 } from "lucide-react";
 
 type Opts = { techs: { id: string; name: string }[]; acts: { id: string; name: string }[] } | undefined;
 const sel = "h-10 w-full rounded-md border bg-background px-2";
-const empty = { customer: "", name: "", description: "", technician_id: "", activity_id: "", every: "1", unit: "maand" as RepeatUnit, next_date: "", end_date: "", mode: "datum" as "datum" | "weekdag", ordinal: "1", weekday: "0" };
+const emptyLine = (vatRate: ContractLine["vatRate"] = 21): ContractLine => ({ description: "", quantity: 1, unit: "st", unitPrice: 0, discount: 0, vatRate });
+const empty = { number: "", customer: "", name: "", description: "", technician_id: "", activity_id: "", every: "1", unit: "maand" as RepeatUnit, next_date: "", end_date: "", mode: "datum" as "datum" | "weekdag", ordinal: "1", weekday: "0" };
 
 export function Contracts({ opts }: { opts: Opts }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(empty);
+  const [lines, setLines] = useState<ContractLine[]>([emptyLine(21)]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
   const planned = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   function openForm() { setOpen(true); setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }
@@ -46,6 +54,11 @@ export function Contracts({ opts }: { opts: Opts }) {
     e.preventDefault();
     const c = customers.find((x) => label(x) === f.customer);
     if (!c) { toast.error("Kies een bestaande klant uit de lijst"); return; }
+    const validLines = lines.filter((l) => l.description.trim().length > 0);
+    for (const l of validLines) {
+      const parsed = contractLineSchema.safeParse(l);
+      if (!parsed.success) { toast.error("Controleer aantal, prijs en korting van elke contractregel"); return; }
+    }
     const useOrdinal = f.mode === "weekdag" && f.unit !== "week";
     const ordinal = useOrdinal ? Number(f.ordinal) : null;
     const weekday = useOrdinal ? Number(f.weekday) : null;
@@ -57,19 +70,37 @@ export function Contracts({ opts }: { opts: Opts }) {
       while (cand < f.next_date && guard++ < 500) cand = addInterval(cand, Number(f.every), f.unit, ordinal, weekday);
       nextDate = cand;
     }
+    const netTotal = validLines.length ? Math.round(validLines.reduce((s, l) => s + l.quantity * l.unitPrice * (1 - l.discount / 100), 0) * 100) / 100 : null;
     const values = {
+      number: f.number.trim() || null,
       customer_id: c.id, customer_name: c.name, name: f.name || c.name, description: f.description || null,
       technician_id: f.technician_id || null, activity_id: f.activity_id || null,
       repeat_every: Number(f.every), repeat_unit: f.unit, next_date: nextDate, end_date: f.end_date || null,
       repeat_ordinal: ordinal, repeat_weekday: weekday,
       scheduling_ready: true,
+      ...(validLines.length ? { billing_lines: validLines, invoice_amount: netTotal } : {}),
     };
     const { error } = editingId
       ? await supabase.from("contracts").update(values).eq("id", editingId)
       : await supabase.from("contracts").insert(values);
     if (error) { toast.error(error.message); return; }
-    setF(empty); setOpen(false); setEditingId(null);
+    setF(empty); setLines([emptyLine(21)]); setOpen(false); setEditingId(null);
     await plan();
+  }
+  async function downloadPdf(id: string) {
+    setPdfBusyId(id);
+    try {
+      const { pdfBase64, filename } = await downloadContractPdf({ data: { id } });
+      const bin = atob(pdfBase64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Contract-PDF aanmaken mislukt");
+    } finally { setPdfBusyId(null); }
   }
   async function stop(id: string) {
     if (!confirm("Contract stopzetten? Reeds ingeplande taken blijven staan.")) return;
@@ -82,14 +113,21 @@ export function Contracts({ opts }: { opts: Opts }) {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-lg font-black uppercase">Terugkerende opdrachten (contracten)</h2>
         <Button size="sm" variant="outline" onClick={() => plan()}>Nu inplannen</Button>
-        <Button size="sm" onClick={() => { if (open) { setOpen(false); return; } setEditingId(null); setF(empty); openForm(); }}>{open ? "Sluiten" : "+ Terugkerende opdracht"}</Button>
+        <Button size="sm" onClick={() => { if (open) { setOpen(false); return; } setEditingId(null); setF({ ...empty, number: nextContractNumber(contracts.map((x) => x.number)) }); setLines([emptyLine(21)]); openForm(); }}>{open ? "Sluiten" : "+ Nieuw contract"}</Button>
       </div>
       <p className="text-sm text-muted-foreground">Contractbeurten · {PLAN_AHEAD_DAYS / 7} weken vooruit gepland · Werkbonnen enkel ter info</p>
       {open && (
         <form ref={formRef} onSubmit={save} className="grid scroll-mt-4 gap-3 rounded border-2 border-primary bg-background p-4 sm:grid-cols-2">
-          <h3 className="font-black uppercase sm:col-span-2">{editingId ? `Planning instellen: ${f.name || "contract"}` : "Nieuwe terugkerende opdracht"}</h3>
+          <h3 className="font-black uppercase sm:col-span-2">{editingId ? `Contract bewerken: ${f.name || "contract"}` : "Nieuw onderhoudscontract"}</h3>
           <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-klant">Klant</Label>
-            <CustomerPicker id="ct-klant" customers={customers} value={customers.find(c => label(c) === f.customer)?.id ?? ""} placeholder="Kies klant…" onChange={id => { const c = customers.find(c => c.id === id); if (c) setF({ ...f, customer: label(c) }); }} /></div>
+            <CustomerPicker id="ct-klant" customers={customers} value={customers.find(c => label(c) === f.customer)?.id ?? ""} placeholder="Kies klant…" onChange={id => {
+              const c = customers.find(c => c.id === id);
+              if (!c) return;
+              setF({ ...f, customer: label(c) });
+              const rate = vatRateForCustomer(c.vat_number ?? "", 21, undefined, { postalCode: c.postal_code, vrijBeroep: !!c.vrij_beroep, defaultRate: c.default_vat_rate }) as ContractLine["vatRate"];
+              if (!editingId) setLines((prev) => prev.map((l) => ({ ...l, vatRate: rate })));
+            }} /></div>
+          <div className="grid gap-1"><Label htmlFor="ct-nr">Contractnummer</Label><Input id="ct-nr" value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="bv. 2026/00003" /></div>
           <div className="grid gap-1"><Label htmlFor="ct-naam">Naam opdracht</Label><Input id="ct-naam" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="bv. Onderhoud dakgoten" /></div>
           <div className="grid gap-1"><Label htmlFor="ct-freq">Frequentie</Label>
             <SearchableSelect id="ct-freq" className={sel} value={`${f.every}-${f.unit}`} onChange={(e) => { const [ev, u] = e.target.value.split("-"); if (ev && u) setF({ ...f, every: ev, unit: u as RepeatUnit }); }}>
@@ -124,7 +162,29 @@ export function Contracts({ opts }: { opts: Opts }) {
           <div className="grid gap-1"><Label htmlFor="ct-eind">Einde contract (optioneel)</Label><Input id="ct-eind" type="date" value={f.end_date} onChange={(e) => setF({ ...f, end_date: e.target.value })} /></div>
           <div className="grid gap-1"><Label htmlFor="ct-ploeg">Ploeg</Label><SearchableSelect id="ct-ploeg" className={sel} value={f.technician_id} onChange={(e) => setF({ ...f, technician_id: e.target.value })}><option value="">— Later —</option>{opts?.techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</SearchableSelect></div>
           <div className="grid gap-1"><Label htmlFor="ct-act">Activiteit</Label><SearchableSelect id="ct-act" className={sel} value={f.activity_id} onChange={(e) => setF({ ...f, activity_id: e.target.value })}><option value="">— Kies —</option>{opts?.acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</SearchableSelect></div>
-          <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-oms">Omschrijving voor de ploeg</Label><Textarea id="ct-oms" rows={2} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
+          <div className="grid gap-1 sm:col-span-2"><Label htmlFor="ct-oms">Omschrijving en bijzondere afspraken (voor contract &amp; ploeg)</Label><Textarea id="ct-oms" rows={2} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="bv. Alle gevels toegankelijk, reisvergoeding gratis" /></div>
+          <div className="space-y-2 rounded border bg-muted/30 p-3 sm:col-span-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold uppercase">Prijsregels per beurt (voor contract-PDF en facturatie)</Label>
+              <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => setLines([...lines, emptyLine(lines[0]?.vatRate ?? 21)])}><Plus className="mr-1 h-3.5 w-3.5" />Regel</Button>
+            </div>
+            {lines.map((l, idx) => (
+              <div key={idx} className="grid gap-2 border-t pt-2 sm:grid-cols-[1fr_4.5rem_4.5rem_6rem_4.5rem_4.5rem_auto]">
+                <Input aria-label="Omschrijving regel" placeholder="Omschrijving dienst" value={l.description} onChange={(e) => setLines(lines.map((x, i) => i === idx ? { ...x, description: e.target.value } : x))} />
+                <Input aria-label="Aantal" type="number" step="0.01" min="0.01" value={l.quantity} onChange={(e) => setLines(lines.map((x, i) => i === idx ? { ...x, quantity: Number(e.target.value) || 0 } : x))} />
+                <Input aria-label="Eenheid" placeholder="st" value={l.unit} onChange={(e) => setLines(lines.map((x, i) => i === idx ? { ...x, unit: e.target.value } : x))} />
+                <Input aria-label="Prijs excl. btw" type="number" step="0.01" min="0" value={l.unitPrice} onChange={(e) => setLines(lines.map((x, i) => i === idx ? { ...x, unitPrice: Number(e.target.value) || 0 } : x))} />
+                <Input aria-label="Korting %" type="number" step="1" min="0" max="100" value={l.discount} onChange={(e) => setLines(lines.map((x, i) => i === idx ? { ...x, discount: Number(e.target.value) || 0 } : x))} />
+                <select aria-label="Btw %" className={sel} value={l.vatRate} onChange={(e) => setLines(lines.map((x, i) => i === idx ? { ...x, vatRate: Number(e.target.value) as ContractLine["vatRate"] } : x))}>
+                  <option value={21}>21%</option><option value={6}>6%</option><option value={0}>0%</option><option value={12}>12%</option>
+                </select>
+                <Button type="button" size="icon" variant="ghost" disabled={lines.length === 1} onClick={() => setLines(lines.filter((_, i) => i !== idx))} aria-label="Verwijder regel"><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            ))}
+            <div className="text-right text-xs font-medium text-muted-foreground">
+              Totaal per beurt excl. btw: <span className="font-bold text-foreground">€ {lines.reduce((s, l) => s + l.quantity * l.unitPrice * (1 - l.discount / 100), 0).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
           <Button type="submit" className="sm:col-span-2">Opslaan en inplannen</Button>
         </form>
       )}
@@ -151,9 +211,14 @@ export function Contracts({ opts }: { opts: Opts }) {
                 const customer = list.find((x) => x.id === c.customer_id);
                 if (!customer) { toast.error("Klant niet gevonden"); return; }
                 setEditingId(c.id);
-                setF({ ...empty, customer: label(customer), name: c.name, description: c.description ?? "", every: String(c.repeat_every), unit: c.repeat_unit as RepeatUnit, next_date:c.scheduling_ready?c.next_date:'',end_date:c.end_date??'',technician_id:c.technician_id??'',activity_id:c.activity_id??'', mode: c.repeat_ordinal ? "weekdag" : "datum", ordinal: String(c.repeat_ordinal ?? 1), weekday: String(c.repeat_weekday ?? 0) });
+                setF({ ...empty, number: c.number ?? "", customer: label(customer), name: c.name, description: c.description ?? "", every: String(c.repeat_every), unit: c.repeat_unit as RepeatUnit, next_date:c.scheduling_ready?c.next_date:'',end_date:c.end_date??'',technician_id:c.technician_id??'',activity_id:c.activity_id??'', mode: c.repeat_ordinal ? "weekdag" : "datum", ordinal: String(c.repeat_ordinal ?? 1), weekday: String(c.repeat_weekday ?? 0) });
+                const parsedLines = Array.isArray(c.billing_lines) ? c.billing_lines.map((l) => contractLineSchema.safeParse(l)).filter((r) => r.success).map((r) => r.data) : [];
+                setLines(parsedLines.length ? parsedLines : [emptyLine(21)]);
                 openForm();
               }}>{c.scheduling_ready?'Contract bewerken':'Planning instellen'}</Button>}
+              <Button size="sm" variant="outline" className="ml-2 mt-2" disabled={pdfBusyId === c.id} onClick={() => downloadPdf(c.id)}>
+                <FileDown className="mr-1 h-3.5 w-3.5" />{pdfBusyId === c.id ? "PDF maken…" : "Contract PDF"}
+              </Button>
               <ContractBilling contract={c}/>
               {c.active && <Button size="sm" variant="outline" className="mt-1 h-7 text-destructive" onClick={() => stop(c.id)}>Stopzetten</Button>}
             </div>

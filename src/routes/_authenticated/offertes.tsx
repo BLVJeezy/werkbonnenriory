@@ -28,6 +28,7 @@ import { ProductPhotoGallery } from '@/components/ProductPhotos';
 import { quoteProductValues } from '@/lib/product-photos';
 import { QuoteSectionsManager, quoteSectionsQuery } from '@/components/QuoteSectionsManager';
 import { PdfPreview } from '@/components/PdfPreview';
+import { REPEAT_PRESETS, type RepeatUnit } from "@/lib/recurrence";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export const Route = createFileRoute("/_authenticated/offertes")({
@@ -66,7 +67,11 @@ function Offertes() {
   const [kmOn, setKmOn] = useState(false);
   const [km, setKm] = useState<number | null>(null);
   const [kmBusy, setKmBusy] = useState(false);
-  const [kind, setKind] = useState<"offerte" | "verzekering">("offerte");
+  const [kind, setKind] = useState<"offerte" | "verzekering" | "contract">("offerte");
+  const [contractEvery, setContractEvery] = useState("6");
+  const [contractUnit, setContractUnit] = useState<RepeatUnit>("maand");
+  const [contractStartDate, setContractStartDate] = useState("");
+  const [contractEndDate, setContractEndDate] = useState("");
   const [editCustomerId, setEditCustomerId] = useState<string | null>(null);
   const [damageCause, setDamageCause] = useState("");
   const [damageFindings, setDamageFindings] = useState("");
@@ -188,7 +193,11 @@ function Offertes() {
     setEditCustomer(q.customer as InvoiceCustomer);
     setVatRate(String(q.vat_rate));
     setIntro(q.intro ?? "");
-    setKind(q.kind === "verzekering" ? "verzekering" : "offerte");
+    setKind(q.kind === "verzekering" ? "verzekering" : q.kind === "contract" ? "contract" : "offerte");
+    setContractEvery(String(q.contract_repeat_every ?? 6));
+    setContractUnit((q.contract_repeat_unit as RepeatUnit) || "maand");
+    setContractStartDate(q.contract_start_date ?? "");
+    setContractEndDate(q.contract_end_date ?? "");
     setEditCustomerId(q.customer_id ?? null);
     setDamageCause(q.damage_cause ?? "");
     setDamageFindings(q.damage_findings ?? "");
@@ -245,12 +254,16 @@ function Offertes() {
     if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
     if (!customer) { toast.error("Kies een klant"); return; }
     setBusy(true);
-    const extra = { kind, customerId: editId ? editCustomerId : customerId, damageCause, damageFindings, photoPaths };
+    const extra = {
+      kind, customerId: editId ? editCustomerId : customerId, damageCause, damageFindings, photoPaths,
+      ...(kind === "contract" ? { contractRepeatEvery: Number(contractEvery) || 6, contractRepeatUnit: contractUnit, contractStartDate: contractStartDate || null, contractEndDate: contractEndDate || null } : {}),
+    };
     try {
       const saved = editId
         ? await update({ data: { quoteId: editId, customer, lines: parsedLines, vatRate: Number(vatRate), intro, ...extra } })
         : await create({ data: { customer, lines: parsedLines, vatRate: Number(vatRate), intro, ...extra } });
-      toast.success(bestek ? (editId ? "Bestek bijgewerkt" : "Bestek aangemaakt") : editId ? "Offerte bijgewerkt" : "Offerte aangemaakt");
+      const label = bestek ? "Bestek" : kind === "contract" ? "Contractofferte" : "Offerte";
+      toast.success(`${label} ${editId ? "bijgewerkt" : "aangemaakt"}`);
       const id = saved.id as string;
       closeForm();
       refresh();
@@ -324,10 +337,29 @@ function Offertes() {
       {showForm && (
         <form onSubmit={maak} className="space-y-3 rounded-md border bg-card p-4">
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Soort">
-            {([["offerte", "Gewone offerte"], ["verzekering", "Bestek brandverzekering"]] as const).map(([k, label]) => (
+            {([["offerte", "Gewone offerte"], ["contract", "Onderhoudscontract"], ["verzekering", "Bestek brandverzekering"]] as const).map(([k, label]) => (
               <Button key={k} type="button" size="sm" variant={kind === k ? "default" : "outline"} aria-pressed={kind === k} onClick={() => setKind(k)}>{label}</Button>
             ))}
           </div>
+          {kind === "contract" && (
+            <div className="grid grid-cols-1 gap-3 rounded-md border bg-muted/30 p-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label htmlFor="q-ct-freq">Frequentie</Label>
+                <SearchableSelect id="q-ct-freq" className="h-10 w-full rounded-md border bg-background px-2" value={`${contractEvery}-${contractUnit}`} onChange={(e) => { const [ev, u] = e.target.value.split("-"); if (ev && u) { setContractEvery(ev); setContractUnit(u as RepeatUnit); } }}>
+                  {REPEAT_PRESETS.map((p) => <option key={p.label} value={`${p.every}-${p.unit}`}>{p.label}</option>)}
+                </SearchableSelect>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="q-ct-start">Eerste beurt (optioneel)</Label>
+                <Input id="q-ct-start" type="date" value={contractStartDate} onChange={(e) => setContractStartDate(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="q-ct-end">Einde contract (optioneel)</Label>
+                <Input id="q-ct-end" type="date" value={contractEndDate} onChange={(e) => setContractEndDate(e.target.value)} />
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-3">De PDF wordt automatisch opgemaakt als waterdichte onderhoudsovereenkomst in Riory-huisstijl met opzegvergoedingen en algemene voorwaarden. Bij ondertekening door de klant wordt het contract automatisch aangemaakt.</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="min-w-0 space-y-1">
               <Label>Klant</Label>
@@ -443,7 +475,7 @@ function Offertes() {
             <li key={q.id} className="space-y-2 p-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
                 <div className="flex min-w-0 items-center gap-2 sm:flex-1">
-                  <span className="inline-flex items-center gap-1.5 font-mono font-bold">{q.number}{q.sent_at && <OpenEye info={opensQ.data?.opens[q.id]} />}{q.kind === "verzekering" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">Bestek</span>}</span>
+                  <span className="inline-flex items-center gap-1.5 font-mono font-bold">{q.number}{q.sent_at && <OpenEye info={opensQ.data?.opens[q.id]} />}{q.kind === "verzekering" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">Bestek</span>}{q.kind === "contract" && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 font-sans text-xs text-primary-foreground">{q.contract_id ? "Contract actief" : "Contract"}</span>}</span>
                   <span className="min-w-0 break-words font-semibold">{c.name}</span>
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">

@@ -1163,6 +1163,13 @@
       "when": 1795180663043,
       "tag": "0165_activity_description",
       "breakpoints": true
+    },
+    {
+      "idx": 166,
+      "version": "7",
+      "when": 1795188043997,
+      "tag": "0166_quote_contract_conversion",
+      "breakpoints": true
     }
   ]
 }

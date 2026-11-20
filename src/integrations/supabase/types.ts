@@ -2803,6 +2803,11 @@ export type Database = {
       }
       quotes: {
         Row: {
+          contract_end_date: string | null
+          contract_id: string | null
+          contract_repeat_every: number
+          contract_repeat_unit: string
+          contract_start_date: string | null
           created_at: string
           customer: Json
           customer_id: string | null
@@ -2832,6 +2837,11 @@ export type Database = {
           work_order_id: string | null
         }
         Insert: {
+          contract_end_date?: string | null
+          contract_id?: string | null
+          contract_repeat_every?: number
+          contract_repeat_unit?: string
+          contract_start_date?: string | null
           created_at?: string
           customer: Json
           customer_id?: string | null
@@ -2861,6 +2871,11 @@ export type Database = {
           work_order_id?: string | null
         }
         Update: {
+          contract_end_date?: string | null
+          contract_id?: string | null
+          contract_repeat_every?: number
+          contract_repeat_unit?: string
+          contract_start_date?: string | null
           created_at?: string
           customer?: Json
           customer_id?: string | null
@@ -2890,6 +2905,13 @@ export type Database = {
           work_order_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quotes_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotes_source_work_order_id_fkey"
             columns: ["source_work_order_id"]
