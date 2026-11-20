@@ -84,10 +84,21 @@ type QuoteExtra = {
   contractRepeatUnit?: string;
   contractStartDate?: string | null;
   contractEndDate?: string | null;
+  useSiteAddress?: boolean;
+  siteStreet?: string | null;
+  siteHouseNumber?: string | null;
+  sitePostalCode?: string | null;
+  siteCity?: string | null;
 };
 const extraFields = (i: QuoteExtra) => {
   const kind = i.kind === "verzekering" ? "verzekering" : i.kind === "contract" ? "contract" : "offerte";
+  const site = !!i.useSiteAddress && !!(i.siteStreet?.trim() || i.siteCity?.trim());
   return {
+    use_site_address: site,
+    site_street: site ? i.siteStreet?.trim() || null : null,
+    site_house_number: site ? i.siteHouseNumber?.trim() || null : null,
+    site_postal_code: site ? i.sitePostalCode?.trim() || null : null,
+    site_city: site ? i.siteCity?.trim() || null : null,
     kind,
     customer_id: i.customerId || null,
     damage_cause: kind === "verzekering" ? i.damageCause?.trim() || null : null,
@@ -167,6 +178,11 @@ export const quoteFromTask = createServerFn({ method: "POST" })
       number, customer, lines, source_work_order_id: wo.id, vat_rate: Number(wo.vat_rate), net: t.net, vat: t.vat, total: t.total,
       intro: wo.project_name ? `Betreft: ${wo.project_name}` : null,
       technician_id: wo.technician_id,
+      use_site_address: !!wo.use_site_address,
+      site_street: wo.use_site_address ? wo.site_street : null,
+      site_house_number: wo.use_site_address ? wo.site_house_number : null,
+      site_postal_code: wo.use_site_address ? wo.site_postal_code : null,
+      site_city: wo.use_site_address ? wo.site_city : null,
     }).select("*").single();
     if (error) throw new Error(error.message);
     return row;

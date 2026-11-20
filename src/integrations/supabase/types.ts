@@ -2827,11 +2827,16 @@ export type Database = {
           signature: string | null
           signed_at: string | null
           signed_name: string | null
+          site_city: string | null
+          site_house_number: string | null
+          site_postal_code: string | null
+          site_street: string | null
           source_work_order_id: string | null
           status: string
           technician_id: string | null
           token: string
           total: number
+          use_site_address: boolean
           vat: number
           vat_rate: number
           work_order_id: string | null
@@ -2861,11 +2866,16 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          site_city?: string | null
+          site_house_number?: string | null
+          site_postal_code?: string | null
+          site_street?: string | null
           source_work_order_id?: string | null
           status?: string
           technician_id?: string | null
           token?: string
           total: number
+          use_site_address?: boolean
           vat: number
           vat_rate?: number
           work_order_id?: string | null
@@ -2895,11 +2905,16 @@ export type Database = {
           signature?: string | null
           signed_at?: string | null
           signed_name?: string | null
+          site_city?: string | null
+          site_house_number?: string | null
+          site_postal_code?: string | null
+          site_street?: string | null
           source_work_order_id?: string | null
           status?: string
           technician_id?: string | null
           token?: string
           total?: number
+          use_site_address?: boolean
           vat?: number
           vat_rate?: number
           work_order_id?: string | null

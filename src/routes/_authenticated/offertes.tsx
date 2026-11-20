@@ -67,6 +67,11 @@ function Offertes() {
   const [kmOn, setKmOn] = useState(false);
   const [km, setKm] = useState<number | null>(null);
   const [kmBusy, setKmBusy] = useState(false);
+  const [siteOn, setSiteOn] = useState(false);
+  const [siteStreet, setSiteStreet] = useState("");
+  const [siteHouseNumber, setSiteHouseNumber] = useState("");
+  const [sitePostalCode, setSitePostalCode] = useState("");
+  const [siteCity, setSiteCity] = useState("");
   const [kind, setKind] = useState<"offerte" | "verzekering" | "contract">("offerte");
   const [contractEvery, setContractEvery] = useState("6");
   const [contractUnit, setContractUnit] = useState<RepeatUnit>("maand");
@@ -156,19 +161,22 @@ function Offertes() {
   const totals = quoteTotals(parsedLines, Number(vatRate));
   const optionsTotals = quoteOptionsTotals(parsedLines, Number(vatRate));
 
+  const siteAddressText = () => formatAddress({ street: siteStreet || null, house_number: siteHouseNumber || null, postal_code: sitePostalCode || null, city: siteCity || null });
+
   async function toggleKm(on: boolean) {
     setKmOn(on);
     if (!on) { setKm(null); return; }
+    const site = siteOn ? siteAddressText() : null;
     const c = (editCustomer ?? customers.find((x) => x.id === customerId) ?? null) as Record<string, string | null | undefined> | null;
-    const address = c
+    const address = site ?? (c
       ? formatAddress({
           street: c["street"] ?? null,
           house_number: c["house_number"] ?? c["houseNumber"] ?? null,
           postal_code: c["postal_code"] ?? c["postalCode"] ?? null,
           city: c["city"] ?? null,
         })
-      : null;
-    if (!address) { toast.error("De klant heeft geen adres"); setKmOn(false); return; }
+      : null);
+    if (!address) { toast.error(siteOn ? "Vul het werfadres in" : "De klant heeft geen adres"); setKmOn(false); return; }
     setKmBusy(true);
     try {
       const r = await calcKm({ data: { address } });
@@ -202,6 +210,11 @@ function Offertes() {
     setDamageCause(q.damage_cause ?? "");
     setDamageFindings(q.damage_findings ?? "");
     setPhotoPaths(q.photo_paths ?? []);
+    setSiteOn(!!q.use_site_address);
+    setSiteStreet(q.site_street ?? "");
+    setSiteHouseNumber(q.site_house_number ?? "");
+    setSitePostalCode(q.site_postal_code ?? "");
+    setSiteCity(q.site_city ?? "");
     const all = q.lines as InvoiceLine[];
     const kmLine = all.find((l) => l.unit === "km");
     setKmOn(!!kmLine);
@@ -222,6 +235,7 @@ function Offertes() {
     setLines([{ ...emptyLine }]);
     setKmOn(false);
     setKm(null);
+    setSiteOn(false); setSiteStreet(""); setSiteHouseNumber(""); setSitePostalCode(""); setSiteCity("");
     setKind("offerte"); setEditCustomerId(null); setDamageCause(""); setDamageFindings(""); setPhotoPaths([]); setAiNotes("");
     if (bewerk) navigate({ to: "/offertes", search: {}, replace: true });
   }
@@ -253,9 +267,13 @@ function Offertes() {
     }
     if (!parsedLines.length) { toast.error("Voeg minstens één lijn toe"); return; }
     if (!customer) { toast.error("Kies een klant"); return; }
+    const siteAddress = siteOn ? siteAddressText() : null;
+    if (siteOn && !siteAddress) { toast.error("Vul het werfadres in of vink het uit"); return; }
+    if (siteAddress) customer = { ...customer, siteAddress };
     setBusy(true);
     const extra = {
       kind, customerId: editId ? editCustomerId : customerId, damageCause, damageFindings, photoPaths,
+      useSiteAddress: siteOn, siteStreet, siteHouseNumber, sitePostalCode, siteCity,
       ...(kind === "contract" ? { contractRepeatEvery: Number(contractEvery) || 6, contractRepeatUnit: contractUnit, contractStartDate: contractStartDate || null, contractEndDate: contractEndDate || null } : {}),
     };
     try {
@@ -382,6 +400,21 @@ function Offertes() {
               </SearchableSelect>
             </div>
           </div>
+          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            <label className="flex items-center gap-2 text-sm font-bold">
+              <input type="checkbox" checked={siteOn} onChange={(e) => { setSiteOn(e.target.checked); if (kmOn) { setKmOn(false); setKm(null); } }} />
+              Ander werfadres (werken gebeuren niet op het klantadres)
+            </label>
+            {siteOn && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+                <Input placeholder="Straat" className="sm:col-span-2" value={siteStreet} onChange={(e) => setSiteStreet(e.target.value)} aria-label="Werfadres straat" />
+                <Input placeholder="Nr." value={siteHouseNumber} onChange={(e) => setSiteHouseNumber(e.target.value)} aria-label="Werfadres nummer" />
+                <Input placeholder="Postcode" value={sitePostalCode} onChange={(e) => setSitePostalCode(e.target.value)} aria-label="Werfadres postcode" />
+                <Input placeholder="Plaats" className="sm:col-span-2" value={siteCity} onChange={(e) => setSiteCity(e.target.value)} aria-label="Werfadres plaats" />
+                <p className="text-xs text-muted-foreground sm:col-span-4">Kilometers worden naar dit werfadres berekend en de taak krijgt dit adres bij goedkeuring.</p>
+              </div>
+            )}
+          </div>
           {bestek && (
             <div className="space-y-3 rounded-md border border-primary/40 bg-muted/40 p-3">
               <div className="space-y-1">
@@ -457,7 +490,7 @@ function Offertes() {
           </div>
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={kmOn} disabled={kmBusy} onChange={(e) => void toggleKm(e.target.checked)} />
-            Kilometers aanrekenen (heen en terug vanaf {settings?.base_address ?? "het vertrekadres"})
+            Kilometers aanrekenen (heen en terug vanaf {settings?.base_address ?? "het vertrekadres"} naar {siteOn ? "het werfadres" : "het klantadres"})
             {kmBusy && <span className="font-normal text-muted-foreground">berekenen…</span>}
             {kmOn && km != null && <span className="font-mono font-normal">{km} km × {euro(kmRate)} = {euro(km * kmRate)}</span>}
           </label>
