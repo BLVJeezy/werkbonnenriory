@@ -157,7 +157,7 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
     const documents: { table: string; id: string; attachment: unknown }[] = [];
     for (const inv of d.sales) {
       const xml = await accountantSalesUbl(supabase, inv);
-      const attachment = file(`Verkoop-${inv.kind === "creditnota" ? "Creditnota" : "Factuur"}-${inv.number}.xml`, "application/xml", b64(xml));
+      const attachment = file(`Verkoop-Factuur-${inv.number}.xml`, "application/xml", b64(xml));
       ubl.push(attachment); documents.push({ table: 'invoices', id: inv.id, attachment });
     }
     const buyer = { name: s?.company_name || "Riory BV", vat: s?.company_vat || "BE0840931404" };
