@@ -1,14 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { peppolIdFromVat } from "@/lib/invoice";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from "@/lib/mail-senders";
-import { accountantWarnings, monthsInPeriod, normalizePeriod, periodLabel, periodSlug, purchaseUbl } from "@/lib/accountant-package";
+import { accountantWarnings, attachmentBatches, monthsInPeriod, normalizePeriod, periodLabel, periodSlug } from "@/lib/accountant-package";
 import { depreciationByYear, depreciationSchedule, missingDeprParams } from "@/lib/finance";
 import { statements, trialBalance, isBalanced } from "@/lib/boekhouding";
 
 type Ctx = { supabase: any; userId: string };
-const SENDER_PEPPOL_ID = "9925:BE0840931404";
 /** The UI sends a start and end date; normalizePeriod explains what is wrong when they are not usable. onlyNew = only documents not yet sent to the accountant. */
 const periodInput = (i: { from?: string; to?: string; onlyNew?: boolean }) => ({ ...normalizePeriod(i), onlyNew: i?.onlyNew === true });
 
@@ -36,6 +34,7 @@ async function loadPeriod(ctx: Ctx, from: string, to: string, onlyNew: boolean) 
   const docQ = (table: string, dateCol: string) => (a: number, b: number) => {
     let q = supabase.from(table).select("*").gte(dateCol, from).lte(dateCol, to).order("id").range(a, b);
     if (onlyNew) q = q.is("accountant_sent_at", null);
+    if (table === 'purchase_invoices') q = q.neq('source', 'simpla');
     return q;
   };
   const [sales, purchases, finInv, months, bank, invs, accounts, refs, lines] = await Promise.all([
@@ -128,24 +127,35 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
     const d = await loadPeriod(context, from, to, onlyNew);
     const send = await mailer();
 
-    // ---- Mail 1: UBL ----
-    const { invoiceUbl } = await import("@/lib/invoice-ubl");
-    const { pdfData } = await import("./invoice-sending.server");
+    // Prepare every source document before sending anything; no silent omission.
+    const { accountantSalesUbl, accountantPurchaseUbl } = await import('./accountant-documents.server');
     const ubl: unknown[] = [];
+    const documents: { table: string; id: string; attachment: unknown }[] = [];
     for (const inv of d.sales) {
-      const pd = await pdfData(supabase, inv);
-      const xml = invoiceUbl(pd, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(pd.customer.vatNumber), pdfBase64: "", creditNote: inv.kind === "creditnota" });
-      ubl.push(file(`Verkoop-${inv.kind === "creditnota" ? "Creditnota" : "Factuur"}-${inv.number}.xml`, "application/xml", b64(xml)));
+      const xml = await accountantSalesUbl(supabase, inv);
+      const attachment = file(`Verkoop-${inv.kind === "creditnota" ? "Creditnota" : "Factuur"}-${inv.number}.xml`, "application/xml", b64(xml));
+      ubl.push(attachment); documents.push({ table: 'invoices', id: inv.id, attachment });
     }
     const buyer = { name: s?.company_name || "Riory BV", vat: s?.company_vat || "BE0840931404" };
     for (const p of d.purchases) {
       const safe = `${p.supplier_name}-${p.invoice_number ?? p.id.slice(0, 8)}`.replace(/[^\w.-]+/g, "_").slice(0, 80);
-      ubl.push(file(`Aankoop-${p.kind === "creditnota" ? "Creditnota" : "Factuur"}-${safe}.xml`, "application/xml", b64(purchaseUbl({ ...p, lines: Array.isArray(p.lines) ? p.lines : [] }, buyer))));
+      const attachment = file(`Aankoop-${p.kind === "creditnota" ? "Creditnota" : "Factuur"}-${safe}.xml`, "application/xml", b64(await accountantPurchaseUbl(supabase, p, buyer)));
+      ubl.push(attachment); documents.push({ table: 'purchase_invoices', id: p.id, attachment });
     }
     if (!ubl.length) throw new Error(onlyNew ? `Alle aankoop- en verkoopfacturen tussen ${label} werden al eerder doorgestuurd naar de boekhouder.` : `Er zijn geen aankoop- of verkoopfacturen tussen ${label}`);
     const warnText = d.warnings.length ? `\n\nOpgelet — de boekhouding is nog niet volledig:\n- ${d.warnings.join("\n- ")}` : "";
     const scopeText = onlyNew ? " (enkel de documenten die u nog niet eerder ontving)" : "";
-    await send(mailTo, `Aankoop- en verkoopfacturen ${label} in UBL — Riory`, `In de bijlage vindt u ${d.sales.length} verkoop- en ${d.purchases.length} aankoopdocumenten van ${label} in UBL-formaat${scopeText}.${warnText}`, ubl);
+    const batches = attachmentBatches(documents.map(x => x.attachment));
+    for (const [index, batch] of batches.entries()) {
+      const included = documents.filter(x => batch.includes(x.attachment));
+      await send(mailTo, `Aankoop- en verkoopfacturen ${label} in UBL — Riory (${index + 1}/${batches.length})`, `Dit deel bevat ${included.length} facturen en creditnota's in UBL, met de echte documenten ingesloten${scopeText}.${warnText}`, batch);
+      for (const table of ['invoices', 'purchase_invoices'] as const) {
+        const ids = included.filter(x => x.table === table).map(x => x.id);
+        if (!ids.length) continue;
+        const { error } = await supabase.from(table).update({ accountant_sent_at: new Date().toISOString() }).in('id', ids);
+        if (error) throw new Error('Mail aanvaard, maar verzendmarkering mislukt. Controleer Outlook vóór opnieuw versturen.');
+      }
+    }
 
     // ---- Mail 2: comparison pack (Excel) ----
     const XLSX = await import("xlsx");
@@ -181,11 +191,5 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
     await send(mailTo, `Boekhouding ${label} ter vergelijking — balans, afschrijvingen en stukken — Riory`,
       `In de bijlage vindt u de balans, proef- en saldibalans, afschrijvingstabellen, dagboeken, facturenlijsten en banktransacties van ${label} uit onze opvolgboekhouding, ter vergelijking met uw boekhouding.${warnText}`,
       [file(`Boekhouding-Riory-${periodSlug(from, to)}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx)]);
-    // Only after both mails are sent: mark the documents so "enkel nog niet doorgestuurd" skips them next time.
-    const now = new Date().toISOString();
-    const salesIds = d.sales.map((i: any) => i.id);
-    const purchaseIds = d.purchases.map((p: any) => p.id);
-    if (salesIds.length) await supabase.from("invoices").update({ accountant_sent_at: now }).in("id", salesIds);
-    if (purchaseIds.length) await supabase.from("purchase_invoices").update({ accountant_sent_at: now }).in("id", purchaseIds);
-    return { to: mailTo, period: label, ubl: ubl.length, warnings: d.warnings };
+    return { to: mailTo, period: label, ubl: ubl.length, mails: batches.length + 1, warnings: d.warnings };
   });

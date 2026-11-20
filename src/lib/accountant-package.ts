@@ -2,6 +2,28 @@
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const a = (n: number) => (Math.round(Math.abs(n) * 100) / 100).toFixed(2);
 
+/** Embed the actual private source file; never send extracted data without it. */
+export function withSourceDocument(xml: string, source: { name: string; mime: string; base64: string }) {
+  if (!source.base64) throw new Error(`Origineel document ontbreekt: ${source.name}`);
+  if (xml.includes('mimeCode="application/pdf"') && /<cbc:EmbeddedDocumentBinaryObject\b[^>]*>\s*[^<\s]/.test(xml)) return xml;
+  const attachment = `<cac:AdditionalDocumentReference><cbc:ID>${esc(source.name)}</cbc:ID><cac:Attachment><cbc:EmbeddedDocumentBinaryObject mimeCode="${esc(source.mime)}" filename="${esc(source.name)}">${source.base64}</cbc:EmbeddedDocumentBinaryObject></cac:Attachment></cac:AdditionalDocumentReference>`;
+  if (!xml.includes('<cac:AccountingSupplierParty')) throw new Error('Originele UBL bevat geen leverancier');
+  return xml.replace('<cac:AccountingSupplierParty', `${attachment}\n<cac:AccountingSupplierParty`);
+}
+
+/** Graph's direct attachment request is limited; include JSON overhead and never silently drop a file. */
+export function attachmentBatches<T>(items: T[], maxBytes = 2_500_000): T[][] {
+  const batches: T[][] = []; let batch: T[] = []; let size = 0;
+  for (const item of items) {
+    const bytes = new TextEncoder().encode(JSON.stringify(item)).length + 1;
+    if (bytes > maxBytes) throw new Error('Een factuurbijlage is te groot voor e-mail. Er is niets verstuurd.');
+    if (size + bytes > maxBytes) { batches.push(batch); batch = []; size = 0; }
+    batch.push(item); size += bytes;
+  }
+  if (batch.length) batches.push(batch);
+  return batches;
+}
+
 export type PurchaseForUbl = {
   supplier_name: string; supplier_vat: string | null; supplier_iban: string | null; invoice_number: string | null;
   invoice_date: string | null; due_date: string | null; kind: string; net: number; vat: number; total: number; payment_ref?: string | null;

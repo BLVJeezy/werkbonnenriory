@@ -298,13 +298,15 @@ export const sendAllToAccountant = createServerFn({ method: "POST" })
     if (!to) throw new Error("Vul eerst het e-mailadres van de boekhouder in");
     const { data: rows } = await supabase.from("invoices").select("*").order("number");
     if (!rows?.length) throw new Error("Er zijn nog geen facturen");
-    const { invoiceUbl } = await import("@/lib/invoice-ubl");
+    const { accountantSalesUbl } = await import('./accountant-documents.server');
+    const { attachmentBatches } = await import('./accountant-package');
     const attachments = [];
     for (const inv of rows) {
-      const d = await (await import('./invoice-sending.server')).pdfData(supabase, inv);
-      const xml = invoiceUbl(d, { senderId: SENDER_PEPPOL_ID, receiverId: peppolIdFromVat(d.customer.vatNumber), pdfBase64: "", creditNote: inv.kind === "creditnota" });
-      attachments.push({ "@odata.type": "#microsoft.graph.fileAttachment", name: `${inv.kind === "creditnota" ? "Creditnota" : "Factuur"}-${inv.number}.xml`, contentType: "application/xml", contentBytes: btoa(String.fromCharCode(...new TextEncoder().encode(xml))) });
+      const xml = await accountantSalesUbl(supabase, inv);
+      const { bytesBase64 } = await import('./accountant-documents.server');
+      attachments.push({ "@odata.type": "#microsoft.graph.fileAttachment", name: `${inv.kind === "creditnota" ? "Creditnota" : "Factuur"}-${inv.number}.xml`, contentType: "application/xml", contentBytes: bytesBase64(new TextEncoder().encode(xml)) });
     }
+    const batches = attachmentBatches(attachments);
     const { getConnectionKeyForUser } = await import("@/lib/appUserConnections.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: admins } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
@@ -316,17 +318,19 @@ export const sendAllToAccountant = createServerFn({ method: "POST" })
     if (await appUserReconnectRequired(profile)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
     if (!profile.ok) throw new Error(`Mailbox controleren mislukt [${profile.status}]: ${await profile.text()}`);
     assertInvoiceMailbox(await profile.json());
+    for (const [index, batch] of batches.entries()) {
     const res = await callAsAppUser({
       gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectionAPIKey: key, connectorId: "microsoft_outlook", path: "/me/sendMail",
       init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: {
-        subject: `Alle facturen en creditnota's (${rows.length}) in UBL — Riory`,
+        subject: `Alle facturen en creditnota's (${rows.length}) in UBL — Riory (${index + 1}/${batches.length})`,
         body: { contentType: "Text", content: `In de bijlage vindt u ${rows.length} factuur-/creditnotabestanden in UBL-formaat voor de boekhouding van Riory.` },
         toRecipients: [{ emailAddress: { address: to } }],
-        attachments,
+        attachments: batch,
       } }) },
       requiredScopes: WERKBON_MAIL_SCOPES,
     });
     if (await appUserReconnectRequired(res)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
     if (!res.ok) throw new Error(`Mail versturen mislukt [${res.status}]: ${await res.text()}`);
+    }
     return { sent: rows.length, to };
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountantWarnings, monthsInPeriod, normalizePeriod, periodLabel, periodSlug, purchaseUbl } from "./accountant-package";
+import { accountantWarnings, attachmentBatches, monthsInPeriod, normalizePeriod, periodLabel, periodSlug, purchaseUbl, withSourceDocument } from "./accountant-package";
 
 const ok = { purchasesToCheck: 0, salesUnsent: 0, financeToReview: 0, financeUnbooked: 0, bankUnbooked: 0, monthsIncomplete: [], investmentsIncomplete: [], journalLines: 10, trialDiff: 0 };
 
@@ -33,5 +33,34 @@ describe("purchaseUbl", () => {
   it("marks credit notes with type code 381", () => {
     const xml = purchaseUbl({ supplier_name: "X", supplier_vat: null, supplier_iban: null, invoice_number: "1", invoice_date: "2026-01-01", due_date: null, kind: "creditnota", net: 100, vat: 21, total: 121, lines: [] }, { name: "Riory BV", vat: "BE0840931404" });
     expect(xml).toContain("<cbc:CreditNoteTypeCode>381");
+  });
+});
+
+describe('actual source document in accountant UBL', () => {
+  const source = { name: 'Google-factuur.pdf', mime: 'application/pdf', base64: btoa('%PDF-1.7 original supplier invoice') };
+  const xml = purchaseUbl({ supplier_name: 'Google Ireland', supplier_vat: 'IE6388047V', supplier_iban: null, invoice_number: '5704268246', invoice_date: '2026-09-30', due_date: null, kind: 'factuur', net: 567.07, vat: 0, total: 567.07, lines: [] }, { name: 'Riory BV', vat: 'BE0840931404' });
+  it('includes the supplier document bytes, not only extracted values', () => {
+    const result = withSourceDocument(xml, source);
+    expect(atob(result.match(/<cbc:EmbeddedDocumentBinaryObject[^>]*>([^<]+)/)?.[1] ?? '')).toBe('%PDF-1.7 original supplier invoice');
+    expect(result).toContain('<cbc:PayableAmount currencyID="EUR">567.07');
+  });
+  it('preserves the received UBL unchanged when a PDF is already embedded', () => {
+    const original = withSourceDocument(xml, source);
+    expect(withSourceDocument(original, { ...source, base64: btoa('other') })).toBe(original);
+  });
+  it('blocks exports without the original document', () => {
+    expect(() => withSourceDocument(xml, { ...source, base64: '' })).toThrow('Origineel document ontbreekt');
+  });
+});
+
+describe('attachment batching', () => {
+  it('retains all files in order over multiple bounded mails', () => {
+    const items = ['20260845', '20260847', '20260895'].map(number => ({ number, contentBytes: 'x'.repeat(60) }));
+    const batches = attachmentBatches(items, 150);
+    expect(batches.length).toBe(3);
+    expect(batches.flat()).toEqual(items);
+  });
+  it('rejects oversized files instead of skipping them', () => {
+    expect(() => attachmentBatches([{ contentBytes: 'x'.repeat(200) }], 150)).toThrow('te groot');
   });
 });

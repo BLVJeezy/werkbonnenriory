@@ -47,8 +47,8 @@ export function AccountantPackage({ accountantEmail }: { accountantEmail: string
     setBusy(true);
     try {
       const r = await sendPack({ data: { from, to, onlyNew } });
-      if (r.warnings.length) toast.warning(`2 mails verzonden naar ${r.to}, maar de boekhouding is niet volledig (${r.warnings.length} punten).`);
-      else toast.success(`2 mails verzonden naar ${r.to} (${r.ubl} UBL-bestanden + boekhoudpakket).`);
+      if (r.warnings.length) toast.warning(`${r.mails} mails verzonden naar ${r.to}, maar de boekhouding is niet volledig (${r.warnings.length} punten).`);
+      else toast.success(`${r.mails} mails verzonden naar ${r.to} (${r.ubl} UBL-bestanden + boekhoudpakket).`);
       setOpen(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden mislukt"); }
     finally { setBusy(false); }
@@ -60,7 +60,7 @@ export function AccountantPackage({ accountantEmail }: { accountantEmail: string
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Alles naar de boekhouder</DialogTitle>
-          <DialogDescription>Twee mails naar {accountantEmail || "het e-mailadres van de boekhouder"}: één met alle aankoop- en verkoopdocumenten in UBL, één met balans, afschrijvingstabellen en alle stukken uit de boekhouding (Excel).</DialogDescription>
+          <DialogDescription>Facturen en creditnota’s in UBL met de echte factuur als bijlage, naar {accountantEmail || "het e-mailadres van de boekhouder"}. Grote pakketten worden verdeeld over meerdere mails. De balans, afschrijvingstabellen en boekhoudstukken volgen apart in Excel.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-1 text-xs"><span className="font-semibold">Van</span><Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></label>

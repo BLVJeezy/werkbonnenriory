@@ -6,7 +6,7 @@ import { invoicePaymentReference } from './invoice-payment-reference';
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const a = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
-/** Peppol BIS Billing 3.0 UBL invoice (or credit note) with the PDF embedded, so the customer gets both. Pass an empty pdfBase64 to omit the attachment (bulk accountant mail). */
+/** Peppol BIS Billing 3.0 UBL invoice (or credit note), with an optional embedded PDF. Accountant exports always supply the actual PDF. */
 export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId: string | null; pdfBase64: string; creditNote?: boolean }) {
   const [sScheme, sId] = o.senderId.split(":");
   const [rScheme, rId] = o.receiverId?.split(":") ?? [];
@@ -39,7 +39,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
   <cbc:ID>${esc(d.number)}</cbc:ID>
   <cbc:IssueDate>${d.issueDate}</cbc:IssueDate>
-  <cbc:DueDate>${d.dueDate}</cbc:DueDate>
+  ${o.creditNote ? '' : `<cbc:DueDate>${d.dueDate}</cbc:DueDate>`}
   <cbc:${root}TypeCode>${o.creditNote ? "381" : "380"}</cbc:${root}TypeCode>
   ${invoiceVatNotices(d).map(notice => `<cbc:Note>${esc(notice.text)}</cbc:Note>`).join('\n  ')}
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
