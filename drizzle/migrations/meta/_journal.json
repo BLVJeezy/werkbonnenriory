@@ -1156,6 +1156,13 @@
       "when": 1795103953609,
       "tag": "0164_no_intervention_fee",
       "breakpoints": true
+    },
+    {
+      "idx": 165,
+      "version": "7",
+      "when": 1795180663043,
+      "tag": "0165_activity_description",
+      "breakpoints": true
     }
   ]
 }

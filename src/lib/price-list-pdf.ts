@@ -5,7 +5,7 @@ import { supplierFooterLine } from "./company-id";
 export type PriceListData = {
   date: string;
   company: { name: string; vat: string };
-  activities: { name: string; hourlyRate: number }[];
+  activities: { name: string; hourlyRate: number; description?: string | null }[];
   products: { name: string; unit: string; price: number; description?: string | null }[];
 };
 
@@ -60,7 +60,7 @@ export async function createPriceListPdf(d: PriceListData): Promise<Uint8Array> 
   };
   if (d.activities.length) {
     section("ARBEID", ["Activiteit", "Eenheid", "Prijs"]);
-    d.activities.forEach((a, i) => row(i, a.name, "per uur", money(a.hourlyRate)));
+    d.activities.forEach((a, i) => row(i, a.name, "per uur", money(a.hourlyRate), a.description?.trim() || null));
     ensure(30);
     page.drawText(pr("Eerste uur volledig, daarna per begonnen kwartier."), { x: M + 8, y: y - 4, size: 8.5, font, color: muted });
     y -= 30;

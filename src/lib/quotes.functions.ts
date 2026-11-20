@@ -384,7 +384,7 @@ async function renderPriceList(ctx: Ctx, sel: { productIds: string[]; activityId
   await assertAdmin(ctx);
   const [{ data: s }, { data: acts }, { data: prods }] = await Promise.all([
     ctx.supabase.from("settings").select("company_name,company_vat").eq("id", 1).single(),
-    ctx.supabase.from("activities").select("name,hourly_rate").in("id", sel.activityIds.length ? sel.activityIds : ["00000000-0000-0000-0000-000000000000"]).order("name"),
+    ctx.supabase.from("activities").select("name,hourly_rate,description").in("id", sel.activityIds.length ? sel.activityIds : ["00000000-0000-0000-0000-000000000000"]).order("name"),
     ctx.supabase.from("products").select("name,unit,price,description").in("id", sel.productIds.length ? sel.productIds : ["00000000-0000-0000-0000-000000000000"]).order("name"),
   ]);
   const { createPriceListPdf } = await import("@/lib/price-list-pdf");
@@ -392,7 +392,7 @@ async function renderPriceList(ctx: Ctx, sel: { productIds: string[]; activityId
   const pdf = await createPriceListPdf({
     date: today,
     company: { name: s?.company_name ?? "Riory bv", vat: s?.company_vat ?? "BE0840931404" },
-    activities: (acts ?? []).filter((a: any) => a.hourly_rate != null).map((a: any) => ({ name: a.name, hourlyRate: Number(a.hourly_rate) })),
+    activities: (acts ?? []).filter((a: any) => a.hourly_rate != null).map((a: any) => ({ name: a.name, hourlyRate: Number(a.hourly_rate), description: a.description })),
     products: (prods ?? []).map((p: any) => ({ name: p.name, unit: p.unit, price: Number(p.price), description: p.description })),
   });
   return { name: `Prijslijst-Riory-${today}.pdf`, base64: b64(pdf) };

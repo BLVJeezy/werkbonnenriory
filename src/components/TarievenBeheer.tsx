@@ -147,6 +147,21 @@ export function TarievenBeheer() {
                 }}
               />
               <span className="font-mono text-sm text-muted-foreground">{a.hourly_rate === null ? "geen tarief" : `${euro(Number(a.hourly_rate))}/u`}</span>
+              <Input
+                aria-label={`Beschrijving van activiteit ${a.name}`}
+                title="Beschrijving voor op de prijslijst (optioneel)"
+                defaultValue={a.description ?? ""}
+                placeholder="Beschrijving voor prijslijst…"
+                className="h-8 min-w-48 flex-1 text-sm sm:max-w-xl"
+                onBlur={async (e) => {
+                  const next = e.target.value.trim();
+                  if (next === (a.description ?? "")) return;
+                  const { error } = await supabase.from("activities").update({ description: next || null }).eq("id", a.id);
+                  if (error) toast.error(error.message);
+                  else toast.success("Beschrijving opgeslagen");
+                  refresh();
+                }}
+              />
               <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Forfait wanneer de ploeg 'Geen interventie mogelijk' kiest">
                 Forfait geen interventie
                 <Input type="number" step="0.01" min="0" aria-label={`Forfait geen interventie ${a.name}`} className="h-8 w-24 font-mono text-sm"
