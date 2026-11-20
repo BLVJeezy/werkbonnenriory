@@ -51,6 +51,13 @@ describe('actual source document in accountant UBL', () => {
   it('blocks exports without the original document', () => {
     expect(() => withSourceDocument(xml, { ...source, base64: '' })).toThrow('Origineel document ontbreekt');
   });
+  it('retains actual supplier UBL using ns3/ns4 namespaces', () => {
+    const original = `<Invoice xmlns:ns3="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:ns4="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"><ns4:ID>926394878159</ns4:ID><ns3:AccountingSupplierParty>Supplier</ns3:AccountingSupplierParty></Invoice>`;
+    const result = withSourceDocument(original, source);
+    expect(result).toContain(`<ns4:EmbeddedDocumentBinaryObject mimeCode="application/pdf" filename="Google-factuur.pdf">${source.base64}</ns4:EmbeddedDocumentBinaryObject>`);
+    expect(result).toContain('<ns4:ID>926394878159</ns4:ID>');
+    expect(withSourceDocument(result, source)).toBe(result);
+  });
 });
 
 describe('attachment batching', () => {
@@ -60,7 +67,8 @@ describe('attachment batching', () => {
     expect(batches.length).toBe(3);
     expect(batches.flat()).toEqual(items);
   });
-  it('rejects oversized files instead of skipping them', () => {
-    expect(() => attachmentBatches([{ contentBytes: 'x'.repeat(200) }], 150)).toThrow('te groot');
+  it('keeps large original documents separately for upload-session delivery', () => {
+    const large = { contentBytes: 'x'.repeat(200) };
+    expect(attachmentBatches([large], 150)).toEqual([[large]]);
   });
 });

@@ -107,6 +107,30 @@ async function mailer() {
   if (!profile.ok) throw new Error(`Mailbox controleren mislukt [${profile.status}]: ${await profile.text()}`);
   assertInvoiceMailbox(await profile.json());
   return async (to: string, subject: string, content: string, attachments: unknown[]) => {
+    if (new TextEncoder().encode(JSON.stringify(attachments)).length > 2_500_000) {
+      // Large UBL keeps the original PDF: upload to an Outlook draft in chunks, then send once.
+      const draft = await callAsAppUser({ ...base, path: '/me/messages', init: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, body: { contentType: 'Text', content }, toRecipients: [{ emailAddress: { address: to } }] }) } });
+      if (!draft.ok) throw new Error('Mailconcept voor grote factuur kon niet aangemaakt worden.');
+      const { id } = await draft.json() as { id?: string };
+      if (!id) throw new Error('Mailconcept ontbreekt.');
+      for (const attachment of attachments) {
+        const item = attachment as { name: string; contentBytes: string; contentType: string };
+        const bytes = Uint8Array.from(atob(item.contentBytes), c => c.charCodeAt(0));
+        const session = await callAsAppUser({ ...base, path: `/me/messages/${encodeURIComponent(id)}/attachments/createUploadSession`, init: { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ AttachmentItem: { attachmentType: 'file', name: item.name, size: bytes.length, contentType: item.contentType } }) } });
+        if (!session.ok) throw new Error('Grote factuurbijlage voorbereiden mislukt; er is niets verstuurd.');
+        const { uploadUrl } = await session.json() as { uploadUrl?: string };
+        if (!uploadUrl || !uploadUrl.startsWith('https://')) throw new Error('Uploadadres ontbreekt.');
+        const chunkSize = 10 * 320 * 1024;
+        for (let start = 0; start < bytes.length; start += chunkSize) {
+          const end = Math.min(start + chunkSize, bytes.length);
+          const uploaded = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream', 'Content-Range': `bytes ${start}-${end - 1}/${bytes.length}` }, body: bytes.slice(start, end), signal: AbortSignal.timeout(60000) });
+          if (!uploaded.ok) throw new Error('Grote factuurbijlage uploaden mislukt; het concept is niet verstuurd.');
+        }
+      }
+      const sent = await callAsAppUser({ ...base, path: `/me/messages/${encodeURIComponent(id)}/send`, init: { method: 'POST' } });
+      if (!sent.ok) throw new Error('Verzending onzeker: controleer Outlook vóór opnieuw versturen.');
+      return;
+    }
     const res = await callAsAppUser({ ...base, path: "/me/sendMail", init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: { subject, body: { contentType: "Text", content }, toRecipients: [{ emailAddress: { address: to } }], attachments } }) } });
     if (await appUserReconnectRequired(res)) throw new Error(`Koppel de mailbox ${INVOICE_MAILBOX_ADDRESS} opnieuw`);
     if (!res.ok) throw new Error(`Mail "${subject}" versturen mislukt [${res.status}]: ${await res.text()}`);

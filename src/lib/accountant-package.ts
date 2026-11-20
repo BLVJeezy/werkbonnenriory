@@ -5,10 +5,15 @@ const a = (n: number) => (Math.round(Math.abs(n) * 100) / 100).toFixed(2);
 /** Embed the actual private source file; never send extracted data without it. */
 export function withSourceDocument(xml: string, source: { name: string; mime: string; base64: string }) {
   if (!source.base64) throw new Error(`Origineel document ontbreekt: ${source.name}`);
-  if (xml.includes('mimeCode="application/pdf"') && /<cbc:EmbeddedDocumentBinaryObject\b[^>]*>\s*[^<\s]/.test(xml)) return xml;
-  const attachment = `<cac:AdditionalDocumentReference><cbc:ID>${esc(source.name)}</cbc:ID><cac:Attachment><cbc:EmbeddedDocumentBinaryObject mimeCode="${esc(source.mime)}" filename="${esc(source.name)}">${source.base64}</cbc:EmbeddedDocumentBinaryObject></cac:Attachment></cac:AdditionalDocumentReference>`;
-  if (!xml.includes('<cac:AccountingSupplierParty')) throw new Error('Originele UBL bevat geen leverancier');
-  return xml.replace('<cac:AccountingSupplierParty', `${attachment}\n<cac:AccountingSupplierParty`);
+  if (/<(?:[\w.-]+:)?EmbeddedDocumentBinaryObject\b(?=[^>]*mimeCode=["']application\/pdf["'])[^>]*>\s*[^<\s]/.test(xml)) return xml;
+  const namespaces = [...xml.matchAll(/xmlns:([\w.-]+)=["']([^"']+)["']/g)];
+  const prefix = (type: string, fallback: string) => namespaces.find(m => m[2]?.includes(type))?.[1] ?? fallback;
+  const aggregate = prefix('CommonAggregateComponents-2', 'cac');
+  const basic = prefix('CommonBasicComponents-2', 'cbc');
+  const attachment = `<${aggregate}:AdditionalDocumentReference><${basic}:ID>${esc(source.name)}</${basic}:ID><${aggregate}:Attachment><${basic}:EmbeddedDocumentBinaryObject mimeCode="${esc(source.mime)}" filename="${esc(source.name)}">${source.base64}</${basic}:EmbeddedDocumentBinaryObject></${aggregate}:Attachment></${aggregate}:AdditionalDocumentReference>`;
+  const supplier = /<(?:[\w.-]+:)?AccountingSupplierParty\b/;
+  if (!supplier.test(xml)) throw new Error('Originele UBL bevat geen leverancier');
+  return xml.replace(supplier, match => `${attachment}\n${match}`);
 }
 
 /** Graph's direct attachment request is limited; include JSON overhead and never silently drop a file. */
@@ -16,7 +21,8 @@ export function attachmentBatches<T>(items: T[], maxBytes = 2_500_000): T[][] {
   const batches: T[][] = []; let batch: T[] = []; let size = 0;
   for (const item of items) {
     const bytes = new TextEncoder().encode(JSON.stringify(item)).length + 1;
-    if (bytes > maxBytes) throw new Error('Een factuurbijlage is te groot voor e-mail. Er is niets verstuurd.');
+    if (bytes > 120_000_000) throw new Error('Een factuurbijlage is te groot voor e-mail. Er is niets verstuurd.');
+    if (bytes > maxBytes) { if (batch.length) batches.push(batch); batches.push([item]); batch = []; size = 0; continue; }
     if (size + bytes > maxBytes) { batches.push(batch); batch = []; size = 0; }
     batch.push(item); size += bytes;
   }

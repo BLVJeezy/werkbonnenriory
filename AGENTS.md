@@ -37,7 +37,7 @@
 - Credit notes share invoice numbering and nullable/non-unique work_order_id. Editors share isInvoiceEditable; credit previews/saves use buildManualCreditNote to preserve negative totals and lock settled notes.
 - Product RLS enforces admin_only. Private photo paths snapshot onto quote lines; token reads sign only those files, PDFs embed bytes. Retain files for saved quotes.
 - Invoices/credit notes use a separate, sender-verified Outlook connection; other mails retain theirs. Accountant exports attach UBL only.
-- Accountant UBL exports use accountant-documents.server.ts to embed accepted sales PDF snapshots or rendered invoice snapshots and private purchase originals, preserve received UBL, and split mails by serialized attachment size; mark only accepted batches, so no file is silently lost.
+- Accountant UBL exports use accountant-documents.server.ts to embed accepted sales PDF snapshots or rendered invoice snapshots and private purchase originals, preserve received UBL namespaces, and split mails by serialized attachment size (large originals use Outlook draft upload sessions); mark only accepted batches, so no file is silently lost.
 - External crews use price-free token DTOs, quote text/quantities and atomic scheduling RPCs. Slot entry uses raw text normalized before validation; native pickers can leave visible selections uncommitted.
 - Quote scheduling/conversion queues original mails; admin sync uses owner-scoped Outlook keys and stable IDs for retry-safe moves.
 - Contracts invoice confirmed per-visit lines via unique queue/RPC every five minutes. Informational tasks skip normal invoicing/Simpla. Activation explicit; sending server-only; uncertain mail never retries.

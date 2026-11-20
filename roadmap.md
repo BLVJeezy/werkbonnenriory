@@ -1,7 +1,7 @@
 # Taken
-- [x] Boekhouder: echte factuur-PDF insluiten in UBL, ontvangen UBL behouden en verzending begrenzen per mail; 22 tests geslaagd, venster gecontroleerd zonder echte verzending.
+- [x] Boekhouder: alle 113 verkoop- en 36 aankoopdocumenten met echte bijlagen gecontroleerd; originele UBL-naamruimtes behouden, grote bijlagen via Outlook-uploadsessies; 23 tests geslaagd. Venster licht/donker op gsm/computer tot Versturen en heropenen gecontroleerd. Werkelijke mailverzending niet getest, niets verstuurd.
 - [x] Creditnota’s 845, 847 en 895 onderzocht en opnieuw klaargezet voor doorsturen; facturen en boekingen behouden.
-- [ ] Verkoopfacturen 818/819 identificeren: geen match in huidige facturen/boekhouding/verzendarchief; Simpla bevat 20250818 (LOCKED) en 20250819 (DRAFT). Wacht op bevestiging volledig nummer door gebruiker; Simpla niet opnieuw doorsturen.
+- [x] Verkoopfacturen 818/819 onderzocht; gebruiker zegt dat ontbrekende nummers niet erg zijn, geen verdere actie of fictieve facturen.
 
 - [x] Mobiel uitzicht taakpagina klopt niet — activiteit/btw-lijsten duwden de pagina te breed; hersteld met min-w-0, ook in taak-aanmaakvenster; op iPhone-breedte met grote letters geverifieerd
 - [x] Deelbetalingen afletteren — bankscherm en koppeldialoog in browser gecontroleerd ("nog open" zichtbaar)
