@@ -21,6 +21,34 @@ export async function createPriceListPdf(d: PriceListData): Promise<Uint8Array> 
   const ink = rgb(0.118, 0.18, 0.204), orange = rgb(0.953, 0.573, 0), muted = rgb(0.42, 0.46, 0.48), soft = rgb(0.996, 0.957, 0.902), white = rgb(1, 1, 1);
   const pr = (t: string) => [...t].map((c) => { try { font.encodeText(c); return c; } catch { return "?"; } }).join("");
   const clip = (t: string, size: number, width: number, f = font) => { const s = pr(t); if (f.widthOfTextAtSize(s, size) <= width) return s; let c = s; while (c && f.widthOfTextAtSize(`${c}...`, size) > width) c = c.slice(0, -1); return `${c}...`; };
+  const wrap = (t: string, size: number, width: number, f = font): string[] => {
+    const lines: string[] = [];
+    for (const para of t.split(/\r?\n/)) {
+      const words = pr(para.trim()).split(/\s+/).filter(Boolean);
+      if (!words.length) continue;
+      let cur = "";
+      for (const word of words) {
+        const next = cur ? `${cur} ${word}` : word;
+        if (f.widthOfTextAtSize(next, size) <= width) {
+          cur = next;
+        } else {
+          if (cur) lines.push(cur);
+          if (f.widthOfTextAtSize(word, size) <= width) {
+            cur = word;
+          } else {
+            let part = "";
+            for (const ch of word) {
+              if (f.widthOfTextAtSize(part + ch, size) <= width) part += ch;
+              else { if (part) lines.push(part); part = ch; }
+            }
+            cur = part;
+          }
+        }
+      }
+      if (cur) lines.push(cur);
+    }
+    return lines;
+  };
   let page = doc.addPage([W, H]);
   let y = 0;
   const chrome = (first: boolean) => {
@@ -49,11 +77,16 @@ export async function createPriceListPdf(d: PriceListData): Promise<Uint8Array> 
     y -= 22;
   };
   const row = (i: number, name: string, mid: string, price: string, sub?: string | null) => {
-    const h = sub ? 30 : 18;
+    const colW = W - 2 * M - 190;
+    const subLines = sub ? wrap(sub, 8.5, colW) : [];
+    const lineH = 11.5;
+    const h = subLines.length ? 18 + subLines.length * lineH + 4 : 18;
     ensure(h + 4);
-    if (i % 2) page.drawRectangle({ x: M, y: y - h + 12, width: W - 2 * M, height: h, color: soft });
-    page.drawText(clip(name, 10, W - 2 * M - 200, bold), { x: M + 8, y, size: 10, font: bold, color: ink });
-    if (sub) page.drawText(clip(sub.replace(/\s+/g, " "), 8.5, W - 2 * M - 200), { x: M + 8, y: y - 12, size: 8.5, font, color: muted });
+    if (i % 2) page.drawRectangle({ x: M, y: y - h + 13, width: W - 2 * M, height: h, color: soft });
+    page.drawText(clip(name, 10, colW, bold), { x: M + 8, y, size: 10, font: bold, color: ink });
+    subLines.forEach((line, idx) => {
+      page.drawText(line, { x: M + 8, y: y - 12 - idx * lineH, size: 8.5, font, color: muted });
+    });
     right(mid, W - M - 110, y, 10, font, muted);
     right(price, W - M - 8, y, 10, bold);
     y -= h;
