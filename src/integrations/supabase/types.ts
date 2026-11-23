@@ -3508,6 +3508,54 @@ export type Database = {
           },
         ]
       }
+      tk_employee_crew_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          employee_id: string
+          ended_at: string | null
+          id: string
+          note: string | null
+          started_at: string
+          technician_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          employee_id: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at?: string
+          technician_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          employee_id?: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_crew_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tk_employee_crew_assignments_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tk_employee_documents: {
         Row: {
           created_at: string
@@ -3774,6 +3822,38 @@ export type Database = {
           },
         ]
       }
+      tk_employee_password_invitations: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          employee_id: string
+          expires_at: string
+          token_hash: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          employee_id: string
+          expires_at: string
+          token_hash: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          employee_id?: string
+          expires_at?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_password_invitations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tk_employee_profiles: {
         Row: {
           birth_date: string | null
@@ -3894,25 +3974,39 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          current_technician_id: string | null
           id: string
           name: string
           pin: string
+          user_id: string | null
         }
         Insert: {
           active?: boolean
           created_at?: string
+          current_technician_id?: string | null
           id?: string
           name: string
           pin: string
+          user_id?: string | null
         }
         Update: {
           active?: boolean
           created_at?: string
+          current_technician_id?: string | null
           id?: string
           name?: string
           pin?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tk_employees_current_technician_id_fkey"
+            columns: ["current_technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tk_employment_contracts: {
         Row: {
@@ -4870,6 +4964,10 @@ export type Database = {
         }[]
       }
       claim_crew_password_invitation: {
+        Args: { p_hash: string }
+        Returns: string
+      }
+      claim_employee_password_invitation: {
         Args: { p_hash: string }
         Returns: string
       }

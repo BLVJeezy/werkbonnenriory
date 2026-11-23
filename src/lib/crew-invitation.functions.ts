@@ -23,11 +23,18 @@ export const readCrewInvitation = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { hashInvitation } = await import("./crew-invitation.server");
-    const { data: invitation, error } = await supabaseAdmin.from("crew_password_invitations").select("technician_id,expires_at,consumed_at").eq("token_hash", await hashInvitation(data.token)).maybeSingle();
-    if (error || !invitation || !invitationUsable(invitation)) throw new Error(invalid);
-    const { data: crew, error: crewError } = await supabaseAdmin.from("technicians").select("name,user_id,external_planning").eq("id", invitation.technician_id).single();
-    if (crewError || !crew?.user_id || crew.external_planning) throw new Error(invalid);
-    return { name: crew.name };
+    const hash = await hashInvitation(data.token);
+    const { data: invitation, error } = await supabaseAdmin.from("crew_password_invitations").select("technician_id,expires_at,consumed_at").eq("token_hash", hash).maybeSingle();
+    if (!error && invitation && invitationUsable(invitation)) {
+      const { data: crew, error: crewError } = await supabaseAdmin.from("technicians").select("name,user_id,external_planning").eq("id", invitation.technician_id).single();
+      if (crewError || !crew?.user_id || crew.external_planning) throw new Error(invalid);
+      return { name: crew.name };
+    }
+    const { data: empInv, error: empInvErr } = await supabaseAdmin.from("tk_employee_password_invitations").select("employee_id,expires_at,consumed_at").eq("token_hash", hash).maybeSingle();
+    if (empInvErr || !empInv || !invitationUsable(empInv)) throw new Error(invalid);
+    const { data: emp, error: empErr } = await supabaseAdmin.from("tk_employees").select("name,user_id,active").eq("id", empInv.employee_id).single();
+    if (empErr || !emp?.user_id || !emp.active) throw new Error(invalid);
+    return { name: emp.name };
   });
 
 export const acceptCrewInvitation = createServerFn({ method: "POST" })
@@ -37,18 +44,34 @@ export const acceptCrewInvitation = createServerFn({ method: "POST" })
     const { hashInvitation } = await import("./crew-invitation.server");
     const hash = await hashInvitation(data.token);
     const { data: invitation, error: readError } = await supabaseAdmin.from("crew_password_invitations").select("technician_id,expires_at,consumed_at").eq("token_hash", hash).maybeSingle();
-    if (readError || !invitation || !invitationUsable(invitation)) throw new Error(invalid);
-    const { data: crew, error: crewError } = await supabaseAdmin.from("technicians").select("name,user_id,external_planning").eq("id", invitation.technician_id).single();
-    if (crewError || !crew?.user_id || crew.external_planning) throw new Error(invalid);
-    const { data: roles, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", crew.user_id);
+    if (!readError && invitation && invitationUsable(invitation)) {
+      const { data: crew, error: crewError } = await supabaseAdmin.from("technicians").select("name,user_id,external_planning").eq("id", invitation.technician_id).single();
+      if (crewError || !crew?.user_id || crew.external_planning) throw new Error(invalid);
+      const { data: roles, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", crew.user_id);
+      if (roleError || !roles?.length || roles.some((r) => r.role !== "technician")) throw new Error(invalid);
+      const { data: claimed, error: claimError } = await supabaseAdmin.rpc("claim_crew_password_invitation", { p_hash: hash });
+      if (claimError || claimed !== invitation.technician_id) throw new Error(invalid);
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(crew.user_id, { password: data.password });
+      if (error) {
+        const { error: releaseError } = await supabaseAdmin.from("crew_password_invitations").update({ consumed_at: null }).eq("token_hash", hash);
+        if (releaseError) throw new Error("Opslaan mislukt. Vraag de beheerder om een nieuwe uitnodiging.");
+        throw new Error("Wachtwoord niet opgeslagen. Kies een sterker wachtwoord en probeer opnieuw.");
+      }
+      return { name: crew.name };
+    }
+    const { data: empInv, error: empInvErr } = await supabaseAdmin.from("tk_employee_password_invitations").select("employee_id,expires_at,consumed_at").eq("token_hash", hash).maybeSingle();
+    if (empInvErr || !empInv || !invitationUsable(empInv)) throw new Error(invalid);
+    const { data: emp, error: empErr } = await supabaseAdmin.from("tk_employees").select("name,user_id,active").eq("id", empInv.employee_id).single();
+    if (empErr || !emp?.user_id || !emp.active) throw new Error(invalid);
+    const { data: roles, error: roleError } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", emp.user_id);
     if (roleError || !roles?.length || roles.some((r) => r.role !== "technician")) throw new Error(invalid);
-    const { data: claimed, error: claimError } = await supabaseAdmin.rpc("claim_crew_password_invitation", { p_hash: hash });
-    if (claimError || claimed !== invitation.technician_id) throw new Error(invalid);
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(crew.user_id, { password: data.password });
+    const { data: claimed, error: claimError } = await supabaseAdmin.rpc("claim_employee_password_invitation", { p_hash: hash });
+    if (claimError || claimed !== empInv.employee_id) throw new Error(invalid);
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(emp.user_id, { password: data.password });
     if (error) {
-      const { error: releaseError } = await supabaseAdmin.from("crew_password_invitations").update({ consumed_at: null }).eq("token_hash", hash);
+      const { error: releaseError } = await supabaseAdmin.from("tk_employee_password_invitations").update({ consumed_at: null }).eq("token_hash", hash);
       if (releaseError) throw new Error("Opslaan mislukt. Vraag de beheerder om een nieuwe uitnodiging.");
       throw new Error("Wachtwoord niet opgeslagen. Kies een sterker wachtwoord en probeer opnieuw.");
     }
-    return { name: crew.name };
+    return { name: emp.name };
   });

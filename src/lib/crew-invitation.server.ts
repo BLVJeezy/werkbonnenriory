@@ -13,3 +13,11 @@ export async function issueCrewInvitation(db: SupabaseClient<Database>, technici
   if (error) throw new Error("Uitnodiging aanmaken mislukt. Probeer opnieuw.");
   return { setupUrl: crewInvitationUrl(token), expiresAt };
 }
+
+export async function issueEmployeeInvitation(db: SupabaseClient<Database>, employeeId: string) {
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
+  const expiresAt = new Date(Date.now() + CREW_INVITATION_HOURS * 3600000).toISOString();
+  const { error } = await db.from("tk_employee_password_invitations").upsert({ employee_id: employeeId, token_hash: await hashInvitation(token), expires_at: expiresAt, consumed_at: null, created_at: new Date().toISOString() });
+  if (error) throw new Error("Uitnodiging aanmaken mislukt. Probeer opnieuw.");
+  return { setupUrl: crewInvitationUrl(token), expiresAt };
+}

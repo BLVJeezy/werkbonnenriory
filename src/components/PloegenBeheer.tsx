@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { createTechnicianLogin, deleteTechnician } from "@/lib/technicians.functions";
 import { createExternalCrew } from "@/lib/appointments.functions";
 import { MarketingUsers } from "@/components/MarketingUsers";
+import { EmployeeCrewManager } from "@/components/EmployeeCrewManager";
 import { Copy, MessageCircle, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { crewInvitationText, crewWhatsAppLink } from "@/lib/crew-whatsapp";
@@ -202,6 +203,7 @@ export function PloegenBeheer() {
           <p className="text-sm text-muted-foreground">WhatsApp geblokkeerd? Kopieer het bericht en plak het rechtstreeks in WhatsApp. Bewaar de persoonlijke link alleen voor deze ploeg.</p>
         </DialogContent>
       </Dialog>
+      <EmployeeCrewManager />
       <MarketingUsers />
     </div>
   );

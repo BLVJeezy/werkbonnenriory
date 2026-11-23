@@ -20,15 +20,31 @@ function useMe() {
         .select("show_prices, show_contact, can_payment, show_signed, large_text")
         .eq("user_id", u.user.id)
         .maybeSingle();
+      let crew = t;
+      if (!crew) {
+        const { data: emp } = await supabase
+          .from("tk_employees")
+          .select("current_technician_id")
+          .eq("user_id", u.user.id)
+          .maybeSingle();
+        if (emp?.current_technician_id) {
+          const { data: assigned } = await supabase
+            .from("technicians")
+            .select("show_prices, show_contact, can_payment, show_signed, large_text")
+            .eq("id", emp.current_technician_id)
+            .maybeSingle();
+          crew = assigned;
+        }
+      }
       return {
         role: "technician" as const,
         perms: {
-          showPrices: !!t?.show_prices,
-          showContact: !!t?.show_contact,
-          canPayment: !!t?.can_payment,
-          showSigned: !!t?.show_signed,
+          showPrices: !!crew?.show_prices,
+          showContact: !!crew?.show_contact,
+          canPayment: !!crew?.can_payment,
+          showSigned: !!crew?.show_signed,
         },
-        largeText: !!t?.large_text,
+        largeText: !!crew?.large_text,
       };
     },
   });
