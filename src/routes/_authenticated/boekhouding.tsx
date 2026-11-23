@@ -900,7 +900,7 @@ function Bank({ c }: { c: string }) {
     finally { setManualBusy(false); }
   };
   const manualInvoice = invoiceChoices.find((i) => i.id === manualInvoiceId);
-  const rawManualPreview = manualInvoice && manualTx ? manualBankPreview(manualInvoice.direction, total(manualInvoice), Number(manualInvoice.paid_amount ?? 0), Number(manualTx.amount)) : null;
+  const rawManualPreview = manualInvoice && manualTx && manualInvoice.doc_type !== 'creditnota' ? manualBankPreview(manualInvoice.direction, total(manualInvoice), Number(manualInvoice.paid_amount ?? 0), Number(manualTx.amount)) : null;
   const manualPreview = manualTx?.waiting ? null : rawManualPreview && manualInvoice?.purchase_id && !['goedgekeurd', 'betaling_klaargezet', 'betaald'].includes(manualInvoice.status) ? { ...rawManualPreview, error: 'Controleer en keur de aankoopfactuur eerst goed.' } : rawManualPreview;
   const linkManual = async () => {
     if (!manualTx || !manualInvoice || !manualPreview || manualPreview.error || manualBusy) return;
@@ -949,7 +949,25 @@ function Bank({ c }: { c: string }) {
           <DialogHeader><DialogTitle>Bankverrichting aan factuur koppelen</DialogTitle><DialogDescription>{manualTx ? `${manualTx.tx_date} · ${manualTx.counterparty ?? ''} · ${eur(Number(manualTx.amount))}` : ''}</DialogDescription></DialogHeader>
           <Input aria-label="Zoek te koppelen factuur" placeholder="Zoek op factuurnummer, klant of leverancier…" value={invoiceSearch} onChange={(e) => setInvoiceSearch(e.target.value)} />
           <div className="max-h-72 space-y-1 overflow-y-auto">
-            {invoiceChoices.filter((i) => (i.doc_type === 'factuur' || i.doc_type === 'creditnota') && `${i.number ?? ''} ${i.counterparty ?? ''}`.toLowerCase().includes(invoiceSearch.trim().toLowerCase())).sort((a, b) => String(b.invoice_date).localeCompare(String(a.invoice_date))).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
+            {invoiceChoices.filter((i) => {
+              if (i.doc_type !== 'factuur' && i.doc_type !== 'creditnota') return false;
+              const q = invoiceSearch.trim().toLowerCase();
+              if (!q) return true;
+              const openAmt = docOpenAmount(i, total(i));
+              return `${i.number ?? ''} ${i.counterparty ?? ''} ${i.doc_type === 'creditnota' ? 'creditnota cn' : ''} ${openAmt.toFixed(2)} ${openAmt.toFixed(2).replace('.', ',')}`.toLowerCase().includes(q);
+            }).sort((a, b) => {
+              const txAmt = Number(manualTx?.amount ?? 0);
+              const rank = (i: any) => {
+                const openAmt = docOpenAmount(i, total(i));
+                const dirOk = (txAmt < 0) === docExpectsOutgoing(i);
+                if (dirOk && openAmt > 0.005 && Math.abs(openAmt - Math.abs(txAmt)) < 0.025) return 0;
+                if (dirOk && openAmt > 0.005) return 1;
+                if (openAmt > 0.005) return 2;
+                return 3;
+              };
+              const diff = rank(a) - rank(b);
+              return diff !== 0 ? diff : String(b.invoice_date).localeCompare(String(a.invoice_date));
+            }).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
               <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) { const available = Math.max(0, r2(Math.abs(Number(manualTx?.amount ?? 0)) - Object.values(current).reduce((sum, value) => sum + (parseAmount(value) ?? 0), 0))); next[i.id] = String(Math.min(available, docOpenAmount(i, total(i)))); } else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
               <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction}{i.doc_type === 'creditnota' ? ' · creditnota' : ''} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
               <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))} · nog open {eur(docOpenAmount(i, total(i)))}</span></span>
