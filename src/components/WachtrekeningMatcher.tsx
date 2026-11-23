@@ -1,15 +1,17 @@
 import { useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Upload, Download, FileCheck2, Landmark, HelpCircle, ExternalLink, Loader2 } from "lucide-react";
+import { Upload, Download, FileArchive, FileCheck2, Landmark, HelpCircle, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import JSZip from "jszip";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
-import { parseWachtrekening } from "@/lib/wachtrekening.functions";
+import { fetchWachtrekeningDocuments, parseWachtrekening } from "@/lib/wachtrekening.functions";
 import {
   matchWachtrekeningLines,
   type BankTxCandidate,
@@ -36,13 +38,34 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
 export function WachtrekeningMatcher({ c }: { c: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const runParse = useServerFn(parseWachtrekening);
+  const runFetchDocs = useServerFn(fetchWachtrekeningDocuments);
   const [busy, setBusy] = useState(false);
+  const [zipBusy, setZipBusy] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [accountInfo, setAccountInfo] = useState<string | null>(null);
   const [results, setResults] = useState<WachtrekeningMatchResult[]>([]);
+  const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<FilterStatus>("all");
 
   async function handleFile(file: File) {
@@ -115,6 +138,7 @@ export function WachtrekeningMatcher({ c }: { c: string }) {
       const matched = matchWachtrekeningLines(parsed.lines, bankRows, purchaseRows, salesCandidates);
       setAccountInfo(parsed.accountInfo);
       setResults(matched);
+      setFeedback({});
       setFilter("all");
       const docCount = matched.filter((r) => r.status === "document_found").length;
       toast.success(`${matched.length} regel(s) gecontroleerd: ${docCount} met document gevonden`);
@@ -138,32 +162,84 @@ export function WachtrekeningMatcher({ c }: { c: string }) {
     [results, filter],
   );
 
+  function buildExportRows(docFileByKey?: Map<string, string>) {
+    return results.map((r) => {
+      const docKey = r.document ? `${r.document.type}:${r.document.id}` : "";
+      return {
+        Datum: r.line.date ?? "",
+        Bedrag: r.line.amount,
+        Tegenpartij_wachtrekening: r.line.counterparty,
+        Omschrijving_wachtrekening: r.line.description,
+        Status:
+          r.status === "document_found"
+            ? "Document gevonden"
+            : r.status === "bank_only"
+              ? "Alleen bankverrichting"
+              : "Niet gevonden",
+        Bank_datum: r.bankTx?.tx_date ?? "",
+        Bank_tegenpartij: r.bankTx?.counterparty ?? "",
+        Bank_IBAN: r.bankTx?.counterparty_account ?? "",
+        Bank_mededeling: r.bankTx?.description ?? "",
+        Document_type: r.document ? (r.document.type === "purchase" ? "Aankoopfactuur" : "Verkoopfactuur") : "",
+        Document_nummer: r.document?.number ?? "",
+        Document_relatie: r.document?.party ?? "",
+        Document_bedrag: r.document?.total ?? "",
+        Bijlage_in_ZIP: docKey ? (docFileByKey?.get(docKey) ?? "") : "",
+        Feedback_boekhouder: feedback[r.line.id]?.trim() ?? "",
+        Reden: r.document?.reason ?? r.bankReason ?? "",
+      };
+    });
+  }
+
   function exportExcel() {
-    const rows = results.map((r) => ({
-      Datum: r.line.date ?? "",
-      Bedrag: r.line.amount,
-      Tegenpartij_wachtrekening: r.line.counterparty,
-      Omschrijving_wachtrekening: r.line.description,
-      Status:
-        r.status === "document_found"
-          ? "Document gevonden"
-          : r.status === "bank_only"
-            ? "Alleen bankverrichting"
-            : "Niet gevonden",
-      Bank_datum: r.bankTx?.tx_date ?? "",
-      Bank_tegenpartij: r.bankTx?.counterparty ?? "",
-      Bank_IBAN: r.bankTx?.counterparty_account ?? "",
-      Bank_mededeling: r.bankTx?.description ?? "",
-      Document_type: r.document ? (r.document.type === "purchase" ? "Aankoopfactuur" : "Verkoopfactuur") : "",
-      Document_nummer: r.document?.number ?? "",
-      Document_relatie: r.document?.party ?? "",
-      Document_bedrag: r.document?.total ?? "",
-      Reden: r.document?.reason ?? r.bankReason ?? "",
-    }));
+    const rows = buildExportRows();
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Wachtrekening");
     XLSX.writeFile(wb, `wachtrekening-controle-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  async function exportAccountantZip() {
+    setZipBusy(true);
+    try {
+      const purchaseIds = results.filter((r) => r.document?.type === "purchase").map((r) => r.document!.id);
+      const salesIds = results.filter((r) => r.document?.type === "sales").map((r) => r.document!.id);
+      const { docs, missingCount } = await runFetchDocs({ data: { purchaseIds, salesIds } });
+
+      const zip = new JSZip();
+      const docFileByKey = new Map<string, string>();
+      const usedNames = new Set<string>();
+
+      for (const d of docs) {
+        let name = d.fileName;
+        let n = 2;
+        while (usedNames.has(name)) {
+          name = `${d.fileName.replace(/(\.[^.]+)$/, "")}-${n++}${d.fileName.match(/\.[^.]+$/)?.[0] ?? ".pdf"}`;
+        }
+        usedNames.add(name);
+        docFileByKey.set(`${d.type}:${d.id}`, `facturen/${name}`);
+        zip.file(`facturen/${name}`, base64ToUint8Array(d.base64));
+      }
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const ws = XLSX.utils.json_to_sheet(buildExportRows(docFileByKey));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Wachtrekening");
+      const xlsxBytes = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
+      zip.file(`wachtrekening-afgewerkt-${todayStr}.xlsx`, xlsxBytes);
+
+      const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
+      downloadBlob(blob, `wachtrekening-boekhouder-${todayStr}.zip`);
+      toast.success(
+        missingCount > 0
+          ? `Pakket gedownload met ${docs.length} factuur/facturen (${missingCount} zonder PDF)`
+          : `Pakket gedownload met overzicht en ${docs.length} gekoppelde factuur/facturen`,
+      );
+    } catch (err) {
+      toast.error((err as Error).message || "Pakket voor boekhouder maken mislukt");
+    } finally {
+      setZipBusy(false);
+    }
   }
 
   return (
@@ -193,10 +269,16 @@ export function WachtrekeningMatcher({ c }: { c: string }) {
               {busy ? "Bezig met uitlezen…" : "Wachtrekening uploaden"}
             </Button>
             {results.length > 0 && (
-              <Button size="sm" variant="outline" onClick={exportExcel}>
-                <Download className="mr-1.5 size-4" />
-                Exporteer Excel
-              </Button>
+              <>
+                <Button size="sm" variant="default" disabled={zipBusy} onClick={exportAccountantZip}>
+                  {zipBusy ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <FileArchive className="mr-1.5 size-4" />}
+                  {zipBusy ? "Pakket maken…" : "Pakket voor boekhouder (ZIP)"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={exportExcel}>
+                  <Download className="mr-1.5 size-4" />
+                  Alleen Excel
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -293,9 +375,15 @@ export function WachtrekeningMatcher({ c }: { c: string }) {
                         )}
                       </div>
                     ) : (
-                      <p className="mt-0.5 text-muted-foreground">
-                        Geen passend document in de app gevonden.
-                      </p>
+                      <div className="mt-0.5 space-y-1.5">
+                        <p className="text-muted-foreground">Geen passend document in de app gevonden.</p>
+                        <Input
+                          value={feedback[r.line.id] ?? ""}
+                          onChange={(e) => setFeedback((prev) => ({ ...prev, [r.line.id]: e.target.value }))}
+                          placeholder="Jouw feedback voor de boekhouder (bv. privé-uitgave, bonnetje volgt…)"
+                          className="h-8 text-xs"
+                        />
+                      </div>
                     )}
                   </div>
                 </div>

@@ -131,3 +131,106 @@ export const parseWachtrekening = createServerFn({ method: "POST" })
 
     return { accountInfo: out.accountInfo, lines };
   });
+
+export interface FetchedWachtrekeningDoc {
+  type: "purchase" | "sales";
+  id: string;
+  fileName: string;
+  base64: string;
+  mime: string;
+}
+
+function safeFilePart(s: string): string {
+  return s.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "document";
+}
+
+export const fetchWachtrekeningDocuments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { purchaseIds: string[]; salesIds: string[] }) => ({
+    purchaseIds: Array.from(new Set(input.purchaseIds ?? [])).slice(0, 150),
+    salesIds: Array.from(new Set(input.salesIds ?? [])).slice(0, 150),
+  }))
+  .handler(async ({ data, context }): Promise<{ docs: FetchedWachtrekeningDoc[]; missingCount: number }> => {
+    const { data: admin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!admin) throw new Error("Alleen voor beheerder");
+
+    const sb = context.supabase as any;
+    const { bytesBase64 } = await import("./accountant-documents.server");
+    const docs: FetchedWachtrekeningDoc[] = [];
+    let missingCount = 0;
+
+    if (data.purchaseIds.length) {
+      const { data: purchases } = await sb
+        .from("purchase_invoices")
+        .select("id,invoice_number,supplier_name,pdf_path")
+        .in("id", data.purchaseIds);
+      const storage = sb.storage.from("aankoopfacturen");
+      for (const p of purchases ?? []) {
+        if (!p.pdf_path) {
+          missingCount++;
+          continue;
+        }
+        const { data: blob, error } = await storage.download(p.pdf_path);
+        if (error || !blob) {
+          missingCount++;
+          continue;
+        }
+        const ext = p.pdf_path.split(".").pop()?.toLowerCase() || "pdf";
+        const mime =
+          blob.type && blob.type !== "application/octet-stream"
+            ? blob.type
+            : ext === "png"
+              ? "image/png"
+              : ext === "jpg" || ext === "jpeg"
+                ? "image/jpeg"
+                : "application/pdf";
+        const num = safeFilePart(p.invoice_number || p.id.slice(0, 8));
+        const sup = safeFilePart(p.supplier_name || "leverancier");
+        docs.push({
+          type: "purchase",
+          id: p.id,
+          fileName: `Aankoop-${num}-${sup}.${ext}`,
+          base64: bytesBase64(new Uint8Array(await (blob as Blob).arrayBuffer())),
+          mime,
+        });
+      }
+    }
+
+    if (data.salesIds.length) {
+      const { data: sales } = await sb
+        .from("invoices")
+        .select("*")
+        .in("id", data.salesIds);
+      const { pdfData } = await import("./invoice-sending.server");
+      const { createInvoicePdf } = await import("./invoice-pdf");
+      for (const inv of sales ?? []) {
+        try {
+          const { data: snapshot } = await sb
+            .from("document_deliveries")
+            .select("pdf_base64")
+            .eq("document_id", inv.id)
+            .eq("document_type", inv.kind === "creditnota" ? "creditnota" : "factuur")
+            .eq("status", "accepted")
+            .order("sent_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const base64 = snapshot?.pdf_base64 || bytesBase64(await createInvoicePdf(await pdfData(sb, inv)));
+          const num = safeFilePart(inv.number || inv.id.slice(0, 8));
+          docs.push({
+            type: "sales",
+            id: inv.id,
+            fileName: `Verkoop-${num}.pdf`,
+            base64,
+            mime: "application/pdf",
+          });
+        } catch {
+          missingCount++;
+        }
+      }
+    }
+
+    return { docs, missingCount };
+  });
