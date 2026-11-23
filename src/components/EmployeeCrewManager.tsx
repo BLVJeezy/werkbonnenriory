@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { crewInvitationText, crewWhatsAppLink } from "@/lib/crew-whatsapp";
 import {
-  assignEmployeeToCrew,
   createAllEmployeeLogins,
   createEmployeeLogin,
   inviteEmployeePassword,
+  setEmployeeCrews,
 } from "@/lib/employee-crew.functions";
 
 function formatDateTime(iso: string) {
@@ -33,7 +33,7 @@ export function EmployeeCrewManager() {
   const createOne = useServerFn(createEmployeeLogin);
   const createAll = useServerFn(createAllEmployeeLogins);
   const inviteOne = useServerFn(inviteEmployeePassword);
-  const assignCrew = useServerFn(assignEmployeeToCrew);
+  const saveCrews = useServerFn(setEmployeeCrews);
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -58,6 +58,11 @@ export function EmployeeCrewManager() {
     queryFn: async () => (await supabase.from("technicians").select("id, name, color, external_planning").order("name")).data ?? [],
   });
 
+  const { data: crewLinks = [] } = useQuery({
+    queryKey: ["tk_employee_crews"],
+    queryFn: async () => (await supabase.from("tk_employee_crews").select("employee_id, technician_id")).data ?? [],
+  });
+
   const { data: history = [] } = useQuery({
     queryKey: ["tk_employee_crew_assignments"],
     queryFn: async () =>
@@ -75,6 +80,12 @@ export function EmployeeCrewManager() {
   const empNameById = new Map(employees.map((e) => [e.id, e.name]));
   const crewById = new Map(crews.map((c) => [c.id, c]));
   const withoutLogin = employees.filter((e) => !e.user_id);
+  const allowedByEmp = new Map<string, Set<string>>();
+  for (const link of crewLinks) {
+    const set = allowedByEmp.get(link.employee_id) ?? new Set<string>();
+    set.add(link.technician_id);
+    allowedByEmp.set(link.employee_id, set);
+  }
 
   const filteredHistory = history.filter((row) => {
     if (filterEmp !== "all" && row.employee_id !== filterEmp) return false;
@@ -124,12 +135,16 @@ export function EmployeeCrewManager() {
     }
   }
 
-  async function handleAssign(employeeId: string, technicianId: string) {
+  async function handleToggleCrew(employeeId: string, technicianId: string) {
+    const current = new Set(allowedByEmp.get(employeeId) ?? []);
+    if (current.has(technicianId)) current.delete(technicianId);
+    else current.add(technicianId);
     setBusyId(employeeId);
     try {
-      await assignCrew({ data: { employeeId, technicianId: technicianId || null } });
-      toast.success("Ploegtoewijzing bijgewerkt");
+      await saveCrews({ data: { employeeId, technicianIds: [...current] } });
+      toast.success("Ploegtoegang bijgewerkt");
       qc.invalidateQueries({ queryKey: ["tk_employees_crew"] });
+      qc.invalidateQueries({ queryKey: ["tk_employee_crews"] });
       qc.invalidateQueries({ queryKey: ["tk_employee_crew_assignments"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Toewijzen mislukt");
@@ -143,7 +158,7 @@ export function EmployeeCrewManager() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-base font-bold"><Users className="size-4" />Medewerkers uit tikklok</h3>
-          <p className="text-sm text-muted-foreground">Geef elke medewerker een eigen login en wijs toe aan een ploeg. De medewerker ziet automatisch de taken van die ploeg.</p>
+          <p className="text-sm text-muted-foreground">Geef elke medewerker een eigen login en vink aan tot welke ploegen hij toegang krijgt. De medewerker kiest bovenaan zijn actieve ploeg; elke wissel wordt hieronder getraceerd.</p>
         </div>
         {withoutLogin.length > 0 && (
           <Button type="button" size="sm" disabled={bulkBusy} onClick={handleBulkCreate}>
@@ -155,28 +170,21 @@ export function EmployeeCrewManager() {
 
       <ul className="divide-y rounded-md border bg-card">
         {employees.length === 0 && <li className="p-4 text-sm text-muted-foreground">Geen actieve medewerkers in de tikklok.</li>}
-        {employees.map((emp) => (
-          <li key={emp.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div className="font-semibold">{emp.name}</div>
-              <div className="text-sm text-muted-foreground">
-                {emp.user_id ? `login: ${emp.name}` : "Nog geen login"}
+        {employees.map((emp) => {
+          const allowed = allowedByEmp.get(emp.id) ?? new Set<string>();
+          const activeCrew = emp.current_technician_id ? crewById.get(emp.current_technician_id) : null;
+          return (
+          <li key={emp.id} className="space-y-3 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="font-semibold">{emp.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {emp.user_id ? `login: ${emp.name}` : "Nog geen login"}
+                  {activeCrew && ` · Actief in: ${activeCrew.name}`}
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                aria-label={`Ploeg voor ${emp.name}`}
-                className="h-9 rounded-md border bg-background px-2.5 text-sm"
-                value={emp.current_technician_id ?? ""}
-                disabled={busyId === emp.id}
-                onChange={(e) => handleAssign(emp.id, e.target.value)}
-              >
-                <option value="">Geen ploeg</option>
-                {internalCrews.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              {!emp.user_id ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {!emp.user_id ? (
                 <Button
                   size="sm"
                   type="button"
@@ -218,9 +226,34 @@ export function EmployeeCrewManager() {
                   <MessageCircle className="size-4" />Uitnodigen via WhatsApp
                 </Button>
               )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {internalCrews.map((c) => {
+                const checked = allowed.has(c.id);
+                const isActive = emp.current_technician_id === c.id;
+                return (
+                  <label
+                    key={c.id}
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${checked ? "border-primary bg-primary/10 text-foreground" : "border-border bg-background text-muted-foreground"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="accent-primary"
+                      checked={checked}
+                      disabled={busyId === emp.id}
+                      onChange={() => handleToggleCrew(emp.id, c.id)}
+                    />
+                    <span className="inline-block size-2 rounded-full" style={{ backgroundColor: c.color ?? "#f97316" }} />
+                    <span>{c.name}</span>
+                    {isActive && <span className="text-[10px] font-semibold text-primary">(actief)</span>}
+                  </label>
+                );
+              })}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       <div className="space-y-3">

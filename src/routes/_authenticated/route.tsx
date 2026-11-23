@@ -1,10 +1,13 @@
 import { SavingsQuarterAlert } from "@/components/SavingsQuarterAlert";
 import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useRole, useRoleError, useLargeText, usePerms } from "@/lib/use-role";
+import { useRole, useRoleError, useLargeText, usePerms, useEmployeeCrews } from "@/lib/use-role";
+import { switchMyActiveCrew } from "@/lib/employee-crew.functions";
 import { largeTextOn, textSizeStatus, readDeviceChoice, writeDeviceChoice, type DeviceChoice } from "@/lib/text-size";
 import { Menu, X } from "lucide-react";
 import { ScreenHelpPanel, ScreenHelpToggle } from "@/components/ScreenHelp";
@@ -35,6 +38,9 @@ function Layout() {
   const role = useRole();
   const perms = usePerms();
   const adminSet = useLargeText();
+  const { activeCrewId, allowedCrews } = useEmployeeCrews();
+  const switchCrew = useServerFn(switchMyActiveCrew);
+  const [switchingCrew, setSwitchingCrew] = useState(false);
   const [device, setDevice] = useState<DeviceChoice>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const large = largeTextOn(adminSet, device);
@@ -84,6 +90,37 @@ function Layout() {
               </Button>
             )}
             <span id="tekstgrootte-uitleg" className="text-xs opacity-80">{textSizeStatus(adminSet, device)}</span>
+            {role === "technician" && allowedCrews.length > 1 && (
+              <label className="ml-auto flex items-center gap-2 text-xs font-semibold">
+                <span>Actieve ploeg:</span>
+                <select
+                  aria-label="Actieve ploeg kiezen"
+                  className="h-8 rounded-md border bg-background px-2 text-sm text-foreground"
+                  value={activeCrewId ?? ""}
+                  disabled={switchingCrew}
+                  onChange={async (e) => {
+                    const nextId = e.target.value;
+                    if (!nextId) return;
+                    setSwitchingCrew(true);
+                    try {
+                      await switchCrew({ data: { technicianId: nextId } });
+                      await qc.invalidateQueries();
+                      const chosen = allowedCrews.find((c) => c.id === nextId);
+                      toast.success(`Overgeschakeld naar ${chosen?.name ?? "ploeg"}`);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Ploeg wisselen mislukt");
+                    } finally {
+                      setSwitchingCrew(false);
+                    }
+                  }}
+                >
+                  {!activeCrewId && <option value="">Kies een ploeg…</option>}
+                  {allowedCrews.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
           <Button variant="secondary" size="icon" className="shrink-0 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
           <nav id="beheer-menu" aria-label="Beheerpagina’s" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenuOpen(false); }} className={`${menuOpen ? "grid" : "hidden"} col-span-full min-w-0 grid-cols-2 items-center gap-1 border-t border-secondary-foreground/20 pt-2 text-sm font-semibold sm:ml-auto sm:flex sm:flex-wrap sm:border-0 sm:pt-0`}>

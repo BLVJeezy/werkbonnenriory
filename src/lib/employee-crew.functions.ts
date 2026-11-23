@@ -146,3 +146,132 @@ export const assignEmployeeToCrew = createServerFn({ method: "POST" })
 
     return { ok: true, changed: true };
   });
+
+export const setEmployeeCrews = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employeeId: z.string().uuid(),
+        technicianIds: z.array(z.string().uuid()),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const uniqueIds = [...new Set(data.technicianIds)];
+
+    const { data: emp, error: empErr } = await context.supabase
+      .from("tk_employees")
+      .select("id, current_technician_id")
+      .eq("id", data.employeeId)
+      .single();
+    if (empErr || !emp) throw new Error("Medewerker niet gevonden");
+
+    const { data: existing, error: exErr } = await context.supabase
+      .from("tk_employee_crews")
+      .select("technician_id")
+      .eq("employee_id", data.employeeId);
+    if (exErr) throw new Error(exErr.message);
+
+    const existingSet = new Set((existing ?? []).map((r) => r.technician_id));
+    const nextSet = new Set(uniqueIds);
+    const toAdd = uniqueIds.filter((id) => !existingSet.has(id));
+    const toRemove = [...existingSet].filter((id) => !nextSet.has(id));
+
+    if (toRemove.length > 0) {
+      const { error: delErr } = await context.supabase
+        .from("tk_employee_crews")
+        .delete()
+        .eq("employee_id", data.employeeId)
+        .in("technician_id", toRemove);
+      if (delErr) throw new Error(delErr.message);
+    }
+    if (toAdd.length > 0) {
+      const { error: insErr } = await context.supabase
+        .from("tk_employee_crews")
+        .insert(toAdd.map((technician_id) => ({ employee_id: data.employeeId, technician_id })));
+      if (insErr) throw new Error(insErr.message);
+    }
+
+    const nextActive =
+      emp.current_technician_id && nextSet.has(emp.current_technician_id)
+        ? emp.current_technician_id
+        : (uniqueIds[0] ?? null);
+
+    if (nextActive !== emp.current_technician_id) {
+      const now = new Date().toISOString();
+      const { error: closeErr } = await context.supabase
+        .from("tk_employee_crew_assignments")
+        .update({ ended_at: now })
+        .eq("employee_id", data.employeeId)
+        .is("ended_at", null);
+      if (closeErr) throw new Error(closeErr.message);
+
+      if (nextActive) {
+        const { error: logErr } = await context.supabase.from("tk_employee_crew_assignments").insert({
+          employee_id: data.employeeId,
+          technician_id: nextActive,
+          started_at: now,
+          assigned_by: context.userId,
+        });
+        if (logErr) throw new Error(logErr.message);
+      }
+
+      const { error: updErr } = await context.supabase
+        .from("tk_employees")
+        .update({ current_technician_id: nextActive })
+        .eq("id", data.employeeId);
+      if (updErr) throw new Error(updErr.message);
+    }
+
+    return { ok: true, activeTechnicianId: nextActive };
+  });
+
+export const switchMyActiveCrew = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ technicianId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: emp, error: empErr } = await supabaseAdmin
+      .from("tk_employees")
+      .select("id, current_technician_id, active")
+      .eq("user_id", context.userId)
+      .eq("active", true)
+      .maybeSingle();
+    if (empErr || !emp) throw new Error("Geen actieve medewerker gevonden voor deze login");
+
+    const { data: allowed } = await supabaseAdmin
+      .from("tk_employee_crews")
+      .select("technician_id")
+      .eq("employee_id", emp.id)
+      .eq("technician_id", data.technicianId)
+      .maybeSingle();
+    if (!allowed) throw new Error("Je hebt geen toegang tot deze ploeg");
+
+    if (emp.current_technician_id === data.technicianId) return { ok: true, changed: false };
+
+    const now = new Date().toISOString();
+    const { error: closeErr } = await supabaseAdmin
+      .from("tk_employee_crew_assignments")
+      .update({ ended_at: now })
+      .eq("employee_id", emp.id)
+      .is("ended_at", null);
+    if (closeErr) throw new Error(closeErr.message);
+
+    const { error: insErr } = await supabaseAdmin.from("tk_employee_crew_assignments").insert({
+      employee_id: emp.id,
+      technician_id: data.technicianId,
+      started_at: now,
+      assigned_by: context.userId,
+    });
+    if (insErr) throw new Error(insErr.message);
+
+    const { error: updErr } = await supabaseAdmin
+      .from("tk_employees")
+      .update({ current_technician_id: data.technicianId })
+      .eq("id", emp.id);
+    if (updErr) throw new Error(updErr.message);
+
+    return { ok: true, changed: true };
+  });

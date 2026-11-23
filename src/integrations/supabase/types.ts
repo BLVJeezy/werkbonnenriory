@@ -3556,6 +3556,39 @@ export type Database = {
           },
         ]
       }
+      tk_employee_crews: {
+        Row: {
+          created_at: string
+          employee_id: string
+          technician_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          technician_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tk_employee_crews_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "tk_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tk_employee_crews_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tk_employee_documents: {
         Row: {
           created_at: string
