@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from "@/lib/mail-senders";
-import { accountantWarnings, attachmentBatches, monthsInPeriod, normalizePeriod, periodLabel, periodSlug } from "@/lib/accountant-package";
+import { accountantWarnings, attachmentBatches, monthsInPeriod, normalizePeriod, periodLabel, periodSlug, ublFilename } from "@/lib/accountant-package";
 import { depreciationByYear, depreciationSchedule, missingDeprParams } from "@/lib/finance";
 import { statements, trialBalance, isBalanced } from "@/lib/boekhouding";
 
@@ -256,7 +256,7 @@ export const sendInvoiceToAccountant = createServerFn({ method: "POST" })
     return { to: mailTo, name };
   });
 
-/** Admin-only: build and return one sales or purchase invoice as .ubl XML with the source PDF embedded. */
+/** Admin-only: build and return one sales or purchase invoice as UBL XML with the source PDF embedded. */
 export const downloadInvoiceUbl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { kind?: string; id?: string }) => {
@@ -274,14 +274,13 @@ export const downloadInvoiceUbl = createServerFn({ method: "POST" })
       if (error || !inv) throw new Error("Factuur niet gevonden");
       const xml = await accountantSalesUbl(supabase, inv);
       const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
-      return { xml, filename: `Verkoop-${label}-${inv.number}.ubl` };
+      return { xml, filename: ublFilename("Verkoop", label, inv.number) };
     }
     const { data: s } = await supabase.from("settings").select("company_name, company_vat").eq("id", 1).single();
     const { data: p, error } = await supabase.from("purchase_invoices").select("*").eq("id", data.id).single();
     if (error || !p) throw new Error("Aankoopfactuur niet gevonden");
     const buyer = { name: s?.company_name || "Riory BV", vat: s?.company_vat || "BE0840931404" };
-    const safe = `${p.supplier_name}-${p.invoice_number ?? p.id.slice(0, 8)}`.replace(/[^\w.-]+/g, "_").slice(0, 80);
     const xml = await accountantPurchaseUbl(supabase, p, buyer);
     const label = p.kind === "creditnota" ? "Creditnota" : "Factuur";
-    return { xml, filename: `Aankoop-${label}-${safe}.ubl` };
+    return { xml, filename: ublFilename("Aankoop", label, `${p.supplier_name}-${p.invoice_number ?? p.id.slice(0, 8)}`) };
   });

@@ -400,7 +400,7 @@ function Aankoopfacturen() {
                   <span className="flex flex-col items-stretch gap-1 sm:items-end">
                     <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen/$id" params={{ id: r.id }}>{paid ? 'Bekijken' : 'Controleren'}</Link></Button>
                     <Button variant="outline" size="sm" disabled={busy || !r.pdf_path} title={r.pdf_path ? undefined : 'Geen PDF in het systeem'} onClick={() => downloadPdf(r)}>Download PDF</Button>
-                    <Button variant="outline" size="sm" disabled={busy || !r.pdf_path} title={r.pdf_path ? undefined : 'Geen PDF in het systeem'} onClick={() => downloadUbl(r)}>Download .ubl</Button>
+                    <Button variant="outline" size="sm" disabled={busy || !r.pdf_path} title={r.pdf_path ? undefined : 'Geen PDF in het systeem'} onClick={() => downloadUbl(r)}>Download .xml</Button>
                     <Button variant="outline" size="sm" disabled={busy} title={r.accountant_sent_at ? `Al verzonden op ${new Date(r.accountant_sent_at).toLocaleDateString('nl-BE')}` : undefined} onClick={() => sendToAccountant(r)}>{r.accountant_sent_at ? 'Opnieuw naar boekhouder' : 'Naar boekhouder'}</Button>
                     {!paid && r.kind === 'factuur' && <MarkPurchasePaid id={r.id} staged={r.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { setSel(s => s.filter(id => id !== r.id)); await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
                     {paid && <UndoPurchasePaid id={r.id} bankLinked={!!r.bank_payment_ref} disabled={busy} onSaved={async () => { await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}

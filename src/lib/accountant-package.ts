@@ -2,6 +2,12 @@
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const a = (n: number) => (Math.round(Math.abs(n) * 100) / 100).toFixed(2);
 
+/** Download filename for one UBL: the accountant's package only reads .xml, never .ubl. */
+export function ublFilename(prefix: string, label: string, ref: string) {
+  const safe = `${prefix}-${label}-${ref}`.replace(/[^\w.-]+/g, "_").slice(0, 90);
+  return `${safe}.xml`;
+}
+
 /** Embed the actual private source file; never send extracted data without it. */
 export function withSourceDocument(xml: string, source: { name: string; mime: string; base64: string }) {
   if (!source.base64) throw new Error(`Origineel document ontbreekt: ${source.name}`);

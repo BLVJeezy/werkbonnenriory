@@ -409,7 +409,7 @@ function Facturen() {
                       <td className="text-right">
                         <div className="flex flex-wrap justify-end gap-1">
                           <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
-                          <Button variant="outline" size="sm" disabled={busy} onClick={() => downloadUbl(i.id)}>UBL</Button>
+                          <Button variant="outline" size="sm" disabled={busy} onClick={() => downloadUbl(i.id)}>UBL .xml</Button>
                           {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
                           {i.status !== "verzonden" && !i.pdf_sent_at && !i.okioki_sent_at && !i.post_sent_at && (
                             <Button variant="destructive" size="sm" disabled={busy} aria-label={`Factuur ${i.number} verwijderen`} onClick={async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountantWarnings, attachmentBatches, monthsInPeriod, normalizePeriod, periodLabel, periodSlug, purchaseUbl, withSourceDocument } from "./accountant-package";
+import { accountantWarnings, attachmentBatches, monthsInPeriod, normalizePeriod, periodLabel, periodSlug, purchaseUbl, ublFilename, withSourceDocument } from "./accountant-package";
 
 const ok = { purchasesToCheck: 0, salesUnsent: 0, financeToReview: 0, financeUnbooked: 0, bankUnbooked: 0, monthsIncomplete: [], investmentsIncomplete: [], journalLines: 10, trialDiff: 0 };
 
@@ -26,6 +26,13 @@ describe("periodLabel", () => {
   it("reads the same way in mails and on screen", () => {
     expect(periodLabel("2026-01-01", "2026-12-31")).toBe("01/01/2026 tot 31/12/2026");
     expect(periodSlug("2026-01-01", "2026-12-31")).toBe("2026-01-01_tot_2026-12-31");
+  });
+});
+
+describe("ublFilename", () => {
+  it("slaat de download op als .xml zodat het boekhouderpakket het bestand leest", () => {
+    expect(ublFilename("Verkoop", "Factuur", "20260893")).toBe("Verkoop-Factuur-20260893.xml");
+    expect(ublFilename("Aankoop", "Creditnota", "Google Ireland-5704268246")).toBe("Aankoop-Creditnota-Google_Ireland-5704268246.xml");
   });
 });
 
