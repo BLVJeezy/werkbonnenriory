@@ -707,7 +707,8 @@ function Bank({ c }: { c: string }) {
     if (error) return void toast.error(error.message);
     toast.success("Afgeletterd met betaalde factuur"); refresh();
   };
-  const remaining = (i: any) => r2(Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
+  // Creditnota's hebben een negatief totaal: hun open saldo blijft negatief (anders verdween de afpuntknop).
+  const remaining = (i: any) => i.doc_type === "creditnota" ? r2(Math.min(0, total(i) + Number(i.paid_amount ?? 0))) : r2(Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
   // Deelbetaling: betaling kleiner dan het openstaande bedrag, enkel voorstellen bij overeenkomende naam of nummer.
   const partialCands = (t: any) => grossOf(t) == null ? partialInvoiceCandidates(t, open, remaining, effAmt(t)).slice(0, 3) : [];
   const partialMatch = async (t: any, inv: any) => {
