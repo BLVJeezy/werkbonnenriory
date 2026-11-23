@@ -14,18 +14,10 @@ import {
   inviteEmployeePassword,
   setEmployeeCrews,
 } from "@/lib/employee-crew.functions";
+import { formatWorkedDuration, intersectCrewAssignmentsWithClock } from "@/lib/crew-tracking";
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("nl-BE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDuration(startIso: string, endIso: string | null) {
-  const ms = Math.max(0, (endIso ? new Date(endIso).getTime() : Date.now()) - new Date(startIso).getTime());
-  const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return `${hours} u`;
-  const days = Math.floor(hours / 24);
-  const rem = hours % 24;
-  return rem > 0 ? `${days} d ${rem} u` : `${days} d`;
 }
 
 export function EmployeeCrewManager() {
@@ -75,6 +67,18 @@ export function EmployeeCrewManager() {
       ).data ?? [],
   });
 
+  const { data: timeEntries = [] } = useQuery({
+    queryKey: ["tk_time_entries_crew_tracking"],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("tk_time_entries")
+          .select("id, employee_id, clock_in, clock_out")
+          .order("clock_in", { ascending: false })
+          .limit(1000)
+      ).data ?? [],
+  });
+
   const internalCrews = crews.filter((c) => !c.external_planning);
   const phoneByEmp = new Map(profiles.map((p) => [p.employee_id, p.phone ?? ""]));
   const empNameById = new Map(employees.map((e) => [e.id, e.name]));
@@ -87,11 +91,13 @@ export function EmployeeCrewManager() {
     allowedByEmp.set(link.employee_id, set);
   }
 
-  const filteredHistory = history.filter((row) => {
+  const workedSessions = intersectCrewAssignmentsWithClock(history, timeEntries);
+  const filteredHistory = workedSessions.filter((row) => {
     if (filterEmp !== "all" && row.employee_id !== filterEmp) return false;
     if (filterCrew !== "all" && row.technician_id !== filterCrew) return false;
     return true;
   });
+  const totalWorkedMs = filteredHistory.reduce((sum, row) => sum + row.durationMs, 0);
 
   const invitationText = invitation ? crewInvitationText(invitation.name, invitation.setupUrl) : "";
   let invitationLink = "";
@@ -258,7 +264,12 @@ export function EmployeeCrewManager() {
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-sm font-bold">Ploegtracking (wie werkte in welke ploeg)</h4>
+          <div>
+            <h4 className="text-sm font-bold">Ploegtracking (enkel ingetikte werkuren)</h4>
+            {filteredHistory.length > 0 && (
+              <p className="text-xs text-muted-foreground">Totaal gewerkt: <span className="font-mono font-medium">{formatWorkedDuration(totalWorkedMs)}</span></p>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             <select aria-label="Filter op medewerker" className="h-8 rounded-md border bg-background px-2 text-sm" value={filterEmp} onChange={(e) => setFilterEmp(e.target.value)}>
               <option value="all">Alle medewerkers</option>
@@ -273,13 +284,13 @@ export function EmployeeCrewManager() {
 
         <div className="rounded-md border bg-card">
           {filteredHistory.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">Nog geen ploegtoewijzingen geregistreerd.</p>
+            <p className="p-4 text-sm text-muted-foreground">Nog geen ingetikte werkuren in een ploeg geregistreerd.</p>
           ) : (
             <ul className="divide-y text-sm">
               {filteredHistory.map((row) => {
                 const crew = crewById.get(row.technician_id);
                 return (
-                  <li key={row.id} className="grid gap-1 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center sm:gap-3">
+                  <li key={row.key} className="grid gap-1 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center sm:gap-3">
                     <div className="font-medium">{empNameById.get(row.employee_id) ?? "Medewerker"}</div>
                     <div className="flex items-center gap-2">
                       <span className="inline-block size-2.5 shrink-0 rounded-full" style={{ backgroundColor: crew?.color ?? "#f97316" }} />
@@ -288,8 +299,8 @@ export function EmployeeCrewManager() {
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:justify-end">
                       <span>{formatDateTime(row.started_at)}</span>
                       <span>→</span>
-                      {row.ended_at ? <span>{formatDateTime(row.ended_at)}</span> : <span className="rounded bg-primary/15 px-1.5 py-0.5 font-medium text-primary">Actief</span>}
-                      <span className="font-mono">({formatDuration(row.started_at, row.ended_at)})</span>
+                      {row.ended_at ? <span>{formatDateTime(row.ended_at)}</span> : <span className="rounded bg-primary/15 px-1.5 py-0.5 font-medium text-primary">Ingetikt</span>}
+                      <span className="font-mono">({formatWorkedDuration(row.durationMs)})</span>
                     </div>
                   </li>
                 );
