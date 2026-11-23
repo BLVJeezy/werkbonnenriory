@@ -19,7 +19,7 @@ import { bankOfIban, nextBic } from "@/lib/iban-bic";
 import { attachPurchasePdf, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 import { PdfPreview } from "@/components/PdfPreview";
 import { readLoanSchedule, createLoanFromSchedule, type LoanDraft } from "@/lib/loans.functions";
-import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
+import { MarkPurchasePaid, UndoPurchasePaid } from '@/components/MarkPurchasePaid';
 
 export const Route = createFileRoute("/_authenticated/aankoopfacturen_/$id")({
   head: () => ({ meta: [{ title: "Aankoopfactuur controleren — Riory Werkbonnen" }, { name: "description", content: "Aankoopfactuur naast het originele document controleren en boeken." }, { property: "og:title", content: "Aankoopfactuur controleren — Riory Werkbonnen" }, { property: "og:description", content: "Aankoopfactuur naast het originele document controleren en boeken." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -33,7 +33,7 @@ type Row = {
   id: string; supplier_name: string; supplier_vat: string | null; supplier_iban: string | null; supplier_bic: string | null;
   invoice_number: string | null; invoice_date: string | null; due_date: string | null;
   lines: PurchaseLine[]; net: number; vat: number; total: number; payment_ref: string | null;
-  status: string; pdf_path: string | null; kind: "factuur" | "creditnota"; paid_at: string | null;
+  status: string; pdf_path: string | null; kind: "factuur" | "creditnota"; paid_at: string | null; bank_payment_ref?: string | null;
   payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number; supplier_id: string | null;
 };
 
@@ -209,6 +209,7 @@ function Controle() {
         <h1 className="min-w-0 basis-full break-words text-lg font-black uppercase sm:basis-auto sm:text-xl">{edit.supplier_name} <span className="font-mono text-base">{edit.invoice_number ?? ""}</span></h1>
         {queue.length > 0 && <span className="text-sm text-muted-foreground">{queue.length} te controleren</span>}
         {!isPaid && edit.kind === 'factuur' && <MarkPurchasePaid id={edit.id} staged={edit.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { await Promise.all([qc.invalidateQueries({ queryKey: ['purchase_invoices'] }), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); await load(); }} />}
+        {isPaid && <UndoPurchasePaid id={edit.id} bankLinked={!!edit.bank_payment_ref} disabled={busy} onSaved={async () => { await Promise.all([qc.invalidateQueries({ queryKey: ['purchase_invoices'] }), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); await load(); }} />}
         {nextId && <Button variant="ghost" size="sm" className="ml-auto" onClick={() => nav({ to: "/aankoopfacturen/$id", params: { id: nextId } })}>Overslaan →</Button>}
       </div>
       <div className="grid min-h-0 min-w-0 flex-1 gap-4 md:grid-cols-2">

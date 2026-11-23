@@ -101,6 +101,38 @@ export const markPurchaseInvoicePaid = createServerFn({ method: 'POST' })
     return { ok: true as const };
   });
 
+/** Reverts a purchase invoice payment: undoes linked bank reconciliation/allocations or clears a manual paid flag. */
+export const undoPurchaseInvoicePayment = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), confirmed: z.literal(true) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: row, error } = await context.supabase.from('purchase_invoices').select('id,status,paid_at').eq('id', data.id).single();
+    if (error || !row) throw new Error('Factuur niet gevonden');
+    if (row.status !== 'betaald' && !row.paid_at) throw new Error('Deze factuur staat niet als betaald gemarkeerd');
+    const { data: allocs, error: allocError } = await context.supabase.from('fin_bank_allocations').select('transaction_id').eq('purchase_invoice_id', data.id);
+    if (allocError) throw new Error(allocError.message);
+    const allocTxIds = [...new Set<string>((allocs ?? []).map((a: { transaction_id: string }) => a.transaction_id))];
+    for (const txId of allocTxIds) {
+      const { error: rpcError } = await context.supabase.rpc('fin_undo_bank_allocations', { _transaction: txId });
+      if (rpcError) throw new Error(rpcError.message);
+    }
+    const { data: bankTxs, error: bankError } = await context.supabase.from('fin_bank_tx').select('id').eq('matched_purchase_invoice_id', data.id);
+    if (bankError) throw new Error(bankError.message);
+    const bankTxIds = (bankTxs ?? []).map((t: { id: string }) => t.id).filter((txId: string) => !allocTxIds.includes(txId));
+    for (const txId of bankTxIds) {
+      const { error: rpcError } = await context.supabase.rpc('fin_undo_purchase_bank', { _transaction: txId });
+      if (rpcError) throw new Error(rpcError.message);
+    }
+    const { error: updateError } = await context.supabase
+      .from('purchase_invoices')
+      .update({ status: 'goedgekeurd', paid_at: null, bank_payment_ref: null, bank_transaction_key: null })
+      .eq('id', data.id)
+      .or('status.eq.betaald,paid_at.not.is.null');
+    if (updateError) throw new Error(updateError.message);
+    return { ok: true as const, bankTransactionsUndone: bankTxIds.length + allocTxIds.length, splitAllocationsUndone: allocTxIds.length };
+  });
+
 export const setPurchaseInvoiceStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { ids: string[]; status: "te_controleren" | "goedgekeurd" }) => i)

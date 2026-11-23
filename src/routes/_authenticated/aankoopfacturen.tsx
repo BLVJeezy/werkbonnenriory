@@ -20,7 +20,7 @@ import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusS
 import { canSendPeppolTest, creditorBank, daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { deletePurchaseInvoices, attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
 import { downloadInvoiceUbl, sendInvoiceToAccountant } from "@/lib/accountant-package.functions";
-import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
+import { MarkPurchasePaid, UndoPurchasePaid } from '@/components/MarkPurchasePaid';
 import { SortTh, Th, rowTint, tableCls, tableWrap, useSort } from "@/components/SortTable";
 import { cn } from "@/lib/utils";
 
@@ -403,6 +403,7 @@ function Aankoopfacturen() {
                     <Button variant="outline" size="sm" disabled={busy || !r.pdf_path} title={r.pdf_path ? undefined : 'Geen PDF in het systeem'} onClick={() => downloadUbl(r)}>Download .ubl</Button>
                     <Button variant="outline" size="sm" disabled={busy} title={r.accountant_sent_at ? `Al verzonden op ${new Date(r.accountant_sent_at).toLocaleDateString('nl-BE')}` : undefined} onClick={() => sendToAccountant(r)}>{r.accountant_sent_at ? 'Opnieuw naar boekhouder' : 'Naar boekhouder'}</Button>
                     {!paid && r.kind === 'factuur' && <MarkPurchasePaid id={r.id} staged={r.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { setSel(s => s.filter(id => id !== r.id)); await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
+                    {paid && <UndoPurchasePaid id={r.id} bankLinked={!!r.bank_payment_ref} disabled={busy} onSaved={async () => { await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
                   </span>
                 </td>
               </tr>);
