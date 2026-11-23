@@ -13,6 +13,7 @@ import { Menu, X } from "lucide-react";
 import { ScreenHelpPanel, ScreenHelpToggle } from "@/components/ScreenHelp";
 import { OverdueAfterNoticeAlert } from "@/components/OverdueAfterNoticeAlert";
 import { AdminNotifications } from "@/components/AdminNotifications";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -69,6 +70,7 @@ function Layout() {
             Riory <span className="text-primary">Werkbonnen</span>
           </Link>
           <div className="col-span-full flex flex-wrap items-center gap-2 sm:order-last sm:basis-full">
+            <GlobalSearch />
             <Button
               size="sm"
               variant={large ? "default" : "secondary"}
