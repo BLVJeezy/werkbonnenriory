@@ -1205,6 +1205,13 @@
       "when": 1795440883563,
       "tag": "0171_settle_credit_note_sync_finance",
       "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "7",
+      "when": 1795442093325,
+      "tag": "0172_fin_split_bank_payment_credit_notes",
+      "breakpoints": true
     }
   ]
 }
