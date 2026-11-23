@@ -1198,6 +1198,13 @@
       "when": 1795440669049,
       "tag": "0170_fin_offset_credit_note",
       "breakpoints": true
+    },
+    {
+      "idx": 171,
+      "version": "7",
+      "when": 1795440883563,
+      "tag": "0171_settle_credit_note_sync_finance",
+      "breakpoints": true
     }
   ]
 }

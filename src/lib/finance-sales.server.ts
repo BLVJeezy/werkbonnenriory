@@ -21,16 +21,20 @@ export async function syncFinanceSales(db: any, userId: string) {
     const numberKey = dubbelSleutel(doc.nummer, doc.credit);
     const existing = refs.get(doc.ref) ?? (numberKey ? byNumber.get(numberKey) : undefined);
     if (existing) {
-      if (!doc.credit && (Number(existing.paid_amount ?? 0) !== Number(raw.paid_amount) || (existing.status !== "betaald" && Number(raw.paid_amount) >= Number(raw.total))) && Number(raw.total) > 0) {
-        const { error } = await db.from("fin_invoices").update({ paid_amount: Number(raw.paid_amount), status: Number(raw.paid_amount) >= Number(raw.total) ? "betaald" : "open", paid_at: raw.paid_at?.slice(0, 10) ?? null, bank_ref: `werkbonnen:${raw.id}` }).eq("id", existing.id);
+      const absPaid = Math.abs(Number(raw.paid_amount ?? 0));
+      const absTotal = Math.abs(Number(raw.total ?? 0));
+      if (absTotal > 0 && (Number(existing.paid_amount ?? 0) !== absPaid || (existing.status !== "betaald" && absPaid >= absTotal - 0.005))) {
+        const { error } = await db.from("fin_invoices").update({ paid_amount: absPaid, status: absPaid >= absTotal - 0.005 ? "betaald" : "open", paid_at: raw.paid_at?.slice(0, 10) ?? null, bank_ref: `werkbonnen:${raw.id}` }).eq("id", existing.id);
         if (error) throw new Error("Betaalstatus synchroniseren mislukt");
         bijgewerkt++;
       }
       overgeslagen++; continue;
     }
     if (numberKey && numbers.has(numberKey)) { overgeslagen++; continue; }
-    const paid = raw.kind !== "creditnota" && Number(raw.paid_amount) >= Number(raw.total) && Number(raw.total) > 0;
-    const { data: inv, error } = await db.from("fin_invoices").insert({ user_id: userId, company_id: company.id, direction: "verkoop", doc_type: doc.credit ? "creditnota" : "factuur", counterparty: doc.klant, number: doc.nummer, invoice_date: doc.datum, due_date: raw.due_date, source: "werkbonnen", source_ref: doc.ref, status: paid ? "betaald" : "open", paid_at: paid ? raw.paid_at?.slice(0, 10) ?? null : null, bank_ref: paid ? `werkbonnen:${raw.id}` : null }).select("id").single();
+    const absPaid = Math.abs(Number(raw.paid_amount ?? 0));
+    const absTotal = Math.abs(Number(raw.total ?? 0));
+    const paid = absTotal > 0 && absPaid >= absTotal - 0.005;
+    const { data: inv, error } = await db.from("fin_invoices").insert({ user_id: userId, company_id: company.id, direction: "verkoop", doc_type: doc.credit ? "creditnota" : "factuur", counterparty: doc.klant, number: doc.nummer, invoice_date: doc.datum, due_date: raw.due_date, source: "werkbonnen", source_ref: doc.ref, status: paid ? "betaald" : "open", paid_amount: absPaid, paid_at: paid ? raw.paid_at?.slice(0, 10) ?? null : null, bank_ref: paid ? `werkbonnen:${raw.id}` : null }).select("id").single();
     if (error) { if (error.code === "23505") { overgeslagen++; continue; } throw new Error("Verkoopfactuur overnemen mislukt"); }
     const lines = doc.lijnen.map(line => ({ user_id: userId, invoice_id: inv.id, description: line.omschrijving, ex_vat: line.ex, vat: line.vat, account: revenue, category: "omzet" }));
     const { error: lineError } = await db.from("fin_invoice_lines").insert(lines);

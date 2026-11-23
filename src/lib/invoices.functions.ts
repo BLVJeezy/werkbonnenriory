@@ -284,6 +284,18 @@ export const createCreditNote = createServerFn({ method: "POST" })
       p_kind: "creditnota", p_credit_for: inv.id,
     });
     if (error) throw new Error(error.message);
+    const invOpen = Math.round((Number(inv.total) - Number(inv.paid_amount ?? 0)) * 100) / 100;
+    const cnAbs = Math.round(Math.abs(Number(cn.total)) * 100) / 100;
+    const offset = Math.round(Math.min(invOpen, cnAbs) * 100) / 100;
+    if (row?.id && offset > 0.005) {
+      const { error: settleErr } = await supabase.rpc("settle_credit_note", {
+        p_credit: row.id,
+        p_invoice: inv.id,
+        p_amount: offset,
+        p_date: issue,
+      });
+      if (settleErr) throw new Error(settleErr.message);
+    }
     return row;
   });
 
