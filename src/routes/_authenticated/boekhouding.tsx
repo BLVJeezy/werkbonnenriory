@@ -1,5 +1,6 @@
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { CardFeeReport } from "@/components/CardFeeReport";
+import { WachtrekeningMatcher } from "@/components/WachtrekeningMatcher";
 import { SAVINGS_ACCOUNT, markSavingsQuarterDone } from "@/lib/savings-quarter";
 import { cardGross } from "@/lib/card-gross";
 import { parseCoda } from "@/lib/coda";
@@ -52,7 +53,7 @@ export const Route = createFileRoute("/_authenticated/boekhouding")({
   component: Boekhouding,
 });
 
-const TABS = [["rekeningen", "Rekeningschema"], ["dagboeken", "Dagboeken"], ["saldibalans", "Saldibalans"], ["balans", "Balans & resultaat"], ["btw", "Btw"], ["bank", "Bank"]] as const;
+const TABS = [["rekeningen", "Rekeningschema"], ["dagboeken", "Dagboeken"], ["saldibalans", "Saldibalans"], ["balans", "Balans & resultaat"], ["btw", "Btw"], ["bank", "Bank"], ["wachtrekening", "Wachtrekening"]] as const;
 const eur = (n: number) => new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" }).format(n);
 const db = supabase as any;
 const yearStart = () => `${new Date().getFullYear()}-01-01`;
@@ -95,6 +96,7 @@ function Boekhouding() {
             {search.tab === "balans" && <Balans c={c} companyName={companies.data?.find((x) => x.id === c)?.name ?? ""} />}
             {search.tab === "btw" && <Btw c={c} />}
             {search.tab === "bank" && <Bank c={c} />}
+            {search.tab === "wachtrekening" && <WachtrekeningMatcher c={c} />}
           </>
         )}
       </div>
