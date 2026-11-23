@@ -8,6 +8,7 @@ import { useRole } from "@/lib/use-role";
 import { euro } from "@/lib/billing";
 import { FinanceYear } from "@/components/FinanceYear";
 import { FinanceWeek } from "@/components/FinanceWeek";
+import { DashboardAnnualHero } from "@/components/DashboardAnnualHero";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PageHeader } from "@/components/PageHeader";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -172,6 +173,9 @@ function Dashboard() {
           </ToggleGroup>
         }
       />
+
+      {/* Primaire sectie: Jaaromzet KPI & Meest verkochte producten/activiteiten */}
+      <DashboardAnnualHero currentDay={currentDay} />
 
       {/* Periode & KPI-overzicht */}
       <section className="space-y-4">
