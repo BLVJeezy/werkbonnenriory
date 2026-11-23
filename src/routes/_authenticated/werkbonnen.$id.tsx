@@ -327,7 +327,7 @@ function Detail() {
 
       <div className="relative pt-12"><TaskActions id={id} address={destinationAddress(wo)} phone={perms.showContact ? wo.phone : null} contactPhone={wo.site_contact_phone} contactName={wo.site_contact_name} runningEntryId={running?.id ?? null} showTimer={false} manualTime={!!techs.find((t) => t.id === wo.technician_id)?.manual_time_entry} noAnswerAt={wo.no_answer_at} /></div>
 
-      <section className="grid gap-4 rounded-md border bg-card p-4 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:grid-cols-2 sm:p-5">
         <Field label="Klant" value={wo.customer_name} disabled={infoLocked} onSave={(v) => update({ customer_name: v })} />
         <Field label="Project" value={wo.project_name ?? ""} disabled={infoLocked} onSave={(v) => update({ project_name: v.trim() || null })} />
         {(isAdmin || perms.showContact) && <Field label="Btw-nummer klant" value={wo.vat_number ?? ""} disabled={infoLocked} onSave={(v) => update({ vat_number: v.trim() || null, vat_rate: vatRateForCustomer(v, Number(wo.vat_rate), undefined, { postalCode: wo.postal_code }) })} />}
@@ -416,12 +416,12 @@ function Detail() {
         <span className="text-sm font-normal text-muted-foreground">(eerste uur en kilometers niet aangerekend)</span>
       </label>
 
-      <section className="rounded-md border bg-card p-4">
-        <h2 className="mb-3 text-lg font-black uppercase">Tijd</h2>
+      <section className="rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
+        <h2 className="mb-3 text-base font-bold uppercase tracking-wider text-muted-foreground">Tijd</h2>
         <div className="flex flex-wrap items-center gap-4">
           <div className="font-mono text-4xl font-semibold tabular-nums">{formatDuration(total)}</div>
           {!locked && (
-            <Button size="lg" variant={running ? "destructive" : "default"} onClick={toggleTimer} className="min-w-32 text-lg">
+            <Button size="lg" variant={running ? "destructive" : "default"} onClick={toggleTimer} className="min-h-12 min-w-36 text-lg font-semibold">
               {running ? "■ Stop" : "▶ Start"}
             </Button>
           )}
@@ -495,8 +495,8 @@ function Detail() {
         )}
       </section>
 
-      <section className="rounded-md border bg-card p-4">
-        <h2 className="mb-3 text-lg font-black uppercase">Materialen</h2>
+      <section className="rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
+        <h2 className="mb-3 text-base font-bold uppercase tracking-wider text-muted-foreground">Materialen</h2>
         <ul className="mb-3 divide-y">
           {mats.length === 0 && <li className="py-2 text-muted-foreground">Nog geen materialen.</li>}
           {mats.map((m) => (
@@ -574,8 +574,8 @@ function Detail() {
         <CustomerInvite task={wo} size="default" />
       </section>}
 
-      {(perms.showPrices || perms.canPayment) && <section className="rounded-md border bg-card p-4">
-        <h2 className="mb-3 text-lg font-black uppercase">Afrekening</h2>
+      {(perms.showPrices || perms.canPayment) && <section className="rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
+        <h2 className="mb-3 text-base font-bold uppercase tracking-wider text-muted-foreground">Afrekening</h2>
         {perms.showPrices && <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 font-mono text-sm">
           <dt>
             {wo.no_intervention ? <>Forfait niet gestarte interventie</> : <>Arbeid: {billableHours(total).toLocaleString("nl-BE")} u{wo.warranty && " − 1 u garantie"} × {activity?.hourly_rate === null ? "geen tarief" : euro(Number(activity?.hourly_rate ?? 0))}</>}

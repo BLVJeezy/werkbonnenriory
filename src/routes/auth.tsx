@@ -69,20 +69,25 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary px-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-md border-t-8 border-primary bg-card p-6 shadow-xl">
-        <h1 className="text-2xl font-black uppercase">
-          Riory <span className="text-primary">Werkbonnen</span>
-        </h1>
-        {mode !== "new" && <div className="space-y-1">
+    <div className="flex min-h-screen items-center justify-center bg-secondary px-4 py-10">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-xl border border-border/20 border-t-4 border-t-primary bg-card p-7 shadow-2xl">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-black uppercase tracking-tight">
+            Riory <span className="text-primary">Werkbonnen</span>
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {mode === "in" ? "Meld je aan met je ploegnaam of e-mailadres." : mode === "reset" ? "Vraag een herstelmail aan voor je wachtwoord." : "Kies een nieuw wachtwoord voor je account."}
+          </p>
+        </div>
+        {mode !== "new" && <div className="space-y-1.5">
           <Label htmlFor="email">Naam ploeg of e-mail</Label>
-          <Input id="email" type="text" autoCapitalize="none" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input id="email" type="text" className="h-10" autoCapitalize="none" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>}
-        {mode !== "reset" && <div className="space-y-1">
+        {mode !== "reset" && <div className="space-y-1.5">
           <Label htmlFor="pw">{mode === "new" ? "Nieuw wachtwoord" : "Wachtwoord"}</Label>
-          <Input id="pw" type="password" autoComplete={mode === "new" ? "new-password" : "current-password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input id="pw" type="password" className="h-10" autoComplete={mode === "new" ? "new-password" : "current-password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>}
-        <Button className="w-full" disabled={busy}>
+        <Button className="h-10 w-full font-semibold" disabled={busy}>
           {busy ? "Bezig…" : mode === "in" ? "Inloggen" : mode === "reset" ? "Herstelmail versturen" : "Nieuw wachtwoord opslaan"}
         </Button>
         {mode !== "new" && <Button type="button" variant="link" className="w-full" onClick={() => { setMode(mode === "reset" ? "in" : "reset"); setPassword(""); }}>

@@ -30,8 +30,8 @@ export const Route = createFileRoute("/_authenticated")({
   component: Layout,
 });
 
-const navCls = "rounded px-3 py-1.5";
-const active = { className: "bg-primary text-primary-foreground" };
+const navCls = "rounded-md px-3 py-2 text-secondary-foreground/85 transition-colors hover:bg-secondary-foreground/10 hover:text-secondary-foreground sm:py-1.5";
+const active = { className: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:text-primary-foreground" };
 
 function Layout() {
   const navigate = useNavigate();
@@ -64,16 +64,17 @@ function Layout() {
   return (
     <div className={fullScreen ? 'flex h-dvh min-h-0 flex-col overflow-hidden bg-background' : 'min-h-screen bg-background'}>
       {role === "admin" && <AdminNotifications />}
-      <header className="no-print shrink-0 border-b-4 border-primary bg-secondary text-secondary-foreground">
-        <div className="mx-auto grid max-w-5xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-3 sm:flex sm:flex-wrap sm:gap-4 sm:px-4">
-          <Link to={role === "admin" ? "/dashboard" : "/kalender"} className="min-w-0 truncate text-lg font-black uppercase" onClick={() => setMenuOpen(false)}>
+      <header className="no-print shrink-0 border-b-2 border-primary bg-secondary text-secondary-foreground shadow-sm">
+        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-3 sm:flex sm:flex-wrap sm:gap-3 sm:px-6">
+          <Link to={role === "admin" ? "/dashboard" : "/kalender"} className="min-w-0 truncate text-lg font-black uppercase tracking-tight" onClick={() => setMenuOpen(false)}>
             Riory <span className="text-primary">Werkbonnen</span>
           </Link>
-          <div className="col-span-full flex flex-wrap items-center gap-2 sm:order-last sm:basis-full">
+          <div className="col-span-full flex flex-wrap items-center gap-2 border-t border-secondary-foreground/12 pt-2.5 sm:order-last sm:basis-full">
             <GlobalSearch />
             <Button
               size="sm"
               variant={large ? "default" : "secondary"}
+              className={large ? "" : "border border-secondary-foreground/20 bg-secondary-foreground/10 text-secondary-foreground hover:bg-secondary-foreground/20"}
               role="switch"
               aria-checked={large}
               aria-describedby="tekstgrootte-uitleg"
@@ -87,7 +88,7 @@ function Layout() {
               Grote letters: {large ? "AAN" : "UIT"}
             </Button>
             {device !== null && (
-              <Button size="sm" variant="secondary" onClick={() => { writeDeviceChoice(null); setDevice(null); }}>
+              <Button size="sm" variant="secondary" className="border border-secondary-foreground/20 bg-secondary-foreground/10 text-secondary-foreground hover:bg-secondary-foreground/20" onClick={() => { writeDeviceChoice(null); setDevice(null); }}>
                 Tekstgrootte terugzetten
               </Button>
             )}
@@ -124,8 +125,8 @@ function Layout() {
               </label>
             )}
           </div>
-          <Button variant="secondary" size="icon" className="shrink-0 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
-          <nav id="beheer-menu" aria-label="Beheerpagina’s" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenuOpen(false); }} className={`${menuOpen ? "grid" : "hidden"} col-span-full min-w-0 grid-cols-2 items-center gap-1 border-t border-secondary-foreground/20 pt-2 text-sm font-semibold sm:ml-auto sm:flex sm:flex-wrap sm:border-0 sm:pt-0`}>
+          <Button variant="secondary" size="icon" className="h-10 w-10 shrink-0 border border-secondary-foreground/20 bg-secondary-foreground/10 text-secondary-foreground hover:bg-secondary-foreground/20 sm:hidden" aria-label={menuOpen ? "Menu sluiten" : "Menu openen"} aria-expanded={menuOpen} aria-controls="beheer-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</Button>
+          <nav id="beheer-menu" aria-label="Beheerpagina’s" onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMenuOpen(false); }} className={`${menuOpen ? "grid" : "hidden"} col-span-full min-w-0 grid-cols-2 items-center gap-1.5 border-t border-secondary-foreground/15 pt-2.5 text-sm font-medium sm:ml-auto sm:flex sm:flex-wrap sm:gap-1 sm:border-0 sm:pt-0`}>
             {role === "marketing" ? (
               <>
                 <Link to="/nieuwsbrieven" className={navCls} activeProps={active}>Nieuwsbrieven</Link>
@@ -215,7 +216,7 @@ function Layout() {
             <Button asChild variant="outline"><Link to="/fotos">Foto's</Link></Button>
           </div>
         </main>
-      ) : <main className={fullScreen ? 'min-h-0 w-full min-w-0 flex-1 overflow-hidden' : 'mx-auto w-full min-w-0 max-w-5xl px-2 py-4 sm:px-4 sm:py-6'}>
+      ) : <main className={fullScreen ? 'min-h-0 w-full min-w-0 flex-1 overflow-hidden' : 'mx-auto w-full min-w-0 max-w-7xl px-3 py-5 sm:px-6 sm:py-7'}>
         <Outlet />
       </main>}
       {role === "admin" && <OverdueAfterNoticeAlert />}

@@ -42,7 +42,7 @@ export function CrewTasks({ rows }: { rows: Row[] }) {
   const group = (title: string, list: Row[], empty: string) => (
     <section className="space-y-3">
       <h2 className="text-xl font-black uppercase">{title}</h2>
-      {list.length === 0 && <div className="rounded-md border bg-card p-4 text-muted-foreground">{empty}</div>}
+      {list.length === 0 && <div className="rounded-xl border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">{empty}</div>}
       {list.map((w) => <RowLink key={w.id} w={w} label="Taak" />)}
     </section>
   );
@@ -61,7 +61,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
   const running = w.time_entries?.find((t) => !t.ended_at);
   const signed = w.status === "afgetekend";
   return (
-    <div style={crewStyle(w.technicians?.color)} className={`relative min-w-0 space-y-3 rounded-md border-l-4 border-primary bg-card p-3 shadow-sm sm:p-4 ${signed ? "" : "pt-12 sm:pt-12"} ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
+    <div style={crewStyle(w.technicians?.color)} className={`relative min-w-0 space-y-3.5 rounded-xl border border-border/90 border-l-4 border-l-primary bg-card p-4 shadow-xs transition-shadow hover:shadow-sm sm:p-5 ${signed ? "" : "pt-12 sm:pt-12"} ${isUrgentOpen(w) ? URGENT_RING : ""} ${running ? "task-running" : ""}`}>
       {w.quote_approved && <Badge variant="secondary">Offerte goedgekeurd</Badge>}
       {w.first_customer && <FirstCustomerLabel />}
       {!signed && isNoAnswer(w.no_answer_at) && <Badge variant="destructive">Neemt niet op · {new Date(w.no_answer_at ?? "").toLocaleString("nl-BE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</Badge>}

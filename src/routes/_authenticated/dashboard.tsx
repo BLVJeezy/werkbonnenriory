@@ -178,22 +178,22 @@ function Dashboard() {
 
       {mode === "week" && <FinanceWeek from={from} to={to} />}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-xs font-bold uppercase opacity-70">Omzet (excl. btw)</p>
-          <p className="text-xl font-black">{euro(omzet)}</p>
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
+        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Omzet (excl. btw)</p>
+          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{euro(omzet)}</p>
         </div>
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-xs font-bold uppercase opacity-70">Btw</p>
-          <p className="text-xl font-black">{euro(btw)}</p>
+        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Btw</p>
+          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{euro(btw)}</p>
         </div>
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-xs font-bold uppercase opacity-70">Openstaand</p>
-          <p className="text-xl font-black">{euro(openstaand)}</p>
+        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Openstaand</p>
+          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{euro(openstaand)}</p>
         </div>
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-xs font-bold uppercase opacity-70">Documenten</p>
-          <p className="text-xl font-black">{rows.length}</p>
+        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Documenten</p>
+          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{rows.length}</p>
         </div>
       </div>
 
@@ -204,13 +204,13 @@ function Dashboard() {
       {productError && <p role="alert" className="text-destructive">Productomzet kon niet worden geladen. Probeer opnieuw.</p>}
       {simplaError && <p role="alert" className="text-destructive">Historische omzet ontbreekt: {simplaError}. De bedragen zijn onvolledig.</p>}
       {costError && <p role="alert" className="text-destructive">Kosten en marge zijn onvolledig: {costError}.</p>}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
         {productRevenue(prodLines).map((p) => (
-          <div key={p.key} className="rounded-md border bg-card p-3">
-            <p className="text-xs font-bold uppercase opacity-70">{p.label}</p>
-            <p className="text-xl font-black">{productsLoading ? "…" : euro(p.amount)}</p>
-            <p className="text-xs opacity-70">{Math.round(p.quantity * 100) / 100} stuks (excl. btw)</p>
-            <p className="mt-1 text-xs">Simpla: {euro(productRevenue(prodLines.filter(l => l.source === "simpla")).find(g => g.key === p.key)?.amount ?? 0)} · App: {euro(productRevenue(prodLines.filter(l => l.source === "app")).find(g => g.key === p.key)?.amount ?? 0)}</p>
+          <div key={p.key} className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{p.label}</p>
+            <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{productsLoading ? "…" : euro(p.amount)}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{Math.round(p.quantity * 100) / 100} stuks (excl. btw)</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">Simpla: {euro(productRevenue(prodLines.filter(l => l.source === "simpla")).find(g => g.key === p.key)?.amount ?? 0)} · App: {euro(productRevenue(prodLines.filter(l => l.source === "app")).find(g => g.key === p.key)?.amount ?? 0)}</p>
             {(p.key === "regenput" || p.key === "septisch" || p.key === "riostop") && (() => {
               const k = costs.filter((c) => c.key === p.key).reduce((s, c) => s + c.amount, 0);
               const who = p.key === "regenput" ? "Rioclean" : p.key === "septisch" ? "leveranciers" : "IDBS";
@@ -230,8 +230,8 @@ function Dashboard() {
         </div>
       </details>
 
-      <div className="rounded-md border bg-card p-3 sm:p-4">
-        <p className="mb-3 text-sm font-bold uppercase opacity-70">
+      <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Omzet per {mode === "week" ? "week" : perMaand ? "maand" : "dag"} tot en met vandaag, volgens werkdag van de werkbonnen; zelf gemaakte facturen op hun factuurdatum (excl. btw)
         </p>
         <div className="h-72 w-full sm:h-96">

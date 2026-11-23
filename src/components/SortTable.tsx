@@ -20,8 +20,8 @@ export function SortTh<K extends string>({ k, sort, children, className, right }
   const active = sort.key === k;
   const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
   return (
-    <th className={cn("whitespace-nowrap px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground", right ? "text-right" : "text-left", className)} aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
-      <button type="button" onClick={() => sort.toggle(k)} className={cn("inline-flex items-center gap-1 hover:text-foreground", active && "text-foreground")}>
+    <th className={cn("whitespace-nowrap bg-muted/50 px-3.5 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground", right ? "text-right" : "text-left", className)} aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button type="button" onClick={() => sort.toggle(k)} className={cn("inline-flex cursor-pointer items-center gap-1.5 transition-colors hover:text-foreground", active && "text-foreground")}>
         {children}<Icon className="h-3 w-3" aria-hidden="true" />
       </button>
     </th>
@@ -29,7 +29,7 @@ export function SortTh<K extends string>({ k, sort, children, className, right }
 }
 
 export function Th({ children, className, right }: { children?: React.ReactNode; className?: string; right?: boolean }) {
-  return <th className={cn("whitespace-nowrap px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground", right ? "text-right" : "text-left", className)}>{children}</th>;
+  return <th className={cn("whitespace-nowrap bg-muted/50 px-3.5 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground", right ? "text-right" : "text-left", className)}>{children}</th>;
 }
 
 /** Rijkleur voor de facturenlijst: groen = betaald, wit = open, rood = vervallen. */
@@ -39,5 +39,5 @@ export const rowTint: Record<RowState, string> = {
   overdue: "[&_td]:bg-overdue",
 };
 
-export const tableWrap = "overflow-x-auto rounded-md border bg-card";
-export const tableCls = "w-full text-sm [&_tbody_tr]:border-t [&_tbody_tr:hover]:bg-muted/40 [&_td]:px-3 [&_td]:py-2 [&_td]:align-middle";
+export const tableWrap = "overflow-x-auto rounded-xl border border-border/90 bg-card shadow-xs";
+export const tableCls = "w-full text-sm [&_tbody_tr]:border-t [&_tbody_tr]:border-border/70 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/40 [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle";

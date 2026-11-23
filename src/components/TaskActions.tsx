@@ -86,45 +86,45 @@ export function TaskActions({ id, address, phone, contactPhone, contactName, run
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {showTimer && (
-        <Button size="sm" variant={runningEntryId ? "destructive" : "default"} disabled={busy} onClick={toggle}>
+        <Button size="sm" className="min-h-11 px-4 text-sm sm:min-h-8 sm:px-3 sm:text-xs" variant={runningEntryId ? "destructive" : "default"} disabled={busy} onClick={toggle}>
           {runningEntryId ? "■ Stop tijd" : "▶ Start tijd"}
         </Button>
       )}
       {manualTime && (
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1.5">
           <input
             type="text"
             inputMode="decimal"
             aria-label="Gewerkte uren"
             placeholder="uren"
-            className="h-8 w-16 rounded-md border bg-background px-2 text-sm"
+            className="h-11 w-20 rounded-md border border-input bg-card px-2.5 text-sm shadow-xs sm:h-8 sm:w-16"
             value={hours}
             onChange={(e) => setHours(e.target.value)}
           />
-          <Button size="sm" variant="outline" disabled={busy || !hours.trim()} onClick={saveManualTime}>
+          <Button size="sm" className="min-h-11 px-3 sm:min-h-8" variant="outline" disabled={busy || !hours.trim()} onClick={saveManualTime}>
             Tijd opslaan
           </Button>
         </span>
       )}
       {address && (
-        <Button size="sm" variant="outline" asChild>
+        <Button size="sm" className="min-h-11 px-3.5 sm:min-h-8 sm:px-3" variant="outline" asChild>
           <a href={mapsUrl(address)} target="_blank" rel="noreferrer">
             Route
           </a>
         </Button>
       )}
       {calls.contact && (
-        <Button size="sm" variant="outline" asChild>
+        <Button size="sm" className="min-h-11 px-3.5 sm:min-h-8 sm:px-3" variant="outline" asChild>
           <a href={`tel:${calls.contact}`}>Bel contactpersoon{contactName ? ` (${contactName})` : ""}</a>
         </Button>
       )}
-      <Button size="sm" className="absolute right-3 top-3" variant={noAnswer ? "destructive" : "outline"} disabled={busy} onClick={toggleNoAnswer}>
+      <Button size="sm" className="absolute right-3 top-3 min-h-9 sm:min-h-8" variant={noAnswer ? "destructive" : "outline"} disabled={busy} onClick={toggleNoAnswer}>
         {noAnswer ? "Neemt niet op ✓" : "Klant neemt niet op"}
       </Button>
       {calls.customer && (
-        <Button size="sm" variant="outline" asChild>
+        <Button size="sm" className="min-h-11 px-3.5 sm:min-h-8 sm:px-3" variant="outline" asChild>
           <a href={`tel:${calls.customer}`}>Bel klant</a>
         </Button>
       )}
