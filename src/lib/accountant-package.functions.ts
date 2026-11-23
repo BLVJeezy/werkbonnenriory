@@ -255,3 +255,33 @@ export const sendInvoiceToAccountant = createServerFn({ method: "POST" })
     if (error) throw new Error("Mail aanvaard, maar verzendmarkering mislukt. Controleer Outlook vóór opnieuw versturen.");
     return { to: mailTo, name };
   });
+
+/** Admin-only: build and return one sales or purchase invoice as .ubl XML with the source PDF embedded. */
+export const downloadInvoiceUbl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { kind?: string; id?: string }) => {
+    const kind = input?.kind === "purchase" ? "purchase" : input?.kind === "sales" ? "sales" : null;
+    const id = String(input?.id ?? "");
+    if (!kind || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Kies een geldige factuur");
+    return { kind, id } as { kind: "sales" | "purchase"; id: string };
+  })
+  .handler(async ({ data, context }): Promise<{ xml: string; filename: string }> => {
+    await assertAdmin(context);
+    const { supabase } = context;
+    const { accountantSalesUbl, accountantPurchaseUbl } = await import('./accountant-documents.server');
+    if (data.kind === "sales") {
+      const { data: inv, error } = await supabase.from("invoices").select("*").eq("id", data.id).single();
+      if (error || !inv) throw new Error("Factuur niet gevonden");
+      const xml = await accountantSalesUbl(supabase, inv);
+      const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
+      return { xml, filename: `Verkoop-${label}-${inv.number}.ubl` };
+    }
+    const { data: s } = await supabase.from("settings").select("company_name, company_vat").eq("id", 1).single();
+    const { data: p, error } = await supabase.from("purchase_invoices").select("*").eq("id", data.id).single();
+    if (error || !p) throw new Error("Aankoopfactuur niet gevonden");
+    const buyer = { name: s?.company_name || "Riory BV", vat: s?.company_vat || "BE0840931404" };
+    const safe = `${p.supplier_name}-${p.invoice_number ?? p.id.slice(0, 8)}`.replace(/[^\w.-]+/g, "_").slice(0, 80);
+    const xml = await accountantPurchaseUbl(supabase, p, buyer);
+    const label = p.kind === "creditnota" ? "Creditnota" : "Factuur";
+    return { xml, filename: `Aankoop-${label}-${safe}.ubl` };
+  });

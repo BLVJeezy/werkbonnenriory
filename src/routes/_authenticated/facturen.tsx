@@ -14,7 +14,7 @@ import { werkbonNr } from "@/lib/werkbon-number";
 import { AccountantPackage } from "@/components/AccountantPackage";
 import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { createCreditNote, createInvoices, createSubcontractInvoices, invoicePdf, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
-import { sendInvoiceToAccountant } from "@/lib/accountant-package.functions";
+import { downloadInvoiceUbl, sendInvoiceToAccountant } from "@/lib/accountant-package.functions";
 import { sendConfirmText } from "@/lib/invoice-delivery";
 import { isInvoiceEditable } from "@/lib/invoice";
 import { QrCode, Trash2 } from "lucide-react";
@@ -198,11 +198,23 @@ function Facturen() {
     refresh();
   }
   const toAccountant = useServerFn(sendInvoiceToAccountant);
+  const getUbl = useServerFn(downloadInvoiceUbl);
   async function sendToAccountant(id: string, number: string) {
     if (!confirm(`${number} als UBL (met de echte factuur erin) naar de boekhouder mailen?`)) return;
     setBusy(true);
     try { const r = await toAccountant({ data: { kind: "sales", id } }); toast.success(`${r.name} verzonden naar ${r.to}`); refresh(); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden naar boekhouder mislukt"); }
+    finally { setBusy(false); }
+  }
+  async function downloadUbl(id: string) {
+    setBusy(true);
+    try {
+      const r = await getUbl({ data: { kind: "sales", id } });
+      const url = URL.createObjectURL(new Blob([r.xml], { type: "application/xml;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "UBL downloaden mislukt"); }
     finally { setBusy(false); }
   }
   async function download(id: string) {
@@ -397,6 +409,7 @@ function Facturen() {
                       <td className="text-right">
                         <div className="flex flex-wrap justify-end gap-1">
                           <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
+                          <Button variant="outline" size="sm" disabled={busy} onClick={() => downloadUbl(i.id)}>UBL</Button>
                           {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
                           {i.status !== "verzonden" && !i.pdf_sent_at && !i.okioki_sent_at && !i.post_sent_at && (
                             <Button variant="destructive" size="sm" disabled={busy} aria-label={`Factuur ${i.number} verwijderen`} onClick={async () => {
