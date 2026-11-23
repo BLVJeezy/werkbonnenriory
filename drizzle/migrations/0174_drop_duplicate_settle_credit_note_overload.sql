@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.settle_credit_note(uuid, uuid, numeric, date);

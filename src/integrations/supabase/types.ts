@@ -5415,27 +5415,17 @@ export type Database = {
         }[]
       }
       same_invoice_customer: { Args: { a: Json; b: Json }; Returns: boolean }
-      settle_credit_note:
-        | {
-            Args: {
-              p_amount: number
-              p_credit: string
-              p_date: string
-              p_invoice: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_bank_tx_id?: string
-              p_credit: string
-              p_date: string
-              p_idempotency_key?: string
-              p_invoice: string
-            }
-            Returns: number
-          }
+      settle_credit_note: {
+        Args: {
+          p_amount: number
+          p_bank_tx_id?: string
+          p_credit: string
+          p_date: string
+          p_idempotency_key?: string
+          p_invoice: string
+        }
+        Returns: number
+      }
       tech_reopen_work_order: { Args: { _id: string }; Returns: undefined }
       tk_import_snapshot: { Args: { p_data: Json }; Returns: Json }
       tk_record_employee_incident: {
