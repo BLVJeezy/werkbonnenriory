@@ -337,7 +337,7 @@ function Facturen() {
               <Th className="w-8" />
               <SortTh k="nr" sort={invSort}>Nr.</SortTh>
               <SortTh k="klant" sort={invSort}>Klant</SortTh>
-              <SortTh k="datum" sort={invSort} className="hidden md:table-cell">Datum</SortTh>
+              <SortTh k="datum" sort={invSort} className="hidden lg:table-cell">Datum</SortTh>
               <SortTh k="bedrag" sort={invSort} right>Bedrag</SortTh>
               <SortTh k="status" sort={invSort}>Status</SortTh>
               <Th right>Acties</Th>
@@ -353,8 +353,8 @@ function Facturen() {
                      <tr className={rowTint[state]}>
                       <td><input type="checkbox" aria-label={`Selecteer factuur ${i.number}`} disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} /></td>
                       <td className="whitespace-nowrap font-mono font-bold"><span className="inline-flex items-center gap-1.5">{i.number}{i.pdf_sent_at && <OpenEye info={data.opens?.[i.id]} />}</span>{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
-                      <td>{(i.customer as { name?: string }).name}{i.contract_reference && <div className="max-w-xs truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
-                      <td className="hidden whitespace-nowrap text-muted-foreground md:table-cell">{new Date(i.created_at).toLocaleDateString("nl-BE")}</td>
+                      <td><div className="max-w-[180px] truncate">{(i.customer as { name?: string }).name}</div>{i.contract_reference && <div className="max-w-[180px] truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
+                      <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{new Date(i.created_at).toLocaleDateString("nl-BE")}</td>
                       <td className={`whitespace-nowrap text-right font-mono ${i.kind === "creditnota" ? "font-bold text-destructive" : ""}`}>
                         {euro(i.kind === "creditnota" ? -Math.abs(Number(i.total)) : Number(i.total))}
                         {i.kind !== "creditnota" && Number(i.paid_amount) > 0.005 && open && (
@@ -363,14 +363,14 @@ function Facturen() {
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-1">
-                          <span className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{STATUS[i.status] ?? i.status}</span>
-                          {paid && <span className="whitespace-nowrap rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{i.kind === "creditnota" ? "Verrekend" : "Betaald"}</span>}
-                          {state === "overdue" && <span className="whitespace-nowrap rounded bg-overdue-foreground px-2 py-0.5 text-xs font-bold text-background">Vervallen</span>}
+                          <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{STATUS[i.status] ?? i.status}</span>
+                          {paid && <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{i.kind === "creditnota" ? "Verrekend" : "Betaald"}</span>}
+                          {state === "overdue" && <span className="rounded bg-overdue-foreground px-2 py-0.5 text-xs font-bold text-background">Vervallen</span>}
                         </div>
                         {i.send_error && <div className="max-w-xs truncate text-xs text-destructive" title={i.send_error}>{i.send_error}</div>}
                       </td>
-                      <td className="whitespace-nowrap text-right">
-                        <div className="inline-flex gap-1">
+                      <td className="text-right">
+                        <div className="flex flex-wrap justify-end gap-1">
                           <Button variant="outline" size="sm" onClick={() => download(i.id)}>PDF</Button>
                           {i.status !== "verzonden" && <Button size="sm" disabled={busy} onClick={() => sendSel([i.id])}>Verzenden</Button>}
                           {i.status !== "verzonden" && !i.pdf_sent_at && !i.okioki_sent_at && !i.post_sent_at && (
