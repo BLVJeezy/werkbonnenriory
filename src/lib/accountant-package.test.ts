@@ -41,6 +41,23 @@ describe("purchaseUbl", () => {
     const xml = purchaseUbl({ supplier_name: "X", supplier_vat: null, supplier_iban: null, invoice_number: "1", invoice_date: "2026-01-01", due_date: null, kind: "creditnota", net: 100, vat: 21, total: 121, lines: [] }, { name: "Riory BV", vat: "BE0840931404" });
     expect(xml).toContain("<cbc:CreditNoteTypeCode>381");
   });
+
+  it("includes required Peppol BIS 3.0 PostalAddress, BuyerReference and country-matched EndpointID", () => {
+    const xml = purchaseUbl({ supplier_name: "Google Ireland", supplier_vat: "IE6388047V", supplier_iban: null, invoice_number: "5704268246", invoice_date: "2026-09-30", due_date: null, kind: "factuur", net: 567.07, vat: 0, total: 567.07, lines: [] }, { name: "Riory BV", vat: "BE0840931404" });
+    expect(xml).toContain("<cbc:BuyerReference>5704268246</cbc:BuyerReference>");
+    expect(xml).toContain('<cbc:EndpointID schemeID="9928">IE6388047V</cbc:EndpointID>');
+    expect(xml).not.toContain('<cbc:EndpointID schemeID="9925">IE6388047V');
+    expect(xml).toContain("<cac:Country><cbc:IdentificationCode>IE</cbc:IdentificationCode></cac:Country>");
+    expect(xml).toContain("<cbc:StreetName>Natveld 47</cbc:StreetName>");
+    expect(xml).toContain("<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode>");
+  });
+
+  it("falls back to a single balanced line when extracted lines do not sum to the invoice total", () => {
+    const xml = purchaseUbl({ supplier_name: "Leverancier", supplier_vat: "BE0123456789", supplier_iban: null, invoice_number: "F1", invoice_date: "2026-10-01", due_date: null, kind: "factuur", net: 100, vat: 21, total: 121, lines: [{ description: "Deel", quantity: 1, amount: 80, vatRate: 21, vat: 16.8 }] }, { name: "Riory BV", vat: "BE0840931404" });
+    expect(xml).toContain('<cbc:LineExtensionAmount currencyID="EUR">100.00</cbc:LineExtensionAmount>');
+    expect(xml).toContain('<cbc:TaxAmount currencyID="EUR">21.00</cbc:TaxAmount>');
+    expect(xml).toContain('<cbc:PayableAmount currencyID="EUR">121.00</cbc:PayableAmount>');
+  });
 });
 
 describe('actual source document in accountant UBL', () => {

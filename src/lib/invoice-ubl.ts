@@ -11,7 +11,12 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   const [sScheme, sId] = o.senderId.split(":");
   const [rScheme, rId] = o.receiverId?.split(":") ?? [];
   const c = d.customer;
-  const open = Math.max(0, d.total - d.paidAmount);
+  const vatClean = (c.vatNumber ?? "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+  const customerCountry = /^[A-Z]{2}/.test(vatClean) ? vatClean.slice(0, 2) : /^\d{4}\s?[A-Za-z]{2}$/.test(c.postalCode ?? "") ? "NL" : "BE";
+  const totalAbs = Math.round(Math.abs(d.total) * 100) / 100;
+  const prepaid = o.creditNote ? 0 : Math.round(Math.max(0, Math.min(d.paidAmount, totalAbs)) * 100) / 100;
+  const open = Math.round((totalAbs - prepaid) * 100) / 100;
+  const buyerRef = d.reference || (d.workOrderNumber ? `Werkbon ${d.workOrderNumber}` : d.number);
   const root = o.creditNote ? "CreditNote" : "Invoice";
   const qtyTag = o.creditNote ? "CreditedQuantity" : "InvoicedQuantity";
   const lines = d.lines.map((l, i) => {
@@ -43,7 +48,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   <cbc:${root}TypeCode>${o.creditNote ? "381" : "380"}</cbc:${root}TypeCode>
   ${invoiceVatNotices(d).map(notice => `<cbc:Note>${esc(notice.text)}</cbc:Note>`).join('\n  ')}
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
-  <cbc:BuyerReference>${esc(d.reference ?? `Werkbon ${d.workOrderNumber}`)}</cbc:BuyerReference>
+  <cbc:BuyerReference>${esc(buyerRef)}</cbc:BuyerReference>
   ${o.pdfBase64 ? `<cac:AdditionalDocumentReference>
     <cbc:ID>${esc(d.number)}</cbc:ID>
     <cac:Attachment><cbc:EmbeddedDocumentBinaryObject mimeCode="application/pdf" filename="Factuur-${esc(d.number)}.pdf">${o.pdfBase64}</cbc:EmbeddedDocumentBinaryObject></cac:Attachment>
@@ -56,7 +61,7 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   </cac:Party></cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty><cac:Party>
     ${rScheme && rId ? `<cbc:EndpointID schemeID="${esc(rScheme)}">${esc(rId)}</cbc:EndpointID>` : ""}
-    <cac:PostalAddress>${c.street ? `<cbc:StreetName>${esc(`${c.street} ${c.houseNumber ?? ""}`.trim())}</cbc:StreetName>` : ""}${c.city ? `<cbc:CityName>${esc(c.city)}</cbc:CityName>` : ""}${c.postalCode ? `<cbc:PostalZone>${esc(c.postalCode)}</cbc:PostalZone>` : ""}<cac:Country><cbc:IdentificationCode>BE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
+    <cac:PostalAddress>${c.street ? `<cbc:StreetName>${esc(`${c.street} ${c.houseNumber ?? ""}`.trim())}</cbc:StreetName>` : ""}${c.city ? `<cbc:CityName>${esc(c.city)}</cbc:CityName>` : ""}${c.postalCode ? `<cbc:PostalZone>${esc(c.postalCode)}</cbc:PostalZone>` : ""}<cac:Country><cbc:IdentificationCode>${esc(customerCountry)}</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
     ${c.vatNumber ? `<cac:PartyTaxScheme><cbc:CompanyID>${esc(c.vatNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase())}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}
     <cac:PartyLegalEntity><cbc:RegistrationName>${esc(c.name)}</cbc:RegistrationName></cac:PartyLegalEntity>
   </cac:Party></cac:AccountingCustomerParty>
@@ -68,9 +73,9 @@ export function invoiceUbl(d: InvoicePdfData, o: { senderId: string; receiverId:
   <cac:LegalMonetaryTotal>
     <cbc:LineExtensionAmount currencyID="EUR">${a(Math.abs(d.net))}</cbc:LineExtensionAmount>
     <cbc:TaxExclusiveAmount currencyID="EUR">${a(Math.abs(d.net))}</cbc:TaxExclusiveAmount>
-    <cbc:TaxInclusiveAmount currencyID="EUR">${a(Math.abs(d.total))}</cbc:TaxInclusiveAmount>
-    <cbc:PrepaidAmount currencyID="EUR">${a(Math.max(0, Math.min(d.paidAmount, d.total)))}</cbc:PrepaidAmount>
-    <cbc:PayableAmount currencyID="EUR">${a(o.creditNote ? Math.abs(d.total) : open)}</cbc:PayableAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">${a(totalAbs)}</cbc:TaxInclusiveAmount>
+    <cbc:PrepaidAmount currencyID="EUR">${a(prepaid)}</cbc:PrepaidAmount>
+    <cbc:PayableAmount currencyID="EUR">${a(o.creditNote ? totalAbs : open)}</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>${lines}
 </${root}>`;
 }

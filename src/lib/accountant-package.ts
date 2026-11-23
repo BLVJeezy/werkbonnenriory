@@ -1,6 +1,26 @@
 // Pure helpers for the two accountant mails (UBL mail + comparison pack). Tested in accountant-package.test.ts.
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const a = (n: number) => (Math.round(Math.abs(n) * 100) / 100).toFixed(2);
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const a = (n: number) => round2(Math.abs(n)).toFixed(2);
+const signed = (n: number) => round2(n).toFixed(2);
+
+const PEPPOL_VAT_SCHEME: Record<string, string> = {
+  BE: "9925", NL: "9944", FR: "9957", DE: "9930", IE: "9928", LU: "9938",
+};
+
+function vatCountry(vat: string | null | undefined): string {
+  const clean = (vat ?? "").replace(/[\s.]/g, "").toUpperCase();
+  const cc = clean.slice(0, 2);
+  return /^[A-Z]{2}$/.test(cc) ? cc : "BE";
+}
+
+function peppolEndpoint(vat: string | null | undefined): { scheme: string; id: string } | null {
+  const clean = (vat ?? "").replace(/[\s.]/g, "").toUpperCase();
+  const cc = clean.slice(0, 2);
+  const scheme = PEPPOL_VAT_SCHEME[cc];
+  if (!scheme || clean.length < 4) return null;
+  return { scheme, id: clean };
+}
 
 /** Download filename for one UBL: the accountant's package only reads .xml, never .ubl. */
 export function ublFilename(prefix: string, label: string, ref: string) {
@@ -47,34 +67,76 @@ export function purchaseUbl(p: PurchaseForUbl, buyer: { name: string; vat: strin
   const credit = p.kind === "creditnota";
   const root = credit ? "CreditNote" : "Invoice";
   const vatId = (v: string | null) => (v ?? "").replace(/[\s.]/g, "").toUpperCase();
-  const groups = new Map<number, { net: number; vat: number }>();
-  const lines = (p.lines.length ? p.lines : [{ description: "Totaal", quantity: 1, amount: p.net, vat: p.vat }]).map((l, i) => {
-    const net = Number(l.amount ?? 0);
-    const rate = l.vatRate ?? (net ? Math.round((Number(l.vat ?? 0) / net) * 100) : 0);
-    const g = groups.get(rate) ?? { net: 0, vat: 0 };
-    g.net += net; g.vat += Number(l.vat ?? net * rate / 100); groups.set(rate, g);
+  const supplierCountry = vatCountry(p.supplier_vat);
+  const buyerCountry = vatCountry(buyer.vat);
+  const headerNet = round2(Math.abs(Number(p.net ?? 0)));
+  const headerVat = round2(Math.abs(Number(p.vat ?? 0)));
+  const headerTotal = round2(headerNet + headerVat);
+  const sign = credit ? -1 : 1;
+
+  const rawLines = p.lines.map(l => {
+    const net = round2(Number(l.amount ?? 0) * sign);
+    const rate = l.vatRate != null ? Number(l.vatRate) : (net ? Math.round((Math.abs(Number(l.vat ?? 0)) / Math.abs(net)) * 100) : 0);
+    const vat = l.vat != null ? round2(Number(l.vat) * sign) : round2(net * rate / 100);
     const q = Math.abs(Number(l.quantity ?? 1)) || 1;
+    const unitPrice = l.unitPrice != null ? Math.abs(Number(l.unitPrice)) : Math.abs(net / q);
+    return { description: String(l.description ?? "Lijn").slice(0, 200) || "Lijn", quantity: q, unitPrice, net, vat, rate };
+  });
+
+  const linesNetSum = round2(rawLines.reduce((s, l) => s + l.net, 0));
+  const linesVatSum = round2(rawLines.reduce((s, l) => s + l.vat, 0));
+  const linesMatch = rawLines.length > 0 && Math.abs(linesNetSum - headerNet) <= 0.01 && Math.abs(linesVatSum - headerVat) <= 0.01 && rawLines.every(l => l.net >= 0);
+  const effectiveRate = headerNet > 0 ? Math.round((headerVat / headerNet) * 100) : 0;
+  const effectiveLines = linesMatch
+    ? rawLines
+    : [{ description: p.invoice_number ? `Factuur ${p.invoice_number}` : "Totaal", quantity: 1, unitPrice: headerNet, net: headerNet, vat: headerVat, rate: effectiveRate }];
+
+  const groups = new Map<number, { net: number; vat: number }>();
+  const taxCat = (rate: number) => (rate > 0 ? "S" : supplierCountry !== buyerCountry ? "AE" : "Z");
+  const lines = effectiveLines.map((l, i) => {
+    const g = groups.get(l.rate) ?? { net: 0, vat: 0 };
+    g.net = round2(g.net + l.net);
+    g.vat = round2(g.vat + l.vat);
+    groups.set(l.rate, g);
     return `
-  <cac:${root}Line><cbc:ID>${i + 1}</cbc:ID><cbc:${credit ? "CreditedQuantity" : "InvoicedQuantity"} unitCode="C62">${q}</cbc:${credit ? "CreditedQuantity" : "InvoicedQuantity"}><cbc:LineExtensionAmount currencyID="EUR">${a(net)}</cbc:LineExtensionAmount>
-    <cac:Item><cbc:Name>${esc(String(l.description ?? "Lijn").slice(0, 200))}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>${rate ? "S" : "Z"}</cbc:ID><cbc:Percent>${rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>
-    <cac:Price><cbc:PriceAmount currencyID="EUR">${Math.abs(Number(l.unitPrice ?? net / q)).toFixed(6)}</cbc:PriceAmount></cac:Price>
+  <cac:${root}Line><cbc:ID>${i + 1}</cbc:ID><cbc:${credit ? "CreditedQuantity" : "InvoicedQuantity"} unitCode="C62">${l.quantity}</cbc:${credit ? "CreditedQuantity" : "InvoicedQuantity"}><cbc:LineExtensionAmount currencyID="EUR">${signed(l.net)}</cbc:LineExtensionAmount>
+    <cac:Item><cbc:Name>${esc(l.description)}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>${taxCat(l.rate)}</cbc:ID><cbc:Percent>${l.rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="EUR">${l.unitPrice.toFixed(6)}</cbc:PriceAmount></cac:Price>
   </cac:${root}Line>`;
   }).join("");
-  const subtotals = [...groups].map(([rate, g]) => `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${a(g.net)}</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">${a(g.vat)}</cbc:TaxAmount><cac:TaxCategory><cbc:ID>${rate ? "S" : "Z"}</cbc:ID><cbc:Percent>${rate}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`).join("");
-  const party = (name: string, vat: string | null) => `<cac:Party>${vat ? `<cbc:EndpointID schemeID="9925">${esc(vatId(vat))}</cbc:EndpointID>` : ""}<cac:PartyName><cbc:Name>${esc(name)}</cbc:Name></cac:PartyName>${vat ? `<cac:PartyTaxScheme><cbc:CompanyID>${esc(vatId(vat))}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}<cac:PartyLegalEntity><cbc:RegistrationName>${esc(name)}</cbc:RegistrationName></cac:PartyLegalEntity></cac:Party>`;
+
+  const subtotals = [...groups].map(([rate, g]) => {
+    const cat = taxCat(rate);
+    const reason = cat === "AE" ? "<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode>" : "";
+    return `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${signed(g.net)}</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">${signed(g.vat)}</cbc:TaxAmount><cac:TaxCategory><cbc:ID>${cat}</cbc:ID><cbc:Percent>${rate}</cbc:Percent>${reason}<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`;
+  }).join("");
+
+  const totalNet = round2([...groups.values()].reduce((s, g) => s + g.net, 0));
+  const totalVat = round2([...groups.values()].reduce((s, g) => s + g.vat, 0));
+  const totalGross = round2(totalNet + totalVat);
+  const issueDate = /^\d{4}-\d{2}-\d{2}$/.test(p.invoice_date ?? "") ? p.invoice_date! : new Date().toISOString().slice(0, 10);
+  const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(p.due_date ?? "") ? p.due_date! : null;
+
+  const party = (name: string, vat: string | null, address: { street?: string; city?: string; postal?: string; country: string }) => {
+    const ep = peppolEndpoint(vat);
+    const addr = `<cac:PostalAddress>${address.street ? `<cbc:StreetName>${esc(address.street)}</cbc:StreetName>` : ""}${address.city ? `<cbc:CityName>${esc(address.city)}</cbc:CityName>` : ""}${address.postal ? `<cbc:PostalZone>${esc(address.postal)}</cbc:PostalZone>` : ""}<cac:Country><cbc:IdentificationCode>${esc(address.country)}</cbc:IdentificationCode></cac:Country></cac:PostalAddress>`;
+    return `<cac:Party>${ep ? `<cbc:EndpointID schemeID="${ep.scheme}">${esc(ep.id)}</cbc:EndpointID>` : ""}<cac:PartyName><cbc:Name>${esc(name)}</cbc:Name></cac:PartyName>${addr}${vat ? `<cac:PartyTaxScheme><cbc:CompanyID>${esc(vatId(vat))}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>` : ""}<cac:PartyLegalEntity><cbc:RegistrationName>${esc(name)}</cbc:RegistrationName></cac:PartyLegalEntity></cac:Party>`;
+  };
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <${root} xmlns="urn:oasis:names:specification:ubl:schema:xsd:${root}-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
   <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
   <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
   <cbc:ID>${esc(p.invoice_number ?? "zonder-nummer")}</cbc:ID>
-  <cbc:IssueDate>${p.invoice_date ?? ""}</cbc:IssueDate>${!credit && p.due_date ? `\n  <cbc:DueDate>${p.due_date}</cbc:DueDate>` : ""}
+  <cbc:IssueDate>${issueDate}</cbc:IssueDate>${!credit && dueDate ? `\n  <cbc:DueDate>${dueDate}</cbc:DueDate>` : ""}
   <cbc:${root}TypeCode>${credit ? 381 : 380}</cbc:${root}TypeCode>
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
-  <cac:AccountingSupplierParty>${party(p.supplier_name, p.supplier_vat)}</cac:AccountingSupplierParty>
-  <cac:AccountingCustomerParty>${party(buyer.name, buyer.vat)}</cac:AccountingCustomerParty>${p.supplier_iban ? `
+  <cbc:BuyerReference>${esc(p.invoice_number ?? "NVT")}</cbc:BuyerReference>
+  <cac:AccountingSupplierParty>${party(p.supplier_name, p.supplier_vat, { country: supplierCountry })}</cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>${party(buyer.name, buyer.vat, { street: "Natveld 47", city: "Bilzen", postal: "3740", country: buyerCountry })}</cac:AccountingCustomerParty>${p.supplier_iban ? `
   <cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>${p.payment_ref ? `<cbc:PaymentID>${esc(p.payment_ref)}</cbc:PaymentID>` : ""}<cac:PayeeFinancialAccount><cbc:ID>${esc(p.supplier_iban.replace(/\s/g, ""))}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>` : ""}
-  <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${a(p.vat)}</cbc:TaxAmount>${subtotals}</cac:TaxTotal>
-  <cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID="EUR">${a(p.net)}</cbc:LineExtensionAmount><cbc:TaxExclusiveAmount currencyID="EUR">${a(p.net)}</cbc:TaxExclusiveAmount><cbc:TaxInclusiveAmount currencyID="EUR">${a(p.total)}</cbc:TaxInclusiveAmount><cbc:PayableAmount currencyID="EUR">${a(p.total)}</cbc:PayableAmount></cac:LegalMonetaryTotal>${lines}
+  <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${a(totalVat)}</cbc:TaxAmount>${subtotals}</cac:TaxTotal>
+  <cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID="EUR">${a(totalNet)}</cbc:LineExtensionAmount><cbc:TaxExclusiveAmount currencyID="EUR">${a(totalNet)}</cbc:TaxExclusiveAmount><cbc:TaxInclusiveAmount currencyID="EUR">${a(totalGross)}</cbc:TaxInclusiveAmount><cbc:PayableAmount currencyID="EUR">${a(totalGross)}</cbc:PayableAmount></cac:LegalMonetaryTotal>${lines}
 </${root}>`;
 }
 
