@@ -1,9 +1,51 @@
 // @ts-nocheck -- dense pixel/matrix index math; covered by document-scan.test.ts
-// Browser-side "Adobe Scan"-style processing: find the paper, straighten it,
-// boost contrast in colour, and combine pages into one PDF.
+// Browser-side document scanner: 4-corner detection, bilinear perspective deskew,
+// shadow-corrected Document / adaptive B&W / Original filters, and multi-page PDF export.
 import { PDFDocument } from 'pdf-lib';
 
 export type Point = { x: number; y: number };
+export type Quad = [Point, Point, Point, Point];
+export type ScanFilter = 'document' | 'bw' | 'original';
+export type ScanAdjustments = {
+  filter: ScanFilter;
+  brightness: number; // -30..30
+  contrast: number;   // -30..30
+  rotation: 0 | 90 | 180 | 270;
+};
+
+export const DEFAULT_SCAN_ADJUSTMENTS: ScanAdjustments = {
+  filter: 'document',
+  brightness: 0,
+  contrast: 0,
+  rotation: 0,
+};
+
+export function fullFrameQuad(w: number, h: number): Quad {
+  return [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+}
+
+/** Orders 4 arbitrary points into [topLeft, topRight, bottomRight, bottomLeft]. */
+export function orderCorners(pts: Point[]): Quad {
+  const sorted = [...pts].slice(0, 4);
+  const bySum = [...sorted].sort((a, b) => (a.x + a.y) - (b.x + b.y));
+  const byDiff = [...sorted].sort((a, b) => (a.x - a.y) - (b.x - b.y));
+  return [bySum[0], byDiff[3], bySum[3], byDiff[0]];
+}
+
+/** Returns true if the 4-point quad is strictly convex and non-degenerate. */
+export function isConvexQuad(q: Point[]): boolean {
+  if (q.length !== 4) return false;
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+    if (Math.abs(cross) < 1e-3) return false;
+    const s = cross > 0 ? 1 : -1;
+    if (sign === 0) sign = s;
+    else if (sign !== s) return false;
+  }
+  return true;
+}
 
 /** Finds the four corners of the largest bright area (the paper) in a grayscale image. */
 export function findDocumentCorners(gray: Uint8Array, w: number, h: number): Point[] | null {
@@ -75,45 +117,183 @@ export function project(m: number[], x: number, y: number): Point {
 }
 
 const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+const clamp255 = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : v);
 
-/** Turns a photo into a cropped, straightened, contrast-boosted JPEG blob. */
-export async function processScan(file: Blob): Promise<Blob> {
-  const bmp = await createImageBitmap(file);
-  const srcCanvas = document.createElement('canvas');
-  srcCanvas.width = bmp.width; srcCanvas.height = bmp.height;
-  const sctx = srcCanvas.getContext('2d')!; sctx.drawImage(bmp, 0, 0);
-  const src = sctx.getImageData(0, 0, bmp.width, bmp.height);
+/** Bilinear perspective warp from source ImageData onto a straightened rectangle. */
+export function warpPerspectiveData(src: ImageData, corners: Point[], maxDim = 2200): ImageData {
+  let W = Math.max(16, Math.round(Math.max(dist(corners[0], corners[1]), dist(corners[3], corners[2]))));
+  let H = Math.max(16, Math.round(Math.max(dist(corners[0], corners[3]), dist(corners[1], corners[2]))));
+  const limit = maxDim / Math.max(W, H);
+  if (limit < 1) { W = Math.max(16, Math.round(W * limit)); H = Math.max(16, Math.round(H * limit)); }
+  const m = homography(corners, W, H);
+  const out = new Uint8ClampedArray(W * H * 4);
+  const s = src.data, sw = src.width, sh = src.height;
+  const maxX = sw - 1, maxY = sh - 1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const p = project(m, x + 0.5, y + 0.5);
+      const fx = Math.min(maxX, Math.max(0, p.x));
+      const fy = Math.min(maxY, Math.max(0, p.y));
+      const x0 = fx | 0, y0 = fy | 0;
+      const x1 = x0 < maxX ? x0 + 1 : maxX;
+      const y1 = y0 < maxY ? y0 + 1 : maxY;
+      const dx = fx - x0, dy = fy - y0;
+      const w00 = (1 - dx) * (1 - dy), w10 = dx * (1 - dy), w01 = (1 - dx) * dy, w11 = dx * dy;
+      const i00 = (y0 * sw + x0) * 4, i10 = (y0 * sw + x1) * 4;
+      const i01 = (y1 * sw + x0) * 4, i11 = (y1 * sw + x1) * 4;
+      const di = (y * W + x) * 4;
+      out[di]     = s[i00]     * w00 + s[i10]     * w10 + s[i01]     * w01 + s[i11]     * w11;
+      out[di + 1] = s[i00 + 1] * w00 + s[i10 + 1] * w10 + s[i01 + 1] * w01 + s[i11 + 1] * w11;
+      out[di + 2] = s[i00 + 2] * w00 + s[i10 + 2] * w10 + s[i01 + 2] * w01 + s[i11 + 2] * w11;
+      out[di + 3] = 255;
+    }
+  }
+  return new ImageData(out, W, H);
+}
 
-  // Detect on a small copy
-  const scale = Math.min(1, 300 / Math.max(bmp.width, bmp.height));
-  const sw = Math.max(1, Math.round(bmp.width * scale)), sh = Math.max(1, Math.round(bmp.height * scale));
+/** O(N) integral-image local mean luminance for shadow removal and adaptive thresholding. */
+function buildIntegralLuma(d: Uint8ClampedArray, w: number, h: number): Float64Array {
+  const stride = w + 1;
+  const sat = new Float64Array((w + 1) * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      rowSum += d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+      sat[(y + 1) * stride + (x + 1)] = sat[y * stride + (x + 1)] + rowSum;
+    }
+  }
+  return sat;
+}
+
+function boxMean(sat: Float64Array, w: number, h: number, x: number, y: number, r: number): number {
+  const stride = w + 1;
+  const x0 = Math.max(0, x - r), y0 = Math.max(0, y - r);
+  const x1 = Math.min(w - 1, x + r), y1 = Math.min(h - 1, y + r);
+  const sum = sat[(y1 + 1) * stride + (x1 + 1)] - sat[y0 * stride + (x1 + 1)] - sat[(y1 + 1) * stride + x0] + sat[y0 * stride + x0];
+  return sum / ((x1 - x0 + 1) * (y1 - y0 + 1));
+}
+
+/** Applies 'document' (shadow-removed white paper), 'bw' (adaptive threshold), or 'original' filter + brightness/contrast. */
+export function applyScanFilter(d: Uint8ClampedArray, w: number, h: number, opts: Pick<ScanAdjustments, 'filter' | 'brightness' | 'contrast'>): void {
+  const { filter, brightness, contrast } = opts;
+  if (filter === 'document') {
+    const sat = buildIntegralLuma(d, w, h);
+    const radius = Math.max(14, Math.round(Math.min(w, h) * 0.045));
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const bg = Math.max(45, boxMean(sat, w, h, x, y, radius));
+        const gain = 248 / bg;
+        for (let c = 0; c < 3; c++) {
+          // Normalize against local paper illumination, then gently deepen dark ink
+          let v = d[i + c] * gain;
+          if (v > 228) v = 255;
+          else if (v < 190) v = v * 0.88;
+          d[i + c] = clamp255(v);
+        }
+      }
+    }
+  } else if (filter === 'bw') {
+    const sat = buildIntegralLuma(d, w, h);
+    const radius = Math.max(10, Math.round(Math.min(w, h) * 0.025));
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const luma = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        const mean = boxMean(sat, w, h, x, y, radius);
+        // Soft adaptive ramp preserves faint thermal-receipt strokes without harsh speckles
+        const diff = mean - luma;
+        const out = diff <= 7 ? 255 : diff >= 24 ? 18 : clamp255(255 - ((diff - 7) / 17) * 237);
+        d[i] = out; d[i + 1] = out; d[i + 2] = out;
+      }
+    }
+  }
+
+  if (brightness !== 0 || contrast !== 0) {
+    const bOffset = brightness * 1.8;
+    const cFactor = (100 + contrast * 1.5) / 100;
+    for (let i = 0; i < d.length; i += 4) {
+      for (let c = 0; c < 3; c++) {
+        d[i + c] = clamp255((d[i + c] - 128) * cFactor + 128 + bOffset);
+      }
+    }
+  }
+}
+
+export interface LoadedScanSource {
+  canvas: HTMLCanvasElement;
+  width: number;
+  height: number;
+  autoCorners: Quad;
+}
+
+/** Decodes a camera/upload image with EXIF orientation, caps size for mobile memory safety, and detects 4 document corners. */
+export async function loadScanSource(file: Blob, maxWorkingDim = 2200): Promise<LoadedScanSource> {
+  let bmp: ImageBitmap;
+  try {
+    bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    bmp = await createImageBitmap(file);
+  }
+  const scaleDown = Math.min(1, maxWorkingDim / Math.max(bmp.width, bmp.height));
+  const width = Math.max(1, Math.round(bmp.width * scaleDown));
+  const height = Math.max(1, Math.round(bmp.height * scaleDown));
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bmp, 0, 0, width, height);
+  bmp.close();
+
+  const detScale = Math.min(1, 320 / Math.max(width, height));
+  const sw = Math.max(1, Math.round(width * detScale));
+  const sh = Math.max(1, Math.round(height * detScale));
   const small = document.createElement('canvas'); small.width = sw; small.height = sh;
-  const smctx = small.getContext('2d')!; smctx.filter = 'blur(2px)'; smctx.drawImage(bmp, 0, 0, sw, sh);
+  const smctx = small.getContext('2d')!; smctx.filter = 'blur(2px)'; smctx.drawImage(canvas, 0, 0, sw, sh);
   const sd = smctx.getImageData(0, 0, sw, sh).data;
   const gray = new Uint8Array(sw * sh);
   for (let i = 0; i < gray.length; i++) gray[i] = (sd[i * 4] * 0.299 + sd[i * 4 + 1] * 0.587 + sd[i * 4 + 2] * 0.114) | 0;
   const found = findDocumentCorners(gray, sw, sh);
-  const corners = found ? found.map(p => ({ x: p.x / scale, y: p.y / scale }))
-    : [{ x: 0, y: 0 }, { x: bmp.width, y: 0 }, { x: bmp.width, y: bmp.height }, { x: 0, y: bmp.height }];
+  const autoCorners: Quad = found
+    ? orderCorners(found.map(p => ({ x: Math.min(width, Math.max(0, p.x / detScale)), y: Math.min(height, Math.max(0, p.y / detScale)) })))
+    : fullFrameQuad(width, height);
 
-  let W = Math.round(Math.max(dist(corners[0], corners[1]), dist(corners[3], corners[2])));
-  let H = Math.round(Math.max(dist(corners[0], corners[3]), dist(corners[1], corners[2])));
-  const limit = 2400 / Math.max(W, H); if (limit < 1) { W = Math.round(W * limit); H = Math.round(H * limit); }
-  const m = homography(corners, W, H);
-  const out = new ImageData(W, H); const o = out.data, s = src.data;
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const p = project(m, x + 0.5, y + 0.5);
-    const sx = Math.min(bmp.width - 1, Math.max(0, p.x | 0)), sy = Math.min(bmp.height - 1, Math.max(0, p.y | 0));
-    const si = (sy * bmp.width + sx) * 4, di = (y * W + x) * 4;
-    o[di] = s[si]; o[di + 1] = s[si + 1]; o[di + 2] = s[si + 2]; o[di + 3] = 255;
+  return { canvas, width, height, autoCorners };
+}
+
+/** Renders a straightened, filtered, rotated JPEG blob from a loaded scan source and 4 corners. */
+export async function renderScannedPage(source: LoadedScanSource, corners: Quad, adjustments: ScanAdjustments = DEFAULT_SCAN_ADJUSTMENTS): Promise<Blob> {
+  const sctx = source.canvas.getContext('2d')!;
+  const srcData = sctx.getImageData(0, 0, source.width, source.height);
+  const warped = warpPerspectiveData(srcData, corners, 2200);
+  applyScanFilter(warped.data, warped.width, warped.height, adjustments);
+
+  const warpCanvas = document.createElement('canvas');
+  warpCanvas.width = warped.width; warpCanvas.height = warped.height;
+  warpCanvas.getContext('2d')!.putImageData(warped, 0, 0);
+
+  let outCanvas = warpCanvas;
+  if (adjustments.rotation !== 0) {
+    const rot = document.createElement('canvas');
+    const swap = adjustments.rotation === 90 || adjustments.rotation === 270;
+    rot.width = swap ? warpCanvas.height : warpCanvas.width;
+    rot.height = swap ? warpCanvas.width : warpCanvas.height;
+    const rctx = rot.getContext('2d')!;
+    rctx.translate(rot.width / 2, rot.height / 2);
+    rctx.rotate((adjustments.rotation * Math.PI) / 180);
+    rctx.drawImage(warpCanvas, -warpCanvas.width / 2, -warpCanvas.height / 2);
+    outCanvas = rot;
   }
-  enhanceContrast(o);
-  const outCanvas = document.createElement('canvas'); outCanvas.width = W; outCanvas.height = H;
-  outCanvas.getContext('2d')!.putImageData(out, 0, 0);
-  bmp.close();
-  const blob = await new Promise<Blob | null>(r => outCanvas.toBlob(r, 'image/jpeg', 0.9));
+
+  const blob = await new Promise<Blob | null>(r => outCanvas.toBlob(r, 'image/jpeg', 0.92));
   if (!blob) throw new Error('Scan verwerken mislukt.');
   return blob;
+}
+
+/** Turns a photo into a cropped, straightened, contrast-boosted JPEG blob. */
+export async function processScan(file: Blob): Promise<Blob> {
+  const source = await loadScanSource(file);
+  return renderScannedPage(source, source.autoCorners, DEFAULT_SCAN_ADJUSTMENTS);
 }
 
 /** Colour-preserving levels stretch: paper becomes white, ink darker. */
