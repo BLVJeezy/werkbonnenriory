@@ -432,6 +432,76 @@ export type Database = {
           },
         ]
       }
+      credit_note_allocations: {
+        Row: {
+          allocated_date: string
+          allocation_type: string
+          amount: number
+          bank_tx_id: string | null
+          created_at: string
+          created_by: string | null
+          credit_note_id: string
+          id: string
+          idempotency_key: string
+          invoice_id: string | null
+          note: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+        }
+        Insert: {
+          allocated_date?: string
+          allocation_type: string
+          amount: number
+          bank_tx_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_note_id: string
+          id?: string
+          idempotency_key: string
+          invoice_id?: string | null
+          note?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+        }
+        Update: {
+          allocated_date?: string
+          allocation_type?: string
+          amount?: number
+          bank_tx_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_note_id?: string
+          id?: string
+          idempotency_key?: string
+          invoice_id?: string | null
+          note?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_note_allocations_bank_tx_id_fkey"
+            columns: ["bank_tx_id"]
+            isOneToOne: false
+            referencedRelation: "fin_bank_tx"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_allocations_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_password_invitations: {
         Row: {
           consumed_at: string | null
@@ -4996,6 +5066,14 @@ export type Database = {
           work_orders: Json
         }[]
       }
+      auto_allocate_credit_note: {
+        Args: { p_credit: string; p_date?: string }
+        Returns: Json
+      }
+      backfill_credit_note_allocations: {
+        Args: { p_dry_run?: boolean }
+        Returns: Json
+      }
       claim_crew_password_invitation: {
         Args: { p_hash: string }
         Returns: string
@@ -5336,15 +5414,28 @@ export type Database = {
           id: string
         }[]
       }
-      settle_credit_note: {
-        Args: {
-          p_amount: number
-          p_credit: string
-          p_date: string
-          p_invoice: string
-        }
-        Returns: number
-      }
+      same_invoice_customer: { Args: { a: Json; b: Json }; Returns: boolean }
+      settle_credit_note:
+        | {
+            Args: {
+              p_amount: number
+              p_credit: string
+              p_date: string
+              p_invoice: string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_bank_tx_id?: string
+              p_credit: string
+              p_date: string
+              p_idempotency_key?: string
+              p_invoice: string
+            }
+            Returns: number
+          }
       tech_reopen_work_order: { Args: { _id: string }; Returns: undefined }
       tk_import_snapshot: { Args: { p_data: Json }; Returns: Json }
       tk_record_employee_incident: {

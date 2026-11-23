@@ -1212,6 +1212,13 @@
       "when": 1795442093325,
       "tag": "0172_fin_split_bank_payment_credit_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1795454078638,
+      "tag": "0173_credit_note_auto_allocations",
+      "breakpoints": true
     }
   ]
 }

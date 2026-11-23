@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchSelect } from "@/components/SearchSelect";
 import { euro } from "@/lib/billing";
+import { sameLegalCustomer, validateManualCreditAllocation, type CustomerIdentityLike } from "@/lib/credit-note-allocation";
 
 type Inv = { id: string; number: string; kind: string; total: number; paid_amount: number; credit_for: string | null; customer: unknown };
 
@@ -14,7 +15,11 @@ export function CreditNoteSettle({ credit, invoices, onDone }: { credit: Inv; in
   const openAmount = Math.round((Math.abs(Number(credit.total)) - Math.abs(Number(credit.paid_amount))) * 100) / 100;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"offset" | "refund">("offset");
-  const openInvoices = invoices.filter((i) => i.kind !== "creditnota" && Number(i.total) - Number(i.paid_amount) > 0.005);
+  const openInvoices = invoices.filter((i) =>
+    i.kind !== "creditnota" &&
+    Number(i.total) - Number(i.paid_amount) > 0.005 &&
+    (i.id === credit.credit_for || sameLegalCustomer(credit.customer as CustomerIdentityLike, i.customer as CustomerIdentityLike))
+  );
   const [invoiceId, setInvoiceId] = useState(openInvoices.some((i) => i.id === credit.credit_for) ? credit.credit_for! : "");
   const [amount, setAmount] = useState(String(openAmount));
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -29,6 +34,19 @@ export function CreditNoteSettle({ credit, invoices, onDone }: { credit: Inv; in
     const amt = Number(amount.replace(",", "."));
     if (!(amt > 0)) { toast.error("Vul een bedrag in"); return; }
     if (mode === "offset" && !invoiceId) { toast.error("Kies een factuur"); return; }
+    if (mode === "offset") {
+      const target = openInvoices.find((i) => i.id === invoiceId);
+      const invOpen = target ? Math.round((Number(target.total) - Number(target.paid_amount)) * 100) / 100 : 0;
+      const err = validateManualCreditAllocation({
+        creditOpen: openAmount,
+        invoiceOpen: invOpen,
+        requestedAmount: amt,
+        creditCustomer: credit.customer as CustomerIdentityLike,
+        invoiceCustomer: target?.customer as CustomerIdentityLike,
+        isOriginInvoice: target?.id === credit.credit_for,
+      });
+      if (err) { toast.error(err); return; }
+    }
     setBusy(true);
     const { error } = await supabase.rpc("settle_credit_note", { p_credit: credit.id, p_invoice: (mode === "offset" ? invoiceId : null) as unknown as string, p_amount: amt, p_date: date });
     setBusy(false);

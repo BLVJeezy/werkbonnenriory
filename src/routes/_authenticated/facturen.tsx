@@ -106,12 +106,13 @@ function Facturen() {
     queryKey: ["facturen"],
     refetchInterval: 10_000,
     queryFn: async () => {
-      const [w, i, s, a, o] = await Promise.all([
+      const [w, i, s, a, o, allocs] = await Promise.all([
         supabase.from("work_orders").select("id, number, customer_name, signed_at, paid_amount, paid_at, vat_number, scheduled_date, scheduled_from, scheduled_until, activity_id, distance_km, vat_rate, warranty, no_invoice, subcontract_auto, time_entries(started_at, ended_at), materials(quantity, unit_price), technicians!work_orders_technician_id_fkey(name)").eq("status", "afgetekend").is("contract_id", null).order("signed_at", { ascending: false }),
         supabase.from("invoices").select("*").order("created_at", { ascending: false }),
         supabase.from("settings").select("*").eq("id", 1).single(),
         supabase.from("activities").select("id, hourly_rate"),
         supabase.from("document_deliveries").select("document_id, document_open_events(opened_at)").in("document_type", ["factuur", "creditnota", "herinnering"]).not("sent_at", "is", null).order("created_at", { ascending: false }).limit(1000),
+        supabase.from("credit_note_allocations").select("id, credit_note_id, invoice_id, allocation_type, amount, allocated_date").is("reversed_at", null),
       ]);
       const opens: Record<string, { first: string; last: string; count: number }> = {};
       for (const d of (o.data ?? []) as { document_id: string; document_open_events: { opened_at: string }[] }[]) {
@@ -130,7 +131,7 @@ function Facturen() {
         : { data: [] as { id: string; signed_at: string | null }[] };
       const woDates: Record<string, string> = {};
       for (const wo of linkedWos ?? []) if (wo.signed_at) woDates[wo.id] = wo.signed_at;
-      return { todo: uninvoiced.filter((x) => !x.no_invoice && !x.subcontract_auto), sub: uninvoiced.filter((x) => !x.no_invoice && x.subcontract_auto), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], settings: s.data, activities: a.data ?? [], opens, woDates };
+      return { todo: uninvoiced.filter((x) => !x.no_invoice && !x.subcontract_auto), sub: uninvoiced.filter((x) => !x.no_invoice && x.subcontract_auto), noInvoice: uninvoiced.filter((x) => x.no_invoice), invoices: i.data ?? [], allocations: allocs.data ?? [], settings: s.data, activities: a.data ?? [], opens, woDates };
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["facturen"] });
@@ -406,11 +407,15 @@ function Facturen() {
                         {i.kind !== "creditnota" && Number(i.paid_amount) > 0.005 && open && (
                           <div className="text-xs font-normal text-muted-foreground">Betaald {euro(Number(i.paid_amount))} · Open {euro(Number(i.total) - Number(i.paid_amount))}</div>
                         )}
+                        {i.kind === "creditnota" && !paid && (
+                          <div className="text-xs font-normal text-muted-foreground">Klanttegoed open {euro(Math.abs(Number(i.total)) - Math.abs(Number(i.paid_amount ?? 0)))}</div>
+                        )}
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-1">
                           <span className={`rounded px-2 py-0.5 text-xs font-bold ${i.status === "verzonden" ? "bg-accent text-accent-foreground" : i.status === "fout" ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}>{STATUS[i.status] ?? i.status}</span>
                           {paid && <span className="rounded bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{i.kind === "creditnota" ? "Verrekend" : "Betaald"}</span>}
+                          {i.kind === "creditnota" && !paid && <span className="rounded bg-primary/15 px-2 py-0.5 text-xs font-bold text-foreground">Klanttegoed open</span>}
                           {state === "overdue" && <span className="rounded bg-overdue-foreground px-2 py-0.5 text-xs font-bold text-background">Vervallen</span>}
                         </div>
                         {i.send_error && <div className="max-w-xs truncate text-xs text-destructive" title={i.send_error}>{i.send_error}</div>}
@@ -436,6 +441,15 @@ function Facturen() {
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                             {i.kind !== "creditnota" && <span>Mededeling: <span className="font-mono">{invoicePaymentReference(i.number)}</span></span>}
+                            {i.kind === "creditnota" && i.credit_for && (() => { const orig = data.invoices.find((x) => x.id === i.credit_for); return orig ? <span>Oorsprong: <span className="font-mono font-semibold text-foreground">Factuur {orig.number}</span></span> : null; })()}
+                            {(data.allocations ?? []).filter((al) => al.credit_note_id === i.id || al.invoice_id === i.id).map((al) => {
+                              const otherId = al.credit_note_id === i.id ? al.invoice_id : al.credit_note_id;
+                              const other = otherId ? data.invoices.find((x) => x.id === otherId) : null;
+                              const label = al.credit_note_id === i.id
+                                ? (other ? `Verrekend met factuur ${other.number}` : "Terugbetaald")
+                                : (other ? `Verrekend met CN ${other.number}` : "Verrekend met creditnota");
+                              return <span key={al.id} className="rounded bg-accent/60 px-1.5 font-medium text-accent-foreground">{label}: {euro(Number(al.amount))} ({new Date(al.allocated_date).toLocaleDateString("nl-BE")})</span>;
+                            })}
                             {i.sent_via && <span>Via {i.sent_via === "okioki" ? "PDF + OkiOki" : i.sent_via === "peppol" ? "Peppol" : "e-mail"}</span>}
                             {i.pdf_sent_at && <span>PDF gemaild</span>}
                             {i.okioki_sent_at && <span>UBL naar OkiOki gemaild</span>}

@@ -22,6 +22,7 @@ import { bankSplitSummary, docExpectsOutgoing, docOpenAmount } from "@/lib/bank-
 import { partialInvoiceCandidates } from "@/lib/bank-partial";
 import { learnedAccount, type BankHistory } from "@/lib/bank-learned-account";
 import { PontoConnection } from "@/components/PontoConnection";
+import { CustomerCreditsWorklist } from "@/components/CustomerCreditsWorklist";
 import { importSimplaCreditNotes } from "@/lib/simpla-creditnotes.functions";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -1003,6 +1004,7 @@ function Bank({ c }: { c: string }) {
         </div>
         <p className="mt-1 text-xs text-muted-foreground">Exporteer bij je bank (KBC, BNP, Belfius…) als CSV. Kolommen datum, bedrag, tegenpartij en mededeling worden herkend.</p>
       </Card>
+      <CustomerCreditsWorklist onChanged={refresh} />
       <Card title={`Te verwerken (${tx.filter((t) => !t.entry_id).length})`}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <Input className="max-w-sm" placeholder="Zoek klant of leverancier (naam, mededeling, bedrag)…" value={zoek} onChange={(e) => { setZoek(e.target.value); setSel(new Set()); setSelInv(new Set()); }} />
