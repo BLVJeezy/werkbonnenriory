@@ -22,6 +22,7 @@ import { bankSplitSummary } from "@/lib/bank-split";
 import { partialInvoiceCandidates } from "@/lib/bank-partial";
 import { learnedAccount, type BankHistory } from "@/lib/bank-learned-account";
 import { PontoConnection } from "@/components/PontoConnection";
+import { importSimplaCreditNotes } from "@/lib/simpla-creditnotes.functions";
 import { useFinanceAuth as useAuth } from "@/lib/finance-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
@@ -595,6 +596,12 @@ function SavingsDropZone({ onFile }: { onFile: (f: File) => Promise<void> }) {
 // ---------- Bank ----------
 function Bank({ c }: { c: string }) {
   const qc = useQueryClient();
+  const runImportSimplaCn = useServerFn(importSimplaCreditNotes);
+  const [cnImporting, setCnImporting] = useState(false);
+  const [cnOffsetId, setCnOffsetId] = useState<string | null>(null);
+  const [cnTargetId, setCnTargetId] = useState("");
+  const [cnAmount, setCnAmount] = useState("");
+  const [cnBusy, setCnBusy] = useState(false);
   const { data: accounts = [] } = useAccounts(c);
   const { data: paymentAllocations = [] } = useQuery({ queryKey: ['fin', 'bank-allocations', c], queryFn: async () => fetchAll<any>((a, b) => db.from('fin_bank_allocations').select('*').eq('company_id', c).order('id').range(a, b)) });
   const { data: rawTx = [] } = useQuery({ queryKey: ["fin", "bank", c], queryFn: async () => (await fetchAll((a, b) => db.from("fin_bank_tx").select("*").eq("company_id", c).order("tx_date", { ascending: false }).order("id").range(a, b))) as any[], refetchInterval: 30_000 });
@@ -1096,14 +1103,86 @@ function Bank({ c }: { c: string }) {
         <p className="mt-1 text-xs text-muted-foreground">Zodra de bijhorende bankverrichting binnen is, lettert de app ze automatisch af bij gelijk bedrag en naam of nummer; anders via de knop "Afletteren (al betaald)" bij de verrichting.</p>
       </Card>}
       <Card title={`Facturen zonder gekoppelde betaling (${open.length})`}>
-        <Input className="mb-2 max-w-sm" placeholder="Zoek factuur (naam of nummer)…" value={zoekOpen} onChange={(e) => setZoekOpen(e.target.value)} />
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <Input className="max-w-sm" placeholder="Zoek factuur of creditnota (naam of nummer)…" value={zoekOpen} onChange={(e) => setZoekOpen(e.target.value)} />
+          <Button size="sm" variant="outline" disabled={cnImporting} onClick={async () => {
+            setCnImporting(true);
+            try {
+              const res = await runImportSimplaCn({ data: { companyId: c } });
+              toast.success(res.totalNew > 0 ? `${res.importedSales} verkoop- en ${res.importedPurchases} aankoopcreditnota's uit Simpla ingelezen` : "Alle creditnota's uit Simpla zijn al ingelezen");
+              await refresh();
+            } catch (e: any) { toast.error(e.message || "Inlezen uit Simpla mislukt"); }
+            finally { setCnImporting(false); }
+          }}>{cnImporting ? "Bezig met inlezen…" : "Creditnota's uit Simpla inlezen"}</Button>
+        </div>
         <div className="max-h-[50dvh] space-y-1 overflow-y-auto text-sm">
-          {openVis.map((i: any) => (
-            <div key={i.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
-              <span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span> <span className="text-xs text-muted-foreground">{i.direction === "aankoop" ? "aankoop" : "verkoop"}{i.doc_type === "creditnota" ? " · creditnota" : ""}</span></span>
-              <span>{eur(remaining(i))}</span>
-            </div>
-          ))}
+          {openVis.map((i: any) => {
+            const isCn = i.doc_type === "creditnota";
+            const cnOpenAbs = r2(Math.abs(remaining(i)));
+            const offsetOpen = cnOffsetId === i.id;
+            const candidates = offsetOpen
+              ? open
+                  .filter((f: any) => f.doc_type === "factuur" && f.direction === i.direction && Math.abs(remaining(f)) >= 0.01)
+                  .sort((a: any, b: any) => {
+                    const aSame = (a.counterparty ?? "").toLowerCase() === (i.counterparty ?? "").toLowerCase() ? 0 : 1;
+                    const bSame = (b.counterparty ?? "").toLowerCase() === (i.counterparty ?? "").toLowerCase() ? 0 : 1;
+                    if (aSame !== bSame) return aSame - bSame;
+                    return String(b.invoice_date ?? "").localeCompare(String(a.invoice_date ?? ""));
+                  })
+              : [];
+            return (
+              <div key={i.id} className="rounded border border-border p-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{i.invoice_date} · {i.counterparty} <span className="font-mono">{i.number}</span> <span className="text-xs text-muted-foreground">{i.direction === "aankoop" ? "aankoop" : "verkoop"}{isCn ? " · creditnota" : ""}</span></span>
+                  <span className="flex items-center gap-2">
+                    <span>{eur(remaining(i))}</span>
+                    {isCn && cnOpenAbs >= 0.01 && (
+                      <Button size="sm" variant="outline" onClick={() => {
+                        if (offsetOpen) { setCnOffsetId(null); return; }
+                        setCnOffsetId(i.id);
+                        setCnTargetId("");
+                        setCnAmount(String(cnOpenAbs));
+                      }}>{offsetOpen ? "Sluiten" : "Afpunten met factuur"}</Button>
+                    )}
+                  </span>
+                </div>
+                {offsetOpen && (
+                  <div className="mt-2 flex flex-wrap items-end gap-2 border-t border-border pt-2">
+                    <label className="min-w-[220px] flex-1 text-xs">
+                      Openstaande {i.direction === "aankoop" ? "aankoopfactuur" : "verkoopfactuur"}
+                      <SearchableSelect className="mt-1 w-full rounded border border-border bg-background p-1.5 text-sm" value={cnTargetId} onChange={(e) => {
+                        const id = e.target.value;
+                        setCnTargetId(id);
+                        const chosen = candidates.find((f: any) => f.id === id);
+                        if (chosen) setCnAmount(String(r2(Math.min(cnOpenAbs, Math.abs(remaining(chosen))))));
+                      }}>
+                        <option value="">Kies een factuur…</option>
+                        {candidates.map((f: any) => (
+                          <option key={f.id} value={f.id}>{f.invoice_date} · {f.counterparty} {f.number} ({eur(remaining(f))})</option>
+                        ))}
+                      </SearchableSelect>
+                    </label>
+                    <label className="w-32 text-xs">
+                      Bedrag (€)
+                      <Input className="mt-1" type="number" step="0.01" min="0.01" max={cnOpenAbs} value={cnAmount} onChange={(e) => setCnAmount(e.target.value)} />
+                    </label>
+                    <Button size="sm" disabled={cnBusy || !cnTargetId || !(Number(cnAmount) > 0)} onClick={async () => {
+                      setCnBusy(true);
+                      try {
+                        const { error } = await db.rpc("fin_offset_credit_note", { _credit: i.id, _invoice: cnTargetId, _amount: Number(cnAmount), _date: today() });
+                        if (error) throw error;
+                        toast.success(`Creditnota ${i.number ?? ""} voor ${eur(Number(cnAmount))} afgepunt`);
+                        setCnOffsetId(null);
+                        setCnTargetId("");
+                        await refresh();
+                      } catch (e: any) { toast.error(e.message || "Afpunten mislukt"); }
+                      finally { setCnBusy(false); }
+                    }}>{cnBusy ? "Bezig…" : "Afpunten"}</Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         <p className="mt-1 text-xs text-muted-foreground">Deze facturen staan nog open op Klanten/Leveranciers tot er een betaling aan gekoppeld wordt.</p>
       </Card>

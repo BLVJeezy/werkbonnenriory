@@ -5158,6 +5158,15 @@ export type Database = {
         }
         Returns: Json
       }
+      fin_offset_credit_note: {
+        Args: {
+          _amount: number
+          _credit: string
+          _date?: string
+          _invoice: string
+        }
+        Returns: Json
+      }
       fin_post_entry: {
         Args: {
           _company: string
