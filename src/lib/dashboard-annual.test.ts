@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAnnualRevenueSummary,
   categorizeLineLabel,
+  resolveHeroPeriod,
   OTHER_LABEL,
   UNASSIGNED_LABEL,
   type AppInvoiceInput,
@@ -169,5 +170,51 @@ describe("buildAnnualRevenueSummary", () => {
       "Interventie / ontstopping (dagtarief)",
     );
     expect(categorizeLineLabel("")).toBe(UNASSIGNED_LABEL);
+  });
+
+  it("resolves month and year periods dynamically around month/year boundaries and syncs KPI + slices", () => {
+    const nov = resolveHeroPeriod("month", "2026-11-23");
+    expect(nov.title).toBe("Omzet deze maand");
+    expect(nov.from).toBe("2026-11-01");
+    expect(nov.to).toBe("2026-11-23");
+    expect(nov.shortPeriodLabel).toBe("november 2026");
+
+    const jan1 = resolveHeroPeriod("month", "2027-01-01");
+    expect(jan1.from).toBe("2027-01-01");
+    expect(jan1.to).toBe("2027-01-01");
+    expect(jan1.shortPeriodLabel).toBe("januari 2027");
+
+    const ytd = resolveHeroPeriod("year", "2026-11-23", 2026);
+    expect(ytd.title).toBe("Omzet dit jaar");
+    expect(ytd.from).toBe("2026-01-01");
+    expect(ytd.to).toBe("2026-11-23");
+
+    // Empty month returns 0 and no slices without errors
+    const emptyMonth = buildAnnualRevenueSummary({
+      year: nov.year,
+      from: nov.from,
+      to: nov.to,
+      sourceFilter: "all",
+      metric: "revenue",
+      appInvoices: appSample,
+      simplaInvoices: simplaSample,
+    });
+    expect(emptyMonth.totalExVat).toBe(0);
+    expect(emptyMonth.slices).toEqual([]);
+    expect(emptyMonth.simplaIncomplete).toBe(true);
+
+    // June month includes only June invoice (a1 = 300), excludes July credit note (a2) and Feb Simpla (s2)
+    const june = resolveHeroPeriod("month", "2026-06-30");
+    const juneRes = buildAnnualRevenueSummary({
+      year: june.year,
+      from: june.from,
+      to: june.to,
+      sourceFilter: "all",
+      metric: "revenue",
+      appInvoices: appSample,
+      simplaInvoices: simplaSample,
+    });
+    expect(juneRes.totalExVat).toBe(300);
+    expect(juneRes.slices.reduce((s, x) => s + x.amountExVat, 0)).toBe(300);
   });
 });

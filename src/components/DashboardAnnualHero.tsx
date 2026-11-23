@@ -7,8 +7,10 @@ import { fetchAll } from "@/lib/fetch-all";
 import { euro } from "@/lib/billing";
 import {
   buildAnnualRevenueSummary,
+  resolveHeroPeriod,
   type AppInvoiceInput,
   type BreakdownMetric,
+  type HeroPeriodMode,
   type RevenueSourceFilter,
   type SimplaInvoiceInput,
 } from "@/lib/dashboard-annual";
@@ -29,16 +31,22 @@ const fmtDateBE = (iso: string) => iso.split("-").reverse().join("/");
 
 export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
   const currentYear = Number(currentDay.slice(0, 4)) || 2026;
+  const [periodMode, setPeriodMode] = useState<HeroPeriodMode>("month");
   const [year, setYear] = useState<number>(currentYear);
   const [sourceFilter, setSourceFilter] = useState<RevenueSourceFilter>("all");
   const [metric, setMetric] = useState<BreakdownMetric>("revenue");
 
   const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
-  const yearFrom = `${year}-01-01`;
-  const yearTo = `${year}-12-31`;
+  const period = useMemo(
+    () => resolveHeroPeriod(periodMode, currentDay, year),
+    [periodMode, currentDay, year],
+  );
+  const queryYear = period.year;
+  const yearFrom = `${queryYear}-01-01`;
+  const yearTo = `${queryYear}-12-31`;
 
   const { data, isFetching, error } = useQuery({
-    queryKey: ["dashboard-annual-hero", year],
+    queryKey: ["dashboard-annual-hero", queryYear],
     queryFn: async () => {
       const [appInvoices, simplaRaw] = await Promise.all([
         fetchAll((a, b) =>
@@ -88,14 +96,16 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
   const summary = useMemo(
     () =>
       buildAnnualRevenueSummary({
-        year,
+        year: period.year,
+        from: period.from,
+        to: period.to,
         sourceFilter,
         metric,
         appInvoices: data?.appInvoices ?? [],
         simplaInvoices: data?.simplaInvoices ?? [],
         todayIso: currentDay,
       }),
-    [year, sourceFilter, metric, data, currentDay],
+    [period.year, period.from, period.to, sourceFilter, metric, data, currentDay],
   );
 
   const chartSlices = useMemo(
@@ -110,11 +120,6 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
     [summary.slices, metric],
   );
 
-  const periodLabel =
-    year === currentYear
-      ? `01/01/${year} – ${fmtDateBE(currentDay)}`
-      : `01/01/${year} – 31/12/${year}`;
-
   const sourceLabel =
     sourceFilter === "all"
       ? "Werkbonnenriory + Simpla"
@@ -123,31 +128,47 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
         : "Alleen Simpla (geïmporteerd)";
 
   return (
-    <section aria-label="Jaaromzet en topproducten" className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-      {/* Links (desktop) / Bovenaan (mobiel): Jaaromzet KPI */}
+    <section aria-label="Omzetoverzicht en topproducten" className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      {/* Links (desktop) / Bovenaan (mobiel): Omzet KPI */}
       <div className="flex flex-col justify-between rounded-xl border border-border/90 border-l-4 border-l-primary bg-card p-5 shadow-xs lg:col-span-5">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Jaaromzet (excl. btw)
+                {period.title} (excl. btw)
               </p>
               <p className="text-xs text-muted-foreground">
-                {periodLabel} · {sourceLabel}
+                {period.periodLabel} · {sourceLabel}
               </p>
             </div>
-            <select
-              aria-label="Omzetjaar"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-semibold text-foreground"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <ToggleGroup
+                type="single"
+                value={periodMode}
+                aria-label="Periode omzetoverzicht"
+                className="rounded-lg border bg-muted/40 p-0.5"
+                onValueChange={(v) => {
+                  if (v === "month" || v === "year") setPeriodMode(v);
+                }}
+              >
+                <ToggleGroupItem value="month" className="h-7 px-2.5 text-xs font-semibold">Deze maand</ToggleGroupItem>
+                <ToggleGroupItem value="year" className="h-7 px-2.5 text-xs font-semibold">Dit jaar</ToggleGroupItem>
+              </ToggleGroup>
+              {periodMode === "year" && (
+                <select
+                  aria-label="Omzetjaar"
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs font-semibold text-foreground"
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           <div>
@@ -190,7 +211,7 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
               <span>
                 <strong className="text-foreground">Simpla data niet volledig:</strong>{" "}
                 {summary.simplaDocCount === 0
-                  ? `geen geïmporteerde Simpla-verkoopfacturen voor ${year}.`
+                  ? `geen geïmporteerde Simpla-verkoopfacturen voor ${period.shortPeriodLabel}.`
                   : `geïmporteerd van ${fmtDateBE(summary.simplaMinDate!)} t/m ${fmtDateBE(summary.simplaMaxDate!)}.`}
               </span>
             </p>
@@ -204,7 +225,7 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
           <div>
             <h2 className="text-sm font-bold text-foreground">Meest verkochte producten en activiteiten</h2>
             <p className="text-xs text-muted-foreground">
-              {metric === "revenue" ? "Gebaseerd op gefactureerde omzet excl. btw" : "Gebaseerd op gefactureerd aantal"} · {year}
+              {metric === "revenue" ? "Gebaseerd op gefactureerde omzet excl. btw" : "Gebaseerd op gefactureerd aantal"} · {period.shortPeriodLabel}
             </p>
           </div>
           <ToggleGroup
@@ -223,7 +244,7 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
 
         {chartSlices.length === 0 ? (
           <div className="flex flex-1 items-center justify-center py-10 text-xs text-muted-foreground">
-            {isFetching ? "Gegevens laden…" : `Geen gefactureerde regels gevonden voor ${year}.`}
+            {isFetching ? "Gegevens laden…" : `Geen gefactureerde regels gevonden voor ${period.shortPeriodLabel}.`}
           </div>
         ) : (
           <div className="grid flex-1 grid-cols-1 items-center gap-4 sm:grid-cols-12">

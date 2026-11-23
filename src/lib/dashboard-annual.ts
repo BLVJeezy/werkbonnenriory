@@ -2,6 +2,74 @@ import { invoiceIdentity } from "./product-sales";
 
 export type RevenueSourceFilter = "all" | "werkbonnen" | "simpla";
 export type BreakdownMetric = "revenue" | "count";
+export type HeroPeriodMode = "month" | "year";
+
+const DUTCH_MONTHS = [
+  "januari",
+  "februari",
+  "maart",
+  "april",
+  "mei",
+  "juni",
+  "juli",
+  "augustus",
+  "september",
+  "oktober",
+  "november",
+  "december",
+] as const;
+
+export type HeroPeriodRange = {
+  mode: HeroPeriodMode;
+  year: number;
+  from: string;
+  to: string;
+  title: string;
+  periodLabel: string;
+  shortPeriodLabel: string;
+};
+
+const fmtBE = (iso: string) => iso.split("-").reverse().join("/");
+
+/** Pure: resolves exact Brussels calendar month or YTD/full-year bounds from `currentDay` (YYYY-MM-DD). */
+export function resolveHeroPeriod(
+  mode: HeroPeriodMode,
+  currentDay: string,
+  selectedYear?: number,
+): HeroPeriodRange {
+  const currentYear = Number(currentDay.slice(0, 4)) || 2026;
+  const currentMonth = Number(currentDay.slice(5, 7)) || 1;
+
+  if (mode === "month") {
+    const mm = String(currentMonth).padStart(2, "0");
+    const from = `${currentYear}-${mm}-01`;
+    const to = currentDay;
+    const monthName = DUTCH_MONTHS[currentMonth - 1] ?? "";
+    const monthYear = `${monthName} ${currentYear}`;
+    return {
+      mode: "month",
+      year: currentYear,
+      from,
+      to,
+      title: "Omzet deze maand",
+      periodLabel: `${monthYear} (${fmtBE(from)} – ${fmtBE(to)})`,
+      shortPeriodLabel: monthYear,
+    };
+  }
+
+  const year = selectedYear ?? currentYear;
+  const from = `${year}-01-01`;
+  const to = year === currentYear ? currentDay : `${year}-12-31`;
+  return {
+    mode: "year",
+    year,
+    from,
+    to,
+    title: year === currentYear ? "Omzet dit jaar" : `Jaaromzet ${year}`,
+    periodLabel: `${fmtBE(from)} – ${fmtBE(to)}`,
+    shortPeriodLabel: year === currentYear ? `${year} (t/m ${fmtBE(to)})` : String(year),
+  };
+}
 
 export type AppInvoiceInput = {
   id: string;
@@ -119,6 +187,8 @@ type AggBucket = { label: string; amountExVat: number; quantity: number };
 
 export function buildAnnualRevenueSummary(params: {
   year: number;
+  from?: string;
+  to?: string;
   sourceFilter: RevenueSourceFilter;
   metric: BreakdownMetric;
   appInvoices: AppInvoiceInput[];
@@ -127,7 +197,9 @@ export function buildAnnualRevenueSummary(params: {
   todayIso?: string;
 }): AnnualRevenueSummary {
   const { year, sourceFilter, metric, appInvoices, simplaInvoices, maxCategories = 6 } = params;
-  const yearPrefix = `${year}-`;
+  const from = params.from ?? `${year}-01-01`;
+  const to = params.to ?? `${year}-12-31`;
+  const inRange = (d: string | null | undefined) => !!d && d >= from && d <= to;
   const seenNumbers = new Set<string>();
 
   let werkbonnenExVat = 0;
@@ -164,7 +236,7 @@ export function buildAnnualRevenueSummary(params: {
 
   // 1. Werkbonnenriory invoices (always scanned first so deduplication favors app snapshots)
   for (const doc of appInvoices) {
-    if (!doc.issue_date?.startsWith(yearPrefix) || isExcludedStatus(doc.status)) continue;
+    if (!inRange(doc.issue_date) || isExcludedStatus(doc.status)) continue;
     const idKey = invoiceIdentity(doc.number || doc.id);
     if (seenNumbers.has(idKey)) continue;
     seenNumbers.add(idKey);
@@ -201,7 +273,7 @@ export function buildAnnualRevenueSummary(params: {
   // 2. Imported Simpla sales invoices from fin_invoices (source = 'simpla')
   for (const doc of simplaInvoices) {
     if (doc.source !== "simpla") continue;
-    if (!doc.invoice_date?.startsWith(yearPrefix) || isExcludedStatus(doc.status)) continue;
+    if (!inRange(doc.invoice_date) || isExcludedStatus(doc.status)) continue;
     const idKey = invoiceIdentity(doc.number || doc.id);
     if (seenNumbers.has(idKey)) {
       deduplicatedCount += 1;
@@ -283,7 +355,7 @@ export function buildAnnualRevenueSummary(params: {
 
   const simplaIncomplete =
     sourceFilter !== "werkbonnen" &&
-    (simplaDocCount === 0 || !simplaMaxDate || simplaMaxDate < `${year}-12-31`);
+    (simplaDocCount === 0 || !simplaMaxDate || simplaMaxDate < to);
 
   return {
     year,
