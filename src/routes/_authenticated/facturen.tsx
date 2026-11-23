@@ -360,7 +360,8 @@ function Facturen() {
               <Th className="w-8" />
               <SortTh k="nr" sort={invSort}>Nr.</SortTh>
               <SortTh k="klant" sort={invSort}>Klant</SortTh>
-              <SortTh k="datum" sort={invSort} className="hidden lg:table-cell">Datum</SortTh>
+              <SortTh k="datum" sort={invSort}>Factuurdatum</SortTh>
+              <SortTh k="werkbon" sort={invSort} className="hidden lg:table-cell">Werkbon</SortTh>
               <SortTh k="bedrag" sort={invSort} right>Bedrag</SortTh>
               <SortTh k="status" sort={invSort}>Status</SortTh>
               <Th right>Acties</Th>
@@ -377,7 +378,8 @@ function Facturen() {
                       <td><input type="checkbox" aria-label={`Selecteer factuur ${i.number}`} disabled={i.status === "verzonden"} className="h-5 w-5 accent-primary" checked={selInv.includes(i.id)} onChange={() => toggle(selInv, setSelInv, i.id)} /></td>
                       <td className="whitespace-nowrap font-mono font-bold"><span className="inline-flex items-center gap-1.5">{i.number}{i.pdf_sent_at && <OpenEye info={data.opens?.[i.id]} />}</span>{i.kind === "creditnota" && <div className="w-fit rounded bg-destructive px-1.5 py-0.5 font-sans text-[10px] font-bold text-destructive-foreground">Creditnota</div>}</td>
                       <td><div className="max-w-[180px] truncate">{(i.customer as { name?: string }).name}</div>{i.contract_reference && <div className="max-w-[180px] truncate text-xs text-muted-foreground" title={i.contract_reference}>{i.contract_reference}</div>}</td>
-                      <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{new Date(i.created_at).toLocaleDateString("nl-BE")}</td>
+                      <td className="whitespace-nowrap text-muted-foreground">{new Date(i.issue_date ?? i.created_at).toLocaleDateString("nl-BE")}</td>
+                      <td className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{(() => { const wd = woDateOf(i); return wd ? new Date(wd).toLocaleDateString("nl-BE") : "—"; })()}</td>
                       <td className={`whitespace-nowrap text-right font-mono ${i.kind === "creditnota" ? "font-bold text-destructive" : ""}`}>
                         {euro(i.kind === "creditnota" ? -Math.abs(Number(i.total)) : Number(i.total))}
                         {i.kind !== "creditnota" && Number(i.paid_amount) > 0.005 && open && (
