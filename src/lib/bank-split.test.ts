@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bankSplitSummary } from './bank-split';
+import { bankSplitSummary, docExpectsOutgoing, docOpenAmount } from './bank-split';
 describe('betaling verdelen', () => {
   it('verdeelt Lovable 75,91 over Lovable 75 en BNP 0,91', () => {
     expect(bankSplitSummary(-75.91, [75, 0.91])).toEqual({ sum: 75.91, difference: 0, valid: true });
@@ -18,5 +18,13 @@ describe('betaling verdelen', () => {
   });
   it('weigert nulbedragen', () => {
     expect(bankSplitSummary(-75.91, [75.91, 0]).valid).toBe(false);
+  });
+  it('koppelt verkoopcreditnota aan uitgaande terugstorting en berekent openstaand restbedrag', () => {
+    expect(docExpectsOutgoing({ doc_type: 'creditnota', direction: 'verkoop' })).toBe(true);
+    expect(docExpectsOutgoing({ doc_type: 'creditnota', direction: 'aankoop' })).toBe(false);
+    expect(docExpectsOutgoing({ doc_type: 'factuur', direction: 'aankoop' })).toBe(true);
+    expect(docExpectsOutgoing({ doc_type: 'factuur', direction: 'verkoop' })).toBe(false);
+    expect(docOpenAmount({ paid_amount: 351.41 }, -425.21)).toBe(73.8);
+    expect(docOpenAmount({ paid_amount: 425.21 }, -425.21)).toBe(0);
   });
 });

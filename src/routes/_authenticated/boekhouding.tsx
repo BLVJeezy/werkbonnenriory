@@ -18,7 +18,7 @@ import { manualBankPreview } from "@/lib/manual-bank-invoice";
 import { purchaseBankChoices } from "@/lib/bank-purchase-choice";
 import { isInvoiceReconciled } from "@/lib/bank-reconciliation-status";
 import { Badge } from "@/components/ui/badge";
-import { bankSplitSummary } from "@/lib/bank-split";
+import { bankSplitSummary, docExpectsOutgoing, docOpenAmount } from "@/lib/bank-split";
 import { partialInvoiceCandidates } from "@/lib/bank-partial";
 import { learnedAccount, type BankHistory } from "@/lib/bank-learned-account";
 import { PontoConnection } from "@/components/PontoConnection";
@@ -662,7 +662,7 @@ function Bank({ c }: { c: string }) {
     }
     if (grossOf(t) == null && list.every((i) => i.status !== 'betaald')) {
       let available = Math.abs(Number(t.amount));
-      const allocations = [...list].sort((a, b) => String(a.id).localeCompare(String(b.id))).map((i) => { const amount = r2(Math.min(available, remaining(i))); available = r2(available - amount); return { type: 'finance', id: i.id, amount }; }).filter((a) => a.amount > 0);
+      const allocations = [...list].sort((a, b) => String(a.id).localeCompare(String(b.id))).map((i) => { const amount = r2(Math.min(available, Math.abs(remaining(i)))); available = r2(available - amount); return { type: 'finance', id: i.id, amount }; }).filter((a) => a.amount > 0);
       const { data, error } = await db.rpc('fin_split_bank_payment', { _transaction: t.id, _allocations: allocations });
       if (error) throw new Error(error.message);
       return data;
@@ -873,7 +873,7 @@ function Bank({ c }: { c: string }) {
   const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({});
   const splitInvoices = invoiceChoices.filter((i) => splitAmounts[i.id] !== undefined);
   const splitSummary = bankSplitSummary(Number(manualTx?.amount ?? 0), splitInvoices.map((i) => parseAmount(splitAmounts[i.id]) ?? NaN));
-  const splitError = splitInvoices.some((i) => (Number(manualTx?.amount) < 0) !== (i.direction === 'aankoop') || (i.purchase_id && !['goedgekeurd','betaling_klaargezet'].includes(i.status)) || (parseAmount(splitAmounts[i.id]) ?? 0) > Math.max(0, total(i) - Number(i.paid_amount ?? 0)));
+  const splitError = splitInvoices.some((i) => (Number(manualTx?.amount) < 0) !== docExpectsOutgoing(i) || (i.purchase_id && !['goedgekeurd','betaling_klaargezet'].includes(i.status)) || (parseAmount(splitAmounts[i.id]) ?? 0) > docOpenAmount(i, total(i)) + 0.005);
   const cardGrossManual = manualTx ? grossOf(manualTx) : null;
   const cardSplitOk = cardGrossManual != null && splitInvoices.length > 1 && Math.abs(splitInvoices.reduce((s2, i) => s2 + (i.status === 'betaald' ? total(i) : total(i) - Number(i.paid_amount ?? 0)), 0) - cardGrossManual) < 0.025;
   const linkSplit = async () => {
@@ -949,10 +949,10 @@ function Bank({ c }: { c: string }) {
           <DialogHeader><DialogTitle>Bankverrichting aan factuur koppelen</DialogTitle><DialogDescription>{manualTx ? `${manualTx.tx_date} · ${manualTx.counterparty ?? ''} · ${eur(Number(manualTx.amount))}` : ''}</DialogDescription></DialogHeader>
           <Input aria-label="Zoek te koppelen factuur" placeholder="Zoek op factuurnummer, klant of leverancier…" value={invoiceSearch} onChange={(e) => setInvoiceSearch(e.target.value)} />
           <div className="max-h-72 space-y-1 overflow-y-auto">
-            {invoiceChoices.filter((i) => i.doc_type === 'factuur' && `${i.number ?? ''} ${i.counterparty ?? ''}`.toLowerCase().includes(invoiceSearch.trim().toLowerCase())).sort((a, b) => String(b.invoice_date).localeCompare(String(a.invoice_date))).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
-              <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) { const available = Math.max(0, r2(Math.abs(Number(manualTx?.amount ?? 0)) - Object.values(current).reduce((sum, value) => sum + (parseAmount(value) ?? 0), 0))); next[i.id] = String(Math.min(available, Math.max(0, r2(total(i) - Number(i.paid_amount ?? 0))))); } else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
-              <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
-              <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))} · nog open {eur(Math.max(0, r2(total(i) - Number(i.paid_amount ?? 0))))}</span></span>
+            {invoiceChoices.filter((i) => (i.doc_type === 'factuur' || i.doc_type === 'creditnota') && `${i.number ?? ''} ${i.counterparty ?? ''}`.toLowerCase().includes(invoiceSearch.trim().toLowerCase())).sort((a, b) => String(b.invoice_date).localeCompare(String(a.invoice_date))).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
+              <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) { const available = Math.max(0, r2(Math.abs(Number(manualTx?.amount ?? 0)) - Object.values(current).reduce((sum, value) => sum + (parseAmount(value) ?? 0), 0))); next[i.id] = String(Math.min(available, docOpenAmount(i, total(i)))); } else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
+              <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction}{i.doc_type === 'creditnota' ? ' · creditnota' : ''} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
+              <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))} · nog open {eur(docOpenAmount(i, total(i)))}</span></span>
             </label>)}
           </div>
           {splitInvoices.length >= 1 && manualPreview?.mode !== 'refund' && <div className="space-y-2 border-t border-border pt-3">
@@ -988,7 +988,7 @@ function Bank({ c }: { c: string }) {
           const s = tx.filter((t) => sel.has(t.id) && !t.entry_id);
           const somTx = r2(s.reduce((a, t) => a + Number(t.amount), 0));
           const gekozen = invHits.filter((i: any) => selInv.has(i.id));
-          const somInv = r2(gekozen.reduce((a: number, i: any) => a + (i.direction === "aankoop" ? -1 : 1) * total(i), 0));
+          const somInv = r2(gekozen.reduce((a: number, i: any) => a + (i.direction === "aankoop" ? -1 : 1) * remaining(i), 0));
           const verschil = r2(somTx - somInv);
           return (
             <div className="mb-2 rounded border border-border p-2 text-sm">
@@ -1038,7 +1038,7 @@ function Bank({ c }: { c: string }) {
         <div className="max-h-[60dvh] space-y-2 overflow-y-auto">
           {vis.map((t) => {
             const amt = Number(t.amount);
-            const cands = ownTransfer(t) ? [] : open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025);
+            const cands = ownTransfer(t) ? [] : open.filter((i: any) => (amt < 0) === docExpectsOutgoing(i) && Math.abs(Math.abs(remaining(i)) - effAmt(t)) < 0.025);
             return (
               <div key={t.id} className="rounded border border-border p-2 text-sm">
                 <div className="flex justify-between gap-2"><label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={sel.has(t.id)} onChange={() => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n; })} /><span>{t.tx_date} · {t.counterparty}{t.counterparty_account ? <span className="text-xs text-muted-foreground"> · {t.counterparty_account}</span> : null} {t.bank_account ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.bank_account}</span> : null} <span className="text-xs text-muted-foreground">{t.description}</span></span></label><span className={amt < 0 ? "text-destructive" : ""}>{eur(amt)}</span></div>
