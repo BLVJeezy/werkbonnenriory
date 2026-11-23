@@ -53,12 +53,16 @@ function Page() {
   const limited = t?.product_scope === "gekozen";
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-black uppercase">Producten per ploeg</h1>
-      <p className="text-sm text-muted-foreground">Bepaal welke producten een ploeg op een werkbon mag zien en kiezen. Dit is geen voorraad: er worden geen aantallen bijgehouden of afgeboekt. Beheerders zien altijd alle producten; producten "enkel admin" zijn nooit zichtbaar voor ploegen.</p>
-      <SearchableSelect className="h-10 w-full rounded-md border bg-background px-2 sm:w-72" value={techId} onChange={(e) => setTech(e.target.value)}>
+    <div className="space-y-5">
+      <div className="space-y-1 border-b border-border/80 pb-4">
+        <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-[1.75rem]">Producten per ploeg</h1>
+        <p className="text-sm text-muted-foreground">Bepaal welke producten een ploeg op een werkbon mag zien en kiezen. Dit is geen voorraad: er worden geen aantallen bijgehouden of afgeboekt. Beheerders zien altijd alle producten; producten "enkel admin" zijn nooit zichtbaar voor ploegen.</p>
+      </div>
+      <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+      <SearchableSelect className="h-10 w-full rounded-md border border-input bg-card px-2.5 sm:w-72" value={techId} onChange={(e) => setTech(e.target.value)}>
         {(techs.data ?? []).map((x) => <option key={x.id} value={x.id}>{x.name}{x.product_scope === "gekozen" ? " (gekozen producten)" : ""}</option>)}
       </SearchableSelect>
+      </div>
       {t && (
         <div className="space-y-2 rounded-md border bg-card p-3">
           <label className="flex items-start gap-2"><input type="radio" className="mt-1" checked={!limited} disabled={busy} onChange={() => setScope("alle")} /><span><b>Alle ploegproducten</b> — standaard voor een ploeg die nog niet ingesteld is (alle producten behalve "enkel admin").</span></label>

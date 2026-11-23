@@ -78,14 +78,20 @@ function Boekhouding() {
   if (!user) return <p className="text-sm text-destructive">Alleen voor beheerder.</p>;
   return (
     <div className="min-w-0 bg-background text-foreground">
-      <div className="mx-auto max-w-6xl space-y-4">
-        <div className="flex flex-wrap items-center gap-2 print:hidden">
-          <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }}><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Finance</Button></Link>
-          <h1 className="text-xl font-bold">Boekhouding</h1>
-          <span className="text-sm text-muted-foreground">Riory BV</span>
-          <Link to="/finance" search={{ tab: "koppelingen", id: undefined, maand: undefined }}><Button variant="outline" size="sm">Koppelingen</Button></Link>
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 border-b border-border/80 pb-4 sm:flex-row sm:items-end sm:justify-between print:hidden">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-[1.75rem]">Boekhouding</h1>
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">Riory BV</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Opvolgboekhouding: houdt je cijfers bij en is exporteerbaar voor je boekhouder. De officiële boekhouding en btw-aangifte blijven bij je boekhouder.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/finance" search={{ tab: "overzicht", id: undefined, maand: undefined }}><Button variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" />Finance</Button></Link>
+            <Link to="/finance" search={{ tab: "koppelingen", id: undefined, maand: undefined }}><Button variant="outline" size="sm">Koppelingen</Button></Link>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground print:hidden">Opvolgboekhouding: houdt je cijfers bij en is exporteerbaar voor je boekhouder. De officiële boekhouding en btw-aangifte blijven bij je boekhouder.</p>
         <div className="flex gap-1 overflow-x-auto pb-1 print:hidden">
           {TABS.map(([k, l]) => <Button key={k} size="sm" variant={search.tab === k ? "default" : "outline"} onClick={() => nav({ to: "/boekhouding", search: { tab: k } })}>{l}</Button>)}
         </div>

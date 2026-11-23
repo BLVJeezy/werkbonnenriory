@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { euro } from "@/lib/billing";
 import { PriceListActions } from "@/components/PriceListActions";
 import { ProductPhotoEditor, ProductPhotoGallery } from "@/components/ProductPhotos";
+import { PageHeader } from "@/components/PageHeader";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/producten")({
   head: () => ({ meta: [{ title: "Producten — Riory Werkbonnen" }, { name: "description", content: "Beheer de producten en materialen voor Riory-werkbonnen." }, { property: "og:title", content: "Producten — Riory Werkbonnen" }, { property: "og:description", content: "Beheer de producten en materialen voor Riory-werkbonnen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -55,23 +57,41 @@ function Producten() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-black uppercase">Producten</h1>
-      <PriceListActions />
-      <form onSubmit={add} className="flex flex-wrap gap-2 rounded-md border bg-card p-4">
-        <Input placeholder="Productnaam" required value={name} onChange={(e) => setName(e.target.value)} className="min-w-48 flex-1" />
-        <Input placeholder="Alias voor ploegen (bv. 'grijze buis')" value={alias} onChange={(e) => setAlias(e.target.value)} className="min-w-48 flex-1" />
-        <Input placeholder="Eenheid" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-24" />
-        <Input placeholder="Prijs € excl. btw" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="w-36" />
+    <div className="space-y-5">
+      <PageHeader
+        title="Producten"
+        subtitle="Beheer materialen, prijzen, aliassen voor ploegen en productfoto’s."
+        badge={<Badge variant="secondary" className="font-mono">{visible.length} / {data.length}</Badge>}
+        actions={<PriceListActions />}
+      />
+
+      <form onSubmit={add} className="space-y-3 rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+        <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
+          <h2 className="text-sm font-bold text-foreground">Nieuw product toevoegen</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_110px_150px]">
+          <Input placeholder="Productnaam" required value={name} onChange={(e) => setName(e.target.value)} />
+          <Input placeholder="Alias voor ploegen (bv. 'grijze buis')" value={alias} onChange={(e) => setAlias(e.target.value)} />
+          <Input placeholder="Eenheid" value={unit} onChange={(e) => setUnit(e.target.value)} />
+          <Input placeholder="Prijs € excl. btw" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} />
+        </div>
         <Textarea placeholder="Lange omschrijving (optioneel)" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-20 w-full" />
-        <ProductPhotoEditor value={photoPaths} onChange={setPhotoPaths} title="nieuw product" />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" className="h-5 w-5 accent-primary" checked={adminOnly} onChange={(e) => setAdminOnly(e.target.checked)} />
-          Enkel voor beheerder
-        </label>
-        <Button>Toevoegen</Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-4">
+            <ProductPhotoEditor value={photoPaths} onChange={setPhotoPaths} title="nieuw product" />
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" className="h-4 w-4 accent-primary" checked={adminOnly} onChange={(e) => setAdminOnly(e.target.checked)} />
+              Enkel voor beheerder
+            </label>
+          </div>
+          <Button>Product toevoegen</Button>
+        </div>
       </form>
-      <Input type="search" aria-label="Producten zoeken" placeholder="Zoek product of alias…" value={q} onChange={(e) => setQ(e.target.value)} />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/90 bg-card p-3.5 shadow-xs">
+        <Input type="search" aria-label="Producten zoeken" placeholder="Zoek op productnaam, alias of omschrijving…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-md" />
+        <span className="text-xs text-muted-foreground">{visible.length} resultaten</span>
+      </div>
       <div className={tableWrap}>
         <table className={tableCls}>
           <thead><tr>

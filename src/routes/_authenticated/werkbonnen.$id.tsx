@@ -199,30 +199,33 @@ function Detail() {
   }
 
   return (
-    <div className="space-y-6">
-      <Link to="/kalender" className="no-print text-sm text-muted-foreground underline">
-        {isAdmin ? "← Kalender" : "← Kalender"}
-      </Link>
+    <div className="space-y-5">
       {isUrgentOpen(wo) && (
-        <div className={`no-print rounded-md bg-destructive p-4 text-destructive-foreground ${URGENT_RING}`}>
-          <p className="animate-pulse text-xl font-black uppercase">⚠ Dringend — vandaag helpen</p>
+        <div className={`no-print rounded-xl bg-destructive p-4 text-destructive-foreground shadow-sm ${URGENT_RING}`}>
+          <p className="animate-pulse text-lg font-black uppercase">⚠ Dringend — vandaag helpen</p>
           <p className="text-sm">Deze opdracht werd als dringend aangeduid. Behandel ze met voorrang.</p>
         </div>
       )}
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-3xl font-black uppercase">{kind} {werkbonNr(wo.number)}</h1>
-        <span className="rounded bg-accent px-2 py-0.5 text-sm font-bold capitalize text-accent-foreground">{wo.status}</span>
-        {wo.first_customer && <FirstCustomerLabel />}
-        {!locked && wo.reopened_at && <span className="rounded bg-destructive px-2 py-0.5 text-sm font-bold text-destructive-foreground">Heropend — opnieuw laten aftekenen</span>}
-        <div className="no-print ml-auto flex flex-wrap gap-2">
-          {(role === 'admin' || role === 'technician') && wo.status === 'afgetekend' && <WorkOrderPreview workOrderId={id} />}
-          <Button variant="outline" onClick={() => window.print()}>Afdrukken</Button>
-          {isAdmin && locked && <DocumentReport id={id} type="werkbon" />}
-          {locked && wo.email && (
-            <Button variant="outline" onClick={mailNaarKlant}>Mail naar klant</Button>
-          )}
-          {isAdmin && locked && <ReassignCustomer wo={{ ...wo, vat_rate: Number(wo.vat_rate) }} onDone={() => { refresh(); qc.invalidateQueries({ queryKey: ["work_orders"] }); }} />}
-          {isAdmin && locked && (
+      <div className="space-y-3 rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
+        <div className="no-print">
+          <Link to="/kalender" className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+            {isAdmin ? "← Terug naar kalender" : "← Terug naar kalender"}
+          </Link>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">{kind} {werkbonNr(wo.number)}</h1>
+          <span className="rounded-md bg-accent px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-accent-foreground">{wo.status}</span>
+          {wo.first_customer && <FirstCustomerLabel />}
+          {!locked && wo.reopened_at && <span className="rounded-md bg-destructive px-2.5 py-0.5 text-xs font-bold text-destructive-foreground">Heropend — opnieuw laten aftekenen</span>}
+          <div className="no-print ml-auto flex flex-wrap gap-2">
+            {(role === 'admin' || role === 'technician') && wo.status === 'afgetekend' && <WorkOrderPreview workOrderId={id} />}
+            <Button variant="outline" size="sm" onClick={() => window.print()}>Afdrukken</Button>
+            {isAdmin && locked && <DocumentReport id={id} type="werkbon" />}
+            {locked && wo.email && (
+              <Button variant="outline" size="sm" onClick={mailNaarKlant}>Mail naar klant</Button>
+            )}
+            {isAdmin && locked && <ReassignCustomer wo={{ ...wo, vat_rate: Number(wo.vat_rate) }} onDone={() => { refresh(); qc.invalidateQueries({ queryKey: ["work_orders"] }); }} />}
+            {isAdmin && locked && (
             <Button variant="outline" onClick={() => confirm("Je kunt deze werkbon als admin gewoon aanpassen zonder heropenen.\n\nToch heropenen? Dan wordt de handtekening definitief gewist en moet de klant opnieuw aftekenen.") && update({ status: wo.technician_id ? "toegewezen" : "nieuw", signature: null, signed_name: null, signed_at: null })}>
               Heropenen (wist handtekening)
             </Button>
@@ -282,6 +285,7 @@ function Detail() {
               Verwijderen
             </Button>
           )}
+          </div>
         </div>
       </div>
 

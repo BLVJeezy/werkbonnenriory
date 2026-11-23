@@ -47,8 +47,8 @@ function InterventionPage() {
   function change(key: keyof MapFilters,value: string) { setFilters(f => ({ ...f, [key]: value })); setPage(0); }
   if (!role) return <p>Laden…</p>;
   if (!allowed) return <p role="alert">Alleen beheerders hebben toegang tot de interventiekaart.</p>;
-  return <div className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black uppercase sm:text-3xl">Interventiekaart</h1><p className="text-sm text-muted-foreground">{rows.length} uitgevoerde werkbonnen · {simplaRows.filter(r => r.source === 'simpla').length} Simpla-adressen · {simplaRows.filter(r => r.source === 'project').length} projectadressen · {allGroups.length} locaties</p></div><Button variant="outline" disabled={query.isFetching || simpla.isFetching} onClick={async () => {
+  return <div className="space-y-5">
+    <div className="flex flex-col gap-3 border-b border-border/80 pb-4 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0 space-y-1"><h1 className="text-2xl font-black tracking-tight text-foreground sm:text-[1.75rem]">Interventiekaart</h1><p className="text-sm text-muted-foreground">{rows.length} uitgevoerde werkbonnen · {simplaRows.filter(r => r.source === 'simpla').length} Simpla-adressen · {simplaRows.filter(r => r.source === 'project').length} projectadressen · {allGroups.length} locaties</p></div><Button variant="outline" disabled={query.isFetching || simpla.isFetching} onClick={async () => {
       await Promise.all([query.refetch(), fetchSimpla({ data: { refresh: true } }).then(result => simplaClient.setQueryData(['intervention-map', 'simpla'], result)).catch(() => simpla.refetch())]);
     }}><RefreshCw className={query.isFetching || simpla.isFetching ? 'animate-spin' : ''} size={16} />Vernieuwen</Button></div>
     {query.error && <p role="alert" className="border-l-4 border-destructive bg-muted p-3">{query.error instanceof Error ? query.error.message : 'Werkbonnen laden mislukt.'}</p>}

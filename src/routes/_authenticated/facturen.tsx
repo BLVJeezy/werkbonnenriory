@@ -23,6 +23,8 @@ import { PaymentReminders } from "@/components/PaymentReminders";
 import { NewInvoice } from "@/components/NewInvoice";
 import { DocumentReport } from '@/components/DocumentReport';
 import { InvoiceMailboxConnect } from '@/components/MailboxConnect';
+import { PageHeader } from "@/components/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { sendWerkbonEmail } from '@/lib/werkbon-mail.functions';
 import { InvoicePaymentDetails } from '@/components/InvoicePaymentDetails';
@@ -254,17 +256,24 @@ function Facturen() {
   const today = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD, lokale tijd
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-black uppercase">Facturen</h1>
-      <div className="space-y-2">
-        <h2 className="text-sm font-bold">Afzender facturen en creditnota’s: boekhouding@riory.be</h2>
-        <InvoiceMailboxConnect />
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Facturen"
+        subtitle="Verkoopfacturen, creditnota’s, Peppol-verzending en boekhouderexport vanuit boekhouding@riory.be."
+      />
+      <details className="rounded-xl border border-border/90 bg-card px-4 py-3 shadow-xs">
+        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+          Afzender facturen en creditnota’s: boekhouding@riory.be
+        </summary>
+        <div className="pt-3">
+          <InvoiceMailboxConnect />
+        </div>
+      </details>
 
-      <section className="space-y-3 rounded-md border bg-card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-lg font-black uppercase">Te factureren</h2>
-          <span className="text-sm text-muted-foreground">({data.todo.length} afgetekende werkbonnen)</span>
+      <section className="space-y-3 rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-3">
+          <h2 className="text-base font-bold text-foreground">Te factureren</h2>
+          <Badge variant="secondary" className="font-mono">{data.todo.length} afgetekend</Badge>
           <div className="ml-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" disabled={busy} onClick={() => setSelWo(selWo.length === data.todo.length ? [] : data.todo.map((w) => w.id))}>
               {selWo.length === data.todo.length && selWo.length ? "Niets selecteren" : "Alles selecteren"}

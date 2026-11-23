@@ -51,10 +51,16 @@ function Newsletters() {
   const [events, setEvents] = useState<Awaited<ReturnType<typeof newsletterHistory>>>([]);
   const rows = data.customers.filter(c => `${c.name} ${c.email ?? ''} ${c.customer_number ?? ''}`.toLowerCase().includes(search.toLowerCase()) && (filter === 'all' || (filter === 'subscribed' ? c.eligible : filter === 'unsubscribed' ? c.consent?.status === 'unsubscribed' : !c.eligible && c.consent?.status !== 'unsubscribed')));
   async function act(fn: () => Promise<void>) { setBusy(true); try { await fn(); } catch (e) { toast.error(e instanceof Error ? e.message : 'Opslaan mislukt'); } finally { setBusy(false); } }
-  return <div className="space-y-6">
-    <div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black uppercase">Nieuwsbrieven</h1><span className="ml-auto font-mono text-sm">{data.recipients} ontvangers</span></div>
-    <div className="border-l-4 border-primary bg-muted px-4 py-3 text-sm">Geen nieuwsbriefdienst gekoppeld. Concepten en toestemming zijn beschikbaar; verzending staat uit.</div>
-    <div className="flex gap-2 border-b pb-3"><Button variant={tab === 'campaigns' ? 'default' : 'outline'} onClick={() => setTab('campaigns')}>Campagnes</Button><Button variant={tab === 'consent' ? 'default' : 'outline'} onClick={() => setTab('consent')}>Toestemming</Button></div>
+  return <div className="space-y-5">
+    <div className="flex flex-col gap-3 border-b border-border/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-[1.75rem]">Nieuwsbrieven</h1>
+        <p className="text-sm text-muted-foreground">Beheer campagnes, concepten en klanttoestemmingen.</p>
+      </div>
+      <span className="rounded-md bg-muted px-2.5 py-1 font-mono text-xs font-semibold text-foreground">{data.recipients} ontvangers</span>
+    </div>
+    <div className="rounded-xl border border-border/90 border-l-4 border-l-primary bg-card px-4 py-3 text-sm shadow-xs">Geen nieuwsbriefdienst gekoppeld. Concepten en toestemming zijn beschikbaar; verzending staat uit.</div>
+    <div className="flex gap-2 border-b border-border/80 pb-3"><Button variant={tab === 'campaigns' ? 'default' : 'outline'} onClick={() => setTab('campaigns')}>Campagnes</Button><Button variant={tab === 'consent' ? 'default' : 'outline'} onClick={() => setTab('consent')}>Toestemming</Button></div>
     {tab === 'campaigns' ? <div className="space-y-4">
       <Button disabled={generating} onClick={() => { setForm({ ...empty }); setHtml(''); setAiText(''); setSuggestion(null); setAiError(''); }}><Plus className="size-4" />Nieuwe campagne</Button>
       {form && <form className="space-y-4 border-y py-5" onSubmit={e => { e.preventDefault(); void act(async () => { const parsed = campaignSchema.parse(form); const saved = await save({ data: parsed }); setForm({ ...parsed, id: saved.id }); await qc.invalidateQueries({ queryKey: options.queryKey }); toast.success('Concept opgeslagen'); }); }}>

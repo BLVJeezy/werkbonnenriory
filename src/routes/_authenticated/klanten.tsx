@@ -18,6 +18,7 @@ import { syncSyndicusFromCustomer } from "@/lib/syndici.functions";
 import { parseContacts, type CustomerContact } from "@/lib/customer-contacts";
 import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
 import { lookupCompany } from "@/lib/company-lookup.functions";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search["q"] === "string" && search["q"] ? { q: search["q"] } : {}),
@@ -374,20 +375,29 @@ function Klanten() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <datalist id="syndicus-suggesties">{syndici.map((s) => <option key={s} value={s} />)}</datalist>
-      <div className="flex flex-wrap items-end gap-3">
-        <h1 className="text-3xl font-black uppercase">Klanten</h1>
-        <Button className="ml-auto" variant={creating ? "secondary" : "default"} onClick={() => (creating ? setCreating(false) : openCreate())}>{creating ? "Sluiten" : "Nieuwe klant"}</Button>
-        <label>
-          <input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importExcel(f); }} />
-          <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
-        </label>
+      <PageHeader
+        title="Klanten"
+        subtitle="Beheer klantfiches, adressen, syndici, contactpersonen en btw-regels."
+        actions={
+          <>
+            <Button variant={creating ? "secondary" : "default"} onClick={() => (creating ? setCreating(false) : openCreate())}>
+              {creating ? "Sluiten" : "Nieuwe klant"}
+            </Button>
+            <label>
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importExcel(f); }} />
+              <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
+            </label>
+          </>
+        }
+      />
+      <div className="rounded-xl border border-border/90 bg-card p-3.5 shadow-xs">
+        <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-lg" />
       </div>
-      <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} />
       {creating && (
-        <div className="space-y-3 rounded-md border border-primary/40 bg-card p-4">
-          <div className="text-sm font-black uppercase tracking-wide">Nieuwe klant</div>
+        <div className="space-y-3 rounded-xl border border-primary/40 bg-card p-4 shadow-xs sm:p-5">
+          <div className="border-b border-border/70 pb-2 text-sm font-bold text-foreground">Nieuwe klant aanmaken</div>
           <CustomerFormFields form={form} setForm={setForm} templates={templates} />
           <div className="flex gap-2">
             <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>

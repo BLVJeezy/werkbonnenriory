@@ -29,6 +29,8 @@ import { isUrgentOpen, URGENT_RING } from "@/lib/urgent";
 import { taskListRows, pinFirstCustomer } from "@/lib/task-list";
 import { destinationLabel, destinationLines } from "@/lib/address";
 import { AppointmentMailSync } from "@/components/AppointmentMailSync";
+import { PageHeader } from "@/components/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { CustomerInvite } from "@/components/CustomerInvite";
 import { dayPartLabel } from "@/lib/invite-slots";
 import { appointmentStatuses } from "@/lib/appointments";
@@ -254,38 +256,68 @@ function Kalender() {
   if (crewView) return <div className="space-y-4">{crewPicker}<CrewTasks rows={data.filter(w => w.technician_id === crewView)} /></div>;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 items-center gap-2 sm:flex sm:flex-wrap">
-        <h1 className="col-span-full min-w-0 text-3xl font-black uppercase sm:mr-auto">Kalender</h1>
-        <Button variant="outline" size="sm" onClick={() => shift(-7)}>← Vorige week</Button>
-        <Button variant="outline" size="sm" onClick={() => { setNow(new Date()); setOffset(0); }}>Vandaag</Button>
-        <Button variant="outline" size="sm" onClick={() => shift(7)}>Volgende week →</Button>
+    <div className="space-y-5">
+      <PageHeader
+        title="Kalender"
+        subtitle="Plan taken in per dag en ploeg, sleep opdrachten en volg lopende interventies."
+        actions={
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => shift(-7)}>← Vorige week</Button>
+            <Button variant="outline" size="sm" onClick={() => { setNow(new Date()); setOffset(0); }}>Vandaag</Button>
+            <Button variant="outline" size="sm" onClick={() => shift(7)}>Volgende week →</Button>
+          </div>
+        }
+      />
+
+      <div className="space-y-3 rounded-xl border border-border/90 bg-card p-3.5 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => setCreate({})}><Plus className="h-4 w-4" />Taak toevoegen</Button>
+            <Button size="sm" variant="outline" onClick={() => setCreate({ direct: true })}><Plus className="h-4 w-4" />Werkbon maken</Button>
+            <Button size="sm" variant="outline" disabled={importing} onClick={() => fetchMail()}>{importing ? "Mails lezen…" : "Mails ophalen"}</Button>
+            <Button size="sm" variant="ghost" asChild><Link to="/contracten">Contracten</Link></Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {crewPicker}
+            <Input aria-label="Taken zoeken" placeholder="Klant, adres, omschrijving…" className="h-9 min-w-0 sm:w-56" value={search} onChange={e => setSearch(e.target.value)} />
+            <Button size="sm" variant={onlyRunning ? "default" : "outline"} aria-pressed={onlyRunning} onClick={() => setOnlyRunning(!onlyRunning)}>Bezig ({data.filter(w => activeTimeEntry(w.time_entries)).length})</Button>
+          </div>
+        </div>
+        <details className="border-t border-border/70 pt-2">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">Mailboxkoppelingen</summary>
+          <div className="space-y-2 pt-2"><MailboxConnect /><WerkbonMailboxConnect /></div>
+        </details>
       </div>
-      <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setCreate({})}><Plus />Taak toevoegen</Button><Button variant="outline" onClick={() => setCreate({ direct: true })}><Plus />Werkbon maken</Button><Button disabled={importing} onClick={() => fetchMail()}>{importing ? "Mails lezen…" : "Mails ophalen"}</Button></div>
-      <details className="border-b pb-2"><summary className="cursor-pointer text-sm font-bold">Mailboxen</summary><div className="space-y-2 pt-2"><MailboxConnect /><WerkbonMailboxConnect /></div></details>
       {importError && <p role="alert" className="text-sm text-destructive">{importError instanceof Error ? importError.message : "Afspraakmails ophalen mislukt"}</p>}
       {appointmentError && <p role="alert" className="text-sm text-destructive">Voorgestelde tijdsloten konden niet worden opgehaald.</p>}
       {create && <TaskCreateDialog key={`${create.day ?? "nieuw"}-${!!create.direct}`} open day={create.day} direct={create.direct} onClose={() => { setCreate(null); if (dag) navigate({ to: "/kalender", search: {}, replace: true }); }} />}
       <AppointmentMailSync />
-      <div className="flex flex-wrap gap-3">{crewPicker}<Input aria-label="Taken zoeken" placeholder="Klant, adres, omschrijving…" className="min-w-0 sm:max-w-xs" value={search} onChange={e => setSearch(e.target.value)} /><Button variant={onlyRunning ? "default" : "outline"} aria-pressed={onlyRunning} onClick={() => setOnlyRunning(!onlyRunning)}>Bezig ({data.filter(w => activeTimeEntry(w.time_entries)).length})</Button></div>
-      <section {...drop(null)} className="space-y-3 border-t pt-4">
-        <h2 className="mb-2 text-lg font-black uppercase">Nog in te plannen ({unplanned.length})</h2>
-        <div className="flex flex-wrap gap-2"><SearchableSelect aria-label="Taken sorteren" className="h-9 rounded border bg-background px-2 text-sm text-foreground" value={taskSort} onChange={e => setTaskSort(e.target.value)}><option value="nieuwste">Ontvangstdatum</option><option value="klant">Klant</option><option value="plaats">Plaats</option><option value="datum">Geplande dag</option></SearchableSelect><Button size="sm" variant="outline" onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button></div>
+      <section {...drop(null)} className="space-y-3 rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-2.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-foreground">Nog in te plannen</h2>
+            <Badge variant="secondary" className="font-mono">{unplanned.length}</Badge>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchableSelect aria-label="Taken sorteren" className="h-9 rounded-md border border-input bg-card px-2.5 text-sm text-foreground" value={taskSort} onChange={e => setTaskSort(e.target.value)}><option value="nieuwste">Ontvangstdatum</option><option value="klant">Klant</option><option value="plaats">Plaats</option><option value="datum">Geplande dag</option></SearchableSelect>
+            <Button size="sm" variant="outline" onClick={() => setTaskDir(taskDir === "asc" ? "desc" : "asc")}>{taskDir === "asc" ? "Oplopend ↑" : "Aflopend ↓"}</Button>
+          </div>
+        </div>
         {!unplanned.length && <p className="text-sm text-muted-foreground">Geen taken om in te plannen.</p>}
         <div className="grid gap-2">{unplanned.map((w) => card(w, undefined, undefined, true))}</div>
       </section>
-      <div className="grid gap-3 xl:grid-cols-[repeat(9,minmax(260px,1fr))] xl:overflow-x-auto xl:gap-2">
+      <div className="grid gap-3 xl:grid-cols-[repeat(9,minmax(260px,1fr))] xl:overflow-x-auto xl:gap-2.5 xl:pb-2">
         {days.map((d) => {
           const k = iso(d);
           return (
-            <div key={k} {...drop(k)} className={`min-w-0 space-y-2 overflow-hidden rounded-md border bg-card p-2 xl:min-h-40 ${k === today ? "border-2 border-primary" : ""}`}>
-              <div className="-mx-2 -mt-2 flex items-center justify-between gap-1 rounded-t-md border-b bg-muted px-2 py-1.5 xl:mx-0 xl:mt-0 xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
-                <span className="text-base font-black uppercase xl:text-sm">
+            <div key={k} {...drop(k)} className={`min-w-0 space-y-2 overflow-hidden rounded-xl border bg-card p-2.5 shadow-xs xl:min-h-48 ${k === today ? "border-2 border-primary ring-2 ring-primary/15" : "border-border/90"}`}>
+              <div className="-mx-2.5 -mt-2.5 flex items-center justify-between gap-1 border-b border-border/70 bg-muted/50 px-2.5 py-2">
+                <span className={`text-sm font-bold uppercase tracking-tight ${k === today ? "text-primary" : "text-foreground"}`}>
                   {d.toLocaleDateString("nl-BE", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
-                <Button size="sm" variant="ghost" className="h-6 px-2" title="Taak aanmaken op deze dag" aria-label={`Taak toevoegen op ${k}`} onClick={() => setCreate({ day: k })}>+</Button>
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Taak aanmaken op deze dag" aria-label={`Taak toevoegen op ${k}`} onClick={() => setCreate({ day: k })}>+</Button>
               </div>
-              {dayOmzet(k) > 0 && <p className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-black text-primary" title="Som van de afgewerkte bonnen van deze dag">Omzet: {euro(dayOmzet(k))}</p>}
+              {dayOmzet(k) > 0 && <p className="rounded-md bg-primary/10 px-2 py-1 font-mono text-xs font-bold text-primary" title="Som van de afgewerkte bonnen van deze dag">Omzet: {euro(dayOmzet(k))}</p>}
               <div className="grid min-w-0 gap-2">
                 {dayList(k).filter((w) => w.status !== "afgetekend").map((w, i, l) => card(w, i, l))}
                 {dayList(k).filter((w) => w.status === "afgetekend").map((w) => card(w))}
@@ -295,7 +327,6 @@ function Kalender() {
           );
         })}
       </div>
-      <Button variant="outline" asChild><Link to="/contracten">Contracten beheren</Link></Button>
     </div>
   );
 }

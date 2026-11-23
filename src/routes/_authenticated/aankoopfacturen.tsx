@@ -301,10 +301,13 @@ function Aankoopfacturen() {
   const upd = (i: number, patch: Partial<PurchaseLine>) => edit && setEdit({ ...edit, lines: edit.lines.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-black uppercase">Aankoopfacturen</h1>
-        <div className="ml-auto flex flex-wrap gap-2">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 border-b border-border/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-[1.75rem]">Aankoopfacturen</h1>
+          <p className="text-sm text-muted-foreground">Controleer inkomende facturen, Peppol-documenten, betalingen en SEPA-exports.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <ReceiptScanner disabled={busy} onScan={leesTicket} />
           <Button asChild variant="outline"><Link to="/leveranciers">Leveranciers</Link></Button>
           <Button variant="outline" disabled={busy || !peppyrus?.configured} title={peppyrus?.configured ? undefined : 'Peppyrus is voorbereid maar nog niet gekoppeld'} onClick={vanPeppyrus}>{peppyrus?.configured ? `Ophalen via Peppol${peppyrus.live ? '' : ' (test)'}` : 'Peppol (Peppyrus) — nog niet gekoppeld'}</Button>

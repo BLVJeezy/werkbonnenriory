@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { WerkbonMailButton } from '@/components/WerkbonMailButton';
 import { SortTh, Th, useSort, tableCls, tableWrap } from '@/components/SortTable';
+import { PageHeader } from '@/components/PageHeader';
 
 export const Route = createFileRoute('/_authenticated/afgewerkte-werkbonnen')({
   head: () => ({ meta: [
@@ -76,15 +77,17 @@ function CompletedWorkOrders() {
   if (!role || !perms) return <p className="text-muted-foreground">Laden…</p>;
   if (!allowed) return <p className="text-muted-foreground">Geen toegang tot afgewerkte werkbonnen.</p>;
   return <div className="space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h1 className="text-2xl font-black uppercase sm:text-3xl">Afgewerkte werkbonnen</h1><p className="text-sm text-muted-foreground">{filtered.length} van {data.length} werkbonnen</p></div>
-      <Button variant="outline" asChild><Link to="/kalender">Kalender</Link></Button>
-    </div>
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div className="space-y-1"><Label htmlFor="completed-search">Zoeken</Label><Input id="completed-search" placeholder="Klant, nummer, adres…" value={search} onChange={e => setSearch(e.target.value)} /></div>
-      {role === 'admin' && <div className="space-y-1"><Label htmlFor="completed-crew">Ploeg</Label><SearchableSelect id="completed-crew" className="h-10 w-full rounded-md border bg-background px-2 text-foreground" value={crew} onChange={e => setCrew(e.target.value)}><option value="">Alle ploegen</option>{crews.map(([id, name]) => <option key={id} value={id ?? ''}>{name}</option>)}</SearchableSelect></div>}
-      <div className="space-y-1"><Label htmlFor="completed-from">Afgewerkt vanaf</Label><Input id="completed-from" type="date" value={from} onChange={e => setFrom(e.target.value)} /></div>
-      <div className="space-y-1"><Label htmlFor="completed-until">Afgewerkt tot</Label><Input id="completed-until" type="date" value={until} onChange={e => setUntil(e.target.value)} /></div>
+    <PageHeader
+      title="Afgewerkte werkbonnen"
+      subtitle="Overzicht van ondertekende en afgerekende interventies."
+      badge={<Badge variant="secondary" className="font-mono">{filtered.length} / {data.length}</Badge>}
+      actions={<Button variant="outline" asChild><Link to="/kalender">Naar kalender</Link></Button>}
+    />
+    <div className="grid gap-3 rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-1.5"><Label htmlFor="completed-search" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zoeken</Label><Input id="completed-search" placeholder="Klant, nummer, adres…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+      {role === 'admin' && <div className="space-y-1.5"><Label htmlFor="completed-crew" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ploeg</Label><SearchableSelect id="completed-crew" className="h-10 w-full rounded-md border border-input bg-card px-2.5 text-foreground" value={crew} onChange={e => setCrew(e.target.value)}><option value="">Alle ploegen</option>{crews.map(([id, name]) => <option key={id} value={id ?? ''}>{name}</option>)}</SearchableSelect></div>}
+      <div className="space-y-1.5"><Label htmlFor="completed-from" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Afgewerkt vanaf</Label><Input id="completed-from" type="date" value={from} onChange={e => setFrom(e.target.value)} /></div>
+      <div className="space-y-1.5"><Label htmlFor="completed-until" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Afgewerkt tot</Label><Input id="completed-until" type="date" value={until} onChange={e => setUntil(e.target.value)} /></div>
     </div>
     {error ? <p role="alert" className="text-destructive">Werkbonnen ophalen mislukt. Probeer opnieuw.</p> : isPending ? <p className="text-muted-foreground">Werkbonnen laden…</p> : <div className={tableWrap}>
       <table className={tableCls}><thead><tr><SortTh k="nr" sort={sort}>Nummer</SortTh><SortTh k="klant" sort={sort}>Klant</SortTh><SortTh k="ploeg" sort={sort}>Ploeg</SortTh><SortTh k="datum" sort={sort}>Afgewerkt op</SortTh>{perms.showPrices && <SortTh k="prijs" sort={sort}>Afgerekend</SortTh>}<Th>Status</Th><Th>Werkbon</Th></tr></thead>

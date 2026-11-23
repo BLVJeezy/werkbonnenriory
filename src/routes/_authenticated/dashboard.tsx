@@ -9,6 +9,7 @@ import { euro } from "@/lib/billing";
 import { FinanceYear } from "@/components/FinanceYear";
 import { FinanceWeek } from "@/components/FinanceWeek";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { PageHeader } from "@/components/PageHeader";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addDays, format, parseISO } from "date-fns";
 import { computeTotals } from "@/lib/billing";
@@ -148,108 +149,158 @@ function Dashboard() {
   const perMaand = punten.length > 62;
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-3 sm:p-4">
-      <h1 className="text-2xl font-black uppercase">Dashboard</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Dashboard"
+        subtitle={`Omzet per dag loopt tot vandaag · boekhoud- en productcijfers over afgesloten ${mode === "week" ? "weken (ma–zo)" : "maanden"} t/m ${def.to.split("-").reverse().join("/")}`}
+        actions={
+          <ToggleGroup
+            type="single"
+            value={mode}
+            aria-label="Dashboardperiode"
+            className="rounded-lg border bg-card p-1"
+            onValueChange={(value) => {
+              if (value !== "month" && value !== "week") return;
+              setMode(value);
+              const range = value === "week" ? lastClosedWeek(currentDay) : lastClosedMonth(currentDay);
+              setFrom(range.from);
+              setTo(currentDay);
+            }}
+          >
+            <ToggleGroupItem value="month" aria-label="Per maand" className="px-3 text-xs font-semibold">Maand</ToggleGroupItem>
+            <ToggleGroupItem value="week" aria-label="Per week" className="px-3 text-xs font-semibold">Week</ToggleGroupItem>
+          </ToggleGroup>
+        }
+      />
 
-      <ToggleGroup type="single" value={mode} aria-label="Dashboardperiode" className="justify-start" onValueChange={value => {
-        if (value !== "month" && value !== "week") return;
-        setMode(value);
-        const range = value === "week" ? lastClosedWeek(currentDay) : lastClosedMonth(currentDay);
-        setFrom(range.from); setTo(currentDay);
-      }}><ToggleGroupItem value="month" aria-label="Per maand">Maand</ToggleGroupItem><ToggleGroupItem value="week" aria-label="Per week">Week</ToggleGroupItem></ToggleGroup>
+      {/* Periode & KPI-overzicht */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+          <div>
+            <h2 className="text-base font-bold text-foreground">{mode === "week" ? "Cijfers per week" : "Facturen & omzet per periode"}</h2>
+            <p className="text-xs text-muted-foreground">Selecteer een datumbereik om omzet, btw en openstaande bedragen te bekijken.</p>
+          </div>
+          <div className="flex flex-wrap items-end gap-2.5">
+            {mode === "week" && (
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="icon" aria-label="Vorige week" onClick={() => shiftWeek(-7)}><ChevronLeft className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" aria-label="Volgende week" disabled={to >= def.to} onClick={() => shiftWeek(7)}><ChevronRight className="h-4 w-4" /></Button>
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label htmlFor="van" className="text-xs text-muted-foreground">Van</Label>
+              <Input id="van" type="date" value={selectedFrom} max={selectedTo} onChange={(e) => setFrom(e.target.value)} className="h-9 w-40" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="tot" className="text-xs text-muted-foreground">Tot</Label>
+              <Input id="tot" type="date" value={selectedTo} min={selectedFrom} max={currentDay} onChange={(e) => setTo(e.target.value)} className="h-9 w-40" />
+            </div>
+          </div>
+        </div>
 
+        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+          <div className="rounded-xl border border-border/90 border-l-4 border-l-primary bg-card p-4 shadow-xs">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Omzet (excl. btw)</p>
+            <p className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-foreground">{euro(omzet)}</p>
+          </div>
+          <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Btw</p>
+            <p className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-foreground">{euro(btw)}</p>
+          </div>
+          <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Openstaand</p>
+            <p className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-foreground">{euro(openstaand)}</p>
+          </div>
+          <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Documenten</p>
+            <p className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-foreground">{rows.length}</p>
+          </div>
+        </div>
+
+        {/* Hoofdgrafiek */}
+        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-bold text-foreground">
+              Omzet per {mode === "week" ? "week" : perMaand ? "maand" : "dag"} (excl. btw)
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Werkbonnen op werkdag · losse facturen op factuurdatum · t/m vandaag
+            </p>
+          </div>
+          <div className="h-72 w-full sm:h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={punten} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={24} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `€${Math.round(v)}`} width={70} />
+                <Tooltip
+                  formatter={(value) => [euro(Number(value)), "Omzet"]}
+                  contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }}
+                />
+                <ReferenceLine y={0} stroke="var(--border)" />
+                <Bar dataKey="omzet" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </section>
+
+      {/* Boekhoudkundig jaar- of weekoverzicht */}
       {mode === "month" && <FinanceYear />}
-
-      <h2 className="text-lg font-black uppercase">{mode === "week" ? "Cijfers per week" : "Facturen per periode"}</h2>
-      {mode === "week" && <div className="flex gap-2"><Button variant="outline" size="icon" aria-label="Vorige week" onClick={() => shiftWeek(-7)}><ChevronLeft /></Button><Button variant="outline" size="icon" aria-label="Volgende week" disabled={to >= def.to} onClick={() => shiftWeek(7)}><ChevronRight /></Button></div>}
-
-      <div className="grid max-w-md grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="van">Van</Label>
-          <Input id="van" type="date" value={selectedFrom} max={selectedTo} onChange={(e) => setFrom(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="tot">Tot</Label>
-          <Input id="tot" type="date" value={selectedTo} min={selectedFrom} max={currentDay} onChange={(e) => setTo(e.target.value)} />
-        </div>
-      </div>
-
-      <p className="text-xs text-muted-foreground">Omzet per dag loopt tot vandaag · boekhoud- en productcijfers alleen over afgesloten {mode === "week" ? "weken (maandag t/m zondag)" : "maanden"} t/m {def.to.split("-").reverse().join("/")}</p>
-
       {mode === "week" && <FinanceWeek from={from} to={to} />}
 
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
-        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Omzet (excl. btw)</p>
-          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{euro(omzet)}</p>
-        </div>
-        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Btw</p>
-          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{euro(btw)}</p>
-        </div>
-        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Openstaand</p>
-          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{euro(openstaand)}</p>
-        </div>
-        <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Documenten</p>
-          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{rows.length}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-black uppercase">Omzet per product</h2>
-        <Button variant="outline" disabled={productsLoading} onClick={() => refreshProducts()}>{productsLoading ? "Ophalen…" : "Opnieuw ophalen"}</Button>
-      </div>
-      {productError && <p role="alert" className="text-destructive">Productomzet kon niet worden geladen. Probeer opnieuw.</p>}
-      {simplaError && <p role="alert" className="text-destructive">Historische omzet ontbreekt: {simplaError}. De bedragen zijn onvolledig.</p>}
-      {costError && <p role="alert" className="text-destructive">Kosten en marge zijn onvolledig: {costError}.</p>}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-        {productRevenue(prodLines).map((p) => (
-          <div key={p.key} className="rounded-xl border border-border/90 bg-card p-4 shadow-xs">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{p.label}</p>
-            <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{productsLoading ? "…" : euro(p.amount)}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{Math.round(p.quantity * 100) / 100} stuks (excl. btw)</p>
-            <p className="mt-1.5 text-xs text-muted-foreground">Simpla: {euro(productRevenue(prodLines.filter(l => l.source === "simpla")).find(g => g.key === p.key)?.amount ?? 0)} · App: {euro(productRevenue(prodLines.filter(l => l.source === "app")).find(g => g.key === p.key)?.amount ?? 0)}</p>
-            {(p.key === "regenput" || p.key === "septisch" || p.key === "riostop") && (() => {
-              const k = costs.filter((c) => c.key === p.key).reduce((s, c) => s + c.amount, 0);
-              const who = p.key === "regenput" ? "Rioclean" : p.key === "septisch" ? "leveranciers" : "IDBS";
-              return <p className="mt-1 text-xs"><span className="font-bold">Kost {who}:</span> {euro(k)} · <span className="font-bold">Marge:</span> {costError || simplaError || productError || productsLoading ? "Niet beschikbaar" : euro(p.amount - k)}</p>;
-            })()}
+      {/* Omzet per product */}
+      <section className="space-y-3.5 rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-foreground">Omzet per product</h2>
+            <p className="text-xs text-muted-foreground">
+              Verkoopfacturen en creditnota’s uit Simpla en deze app, op factuurdatum (excl. btw).{checkedAt ? ` Simpla gecontroleerd: ${new Date(checkedAt).toLocaleString("nl-BE")}.` : ""}
+            </p>
           </div>
-        ))}
-      </div>
-      <p className="text-xs opacity-70">Verkoopfacturen en creditnota’s uit Simpla en deze app, op factuurdatum en excl. btw. Nog niet gefactureerde werkbonnen tellen hier niet mee.{checkedAt ? ` Simpla gecontroleerd: ${new Date(checkedAt).toLocaleString("nl-BE")}.` : ""}</p>
-      <details className="border-t pt-3">
-        <summary className="cursor-pointer text-sm font-bold">Overige / niet-herkende productregels ({prodLines.filter(l => !PRODUCT_GROUPS.some(g => g.match(l.name))).length})</summary>
-        <div className="mt-2 max-h-96 overflow-auto">
-          <table className="w-full text-left text-xs">
-            <thead><tr><th>Bron</th><th>Factuur</th><th>Datum</th><th>Product</th><th>Excl. btw</th></tr></thead>
-            <tbody>{prodLines.filter(l => !PRODUCT_GROUPS.some(g => g.match(l.name))).map((l, index) => <tr key={`${l.source}-${l.invoiceNumber}-${index}`} className="border-t"><td className="p-1">{l.source === "simpla" ? "Simpla" : "App"}</td><td className="p-1">{l.invoiceNumber}</td><td className="p-1 whitespace-nowrap">{l.date}</td><td className="p-1">{l.name || "Zonder omschrijving"}{l.sourceProductId ? ` (Simpla-product ${l.sourceProductId})` : ""}</td><td className="p-1 whitespace-nowrap">{euro(l.amount)}</td></tr>)}</tbody>
-          </table>
+          <Button size="sm" variant="outline" disabled={productsLoading} onClick={() => refreshProducts()}>
+            {productsLoading ? "Ophalen…" : "Opnieuw ophalen"}
+          </Button>
         </div>
-      </details>
 
-      <div className="rounded-xl border border-border/90 bg-card p-4 shadow-xs sm:p-5">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Omzet per {mode === "week" ? "week" : perMaand ? "maand" : "dag"} tot en met vandaag, volgens werkdag van de werkbonnen; zelf gemaakte facturen op hun factuurdatum (excl. btw)
-        </p>
-        <div className="h-72 w-full sm:h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={punten} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={24} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `€${Math.round(v)}`} width={70} />
-              <Tooltip
-                formatter={(value) => [euro(Number(value)), "Omzet"]}
-                contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8 }}
-              />
-              <ReferenceLine y={0} stroke="var(--border)" />
-              <Bar dataKey="omzet" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        {productError && <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Productomzet kon niet worden geladen. Probeer opnieuw.</p>}
+        {simplaError && <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Historische omzet ontbreekt: {simplaError}. De bedragen zijn onvolledig.</p>}
+        {costError && <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">Kosten en marge zijn onvolledig: {costError}.</p>}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {productRevenue(prodLines).map((p) => (
+            <div key={p.key} className="flex flex-col justify-between rounded-lg border border-border/80 bg-muted/25 p-3.5">
+              <div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{p.label}</p>
+                  <span className="text-xs text-muted-foreground">{Math.round(p.quantity * 100) / 100} st</span>
+                </div>
+                <p className="mt-1 font-mono text-xl font-bold tracking-tight text-foreground">{productsLoading ? "…" : euro(p.amount)}</p>
+              </div>
+              <div className="mt-2.5 space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                <p>Simpla: {euro(productRevenue(prodLines.filter(l => l.source === "simpla")).find(g => g.key === p.key)?.amount ?? 0)} · App: {euro(productRevenue(prodLines.filter(l => l.source === "app")).find(g => g.key === p.key)?.amount ?? 0)}</p>
+                {(p.key === "regenput" || p.key === "septisch" || p.key === "riostop") && (() => {
+                  const k = costs.filter((c) => c.key === p.key).reduce((s, c) => s + c.amount, 0);
+                  const who = p.key === "regenput" ? "Rioclean" : p.key === "septisch" ? "leveranciers" : "IDBS";
+                  return <p className="text-foreground"><span className="font-semibold">Kost {who}:</span> {euro(k)} · <span className="font-semibold">Marge:</span> {costError || simplaError || productError || productsLoading ? "Niet beschikbaar" : euro(p.amount - k)}</p>;
+                })()}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-    </main>
+
+        <details className="border-t border-border/70 pt-3">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+            Overige / niet-herkende productregels ({prodLines.filter(l => !PRODUCT_GROUPS.some(g => g.match(l.name))).length})
+          </summary>
+          <div className="mt-2 max-h-96 overflow-auto rounded-lg border">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted/50"><tr><th className="p-2">Bron</th><th className="p-2">Factuur</th><th className="p-2">Datum</th><th className="p-2">Product</th><th className="p-2 text-right">Excl. btw</th></tr></thead>
+              <tbody>{prodLines.filter(l => !PRODUCT_GROUPS.some(g => g.match(l.name))).map((l, index) => <tr key={`${l.source}-${l.invoiceNumber}-${index}`} className="border-t"><td className="p-2">{l.source === "simpla" ? "Simpla" : "App"}</td><td className="p-2 font-mono">{l.invoiceNumber}</td><td className="p-2 whitespace-nowrap">{l.date}</td><td className="p-2">{l.name || "Zonder omschrijving"}{l.sourceProductId ? ` (Simpla-product ${l.sourceProductId})` : ""}</td><td className="p-2 text-right font-mono whitespace-nowrap">{euro(l.amount)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    </div>
   );
 }

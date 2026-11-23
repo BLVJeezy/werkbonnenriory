@@ -341,11 +341,14 @@ function Offertes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <h1 className="text-3xl font-black uppercase">Offertes</h1>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 border-b border-border/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-[1.75rem]">Offertes</h1>
+          <p className="text-sm text-muted-foreground">Maak offertes, verzekeringsbestekken en onderhoudscontracten en volg de uitvoering op.</p>
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <Button variant="outline" onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
+          <Button variant={showForm ? "secondary" : "default"} onClick={() => (showForm ? closeForm() : setShowForm(true))}>{showForm ? "Sluiten" : "+ Offerte maken"}</Button>
           <Button variant="ghost" onClick={() => setShowSections((v) => !v)}>{showSections ? "Titels sluiten" : "Titels beheren"}</Button>
         </div>
       </div>
