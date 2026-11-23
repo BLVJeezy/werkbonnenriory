@@ -12,6 +12,7 @@ import { totalSeconds, type TimeEntry } from "@/lib/time";
 import { invoiceRowState, workOrderRowState } from "@/lib/invoice-row-state";
 import { werkbonNr } from "@/lib/werkbon-number";
 import { AccountantPackage } from "@/components/AccountantPackage";
+import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { createCreditNote, createInvoices, createSubcontractInvoices, invoicePdf, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
 import { sendConfirmText } from "@/lib/invoice-delivery";
 import { isInvoiceEditable } from "@/lib/invoice";
@@ -329,6 +330,7 @@ function Facturen() {
             <Button variant="outline" size="sm" onClick={() => setSelInv(selInv.length ? [] : openIds)}>{selInv.length ? "Niets selecteren" : "Alle openstaande"}</Button>
             <Button size="sm" disabled={!selInv.length || busy} onClick={() => sendSel(selInv)}>Verzenden ({selInv.length})</Button>
             <AccountantPackage accountantEmail={s?.accountant_email ?? null} />
+            <InvoiceDownload />
           </div>
         </div>
         <div className="overflow-x-auto">

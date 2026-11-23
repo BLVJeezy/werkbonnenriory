@@ -132,12 +132,50 @@ export const parseWachtrekening = createServerFn({ method: "POST" })
     return { accountInfo: out.accountInfo, lines };
   });
 
+/** Admin-only: all sales and purchase invoice ids of one period, for the bulk ZIP download. */
+export const listInvoiceDownloadIds = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { from?: string; to?: string }) => {
+    const from = String(input?.from ?? "");
+    const to = String(input?.to ?? "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+      throw new Error("Kies een geldige periode");
+    }
+    return { from, to };
+  })
+  .handler(async ({ data, context }): Promise<{ salesIds: string[]; purchaseIds: string[] }> => {
+    const { data: admin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!admin) throw new Error("Alleen voor beheerder");
+    const sb = context.supabase as any;
+    const page = async (table: string, dateCol: string) => {
+      const ids: string[] = [];
+      for (let from = 0; ; from += 1000) {
+        let q = sb.from(table).select("id").gte(dateCol, data.from).lte(dateCol, data.to).order("id").range(from, from + 999);
+        if (table === "purchase_invoices") q = q.neq("source", "simpla");
+        const { data: rows, error } = await q;
+        if (error) throw new Error(error.message);
+        ids.push(...(rows ?? []).map((r: any) => r.id as string));
+        if (!rows || rows.length < 1000) return ids;
+      }
+    };
+    const [salesIds, purchaseIds] = await Promise.all([page("invoices", "issue_date"), page("purchase_invoices", "invoice_date")]);
+    return { salesIds, purchaseIds };
+  });
+
 export interface FetchedWachtrekeningDoc {
   type: "purchase" | "sales";
   id: string;
   fileName: string;
   base64: string;
   mime: string;
+  /** Extra metadata for the overview sheet in the bulk download. */
+  number?: string;
+  party?: string;
+  date?: string;
+  total?: number;
 }
 
 function safeFilePart(s: string): string {
@@ -165,7 +203,7 @@ export const fetchWachtrekeningDocuments = createServerFn({ method: "POST" })
     if (data.purchaseIds.length) {
       const { data: purchases } = await sb
         .from("purchase_invoices")
-        .select("id,invoice_number,supplier_name,pdf_path")
+        .select("id,invoice_number,supplier_name,pdf_path,invoice_date,total")
         .in("id", data.purchaseIds);
       const storage = sb.storage.from("aankoopfacturen");
       for (const p of purchases ?? []) {
@@ -195,6 +233,10 @@ export const fetchWachtrekeningDocuments = createServerFn({ method: "POST" })
           fileName: `Aankoop-${num}-${sup}.${ext}`,
           base64: bytesBase64(new Uint8Array(await (blob as Blob).arrayBuffer())),
           mime,
+          number: p.invoice_number ?? "",
+          party: p.supplier_name ?? "",
+          date: p.invoice_date ?? "",
+          total: Number(p.total) || 0,
         });
       }
     }
@@ -225,6 +267,10 @@ export const fetchWachtrekeningDocuments = createServerFn({ method: "POST" })
             fileName: `Verkoop-${num}.pdf`,
             base64,
             mime: "application/pdf",
+            number: inv.number ?? "",
+            party: inv.customer?.name ?? "",
+            date: inv.issue_date ?? "",
+            total: Number(inv.total) || 0,
           });
         } catch {
           missingCount++;
