@@ -217,3 +217,41 @@ export const sendAccountantPackage = createServerFn({ method: "POST" })
       [file(`Boekhouding-Riory-${periodSlug(from, to)}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx)]);
     return { to: mailTo, period: label, ubl: ubl.length, mails: batches.length + 1, warnings: d.warnings };
   });
+
+/** Send one single sales or purchase document to the accountant as UBL with the real document embedded, and mark it as sent. */
+export const sendInvoiceToAccountant = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { kind?: string; id?: string }) => {
+    const kind = input?.kind === "purchase" ? "purchase" : input?.kind === "sales" ? "sales" : null;
+    const id = String(input?.id ?? "");
+    if (!kind || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Kies een geldige factuur");
+    return { kind, id } as { kind: "sales" | "purchase"; id: string };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabase } = context;
+    const { data: s } = await supabase.from("settings").select("*").eq("id", 1).single();
+    const mailTo = s?.accountant_email?.trim();
+    if (!mailTo) throw new Error("Vul eerst het e-mailadres van de boekhouder in");
+    const { accountantSalesUbl, accountantPurchaseUbl } = await import('./accountant-documents.server');
+    const send = await mailer();
+    let name: string;
+    let attachment: unknown;
+    if (data.kind === "sales") {
+      const { data: inv, error } = await supabase.from("invoices").select("*").eq("id", data.id).single();
+      if (error || !inv) throw new Error("Factuur niet gevonden");
+      name = `${inv.kind === "creditnota" ? "Creditnota" : "Factuur"} ${inv.number}`;
+      attachment = file(`Verkoop-Factuur-${inv.number}.xml`, "application/xml", b64(await accountantSalesUbl(supabase, inv)));
+    } else {
+      const { data: p, error } = await supabase.from("purchase_invoices").select("*").eq("id", data.id).single();
+      if (error || !p) throw new Error("Aankoopfactuur niet gevonden");
+      const buyer = { name: s?.company_name || "Riory BV", vat: s?.company_vat || "BE0840931404" };
+      const safe = `${p.supplier_name}-${p.invoice_number ?? p.id.slice(0, 8)}`.replace(/[^\w.-]+/g, "_").slice(0, 80);
+      name = `Aankoopfactuur ${p.invoice_number ?? ""} van ${p.supplier_name}`;
+      attachment = file(`Aankoop-${p.kind === "creditnota" ? "Creditnota" : "Factuur"}-${safe}.xml`, "application/xml", b64(await accountantPurchaseUbl(supabase, p, buyer)));
+    }
+    await send(mailTo, `${name} in UBL — Riory`, `In de bijlage vindt u ${name} in UBL, met het echte document ingesloten.`, [attachment]);
+    const { error } = await supabase.from(data.kind === "sales" ? "invoices" : "purchase_invoices").update({ accountant_sent_at: new Date().toISOString() }).eq("id", data.id);
+    if (error) throw new Error("Mail aanvaard, maar verzendmarkering mislukt. Controleer Outlook vóór opnieuw versturen.");
+    return { to: mailTo, name };
+  });

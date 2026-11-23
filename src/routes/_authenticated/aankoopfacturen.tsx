@@ -19,6 +19,7 @@ import { purchaseInvoiceWarnings, type PurchaseLine } from "@/lib/purchase-invoi
 import { bookPurchaseInvoice, importFromPeppyrus, listExpenseAccounts, peppyrusStatus, sendPeppyrusTestInvoice, suggestPurchaseAccounts } from "@/lib/purchase-booking.functions";
 import { canSendPeppolTest, creditorBank, daysUntilDue, dueLabel, paymentCommunication, paymentMethodLock, supplierBankWarnings } from "@/lib/purchase-booking";
 import { deletePurchaseInvoices, attachPurchasePdf, importReceipt, importPurchaseInvoices, paymentFile, setPurchaseInvoiceStatus, updatePurchaseInvoice } from "@/lib/purchase-invoices.functions";
+import { sendInvoiceToAccountant } from "@/lib/accountant-package.functions";
 import { MarkPurchasePaid } from '@/components/MarkPurchasePaid';
 import { SortTh, Th, rowTint, tableCls, tableWrap, useSort } from "@/components/SortTable";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,7 @@ type Row = {
   invoice_number: string | null; invoice_date: string | null; due_date: string | null;
   lines: PurchaseLine[]; net: number; vat: number; total: number; payment_ref: string | null;
   status: string; pdf_path: string | null; created_at: string; kind: 'factuur' | 'creditnota'; paid_at: string | null; bank_payment_ref: string | null;
-  payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number; supplier_id?: string | null; booked_at?: string | null;
+  payment_method: string; supplier_vat_rule: string; vat_deductible_percent: number; supplier_id?: string | null; booked_at?: string | null; accountant_sent_at?: string | null;
 };
 
 const STATUS: Record<string, string> = { te_controleren: "Te controleren", goedgekeurd: "Goedgekeurd", betaald: "Afgeletterd", betaling_klaargezet: 'Betaling ingepland' };
@@ -177,6 +178,36 @@ function Aankoopfacturen() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Betaalbestand mislukt"); }
     setBusy(false);
     refresh();
+  }
+
+  const toAccountant = useServerFn(sendInvoiceToAccountant);
+  type ListRow = { id: string; invoice_number: string | null; supplier_name: string; pdf_path: string | null; accountant_sent_at?: string | null };
+  async function sendToAccountant(r: ListRow) {
+    if (!confirm(`Aankoopfactuur ${r.invoice_number ?? ''} van ${r.supplier_name} als UBL (met het echte document erin) naar de boekhouder mailen?`)) return;
+    setBusy(true);
+    try { const res = await toAccountant({ data: { kind: "purchase", id: r.id } }); toast.success(`${res.name} verzonden naar ${res.to}`); refresh(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden naar boekhouder mislukt"); }
+    finally { setBusy(false); }
+  }
+
+  async function downloadPdf(r: ListRow) {
+    if (!r.pdf_path) { toast.error("Geen PDF in het systeem voor deze factuur"); return; }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.storage.from("aankoopfacturen").createSignedUrl(r.pdf_path, 120);
+      if (error || !data?.signedUrl) throw new Error("PDF ophalen mislukt");
+      const res = await fetch(data.signedUrl);
+      if (!res.ok) throw new Error("PDF downloaden mislukt");
+      const blob = await res.blob();
+      const ext = r.pdf_path.split(".").pop()?.toLowerCase() || "pdf";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Aankoop-${(r.invoice_number ?? r.id.slice(0, 8)).replace(/[^\w.-]+/g, "_")}-${r.supplier_name.replace(/[^\w.-]+/g, "_")}.${ext}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Downloaden mislukt"); }
+    finally { setBusy(false); }
   }
 
   async function bekijkPdf(path: string) {
@@ -354,6 +385,8 @@ function Aankoopfacturen() {
                 <td className="text-right">
                   <span className="flex flex-col items-stretch gap-1 sm:items-end">
                     <Button asChild variant="outline" size="sm"><Link to="/aankoopfacturen/$id" params={{ id: r.id }}>{paid ? 'Bekijken' : 'Controleren'}</Link></Button>
+                    <Button variant="outline" size="sm" disabled={busy || !r.pdf_path} title={r.pdf_path ? undefined : 'Geen PDF in het systeem'} onClick={() => downloadPdf(r)}>Download</Button>
+                    <Button variant="outline" size="sm" disabled={busy} title={r.accountant_sent_at ? `Al verzonden op ${new Date(r.accountant_sent_at).toLocaleDateString('nl-BE')}` : undefined} onClick={() => sendToAccountant(r)}>{r.accountant_sent_at ? 'Opnieuw naar boekhouder' : 'Naar boekhouder'}</Button>
                     {!paid && r.kind === 'factuur' && <MarkPurchasePaid id={r.id} staged={r.status === 'betaling_klaargezet'} disabled={busy} onSaved={async () => { setSel(s => s.filter(id => id !== r.id)); await Promise.all([refresh(), qc.invalidateQueries({ queryKey: ['purchase_queue'] })]); }} />}
                   </span>
                 </td>

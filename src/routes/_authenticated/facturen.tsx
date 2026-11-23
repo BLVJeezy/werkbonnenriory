@@ -14,6 +14,7 @@ import { werkbonNr } from "@/lib/werkbon-number";
 import { AccountantPackage } from "@/components/AccountantPackage";
 import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { createCreditNote, createInvoices, createSubcontractInvoices, invoicePdf, sendInvoiceByPost, sendInvoiceCopy, sendInvoices } from "@/lib/invoices.functions";
+import { sendInvoiceToAccountant } from "@/lib/accountant-package.functions";
 import { sendConfirmText } from "@/lib/invoice-delivery";
 import { isInvoiceEditable } from "@/lib/invoice";
 import { QrCode, Trash2 } from "lucide-react";
@@ -188,6 +189,14 @@ function Facturen() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Creditnota mislukt"); }
     setBusy(false);
     refresh();
+  }
+  const toAccountant = useServerFn(sendInvoiceToAccountant);
+  async function sendToAccountant(id: string, number: string) {
+    if (!confirm(`${number} als UBL (met de echte factuur erin) naar de boekhouder mailen?`)) return;
+    setBusy(true);
+    try { const r = await toAccountant({ data: { kind: "sales", id } }); toast.success(`${r.name} verzonden naar ${r.to}`); refresh(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Verzenden naar boekhouder mislukt"); }
+    finally { setBusy(false); }
   }
   async function download(id: string) {
     const r = await getPdf({ data: { invoiceId: id } });
@@ -398,6 +407,7 @@ function Facturen() {
                               ? <span className="rounded bg-primary/15 px-1.5 font-semibold text-foreground">Geopend {new Date(data.opens[i.id]!.last).toLocaleString("nl-BE", { dateStyle: "short", timeStyle: "short" })}{data.opens[i.id]!.count > 1 ? ` · ${data.opens[i.id]!.count}×` : ""}</span>
                               : <span className="rounded bg-muted px-1.5">Nog niet geopend</span>)}
                             {paid && i.paid_at && <span>Betaald op {new Date(i.paid_at).toLocaleDateString("nl-BE")}</span>}
+                            {i.accountant_sent_at && <span>Naar boekhouder op {new Date(i.accountant_sent_at).toLocaleDateString("nl-BE")}</span>}
                             {i.post_sent_at && <span>Per post verstuurd {new Date(i.post_sent_at).toLocaleDateString("nl-BE")}</span>}
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -413,6 +423,7 @@ function Facturen() {
                             {isInvoiceEditable(i) && <NewInvoice invoice={i} creditNote={i.kind === "creditnota"} onCreated={refresh} />}
                             {i.kind !== "creditnota" && !i.post_sent_at && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendPost(i.id, i.number)}>Per post</Button>}
                             {i.status === "verzonden" && <Button variant="outline" size="sm" disabled={busy} onClick={() => sendCopy(i.id, i.number, (i.customer as { email?: string | null } | null)?.email ?? null)}>Kopie mailen</Button>}
+                            <Button variant="outline" size="sm" disabled={busy} onClick={() => sendToAccountant(i.id, `${i.kind === "creditnota" ? "Creditnota" : "Factuur"} ${i.number}`)}>{i.accountant_sent_at ? "Opnieuw naar boekhouder" : "Naar boekhouder"}</Button>
                           </div>
                         </div>
                       </td></tr>
