@@ -14,6 +14,20 @@ export interface CreditNoteSummary {
   customer: CustomerIdentityLike | null;
 }
 
+export type AllocationTargetSource = "werkbonnen" | "simpla";
+
+export interface CreditAllocationTarget {
+  id: string;
+  source: AllocationTargetSource;
+  number: string;
+  customer: CustomerIdentityLike | null;
+  total: number;
+  paidAmount: number;
+  openAmount: number;
+  issueDate: string | null;
+  isOrigin?: boolean;
+}
+
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 export function normalizeVatNumber(vat: string | null | undefined): string {
@@ -67,6 +81,7 @@ export function validateManualCreditAllocation(input: {
   creditCustomer: CustomerIdentityLike | null | undefined;
   invoiceCustomer: CustomerIdentityLike | null | undefined;
   isOriginInvoice?: boolean;
+  targetSource?: AllocationTargetSource;
 }): string | null {
   const amt = r2(input.requestedAmount);
   if (!(amt > 0)) return "Bedrag moet groter dan 0 zijn";
@@ -78,6 +93,28 @@ export function validateManualCreditAllocation(input: {
   if (amt > input.creditOpen + 0.005) return `Bedrag is hoger dan het openstaand klanttegoed (€${input.creditOpen.toFixed(2)})`;
   if (amt > input.invoiceOpen + 0.005) return `Bedrag is hoger dan het openstaand saldo van de factuur (€${input.invoiceOpen.toFixed(2)})`;
   return null;
+}
+
+/** Bouwt een stabiele idempotency-sleutel voor een manuele aflettering (bescherming tegen dubbelklik). */
+export function buildManualAllocationKey(creditId: string, source: AllocationTargetSource, targetId: string, amount: number, date: string): string {
+  return `manual_${source}:${creditId}:${targetId}:${r2(amount).toFixed(2)}:${date}`;
+}
+
+/** Berekent de herstelde saldi na het terugdraaien (reversal) van een creditnota-aflettering. */
+export function computeReversalBalances(input: {
+  creditTotal: number;
+  creditPaidAmount: number;
+  invoiceTotal: number;
+  invoicePaidAmount: number;
+  reversedAmount: number;
+}): { creditPaidAfter: number; creditOpenAfter: number; invoicePaidAfter: number; invoiceOpenAfter: number } {
+  const amt = r2(Math.max(0, input.reversedAmount));
+  const creditPaidAbs = r2(Math.max(0, Math.abs(input.creditPaidAmount) - amt));
+  const creditPaidAfter = creditPaidAbs <= 0.005 ? 0 : -creditPaidAbs;
+  const creditOpenAfter = r2(Math.max(0, Math.abs(input.creditTotal) - creditPaidAbs));
+  const invoicePaidAfter = r2(Math.max(0, input.invoicePaidAmount - amt));
+  const invoiceOpenAfter = r2(Math.max(0, input.invoiceTotal - invoicePaidAfter));
+  return { creditPaidAfter, creditOpenAfter, invoicePaidAfter, invoiceOpenAfter };
 }
 
 /** Filtert openstaande verkoopcreditnota's die nog niet volledig verrekend of terugbetaald zijn (= openstaand klanttegoed). */

@@ -441,10 +441,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           credit_note_id: string
+          fin_invoice_id: string | null
           id: string
           idempotency_key: string
           invoice_id: string | null
           note: string | null
+          reversal_reason: string | null
           reversed_at: string | null
           reversed_by: string | null
         }
@@ -456,10 +458,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           credit_note_id: string
+          fin_invoice_id?: string | null
           id?: string
           idempotency_key: string
           invoice_id?: string | null
           note?: string | null
+          reversal_reason?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
         }
@@ -471,10 +475,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           credit_note_id?: string
+          fin_invoice_id?: string | null
           id?: string
           idempotency_key?: string
           invoice_id?: string | null
           note?: string | null
+          reversal_reason?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
         }
@@ -491,6 +497,13 @@ export type Database = {
             columns: ["credit_note_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_allocations_fin_invoice_id_fkey"
+            columns: ["fin_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "fin_invoices"
             referencedColumns: ["id"]
           },
           {
@@ -5405,6 +5418,10 @@ export type Database = {
         }
         Returns: string
       }
+      reverse_credit_note_allocation: {
+        Args: { p_allocation_id: string; p_reason?: string }
+        Returns: Json
+      }
       review_completed_work_orders: {
         Args: { _after: string; _after_id: string; _limit: number }
         Returns: {
@@ -5423,6 +5440,16 @@ export type Database = {
           p_date: string
           p_idempotency_key?: string
           p_invoice: string
+        }
+        Returns: number
+      }
+      settle_credit_note_to_fin_invoice: {
+        Args: {
+          p_amount: number
+          p_credit: string
+          p_date?: string
+          p_fin_invoice: string
+          p_idempotency_key?: string
         }
         Returns: number
       }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeAutoAllocation, sameLegalCustomer, unallocatedCustomerCredits, validateManualCreditAllocation } from "./credit-note-allocation";
+import {
+  buildManualAllocationKey,
+  computeAutoAllocation,
+  computeReversalBalances,
+  sameLegalCustomer,
+  unallocatedCustomerCredits,
+  validateManualCreditAllocation,
+} from "./credit-note-allocation";
 
 describe("credit-note auto allocation", () => {
   it("verrekent volledig op een onbetaalde factuur zonder resttegoed", () => {
@@ -105,5 +112,53 @@ describe("sameLegalCustomer & manual allocation validation", () => {
     expect(list).toHaveLength(1);
     expect(list[0]?.id).toBe("2");
     expect(list[0]?.openCredit).toBe(120);
+  });
+
+  it("staat manuele aflettering toe tegen een geïmporteerde Simpla-factuur van dezelfde klant", () => {
+    const err = validateManualCreditAllocation({
+      creditOpen: 296.79,
+      invoiceOpen: 296.79,
+      requestedAmount: 296.79,
+      creditCustomer: { name: "KOZL vzw", vatNumber: "BE0410556656" },
+      invoiceCustomer: { name: "KOZL vzw" },
+      targetSource: "simpla",
+    });
+    expect(err).toBeNull();
+  });
+
+  it("weigert aflettering tegen een Simpla-factuur van een andere klant", () => {
+    const err = validateManualCreditAllocation({
+      creditOpen: 296.79,
+      invoiceOpen: 296.79,
+      requestedAmount: 296.79,
+      creditCustomer: { name: "KOZL vzw", vatNumber: "BE0410556656" },
+      invoiceCustomer: { name: "Immo DDS" },
+      targetSource: "simpla",
+    });
+    expect(err).toContain("dezelfde klant");
+  });
+
+  it("genereert dezelfde idempotency-sleutel bij dubbelklik en onderscheidt Simpla vs Werkbonnen", () => {
+    const k1 = buildManualAllocationKey("cn-1", "simpla", "fi-1", 296.79, "2026-11-23");
+    const k2 = buildManualAllocationKey("cn-1", "simpla", "fi-1", 296.79, "2026-11-23");
+    const k3 = buildManualAllocationKey("cn-1", "werkbonnen", "fi-1", 296.79, "2026-11-23");
+    expect(k1).toBe(k2);
+    expect(k1).not.toBe(k3);
+  });
+
+  it("herstelt saldi exact na terugdraaien (reversal) van een aflettering", () => {
+    const restored = computeReversalBalances({
+      creditTotal: -296.79,
+      creditPaidAmount: -296.79,
+      invoiceTotal: 314.6,
+      invoicePaidAmount: 296.79,
+      reversedAmount: 296.79,
+    });
+    expect(restored).toEqual({
+      creditPaidAfter: 0,
+      creditOpenAfter: 296.79,
+      invoicePaidAfter: 0,
+      invoiceOpenAfter: 314.6,
+    });
   });
 });

@@ -284,13 +284,8 @@ export const createCreditNote = createServerFn({ method: "POST" })
       p_kind: "creditnota", p_credit_for: inv.id,
     });
     if (error) throw new Error(error.message);
-    if (row?.id) {
-      const { error: settleErr } = await supabase.rpc("auto_allocate_credit_note", {
-        p_credit: row.id,
-        p_date: issue,
-      });
-      if (settleErr) throw new Error(settleErr.message);
-    }
+    // Automatische creditnota-aflettering tijdelijk uitgeschakeld: admin kiest manueel
+    // welke openstaande Werkbonnenriory- of geïmporteerde Simpla-verkoopfactuur wordt afgeboekt.
     return row;
   });
 
