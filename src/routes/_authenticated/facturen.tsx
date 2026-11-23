@@ -242,7 +242,7 @@ function Facturen() {
   const todoSort = useSort(data?.todo ?? [], { nr: (w) => w.number, klant: (w) => w.customer_name, ploeg: (w) => w.technicians?.name, datum: (w) => w.scheduled_date ?? w.signed_at, betaald: (w) => todoAmount(w) });
   const woDateOf = (i: { work_order_id?: string | null; extra_work_order_ids?: string[] }) => {
     const ids = [i.work_order_id, ...(i.extra_work_order_ids ?? [])].filter((x): x is string => Boolean(x));
-    const dates = ids.map((id) => data?.woDates[id]).filter((x): x is string => Boolean(x)).sort();
+    const dates = ids.map((id) => data?.woDates?.[id]).filter((x): x is string => Boolean(x)).sort();
     return dates[0] ?? null;
   };
   const invSort = useSort(data?.invoices ?? [], { nr: (i) => i.number, klant: (i) => (i.customer as { name?: string }).name, datum: (i) => i.issue_date ?? i.created_at, werkbon: (i) => woDateOf(i), bedrag: (i) => Number(i.total), status: (i) => i.status });
