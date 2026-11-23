@@ -34,6 +34,11 @@ describe('deelbetaling afletteren', () => {
     const tx = { amount: 100, counterparty: 'TC Tongeren', description: '+++002/0260/83557+++' };
     expect(partialInvoiceCandidates(tx, open, () => 366.4, 100).map((i) => i.id)).toEqual(['a']);
   });
+  it('stelt gedeeltelijke terugstorting op een verkoopcreditnota voor', () => {
+    const open = [{ id: 'cn', direction: 'verkoop', doc_type: 'creditnota', counterparty: 'OCMW van Bilzen-Hoeselt', number: '20250049' }];
+    const tx = { amount: -73.8, counterparty: 'OCMW', description: 'Teveel betaald cn20250049' };
+    expect(partialInvoiceCandidates(tx, open, () => -425.21, 73.8).map((i) => i.id)).toEqual(['cn']);
+  });
 });
 
 describe('partyMatches', () => {

@@ -712,7 +712,7 @@ function Bank({ c }: { c: string }) {
   // Deelbetaling: betaling kleiner dan het openstaande bedrag, enkel voorstellen bij overeenkomende naam of nummer.
   const partialCands = (t: any) => grossOf(t) == null ? partialInvoiceCandidates(t, open, remaining, effAmt(t)).slice(0, 3) : [];
   const partialMatch = async (t: any, inv: any) => {
-    const rest = remaining(inv);
+    const rest = Math.abs(remaining(inv));
     const deel = r2(Math.min(Math.abs(Number(t.amount)), rest));
     if (deel <= 0) return void toast.error("Niets meer af te letteren");
     if (!confirm(`Deelbetaling ${eur(deel)} afletteren op ${inv.counterparty} ${inv.number}?\nVan de factuur blijft ${eur(r2(rest - deel))} open.`)) return;
@@ -800,7 +800,7 @@ function Bank({ c }: { c: string }) {
     if (!open.length && !paidNoTx.length) return;
     const todo = tx.filter((t) => !t.entry_id && !t.matched_purchase_invoice_id && !t.allocated_amount && !ownTransfer(t));
     const fresh = (t: any) => !autoTried.current.has(t.id);
-    const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === (i.direction === "aankoop") && Math.abs(remaining(i) - effAmt(t)) < 0.025); };
+    const candOf = (t: any) => { const amt = Number(t.amount); return open.filter((i: any) => (amt < 0) === docExpectsOutgoing(i) && Math.abs(Math.abs(remaining(i)) - effAmt(t)) < 0.025); };
     const pairs = todo.map((t) => [t, candOf(t)] as const).filter(([, cs]) => cs.length === 1);
     const usage = new Map<string, number>();
     for (const t of todo) for (const i of candOf(t)) usage.set(i.id, (usage.get(i.id) ?? 0) + 1);
@@ -821,7 +821,7 @@ function Bank({ c }: { c: string }) {
     const surePaid = todo.filter((t) => fresh(t) && pc.get(t.id)?.length === 1 && pUse.get(pc.get(t.id)![0].id) === 1).map((t) => [t, pc.get(t.id)!] as const);
     // Vaste kosten: geen passende factuur, geen open factuur op naam van deze partij, en eerdere boekingen altijd op dezelfde rekening.
     const taken = new Set([...sure.map(([t]) => t.id), ...surePaid.map(([t]) => t.id)]);
-    const hasOpenFor = (t: any) => open.some((i: any) => (Number(t.amount) < 0) === (i.direction === "aankoop") && sameParty({ ...t, description: t.counterparty }, i));
+    const hasOpenFor = (t: any) => open.some((i: any) => (Number(t.amount) < 0) === docExpectsOutgoing(i) && sameParty({ ...t, description: t.counterparty }, i));
     const sureFixed = todo.filter((t) => fresh(t) && !taken.has(t.id) && !candOf(t).length && !paidCands(t).length && grossOf(t) == null && !hasOpenFor(t))
       .map((t) => [t, learnedAccount(bankHistory, t)] as const).filter((x): x is readonly [any, string] => !!x[1]);
     sure.forEach(([t]) => autoTried.current.add(t.id));

@@ -3,6 +3,8 @@
 // Kandidaten worden enkel voorgesteld als de naam of het factuurnummer overeenkomt,
 // zodat een gelijk bedrag alleen nooit tot een verkeerde koppeling leidt.
 
+import { docExpectsOutgoing } from "./bank-split";
+
 export const normParty = (s: string) => s.toLowerCase().normalize("NFD").replace(/[^a-z0-9 ]/g, "");
 
 export function partyMatches(txText: string, party: string, number: string | null | undefined): boolean {
@@ -12,15 +14,15 @@ export function partyMatches(txText: string, party: string, number: string | nul
   return normParty(party).split(/\s+/).some((w) => w.length >= 4 && hay.includes(w));
 }
 
-export function partialInvoiceCandidates<T extends { direction: string; counterparty?: string | null; number?: string | null }>(
+export function partialInvoiceCandidates<T extends { direction: string; doc_type?: string | null; counterparty?: string | null; number?: string | null }>(
   tx: { amount: number; counterparty?: string | null; description?: string | null },
   open: T[],
   remaining: (i: T) => number,
   effAmt: number,
 ): T[] {
   return open.filter((i) =>
-    (tx.amount < 0) === (i.direction === "aankoop") &&
-    remaining(i) > effAmt + 0.025 &&
+    (tx.amount < 0) === docExpectsOutgoing(i) &&
+    Math.abs(remaining(i)) > effAmt + 0.025 &&
     partyMatches(`${tx.counterparty ?? ""} ${tx.description ?? ""}`, i.counterparty ?? "", i.number),
   );
 }

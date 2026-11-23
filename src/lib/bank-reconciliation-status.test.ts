@@ -13,4 +13,8 @@ describe('afletterstatus', () => {
   it('aankoop met betalingsledger is afgeletterd', () => {
     expect(isInvoiceReconciled({ paid_amount: 302.50, bank_reconciled: true }, 302.50, false)).toBe(true);
   });
+  it('herkent een volledig afgeletterde creditnota ondanks negatief totaal', () => {
+    expect(isInvoiceReconciled({ paid_amount: 425.21, bank_ref: 'finance:tx-1' }, -425.21, false)).toBe(true);
+    expect(isInvoiceReconciled({ paid_amount: 351.41, bank_ref: 'finance:tx-1' }, -425.21, false)).toBe(false);
+  });
 });
