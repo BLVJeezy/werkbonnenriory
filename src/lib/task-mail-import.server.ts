@@ -1,10 +1,11 @@
 import { addMailContact, parseContacts } from "./customer-contacts";
 import { applySyndicus, syndicusDetailsFromMail, SYNDICUS_DETAIL_FIELDS } from "./syndicus";
+import { syndicusDirPatch, type SyndicusDir } from "./syndici";
 import { isUrgentMail } from "./urgent-mail";
 import { isReplyMail } from "./reply-mail";
 import { formatAddress, formatSiteAddress } from "@/lib/address";
 import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "@/lib/vat-number";
-import { autoCategoryPatchForIncomingTask } from "@/lib/customer-categories";
+import { autoCategoryPatchForIncomingTask, matchSyndicusFromDirectory } from "@/lib/customer-categories";
 
 const MAILBOX_ADDRESS = "afspraak@riory.be";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -196,6 +197,10 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
       ? await db.from("customer_sectors").select("id, name, archived_at")
       : { data: [] as { id: string; name: string; archived_at: string | null }[] };
     const sectors = sectorRows ?? [];
+    const { data: syndiciRows } = fresh.length
+      ? await db.from("syndici").select("id, company, contact, vat_number, street, house_number, postal_code, city, phone, email, billing_email")
+      : { data: [] as SyndicusDir[] };
+    const syndiciDir: SyndicusDir[] = (syndiciRows ?? []) as SyndicusDir[];
 
     let imported = 0;
     const errors: string[] = [];
@@ -287,15 +292,52 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
           const isVme = !!(x.vme_name?.trim() || x.syndicus?.trim());
           const { data: catRow } = await db
             .from("customers")
-            .select("customer_category, sector_id, vat_number")
+            .select("customer_category, sector_id, syndicus_id, vat_number")
             .eq("id", created.customer_id)
             .maybeSingle();
+          let matchedSyndicusId: string | null = null;
+          if (isVme && !catRow?.syndicus_id) {
+            const details = syndicusDetailsFromMail(x);
+            const matched = matchSyndicusFromDirectory(syndiciDir, {
+              company: details.syndicus_company ?? x.syndicus ?? null,
+              vatNumber: details.syndicus_vat_number ?? null,
+              email: details.syndicus_email ?? null,
+              billingEmail: details.syndicus_billing_email ?? null,
+            });
+            if (matched) {
+              matchedSyndicusId = matched.id;
+            } else if (details.syndicus_company?.trim()) {
+              try {
+                const newDir = syndicusDirPatch({
+                  company: details.syndicus_company,
+                  contact: details.syndicus_contact,
+                  vat_number: details.syndicus_vat_number,
+                  street: details.syndicus_street,
+                  house_number: details.syndicus_house_number,
+                  postal_code: details.syndicus_postal_code,
+                  city: details.syndicus_city,
+                  phone: details.syndicus_phone,
+                  email: details.syndicus_email,
+                  billing_email: details.syndicus_billing_email,
+                });
+                const { data: insertedDir } = await db.from("syndici").insert(newDir).select("id, company, contact, vat_number, street, house_number, postal_code, city, phone, email, billing_email").single();
+                if (insertedDir) {
+                  matchedSyndicusId = insertedDir.id;
+                  syndiciDir.push(insertedDir as SyndicusDir);
+                }
+              } catch (dirErr) {
+                console.error("Syndicus-fiche niet automatisch aangemaakt:", dirErr);
+              }
+            }
+          }
           const catPatch = autoCategoryPatchForIncomingTask({
             existingCategory: catRow?.customer_category ?? null,
             existingSectorId: catRow?.sector_id ?? null,
+            existingSyndicusId: catRow?.syndicus_id ?? null,
             vrijBeroep: vrij,
             customerType: x.customer_type,
             isVme,
+            matchedSyndicusId,
             vatNumber: customerVatNumber(x.vat_number) || catRow?.vat_number || null,
             sectors,
           });

@@ -1,5 +1,5 @@
 import { formatAddress } from "./address";
-import { customerDetailsFromDir, type SyndicusDir } from "./syndici";
+import { customerDetailsFromDir, syndicusKey, type SyndicusDir } from "./syndici";
 import { syndicusDetailsPatch } from "./syndicus";
 import { vatRateForCustomer } from "./vat-number";
 
@@ -315,7 +315,63 @@ export function customersToCsv(rows: CustomerExportRow[], includeContactAndAddre
 }
 
 /**
+ * Normaliseert een btw-nummer of bedrijfsnaam (zonder rechtsvorm) voor betrouwbare syndicus-matching.
+ */
+const normVat = (v: string | null | undefined) => (v ?? "").replace(/[^a-z0-9]/gi, "").toUpperCase();
+const normCompanyBase = (name: string | null | undefined) =>
+  syndicusKey(name)
+    .replace(/\b(bv|bvba|nv|vzw|cv|cvba|commv|ebvba|gcv|srl|sa|asbl)\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/**
+ * Zoekt de juiste bestaande syndicus in de syndici-lijst op basis van gegevens uit een inkomende mail:
+ * 1. Exacte match op btw-nummer
+ * 2. Exacte match op genormaliseerde bedrijfsnaam (of zonder rechtsvorm)
+ * 3. Match op e-mailadres of facturatie-e-mailadres
+ */
+export function matchSyndicusFromDirectory(
+  directory: Pick<SyndicusDir, "id" | "company" | "vat_number" | "email" | "billing_email">[],
+  incoming: {
+    company?: string | null;
+    vatNumber?: string | null;
+    email?: string | null;
+    billingEmail?: string | null;
+  },
+): Pick<SyndicusDir, "id" | "company" | "vat_number" | "email" | "billing_email"> | null {
+  const vat = normVat(incoming.vatNumber);
+  if (vat) {
+    const byVat = directory.find((d) => normVat(d.vat_number) === vat);
+    if (byVat) return byVat;
+  }
+  const companyKey = syndicusKey(incoming.company);
+  if (companyKey) {
+    const exact = directory.find((d) => syndicusKey(d.company) === companyKey);
+    if (exact) return exact;
+    const base = normCompanyBase(incoming.company);
+    if (base) {
+      const byBase = directory.filter((d) => normCompanyBase(d.company) === base);
+      if (byBase.length === 1) return byBase[0] ?? null;
+    }
+  }
+  const emails = [incoming.email, incoming.billingEmail]
+    .map((e) => (e ?? "").trim().toLowerCase())
+    .filter(Boolean);
+  if (emails.length > 0) {
+    const byEmail = directory.find((d) => {
+      const dirEmails = [d.email, d.billing_email]
+        .map((e) => (e ?? "").trim().toLowerCase())
+        .filter(Boolean);
+      return emails.some((e) => dirEmails.includes(e));
+    });
+    if (byEmail) return byEmail;
+  }
+  return null;
+}
+
+/**
  * Automatische categorietoewijzing bij het binnenkomen van een opdracht:
+ * - VME -> standaardcategorie "vme" + koppeling aan de juiste syndicus (of "Nog toe te wijzen")
  * - Vrij beroep -> actieve categorie "Vrije beroepen" (of "Vrij beroep")
  * - Particulier (zonder btw-nummer en geen VME) -> standaardcategorie "particulier"
  * Bestaande handmatige indelingen worden nooit overschreven.
@@ -323,14 +379,40 @@ export function customersToCsv(rows: CustomerExportRow[], includeContactAndAddre
 export function autoCategoryPatchForIncomingTask(input: {
   existingCategory?: string | null;
   existingSectorId?: string | null;
+  existingSyndicusId?: string | null;
   vrijBeroep: boolean;
   customerType?: "private" | "business" | "unknown" | null;
   isVme?: boolean;
+  matchedSyndicusId?: string | null;
   vatNumber?: string | null;
   sectors: CustomerSector[];
-}): { customer_category: CustomerCategory | null; sector_id: string | null } | null {
-  if (input.existingSectorId || isCustomerCategory(input.existingCategory)) {
+}): {
+  customer_category?: CustomerCategory | null;
+  sector_id?: string | null;
+  syndicus_id?: string | null;
+  vme_syndicus_pending?: boolean;
+} | null {
+  const hasExistingCategory = Boolean(input.existingSectorId || isCustomerCategory(input.existingCategory));
+
+  // Bestaande VME zonder syndicus_id: alsnog aan de juiste syndicus koppelen
+  if (input.isVme && input.existingCategory === "vme" && !input.existingSyndicusId && input.matchedSyndicusId) {
+    return {
+      syndicus_id: input.matchedSyndicusId,
+      vme_syndicus_pending: false,
+    };
+  }
+
+  if (hasExistingCategory) {
     return null;
+  }
+  if (input.isVme) {
+    const syndicusId = input.existingSyndicusId ?? input.matchedSyndicusId ?? null;
+    return {
+      customer_category: "vme",
+      sector_id: null,
+      syndicus_id: syndicusId,
+      vme_syndicus_pending: !syndicusId,
+    };
   }
   if (input.vrijBeroep) {
     const sector = input.sectors.find(

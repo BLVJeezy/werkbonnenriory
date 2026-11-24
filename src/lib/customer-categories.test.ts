@@ -7,6 +7,7 @@ import {
   customersToCsv,
   effectiveCustomerVatRate,
   filterCustomersByCategoryAndSyndicus,
+  matchSyndicusFromDirectory,
   parseSectorOptionValue,
   resolveUnifiedCategoryLabel,
   sanitizeSpreadsheetCell,
@@ -252,15 +253,53 @@ describe("customer-categories", () => {
       }),
     ).toEqual({ customer_category: "particulier", sector_id: null });
 
-    // Particulier maar wel VME of met btw-nummer wordt niet als particulier ingedeeld
+    // VME met gevonden syndicus krijgt categorie VME + syndicus_id
     expect(
       autoCategoryPatchForIncomingTask({
         vrijBeroep: false,
         customerType: "private",
         isVme: true,
+        matchedSyndicusId: "syn-1",
         sectors,
       }),
-    ).toBeNull();
+    ).toEqual({
+      customer_category: "vme",
+      sector_id: null,
+      syndicus_id: "syn-1",
+      vme_syndicus_pending: false,
+    });
+
+    // VME zonder bekende syndicus krijgt categorie VME + Nog toe te wijzen
+    expect(
+      autoCategoryPatchForIncomingTask({
+        vrijBeroep: false,
+        customerType: "unknown",
+        isVme: true,
+        sectors,
+      }),
+    ).toEqual({
+      customer_category: "vme",
+      sector_id: null,
+      syndicus_id: null,
+      vme_syndicus_pending: true,
+    });
+
+    // Bestaande VME zonder syndicus wordt alsnog gekoppeld aan gevonden syndicus
+    expect(
+      autoCategoryPatchForIncomingTask({
+        existingCategory: "vme",
+        existingSyndicusId: null,
+        vrijBeroep: false,
+        isVme: true,
+        matchedSyndicusId: "syn-2",
+        sectors,
+      }),
+    ).toEqual({
+      syndicus_id: "syn-2",
+      vme_syndicus_pending: false,
+    });
+
+    // Particulier met btw-nummer wordt niet als particulier ingedeeld
     expect(
       autoCategoryPatchForIncomingTask({
         vrijBeroep: false,
@@ -286,5 +325,29 @@ describe("customer-categories", () => {
         sectors,
       }),
     ).toBeNull();
+  });
+
+  it("vindt de juiste syndicus op btw-nummer, bedrijfsnaam (ook zonder rechtsvorm) of e-mail", () => {
+    const directory = [
+      {
+        id: "syn-1",
+        company: "Immo Schrijnemakers BV",
+        vat_number: "BE 0123.456.789",
+        email: "info@schrijnemakers.be",
+        billing_email: "facturen@schrijnemakers.be",
+      },
+      {
+        id: "syn-2",
+        company: "Syndic Limburg",
+        vat_number: null,
+        email: "beheer@syndiclimburg.be",
+        billing_email: null,
+      },
+    ];
+
+    expect(matchSyndicusFromDirectory(directory, { vatNumber: "BE0123456789" })?.id).toBe("syn-1");
+    expect(matchSyndicusFromDirectory(directory, { company: "Immo Schrijnemakers" })?.id).toBe("syn-1");
+    expect(matchSyndicusFromDirectory(directory, { billingEmail: "FACTUREN@schrijnemakers.be" })?.id).toBe("syn-1");
+    expect(matchSyndicusFromDirectory(directory, { company: "Onbekend Kantoor" })).toBeNull();
   });
 });
