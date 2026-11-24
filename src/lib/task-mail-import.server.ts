@@ -4,6 +4,7 @@ import { isUrgentMail } from "./urgent-mail";
 import { isReplyMail } from "./reply-mail";
 import { formatAddress, formatSiteAddress } from "@/lib/address";
 import { customerVatNumber, mentionsVrijBeroep, vatRateForCustomer } from "@/lib/vat-number";
+import { autoCategoryPatchForIncomingTask } from "@/lib/customer-categories";
 
 const MAILBOX_ADDRESS = "afspraak@riory.be";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -191,6 +192,11 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
     const seenMail = new Set((sameMail ?? []).map((e) => mailKey(e.received_at, e.source_subject)));
     const fresh = candidates.filter((m) => !seen.has(m.id) && !seenMail.has(mailKey(m.receivedDateTime, m.subject))).slice(0, 15);
 
+    const { data: sectorRows } = fresh.length
+      ? await db.from("customer_sectors").select("id, name, archived_at")
+      : { data: [] as { id: string; name: string; archived_at: string | null }[] };
+    const sectors = sectorRows ?? [];
+
     let imported = 0;
     const errors: string[] = [];
     for (const m of fresh) {
@@ -276,6 +282,27 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
         if (vrij && created?.customer_id) {
           const { error: flagError } = await db.from("customers").update({ vrij_beroep: true }).eq("id", created.customer_id);
           if (flagError) console.error("Vrij beroep niet bewaard bij de klant:", flagError.message);
+        }
+        if (created?.customer_id) {
+          const isVme = !!(x.vme_name?.trim() || x.syndicus?.trim());
+          const { data: catRow } = await db
+            .from("customers")
+            .select("customer_category, sector_id, vat_number")
+            .eq("id", created.customer_id)
+            .maybeSingle();
+          const catPatch = autoCategoryPatchForIncomingTask({
+            existingCategory: catRow?.customer_category ?? null,
+            existingSectorId: catRow?.sector_id ?? null,
+            vrijBeroep: vrij,
+            customerType: x.customer_type,
+            isVme,
+            vatNumber: customerVatNumber(x.vat_number) || catRow?.vat_number || null,
+            sectors,
+          });
+          if (catPatch) {
+            const { error: catError } = await db.from("customers").update(catPatch).eq("id", created.customer_id);
+            if (catError) console.error("Automatische klantcategorie niet bewaard:", catError.message);
+          }
         }
         imported++;
       } catch (e) {

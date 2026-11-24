@@ -313,3 +313,38 @@ export function customersToCsv(rows: CustomerExportRow[], includeContactAndAddre
   ];
   return `\uFEFF${lines.join("\r\n")}`;
 }
+
+/**
+ * Automatische categorietoewijzing bij het binnenkomen van een opdracht:
+ * - Vrij beroep -> actieve categorie "Vrije beroepen" (of "Vrij beroep")
+ * - Particulier (zonder btw-nummer en geen VME) -> standaardcategorie "particulier"
+ * Bestaande handmatige indelingen worden nooit overschreven.
+ */
+export function autoCategoryPatchForIncomingTask(input: {
+  existingCategory?: string | null;
+  existingSectorId?: string | null;
+  vrijBeroep: boolean;
+  customerType?: "private" | "business" | "unknown" | null;
+  isVme?: boolean;
+  vatNumber?: string | null;
+  sectors: CustomerSector[];
+}): { customer_category: CustomerCategory | null; sector_id: string | null } | null {
+  if (input.existingSectorId || isCustomerCategory(input.existingCategory)) {
+    return null;
+  }
+  if (input.vrijBeroep) {
+    const sector = input.sectors.find(
+      (s) =>
+        !s.archived_at &&
+        ["vrije beroepen", "vrij beroep"].includes(s.name.trim().toLowerCase()),
+    );
+    if (sector) {
+      return { customer_category: null, sector_id: sector.id };
+    }
+    return null;
+  }
+  if (!input.isVme && input.customerType === "private" && !input.vatNumber?.trim()) {
+    return { customer_category: "particulier", sector_id: null };
+  }
+  return null;
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  autoCategoryPatchForIncomingTask,
   buildCategoryUpdatePatch,
   buildCustomerExportRows,
   customerCategoryLabel,
@@ -222,5 +223,68 @@ describe("customer-categories", () => {
     expect(effectiveCustomerVatRate({ default_vat_rate: 6 })).toBe(6);
     expect(effectiveCustomerVatRate({ postal_code: "6211 AA", default_vat_rate: 6 })).toBe(21);
     expect(effectiveCustomerVatRate({})).toBe(21);
+  });
+
+  it("auto-assigns particulieren and vrije beroepen on incoming tasks without overwriting existing categories", () => {
+    const sectors: CustomerSector[] = [
+      ...sampleSectors,
+      { id: "sec-vb", name: "Vrije beroepen", archived_at: null },
+    ];
+
+    // Vrij beroep krijgt de actieve categorie Vrije beroepen, ook met btw-nummer
+    expect(
+      autoCategoryPatchForIncomingTask({
+        vrijBeroep: true,
+        customerType: "business",
+        vatNumber: "BE0888111222",
+        sectors,
+      }),
+    ).toEqual({ customer_category: null, sector_id: "sec-vb" });
+
+    // Particulier zonder btw-nummer en geen VME krijgt standaardcategorie particulier
+    expect(
+      autoCategoryPatchForIncomingTask({
+        vrijBeroep: false,
+        customerType: "private",
+        isVme: false,
+        vatNumber: null,
+        sectors,
+      }),
+    ).toEqual({ customer_category: "particulier", sector_id: null });
+
+    // Particulier maar wel VME of met btw-nummer wordt niet als particulier ingedeeld
+    expect(
+      autoCategoryPatchForIncomingTask({
+        vrijBeroep: false,
+        customerType: "private",
+        isVme: true,
+        sectors,
+      }),
+    ).toBeNull();
+    expect(
+      autoCategoryPatchForIncomingTask({
+        vrijBeroep: false,
+        customerType: "private",
+        vatNumber: "BE0123456789",
+        sectors,
+      }),
+    ).toBeNull();
+
+    // Bestaande categorie wordt niet overschreven
+    expect(
+      autoCategoryPatchForIncomingTask({
+        existingCategory: "zakelijk",
+        vrijBeroep: true,
+        sectors,
+      }),
+    ).toBeNull();
+    expect(
+      autoCategoryPatchForIncomingTask({
+        existingSectorId: "sec-horeca",
+        vrijBeroep: false,
+        customerType: "private",
+        sectors,
+      }),
+    ).toBeNull();
   });
 });
