@@ -24,7 +24,7 @@ async function cardByName(supabase: any, name: string, exceptId?: string | null)
 
 export const saveSyndicus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { id?: string | null } & SyndicusDirInput) => {
+  .inputValidator((i: { id?: string | null; linkCustomerIds?: string[] } & SyndicusDirInput) => {
     syndicusDirPatch(i);
     return i;
   })
@@ -33,25 +33,25 @@ export const saveSyndicus = createServerFn({ method: "POST" })
     const patch = syndicusDirPatch(data);
     const dupe = await cardByName(context.supabase, patch.company, data.id ?? null);
     if (dupe) throw new Error(`Er is al een contactfiche voor ${dupe.company}.`);
+    const customerSync = {
+      syndicus_company: patch.company,
+      syndicus_contact: patch.contact,
+      syndicus_vat_number: patch.vat_number,
+      syndicus_street: patch.street,
+      syndicus_house_number: patch.house_number,
+      syndicus_postal_code: patch.postal_code,
+      syndicus_city: patch.city,
+      syndicus_phone: patch.phone,
+      syndicus_email: patch.email,
+      syndicus_billing_email: patch.billing_email,
+      syndicus: syndicusLabel({ syndicus_company: patch.company, syndicus_contact: patch.contact }),
+    };
     if (data.id) {
       const { error } = await context.supabase
         .from("syndici")
         .update({ ...patch, updated_at: new Date().toISOString() })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
-      const customerSync = {
-        syndicus_company: patch.company,
-        syndicus_contact: patch.contact,
-        syndicus_vat_number: patch.vat_number,
-        syndicus_street: patch.street,
-        syndicus_house_number: patch.house_number,
-        syndicus_postal_code: patch.postal_code,
-        syndicus_city: patch.city,
-        syndicus_phone: patch.phone,
-        syndicus_email: patch.email,
-        syndicus_billing_email: patch.billing_email,
-        syndicus: syndicusLabel({ syndicus_company: patch.company, syndicus_contact: patch.contact }),
-      };
       const { error: syncError } = await context.supabase
         .from("customers")
         .update(customerSync)
@@ -61,6 +61,14 @@ export const saveSyndicus = createServerFn({ method: "POST" })
     }
     const { data: row, error } = await context.supabase.from("syndici").insert(patch).select("id").single();
     if (error) throw new Error(error.code === "23505" ? "Er is al een contactfiche voor deze syndicus." : error.message);
+    const idsToLink = (data.linkCustomerIds ?? []).filter(Boolean);
+    if (idsToLink.length > 0) {
+      const { error: linkError } = await context.supabase
+        .from("customers")
+        .update({ ...customerSync, syndicus_id: row.id })
+        .in("id", idsToLink);
+      if (linkError) throw new Error(linkError.message);
+    }
     return { id: row.id as string, created: true };
   });
 

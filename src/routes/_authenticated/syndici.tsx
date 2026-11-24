@@ -51,6 +51,7 @@ function ausDerKlant(rows: Record<string, unknown>[]): SyndicusDirInput {
 
 function Fiche({
   id,
+  linkCustomerIds,
   title,
   saveLabel,
   initial,
@@ -58,6 +59,7 @@ function Fiche({
   onCancel,
 }: {
   id?: string | null;
+  linkCustomerIds?: string[];
   title: string;
   saveLabel: string;
   initial: SyndicusDirInput;
@@ -102,7 +104,13 @@ function Fiche({
     }
     setBusy(true);
     try {
-      await saveSyndicus({ data: { id: id ?? null, ...form } });
+      await saveSyndicus({
+        data: {
+          id: id ?? null,
+          ...(linkCustomerIds && linkCustomerIds.length > 0 ? { linkCustomerIds } : {}),
+          ...form,
+        },
+      });
       toast.success(`${form.company.trim()} bewaard`);
       onSaved();
     } catch (e) {
@@ -345,6 +353,7 @@ function Syndici() {
               <div className="mt-3">
                 <Fiche
                   id={g.dir?.id ?? null}
+                  {...(!g.dir && g.rows.length > 0 ? { linkCustomerIds: g.rows.map((r) => r.id) } : {})}
                   title={g.dir ? `${g.label} bewerken` : `Contactfiche voor ${g.label}`}
                   saveLabel={g.dir ? "Bewaren" : "Fiche aanmaken"}
                   initial={bron}
