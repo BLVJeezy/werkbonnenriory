@@ -126,4 +126,23 @@ describe("syndicusGroups", () => {
     );
     expect(g[0]?.rows.map((r) => r.name)).toEqual(["VME Astrid", "VME Zonne"]);
   });
+
+  it("houdt gekoppelde residenties bij de juiste syndicus via syndicus_id na naamswijziging", () => {
+    const g = syndicusGroups(
+      [
+        {
+          id: "c4",
+          name: "VME Residentie A",
+          syndicus_id: "1",
+          syndicus: null,
+          syndicus_company: "facturatie.hasselt@pellettieri.be",
+        },
+      ],
+      [{ ...fiche, id: "1", company: "Pellettieri", contact: null }],
+    );
+    expect(g).toHaveLength(1);
+    expect(g[0]?.label).toBe("Pellettieri");
+    expect(g[0]?.dir?.id).toBe("1");
+    expect(g[0]?.rows.map((r) => r.id)).toEqual(["c4"]);
+  });
 });

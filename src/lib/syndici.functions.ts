@@ -7,6 +7,7 @@ import {
   type SyndicusDir,
   type SyndicusDirInput,
 } from "./syndici";
+import { syndicusLabel } from "./syndicus";
 
 async function requireAdmin(context: { supabase: any; userId: string }) {
   const { data: admin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
@@ -38,6 +39,24 @@ export const saveSyndicus = createServerFn({ method: "POST" })
         .update({ ...patch, updated_at: new Date().toISOString() })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
+      const customerSync = {
+        syndicus_company: patch.company,
+        syndicus_contact: patch.contact,
+        syndicus_vat_number: patch.vat_number,
+        syndicus_street: patch.street,
+        syndicus_house_number: patch.house_number,
+        syndicus_postal_code: patch.postal_code,
+        syndicus_city: patch.city,
+        syndicus_phone: patch.phone,
+        syndicus_email: patch.email,
+        syndicus_billing_email: patch.billing_email,
+        syndicus: syndicusLabel({ syndicus_company: patch.company, syndicus_contact: patch.contact }),
+      };
+      const { error: syncError } = await context.supabase
+        .from("customers")
+        .update(customerSync)
+        .eq("syndicus_id", data.id);
+      if (syncError) throw new Error(syncError.message);
       return { id: data.id as string, created: false };
     }
     const { data: row, error } = await context.supabase.from("syndici").insert(patch).select("id").single();

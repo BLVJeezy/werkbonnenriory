@@ -74,6 +74,7 @@ export function mergeSyndicusDir(current: SyndicusDirInput, incoming: SyndicusDi
 export type SyndicusCustomer = {
   id: string;
   name: string;
+  syndicus_id?: string | null;
   syndicus?: string | null;
   syndicus_company?: string | null;
 };
@@ -92,6 +93,7 @@ export type SyndicusGroup<T> = {
  */
 export function syndicusGroups<T extends SyndicusCustomer>(customers: T[], directory: SyndicusDir[]): SyndicusGroup<T>[] {
   const byKey = new Map<string, SyndicusGroup<T>>();
+  const byId = new Map<string, SyndicusGroup<T>>();
   const group = (key: string): SyndicusGroup<T> => {
     const found = byKey.get(key);
     if (found) return found;
@@ -105,8 +107,16 @@ export function syndicusGroups<T extends SyndicusCustomer>(customers: T[], direc
     const g = group(key);
     g.dir = d;
     g.label = syndicusLabel({ syndicus_company: d.company, syndicus_contact: d.contact }) ?? (d.company ?? "").trim();
+    byId.set(d.id, g);
   }
   for (const c of customers) {
+    if (c.syndicus_id) {
+      const linked = byId.get(c.syndicus_id);
+      if (linked) {
+        linked.rows.push(c);
+        continue;
+      }
+    }
     const name = c.syndicus_company?.trim() || c.syndicus?.trim() || "";
     if (!name) continue;
     const g = group(syndicusKey(name));
