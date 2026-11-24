@@ -22,6 +22,7 @@ import { lookupCompany } from "@/lib/company-lookup.functions";
 import { PageHeader } from "@/components/PageHeader";
 import { VmeSyndicusDialog } from "@/components/VmeSyndicusDialog";
 import { CustomerSectorsDialog } from "@/components/CustomerSectorsDialog";
+import { CustomerPortalAdmin } from "@/components/CustomerPortalAdmin";
 import {
   buildCategoryUpdatePatch,
   buildCustomerExportRows,
@@ -955,6 +956,12 @@ function Klanten() {
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
                         <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} sectors={sectors} />
+                        {isAdmin && (
+                          <CustomerPortalAdmin
+                            customerId={c.id}
+                            defaultEmail={c.email ?? c.billing_email ?? ""}
+                          />
+                        )}
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>

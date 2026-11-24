@@ -54,6 +54,14 @@ function AuthPage() {
         toast.error("Inloggen mislukt: " + error.message);
         return;
       }
+      const { data: me } = await supabase.auth.getUser();
+      if (me.user) {
+        const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", me.user.id);
+        if (roles?.some((r) => r.role === "customer") && !roles.some((r) => r.role !== "customer")) {
+          navigate({ to: "/portaal" });
+          return;
+        }
+      }
       navigate({ to: "/dashboard" });
     } else {
       const { error } = await supabase.auth.updateUser({ password });

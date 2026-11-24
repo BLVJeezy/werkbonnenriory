@@ -1247,6 +1247,13 @@
       "when": 1795507621982,
       "tag": "0177_customer_sectors_and_customer_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 178,
+      "version": "7",
+      "when": 1795534857112,
+      "tag": "0178_customer_portal_accounts_and_invitations",
+      "breakpoints": true
     }
   ]
 }

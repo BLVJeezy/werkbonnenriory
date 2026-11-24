@@ -41,6 +41,9 @@ import { Route as AuthenticatedSyndiciRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedTikklokBeheerRouteImport } from './routes/_authenticated/tikklok-beheer'
 import { Route as DocumentTokenRouteImport } from './routes/document.$token'
 import { Route as OfferteTokenRouteImport } from './routes/offerte.$token'
+import { Route as PortaalIndexRouteImport } from './routes/portaal.index'
+import { Route as PortaalInloggenRouteImport } from './routes/portaal.inloggen'
+import { Route as PortaalUitnodigingRouteImport } from './routes/portaal.uitnodiging'
 import { Route as VideoTokenRouteImport } from './routes/video.$token'
 import { Route as WerkbonTekenenIdRouteImport } from './routes/werkbon-tekenen.$id'
 import { Route as AuthenticatedAankoopfacturenIdRouteImport } from './routes/_authenticated/aankoopfacturen_.$id'
@@ -238,6 +241,21 @@ const OfferteTokenRoute = OfferteTokenRouteImport.update({
   path: '/offerte/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortaalIndexRoute = PortaalIndexRouteImport.update({
+  id: '/portaal/',
+  path: '/portaal/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortaalInloggenRoute = PortaalInloggenRouteImport.update({
+  id: '/portaal/inloggen',
+  path: '/portaal/inloggen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortaalUitnodigingRoute = PortaalUitnodigingRouteImport.update({
+  id: '/portaal/uitnodiging',
+  path: '/portaal/uitnodiging',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VideoTokenRoute = VideoTokenRouteImport.update({
   id: '/video/$token',
   path: '/video/$token',
@@ -413,8 +431,11 @@ export interface FileRoutesByFullPath {
   '/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/portaal/inloggen': typeof PortaalInloggenRoute
+  '/portaal/uitnodiging': typeof PortaalUitnodigingRoute
   '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
+  '/portaal/': typeof PortaalIndexRoute
   '/aankoopfacturen/$id': typeof AuthenticatedAankoopfacturenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -471,8 +492,11 @@ export interface FileRoutesByTo {
   '/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/portaal/inloggen': typeof PortaalInloggenRoute
+  '/portaal/uitnodiging': typeof PortaalUitnodigingRoute
   '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
+  '/portaal': typeof PortaalIndexRoute
   '/aankoopfacturen/$id': typeof AuthenticatedAankoopfacturenIdRoute
   '/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -531,8 +555,11 @@ export interface FileRoutesById {
   '/_authenticated/tikklok-beheer': typeof AuthenticatedTikklokBeheerRoute
   '/document/$token': typeof DocumentTokenRoute
   '/offerte/$token': typeof OfferteTokenRoute
+  '/portaal/inloggen': typeof PortaalInloggenRoute
+  '/portaal/uitnodiging': typeof PortaalUitnodigingRoute
   '/video/$token': typeof VideoTokenRoute
   '/werkbon-tekenen/$id': typeof WerkbonTekenenIdRoute
+  '/portaal/': typeof PortaalIndexRoute
   '/_authenticated/aankoopfacturen_/$id': typeof AuthenticatedAankoopfacturenIdRoute
   '/_authenticated/werkbonnen/$id': typeof AuthenticatedWerkbonnenIdRoute
   '/afspraak/klant/$token': typeof AfspraakKlantTokenRoute
@@ -591,8 +618,11 @@ export interface FileRouteTypes {
     | '/tikklok-beheer'
     | '/document/$token'
     | '/offerte/$token'
+    | '/portaal/inloggen'
+    | '/portaal/uitnodiging'
     | '/video/$token'
     | '/werkbon-tekenen/$id'
+    | '/portaal/'
     | '/aankoopfacturen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -649,8 +679,11 @@ export interface FileRouteTypes {
     | '/tikklok-beheer'
     | '/document/$token'
     | '/offerte/$token'
+    | '/portaal/inloggen'
+    | '/portaal/uitnodiging'
     | '/video/$token'
     | '/werkbon-tekenen/$id'
+    | '/portaal'
     | '/aankoopfacturen/$id'
     | '/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -708,8 +741,11 @@ export interface FileRouteTypes {
     | '/_authenticated/tikklok-beheer'
     | '/document/$token'
     | '/offerte/$token'
+    | '/portaal/inloggen'
+    | '/portaal/uitnodiging'
     | '/video/$token'
     | '/werkbon-tekenen/$id'
+    | '/portaal/'
     | '/_authenticated/aankoopfacturen_/$id'
     | '/_authenticated/werkbonnen/$id'
     | '/afspraak/klant/$token'
@@ -745,8 +781,11 @@ export interface RootRouteChildren {
   TikklokRoute: typeof TikklokRoute
   DocumentTokenRoute: typeof DocumentTokenRoute
   OfferteTokenRoute: typeof OfferteTokenRoute
+  PortaalInloggenRoute: typeof PortaalInloggenRoute
+  PortaalUitnodigingRoute: typeof PortaalUitnodigingRoute
   VideoTokenRoute: typeof VideoTokenRoute
   WerkbonTekenenIdRoute: typeof WerkbonTekenenIdRoute
+  PortaalIndexRoute: typeof PortaalIndexRoute
   AfspraakKlantTokenRoute: typeof AfspraakKlantTokenRoute
   AfspraakPloegTokenRoute: typeof AfspraakPloegTokenRoute
   NieuwsbriefUitschrijvenTokenRoute: typeof NieuwsbriefUitschrijvenTokenRoute
@@ -993,6 +1032,27 @@ declare module '@tanstack/react-router' {
       path: '/offerte/$token'
       fullPath: '/offerte/$token'
       preLoaderRoute: typeof OfferteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portaal/': {
+      id: '/portaal/'
+      path: '/portaal'
+      fullPath: '/portaal/'
+      preLoaderRoute: typeof PortaalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portaal/inloggen': {
+      id: '/portaal/inloggen'
+      path: '/portaal/inloggen'
+      fullPath: '/portaal/inloggen'
+      preLoaderRoute: typeof PortaalInloggenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portaal/uitnodiging': {
+      id: '/portaal/uitnodiging'
+      path: '/portaal/uitnodiging'
+      fullPath: '/portaal/uitnodiging'
+      preLoaderRoute: typeof PortaalUitnodigingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/video/$token': {
@@ -1245,8 +1305,11 @@ const rootRouteChildren: RootRouteChildren = {
   TikklokRoute: TikklokRoute,
   DocumentTokenRoute: DocumentTokenRoute,
   OfferteTokenRoute: OfferteTokenRoute,
+  PortaalInloggenRoute: PortaalInloggenRoute,
+  PortaalUitnodigingRoute: PortaalUitnodigingRoute,
   VideoTokenRoute: VideoTokenRoute,
   WerkbonTekenenIdRoute: WerkbonTekenenIdRoute,
+  PortaalIndexRoute: PortaalIndexRoute,
   AfspraakKlantTokenRoute: AfspraakKlantTokenRoute,
   AfspraakPloegTokenRoute: AfspraakPloegTokenRoute,
   NieuwsbriefUitschrijvenTokenRoute: NieuwsbriefUitschrijvenTokenRoute,

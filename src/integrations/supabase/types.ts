@@ -673,6 +673,88 @@ export type Database = {
           },
         ]
       }
+      customer_portal_accounts: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          email: string
+          id: string
+          last_login_at: string | null
+          revoked_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          email: string
+          id?: string
+          last_login_at?: string | null
+          revoked_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          email?: string
+          id?: string
+          last_login_at?: string | null
+          revoked_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_portal_accounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_portal_invitations: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          portal_account_id: string
+          token_hash: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          portal_account_id: string
+          token_hash: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          portal_account_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_portal_invitations_portal_account_id_fkey"
+            columns: ["portal_account_id"]
+            isOneToOne: false
+            referencedRelation: "customer_portal_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_projects: {
         Row: {
           city: string | null
@@ -5141,6 +5223,10 @@ export type Database = {
         Args: { p_hash: string }
         Returns: string
       }
+      claim_customer_portal_invitation: {
+        Args: { p_hash: string }
+        Returns: string
+      }
       claim_employee_password_invitation: {
         Args: { p_hash: string }
         Returns: string
@@ -5399,6 +5485,7 @@ export type Database = {
       }
       login_email: { Args: { p_name: string }; Returns: string }
       my_crew_sees_signed: { Args: never; Returns: boolean }
+      my_portal_customer_id: { Args: never; Returns: string }
       my_technician_id: { Args: never; Returns: string }
       next_invoice_number: { Args: never; Returns: string }
       next_quote_number: { Args: never; Returns: string }
@@ -5526,7 +5613,7 @@ export type Database = {
       unsubscribe_newsletter: { Args: { p_hash: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "technician" | "marketing"
+      app_role: "admin" | "technician" | "marketing" | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5654,7 +5741,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "technician", "marketing"],
+      app_role: ["admin", "technician", "marketing", "customer"],
     },
   },
 } as const
