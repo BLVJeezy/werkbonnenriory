@@ -28,15 +28,17 @@ import {
   CUSTOMER_CATEGORIES,
   customerCategoryLabel,
   customersToCsv,
+  effectiveCustomerVatRate,
   filterCustomersByCategoryAndSyndicus,
   isCustomerCategory,
-  NO_SECTOR_LABEL,
-  resolveCustomerSectorName,
+  parseSectorOptionValue,
   resolveCustomerSyndicusName,
-  SECTOR_FILTER_NONE,
+  resolveUnifiedCategoryLabel,
+  sectorOptionValue,
   selectableSectorsForCustomer,
   SYNDICUS_FILTER_PENDING,
   UNASSIGNED_CATEGORY_LABEL,
+  unifiedCategoryValue,
   VME_SYNDICUS_PENDING_LABEL,
   type CustomerCategory,
   type CustomerCategoryFilter,
@@ -164,17 +166,20 @@ function CustomerFormFields({
     <>
       <div className="flex flex-wrap items-end gap-3 rounded-md border border-border/80 bg-muted/20 p-3">
         <label className="min-w-48 flex-1 space-y-1">
-          <span className="block text-xs font-bold uppercase text-muted-foreground">Klantcategorie</span>
-          <select
-            aria-label="Klantcategorie"
+          <span className="block text-xs font-bold uppercase text-muted-foreground">Categorie</span>
+          <SearchableSelect
+            aria-label="Categorie"
             className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
-            value={form["customer_category"] ?? ""}
+            value={form["sector_id"] ? sectorOptionValue(form["sector_id"]) : (form["customer_category"] ?? "")}
             onChange={(e) => {
               const next = e.target.value;
+              const nextSectorId = parseSectorOptionValue(next);
+              const nextCat = nextSectorId ? "" : next;
               setForm((prev) => ({
                 ...prev,
-                customer_category: next,
-                vme_syndicus_pending: next === "vme" ? prev["vme_syndicus_pending"] ?? "" : "",
+                customer_category: nextCat,
+                sector_id: nextSectorId ?? "",
+                vme_syndicus_pending: nextCat === "vme" ? prev["vme_syndicus_pending"] ?? "" : "",
               }));
             }}
           >
@@ -182,19 +187,8 @@ function CustomerFormFields({
             {CUSTOMER_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
-          </select>
-        </label>
-        <label className="min-w-48 flex-1 space-y-1">
-          <span className="block text-xs font-bold uppercase text-muted-foreground">Sector</span>
-          <SearchableSelect
-            aria-label="Sector"
-            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
-            value={form["sector_id"] ?? ""}
-            onChange={(e) => setForm((prev) => ({ ...prev, sector_id: e.target.value }))}
-          >
-            <option value="">{NO_SECTOR_LABEL}</option>
             {selectableSectorsForCustomer(sectors, form["sector_id"]).map((s) => (
-              <option key={s.id} value={s.id}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
+              <option key={s.id} value={sectorOptionValue(s.id)}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
             ))}
           </SearchableSelect>
         </label>
@@ -304,10 +298,8 @@ function Klanten() {
   const [q, setQ] = useState(search.q ?? "");
   useEffect(() => setQ(search.q ?? ""), [search.q]);
   const [categoryFilter, setCategoryFilter] = useState<CustomerCategoryFilter>("all");
-  const [sectorFilter, setSectorFilter] = useState<string>("");
   const [syndicusFilter, setSyndicusFilter] = useState<string>("");
   const [bulkCategory, setBulkCategory] = useState<string>("");
-  const [bulkSector, setBulkSector] = useState<string>("");
   const [sectorsDialogOpen, setSectorsDialogOpen] = useState(false);
   const [vmeDialog, setVmeDialog] = useState<{
     ids: string[];
@@ -359,15 +351,16 @@ function Klanten() {
     [sectors, sectorCounts],
   );
   const branchName = (id: string | null | undefined) => branches.find((b) => b.id === id)?.name;
+  const isDutchBranch = (id: string | null | undefined) => (branches.find((b) => b.id === id) as { country?: string | null } | undefined)?.country === "NL";
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
-  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus, c.syndicus_company, c.syndicus_contact, c.syndicus_email, c.syndicus_billing_email, c.syndicus_phone, resolveCustomerSectorName((c as { sector_id?: string | null }).sector_id, sectors)].filter(Boolean).join(' ') })), q).map(c => c.value));
+  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus, c.syndicus_company, c.syndicus_contact, c.syndicus_email, c.syndicus_billing_email, c.syndicus_phone, resolveUnifiedCategoryLabel(c as { customer_category?: string | null; sector_id?: string | null }, sectors)].filter(Boolean).join(' ') })), q).map(c => c.value));
   const searchedRows = useMemo(() => data.filter((c) => matchingIds.has(c.id)), [data, q, sectors]);
   const rows = useMemo(
-    () => filterCustomersByCategoryAndSyndicus(searchedRows, { categoryFilter, syndicusFilter, sectorFilter }),
-    [searchedRows, categoryFilter, syndicusFilter, sectorFilter],
+    () => filterCustomersByCategoryAndSyndicus(searchedRows, { categoryFilter, syndicusFilter }),
+    [searchedRows, categoryFilter, syndicusFilter],
   );
   const categoryCounts = useMemo(() => {
-    const counts: Record<CustomerCategoryFilter, number> = {
+    const counts: Record<string, number> = {
       all: searchedRows.length,
       zakelijk: 0,
       vme: 0,
@@ -376,21 +369,21 @@ function Klanten() {
       unassigned: 0,
     };
     for (const c of searchedRows) {
-      const cat = (c as { customer_category?: string | null }).customer_category;
-      if (isCustomerCategory(cat)) counts[cat] += 1;
-      else counts.unassigned += 1;
+      const key = unifiedCategoryValue(c as { customer_category?: string | null; sector_id?: string | null });
+      if (!key) counts["unassigned"] = (counts["unassigned"] ?? 0) + 1;
+      else counts[key] = (counts[key] ?? 0) + 1;
     }
     return counts;
   }, [searchedRows]);
   const sort = useSort(rows, {
     nr: c => c.customer_number,
     naam: c => c.name,
-    categorie: c => customerCategoryLabel((c as { customer_category?: string | null }).customer_category),
-    sector: c => resolveCustomerSectorName((c as { sector_id?: string | null }).sector_id, sectors),
+    categorie: c => resolveUnifiedCategoryLabel(c as { customer_category?: string | null; sector_id?: string | null }, sectors),
+    btw: c => c.vat_number,
+    btw_tarief: c => effectiveCustomerVatRate(c, isDutchBranch((c as { branch_id?: string | null }).branch_id)),
     plaats: c => c.city,
     tel: c => c.phone,
     mail: c => c.email,
-    btw: c => c.vat_number,
     syndicus: c => resolveCustomerSyndicusName(c as { customer_category?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null; syndicus_company?: string | null; syndicus?: string | null }, directory),
   });
   // Eén keuze per bekende syndicus: eerst de contactfiche (die is volledig), dan
@@ -591,7 +584,8 @@ function Klanten() {
   }
 
   async function handleInlineCategoryChange(c: (typeof data)[number], rawNext: string) {
-    const nextCat: CustomerCategory | null = isCustomerCategory(rawNext) ? rawNext : null;
+    const nextSectorId = parseSectorOptionValue(rawNext);
+    const nextCat: CustomerCategory | null = !nextSectorId && isCustomerCategory(rawNext) ? rawNext : null;
     const ext = c as { customer_category?: string | null; syndicus_id?: string | null };
     if (nextCat === "vme") {
       setVmeDialog({ ids: [c.id], title: `Klant: ${c.name}`, initialSyndicusId: ext.syndicus_id ?? null });
@@ -605,6 +599,7 @@ function Klanten() {
     }
     const res = buildCategoryUpdatePatch({
       nextCategory: nextCat,
+      nextSectorId,
       previousCategory: ext.customer_category ?? null,
       clearSyndicusOnLeave,
     });
@@ -612,46 +607,29 @@ function Klanten() {
       toast.error(res.error);
       return;
     }
-    await applyCategoryPatch([c.id], res.patch, `${c.name}: categorie op ${customerCategoryLabel(nextCat)} gezet`);
+    const label = resolveUnifiedCategoryLabel({ customer_category: nextCat, sector_id: nextSectorId }, sectors);
+    await applyCategoryPatch([c.id], res.patch, `${c.name}: categorie op ${label} gezet`);
   }
 
   async function handleBulkCategoryApply() {
     const ids = [...sel];
     if (!ids.length) return;
-    const nextCat: CustomerCategory | null = isCustomerCategory(bulkCategory) ? bulkCategory : null;
+    const nextSectorId = parseSectorOptionValue(bulkCategory);
+    const nextCat: CustomerCategory | null = !nextSectorId && isCustomerCategory(bulkCategory) ? bulkCategory : null;
     if (nextCat === "vme") {
       setVmeDialog({ ids, title: `${ids.length} geselecteerde klant(en) als VME instellen` });
       return;
     }
-    if (!confirm(`Categorie '${customerCategoryLabel(nextCat)}' toewijzen aan ${ids.length} geselecteerde klant(en)?`)) return;
-    const res = buildCategoryUpdatePatch({ nextCategory: nextCat });
+    const label = resolveUnifiedCategoryLabel({ customer_category: nextCat, sector_id: nextSectorId }, sectors);
+    if (!confirm(`Categorie '${label}' toewijzen aan ${ids.length} geselecteerde klant(en)?`)) return;
+    const res = buildCategoryUpdatePatch({ nextCategory: nextCat, nextSectorId });
     if (!res.ok) {
       toast.error(res.error);
       return;
     }
-    await applyCategoryPatch(ids, res.patch, `${ids.length} klant(en) ingesteld als ${customerCategoryLabel(nextCat)}`);
+    await applyCategoryPatch(ids, res.patch, `${ids.length} klant(en) ingesteld als ${label}`);
     setSel(new Set());
     setBulkCategory("");
-  }
-
-  async function handleInlineSectorChange(c: (typeof data)[number], rawSectorId: string) {
-    const nextSectorId = rawSectorId || null;
-    await applyCategoryPatch(
-      [c.id],
-      { sector_id: nextSectorId },
-      `${c.name}: sector op ${resolveCustomerSectorName(nextSectorId, sectors)} gezet`,
-    );
-  }
-
-  async function handleBulkSectorApply() {
-    const ids = [...sel];
-    if (!ids.length) return;
-    const nextSectorId = bulkSector || null;
-    const label = resolveCustomerSectorName(nextSectorId, sectors);
-    if (!confirm(`Sector '${label}' toewijzen aan ${ids.length} geselecteerde klant(en)?`)) return;
-    await applyCategoryPatch(ids, { sector_id: nextSectorId }, `${ids.length} klant(en) ingesteld op sector '${label}'`);
-    setSel(new Set());
-    setBulkSector("");
   }
 
   async function createSyndicusAndLink(ids: string[], company: string, contact: string) {
@@ -741,7 +719,7 @@ function Klanten() {
             </Button>
             {isAdmin && (
               <Button variant="outline" onClick={() => setSectorsDialogOpen(true)}>
-                Sectoren beheren
+                Categorieën beheren
               </Button>
             )}
             <label>
@@ -755,21 +733,7 @@ function Klanten() {
       />
       <div className="space-y-3 rounded-xl border border-border/90 bg-card p-3.5 shadow-xs">
         <div className="flex flex-wrap items-center gap-2">
-          <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, sector, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-lg flex-1" />
-          <div className="min-w-44">
-            <SearchableSelect
-              aria-label="Filter op sector"
-              className="h-9 w-full rounded-md border bg-background px-2 text-sm"
-              value={sectorFilter}
-              onChange={(e) => setSectorFilter(e.target.value)}
-            >
-              <option value="">Alle sectoren</option>
-              <option value={SECTOR_FILTER_NONE}>{NO_SECTOR_LABEL}</option>
-              {filterSectors.map((s) => (
-                <option key={s.id} value={s.id}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
-              ))}
-            </SearchableSelect>
-          </div>
+          <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, categorie, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-lg flex-1" />
           {categoryFilter === "vme" && (
             <div className="min-w-52">
               <SearchableSelect
@@ -793,6 +757,10 @@ function Klanten() {
             [
               { key: "all", label: "Alle" },
               ...CUSTOMER_CATEGORIES.map((c) => ({ key: c.value as CustomerCategoryFilter, label: c.label })),
+              ...filterSectors.map((s) => ({
+                key: sectorOptionValue(s.id) as CustomerCategoryFilter,
+                label: s.archived_at ? `${s.name} (gearchiveerd)` : s.name,
+              })),
               { key: "unassigned", label: UNASSIGNED_CATEGORY_LABEL },
             ] as { key: CustomerCategoryFilter; label: string }[]
           ).map((tab) => {
@@ -809,7 +777,7 @@ function Klanten() {
                   if (tab.key !== "vme") setSyndicusFilter("");
                 }}
               >
-                {tab.label} ({categoryCounts[tab.key]})
+                {tab.label} ({categoryCounts[tab.key] ?? 0})
               </Button>
             );
           })}
@@ -830,36 +798,23 @@ function Klanten() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-bold">{sel.size} klant{sel.size > 1 ? "en" : ""} geselecteerd</span>
             {canEditCategory && (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <select
-                    aria-label="Bulk klantcategorie"
-                    className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
-                    value={bulkCategory}
-                    onChange={(e) => setBulkCategory(e.target.value)}
-                  >
-                    <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
-                    {CUSTOMER_CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
-                  <Button size="sm" variant="outline" onClick={handleBulkCategoryApply}>Categorie toewijzen</Button>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <SearchableSelect
-                    aria-label="Bulk sector"
-                    className="h-8 min-w-36 rounded-md border border-input bg-background px-2 text-xs text-foreground"
-                    value={bulkSector}
-                    onChange={(e) => setBulkSector(e.target.value)}
-                  >
-                    <option value="">{NO_SECTOR_LABEL}</option>
-                    {selectableSectorsForCustomer(sectors).map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </SearchableSelect>
-                  <Button size="sm" variant="outline" onClick={handleBulkSectorApply}>Sector toewijzen</Button>
-                </div>
-              </>
+              <div className="flex items-center gap-1.5">
+                <SearchableSelect
+                  aria-label="Bulk categorie"
+                  className="h-8 min-w-40 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value)}
+                >
+                  <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
+                  {CUSTOMER_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                  {selectableSectorsForCustomer(sectors).map((s) => (
+                    <option key={s.id} value={sectorOptionValue(s.id)}>{s.name}</option>
+                  ))}
+                </SearchableSelect>
+                <Button size="sm" variant="outline" onClick={handleBulkCategoryApply}>Categorie toewijzen</Button>
+              </div>
             )}
             <Button size="sm" variant={assignOpen ? "secondary" : "default"} onClick={() => setAssignOpen((o) => !o)}>Syndicus toewijzen</Button>
             <Button size="sm" variant="ghost" onClick={() => { setSel(new Set()); setAssignOpen(false); }}>Selectie wissen</Button>
@@ -896,12 +851,12 @@ function Klanten() {
             <SortTh k="nr" sort={sort} className="w-px">Nr.</SortTh>
             <SortTh k="naam" sort={sort}>Naam</SortTh>
             <SortTh k="categorie" sort={sort}>Categorie</SortTh>
-            <SortTh k="sector" sort={sort}>Sector</SortTh>
-            <SortTh k="plaats" sort={sort} className="hidden md:table-cell">Adres</SortTh>
-            <SortTh k="syndicus" sort={sort} className="hidden lg:table-cell">Syndicus</SortTh>
-            <SortTh k="tel" sort={sort} className="hidden lg:table-cell">Telefoon</SortTh>
+            <SortTh k="btw" sort={sort} className="hidden md:table-cell">Ondernemingsnr.</SortTh>
+            <SortTh k="btw_tarief" sort={sort} className="w-px whitespace-nowrap">Btw-tarief</SortTh>
+            <SortTh k="plaats" sort={sort} className="hidden lg:table-cell">Adres</SortTh>
+            <SortTh k="syndicus" sort={sort} className="hidden xl:table-cell">Syndicus</SortTh>
+            <SortTh k="tel" sort={sort} className="hidden xl:table-cell">Telefoon</SortTh>
             <SortTh k="mail" sort={sort} className="hidden 2xl:table-cell">E-mail</SortTh>
-            <SortTh k="btw" sort={sort} className="hidden 2xl:table-cell">Btw-nummer</SortTh>
             <Th />
           </tr></thead>
           <tbody>
@@ -910,6 +865,7 @@ function Klanten() {
               const own = projects.filter(p => p.customer_id === c.id);
               const ext = c as { customer_category?: string | null; sector_id?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null };
               const synDisplay = resolveCustomerSyndicusName({ ...ext, syndicus_company: c.syndicus_company, syndicus: c.syndicus }, directory);
+              const vatRate = effectiveCustomerVatRate(c, isDutchBranch((c as { branch_id?: string | null }).branch_id));
               return (
                 <Fragment key={c.id}>
                   <tr>
@@ -918,45 +874,32 @@ function Klanten() {
                     <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}{synDisplay && <div className="text-xs font-normal text-muted-foreground lg:hidden">Syndicus: {synDisplay}</div>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
                     <td className="whitespace-nowrap">
                       {canEditCategory ? (
-                        <select
+                        <SearchableSelect
                           aria-label={`Categorie voor ${c.name}`}
                           className="h-8 max-w-44 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground"
-                          value={ext.customer_category ?? ""}
+                          value={unifiedCategoryValue(ext)}
                           onChange={(e) => handleInlineCategoryChange(c, e.target.value)}
                         >
                           <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
                           {CUSTOMER_CATEGORIES.map((cat) => (
                             <option key={cat.value} value={cat.value}>{cat.label}</option>
                           ))}
-                        </select>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{customerCategoryLabel(ext.customer_category)}</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {canEditCategory ? (
-                        <SearchableSelect
-                          aria-label={`Sector voor ${c.name}`}
-                          className="h-8 max-w-44 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground"
-                          value={ext.sector_id ?? ""}
-                          onChange={(e) => handleInlineSectorChange(c, e.target.value)}
-                        >
-                          <option value="">{NO_SECTOR_LABEL}</option>
                           {selectableSectorsForCustomer(sectors, ext.sector_id).map((s) => (
-                            <option key={s.id} value={s.id}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
+                            <option key={s.id} value={sectorOptionValue(s.id)}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
                           ))}
                         </SearchableSelect>
                       ) : (
                         <span className="text-xs text-muted-foreground">
-                          {resolveCustomerSectorName(ext.sector_id, sectors, { includeArchivedTag: true })}
+                          {resolveUnifiedCategoryLabel(ext, sectors, { includeArchivedTag: true })}
                         </span>
                       )}
                     </td>
-                    <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
-                    <td className="hidden text-muted-foreground lg:table-cell">{synDisplay || "—"}</td>
-                    <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
+                    <td className="hidden whitespace-nowrap font-mono text-xs md:table-cell">{c.vat_number ?? "—"}</td>
+                    <td className="whitespace-nowrap font-mono text-xs">{vatRate}%</td>
+                    <td className="hidden text-muted-foreground lg:table-cell">{formatAddress(c) || "—"}</td>
+                    <td className="hidden text-muted-foreground xl:table-cell">{synDisplay || "—"}</td>
+                    <td className="hidden whitespace-nowrap xl:table-cell">{c.phone ?? "—"}</td>
                     <td className="hidden max-w-56 truncate 2xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
-                    <td className="hidden whitespace-nowrap font-mono text-xs 2xl:table-cell">{c.vat_number ?? "—"}</td>
                     <td className="whitespace-nowrap text-right">
                       <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{editing === c.id ? "Sluiten" : "Details"}</Button>
                       <Button size="sm" variant="ghost" className="text-destructive" onClick={async () => {

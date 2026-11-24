@@ -33,10 +33,10 @@ export function CustomerSectorsDialog({ open, onOpenChange, sectors, customerCou
     const { error } = await supabase.from("customer_sectors").insert({ name: res.name });
     setBusy(false);
     if (error) {
-      toast.error(error.code === "23505" ? "Deze sector bestaat al." : error.message);
+      toast.error(error.code === "23505" ? "Deze categorie bestaat al." : error.message);
       return;
     }
-    toast.success(`Sector '${res.name}' toegevoegd`);
+    toast.success(`Categorie '${res.name}' toegevoegd`);
     setNewName("");
     onChanged();
   }
@@ -54,10 +54,10 @@ export function CustomerSectorsDialog({ open, onOpenChange, sectors, customerCou
       .eq("id", sector.id);
     setBusy(false);
     if (error) {
-      toast.error(error.code === "23505" ? "Er bestaat al een sector met deze naam." : error.message);
+      toast.error(error.code === "23505" ? "Er bestaat al een categorie met deze naam." : error.message);
       return;
     }
-    toast.success(`Sector hernoemd naar '${res.name}'`);
+    toast.success(`Categorie hernoemd naar '${res.name}'`);
     setEditingId(null);
     setEditingName("");
     onChanged();
@@ -68,7 +68,7 @@ export function CustomerSectorsDialog({ open, onOpenChange, sectors, customerCou
     const count = customerCounts[sector.id] ?? 0;
     if (archiving && count > 0) {
       const ok = confirm(
-        `Sector '${sector.name}' archiveren? Deze sector is nog gekoppeld aan ${count} klant${count === 1 ? "" : "en"}. Bestaande koppelingen blijven zichtbaar en behouden, maar nieuwe toewijzingen zijn verborgen.`,
+        `Categorie '${sector.name}' archiveren? Deze categorie is nog gekoppeld aan ${count} klant${count === 1 ? "" : "en"}. Bestaande koppelingen blijven zichtbaar en behouden, maar nieuwe toewijzingen zijn verborgen.`,
       );
       if (!ok) return;
     }
@@ -85,7 +85,7 @@ export function CustomerSectorsDialog({ open, onOpenChange, sectors, customerCou
       toast.error(error.message);
       return;
     }
-    toast.success(archiving ? `Sector '${sector.name}' gearchiveerd` : `Sector '${sector.name}' heractiveerd`);
+    toast.success(archiving ? `Categorie '${sector.name}' gearchiveerd` : `Categorie '${sector.name}' heractiveerd`);
     onChanged();
   }
 
@@ -93,15 +93,15 @@ export function CustomerSectorsDialog({ open, onOpenChange, sectors, customerCou
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Sectoren beheren</DialogTitle>
+          <DialogTitle>Categorieën beheren</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Voeg eigen subcategorieën/sectoren toe (bv. Horeca, Bouwbedrijven, Retail, Kantoren). Archiveren behoudt alle bestaande klantkoppelingen.
+          Voeg eigen categorieën toe (bv. Horeca, Bouwbedrijven, Retail, Kantoren) naast Zakelijk, VME, Particulier en Patrimoniumvennootschap. Archiveren behoudt alle bestaande klantkoppelingen.
         </p>
         <div className="flex gap-2">
           <Input
-            aria-label="Nieuwe sectornaam"
-            placeholder="Nieuwe sector (bv. Horeca)…"
+            aria-label="Nieuwe categorienaam"
+            placeholder="Nieuwe categorie (bv. Horeca)…"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
@@ -113,9 +113,9 @@ export function CustomerSectorsDialog({ open, onOpenChange, sectors, customerCou
         </div>
 
         <div className="space-y-2 pt-2">
-          <div className="text-xs font-bold uppercase text-muted-foreground">Actieve sectoren ({activeSectors.length})</div>
+          <div className="text-xs font-bold uppercase text-muted-foreground">Eigen categorieën ({activeSectors.length})</div>
           {activeSectors.length === 0 ? (
-            <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Nog geen sectoren aangemaakt.</p>
+            <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">Nog geen eigen categorieën aangemaakt.</p>
           ) : (
             <ul className="divide-y rounded-md border">
               {activeSectors.map((s) => {
@@ -157,7 +157,7 @@ export function CustomerSectorsDialog({ open, onOpenChange, sectors, customerCou
 
         {archivedSectors.length > 0 && (
           <div className="space-y-2 pt-2">
-            <div className="text-xs font-bold uppercase text-muted-foreground">Gearchiveerde sectoren ({archivedSectors.length})</div>
+            <div className="text-xs font-bold uppercase text-muted-foreground">Gearchiveerde categorieën ({archivedSectors.length})</div>
             <ul className="divide-y rounded-md border bg-muted/20">
               {archivedSectors.map((s) => {
                 const count = customerCounts[s.id] ?? 0;

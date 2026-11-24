@@ -4,14 +4,16 @@ import {
   buildCustomerExportRows,
   customerCategoryLabel,
   customersToCsv,
+  effectiveCustomerVatRate,
   filterCustomersByCategoryAndSyndicus,
-  NO_SECTOR_LABEL,
-  resolveCustomerSectorName,
+  parseSectorOptionValue,
+  resolveUnifiedCategoryLabel,
   sanitizeSpreadsheetCell,
-  SECTOR_FILTER_NONE,
+  sectorOptionValue,
   selectableSectorsForCustomer,
   SYNDICUS_FILTER_PENDING,
   UNASSIGNED_CATEGORY_LABEL,
+  unifiedCategoryValue,
   validateSectorName,
   VME_SYNDICUS_PENDING_LABEL,
   type CategorizableCustomer,
@@ -150,7 +152,9 @@ describe("customer-categories", () => {
       "c3",
       "c4",
     ]);
-    expect(filterCustomersByCategoryAndSyndicus(sampleCustomers, { categoryFilter: "unassigned" }).map((c) => c.id)).toEqual(["c4"]);
+    expect(filterCustomersByCategoryAndSyndicus(sampleCustomers, { categoryFilter: "unassigned" }).map((c) => c.id)).toEqual([]);
+    expect(filterCustomersByCategoryAndSyndicus(sampleCustomers, { categoryFilter: sectorOptionValue("sec-horeca") }).map((c) => c.id)).toEqual(["c3"]);
+    expect(filterCustomersByCategoryAndSyndicus(sampleCustomers, { categoryFilter: sectorOptionValue("sec-oud") }).map((c) => c.id)).toEqual(["c4"]);
     expect(filterCustomersByCategoryAndSyndicus(sampleCustomers, { categoryFilter: "vme", syndicusFilter: "syn-1" }).map((c) => c.id)).toEqual(["c1"]);
     expect(
       filterCustomersByCategoryAndSyndicus(sampleCustomers, {
@@ -170,22 +174,23 @@ describe("customer-categories", () => {
     expect(rows[0]?.Syndicus).toBe("Immo Schrijnemakers BV");
     expect(rows[1]?.Syndicus).toBe(VME_SYNDICUS_PENDING_LABEL);
     expect(rows[3]?.Klantnaam).toBe("'=CMD|' /C calc'!A0");
-    expect(rows[3]?.Categorie).toBe(UNASSIGNED_CATEGORY_LABEL);
-    expect(rows[0]?.Sector).toBe(NO_SECTOR_LABEL);
-    expect(rows[2]?.Sector).toBe("Horeca");
-    expect(rows[3]?.Sector).toBe("Oude sector");
+    expect(rows[0]?.Categorie).toBe("VME");
+    expect(rows[2]?.Categorie).toBe("Horeca");
+    expect(rows[3]?.Categorie).toBe("Oude sector");
 
     const csv = customersToCsv(rows, true);
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("Immo Schrijnemakers BV");
     expect(csv).toContain("'=CMD|' /C calc'!A0");
-    expect(csv).toContain("Categorie;Sector;Syndicus");
+    expect(csv).toContain("Categorie;Syndicus");
     expect(csv).toContain("Horeca");
   });
 
-  it("validates sector creation and rename against empty and duplicate names including archived", () => {
+  it("validates custom category creation and rename against empty, standard and duplicate names including archived", () => {
     expect(validateSectorName("   ", sampleSectors).ok).toBe(false);
     expect(validateSectorName("horeca", sampleSectors).ok).toBe(false);
+    expect(validateSectorName("VME", sampleSectors).ok).toBe(false);
+    expect(validateSectorName("Zakelijk", sampleSectors).ok).toBe(false);
     const archivedClash = validateSectorName("Oude sector", sampleSectors);
     expect(archivedClash.ok).toBe(false);
     if (!archivedClash.ok) expect(archivedClash.error).toContain("gearchiveerd");
@@ -198,38 +203,24 @@ describe("customer-categories", () => {
     expect(validateSectorName("  Retail  ", sampleSectors)).toEqual({ ok: true, name: "Retail" });
   });
 
-  it("keeps archived sectors visible for linked customers while hiding them for new assignments", () => {
+  it("keeps archived custom categories visible for linked customers while hiding them for new assignments", () => {
     const forUnlinked = selectableSectorsForCustomer(sampleSectors, null);
     expect(forUnlinked.map((s) => s.id)).toEqual(["sec-bouw", "sec-horeca"]);
 
     const forLinked = selectableSectorsForCustomer(sampleSectors, "sec-oud");
     expect(forLinked.map((s) => s.id)).toEqual(["sec-bouw", "sec-horeca", "sec-oud"]);
 
-    expect(resolveCustomerSectorName(null, sampleSectors)).toBe(NO_SECTOR_LABEL);
-    expect(resolveCustomerSectorName("sec-oud", sampleSectors, { includeArchivedTag: true })).toBe("Oude sector (gearchiveerd)");
+    expect(resolveUnifiedCategoryLabel({ customer_category: null, sector_id: null }, sampleSectors)).toBe(UNASSIGNED_CATEGORY_LABEL);
+    expect(resolveUnifiedCategoryLabel({ customer_category: null, sector_id: "sec-oud" }, sampleSectors, { includeArchivedTag: true })).toBe("Oude sector (gearchiveerd)");
+    expect(parseSectorOptionValue(sectorOptionValue("sec-horeca"))).toBe("sec-horeca");
+    expect(unifiedCategoryValue({ customer_category: "zakelijk", sector_id: "sec-horeca" })).toBe("sector:sec-horeca");
   });
 
-  it("combines main category, sector, unassigned sector and VME syndicus filters", () => {
-    expect(
-      filterCustomersByCategoryAndSyndicus(sampleCustomers, {
-        categoryFilter: "zakelijk",
-        sectorFilter: "sec-horeca",
-      }).map((c) => c.id),
-    ).toEqual(["c3"]);
-
-    expect(
-      filterCustomersByCategoryAndSyndicus(sampleCustomers, {
-        categoryFilter: "all",
-        sectorFilter: SECTOR_FILTER_NONE,
-      }).map((c) => c.id),
-    ).toEqual(["c1", "c2"]);
-
-    expect(
-      filterCustomersByCategoryAndSyndicus(sampleCustomers, {
-        categoryFilter: "vme",
-        syndicusFilter: "syn-1",
-        sectorFilter: SECTOR_FILTER_NONE,
-      }).map((c) => c.id),
-    ).toEqual(["c1"]);
+  it("computes effective customer VAT rate for sorting", () => {
+    expect(effectiveCustomerVatRate({ vat_number: "BE0888111222" })).toBe(0);
+    expect(effectiveCustomerVatRate({ vat_number: "BE0888111222", vrij_beroep: true })).toBe(21);
+    expect(effectiveCustomerVatRate({ default_vat_rate: 6 })).toBe(6);
+    expect(effectiveCustomerVatRate({ postal_code: "6211 AA", default_vat_rate: 6 })).toBe(21);
+    expect(effectiveCustomerVatRate({})).toBe(21);
   });
 });

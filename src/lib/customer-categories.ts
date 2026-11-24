@@ -1,6 +1,7 @@
 import { formatAddress } from "./address";
 import { customerDetailsFromDir, type SyndicusDir } from "./syndici";
 import { syndicusDetailsPatch } from "./syndicus";
+import { vatRateForCustomer } from "./vat-number";
 
 export type CustomerCategory =
   | "zakelijk"
@@ -8,7 +9,7 @@ export type CustomerCategory =
   | "particulier"
   | "patrimoniumvennootschap";
 
-export type CustomerCategoryFilter = "all" | "unassigned" | CustomerCategory;
+export type CustomerCategoryFilter = "all" | "unassigned" | CustomerCategory | `sector:${string}`;
 
 export const CUSTOMER_CATEGORIES: { value: CustomerCategory; label: string }[] = [
   { value: "zakelijk", label: "Zakelijk" },
@@ -18,10 +19,9 @@ export const CUSTOMER_CATEGORIES: { value: CustomerCategory; label: string }[] =
 ];
 
 export const UNASSIGNED_CATEGORY_LABEL = "Niet ingedeeld";
-export const NO_SECTOR_LABEL = "Geen sector";
-export const SECTOR_FILTER_NONE = "__none__";
 export const VME_SYNDICUS_PENDING_LABEL = "Nog toe te wijzen";
 export const SYNDICUS_FILTER_PENDING = "__pending__";
+export const SECTOR_VALUE_PREFIX = "sector:";
 
 export type CustomerSector = {
   id: string;
@@ -29,36 +29,37 @@ export type CustomerSector = {
   archived_at?: string | null;
 };
 
+export function sectorOptionValue(sectorId: string): `sector:${string}` {
+  return `${SECTOR_VALUE_PREFIX}${sectorId}`;
+}
+
+export function parseSectorOptionValue(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith(SECTOR_VALUE_PREFIX)) return null;
+  return value.slice(SECTOR_VALUE_PREFIX.length) || null;
+}
+
 export function validateSectorName(
   raw: string,
   existing: CustomerSector[],
   excludeId?: string,
 ): { ok: true; name: string } | { ok: false; error: string } {
   const name = raw.trim();
-  if (!name) return { ok: false, error: "Vul een sectornaam in." };
+  if (!name) return { ok: false, error: "Vul een categorienaam in." };
   const key = name.toLowerCase();
+  const standardClash = CUSTOMER_CATEGORIES.find((c) => c.label.toLowerCase() === key);
+  if (standardClash) {
+    return { ok: false, error: `'${standardClash.label}' is al een standaardcategorie.` };
+  }
   const clash = existing.find((s) => s.id !== excludeId && s.name.trim().toLowerCase() === key);
   if (clash) {
     return {
       ok: false,
       error: clash.archived_at
-        ? `De sector '${clash.name}' bestaat al (gearchiveerd). Heractiveer die sector in plaats van een duplicaat aan te maken.`
-        : `De sector '${clash.name}' bestaat al.`,
+        ? `De categorie '${clash.name}' bestaat al (gearchiveerd). Heractiveer die categorie in plaats van een duplicaat aan te maken.`
+        : `De categorie '${clash.name}' bestaat al.`,
     };
   }
   return { ok: true, name };
-}
-
-export function resolveCustomerSectorName(
-  sectorId: string | null | undefined,
-  sectors: Pick<CustomerSector, "id" | "name" | "archived_at">[],
-  options?: { includeArchivedTag?: boolean },
-): string {
-  if (!sectorId) return NO_SECTOR_LABEL;
-  const found = sectors.find((s) => s.id === sectorId);
-  if (!found) return NO_SECTOR_LABEL;
-  if (options?.includeArchivedTag && found.archived_at) return `${found.name} (gearchiveerd)`;
-  return found.name;
 }
 
 /** Active sectors sorted by name, plus the customer's currently linked sector if archived. */
@@ -83,6 +84,45 @@ export function isCustomerCategory(value: unknown): value is CustomerCategory {
 export function customerCategoryLabel(category: string | null | undefined): string {
   const match = CUSTOMER_CATEGORIES.find((c) => c.value === category);
   return match ? match.label : UNASSIGNED_CATEGORY_LABEL;
+}
+
+/** Unified select value for a customer: custom sector takes precedence if linked, else standard category, else "". */
+export function unifiedCategoryValue(
+  c: Pick<CategorizableCustomer, "customer_category" | "sector_id">,
+): string {
+  if (c.sector_id) return sectorOptionValue(c.sector_id);
+  if (isCustomerCategory(c.customer_category)) return c.customer_category;
+  return "";
+}
+
+/** Unified display label for a customer's category (standard or custom). */
+export function resolveUnifiedCategoryLabel(
+  c: Pick<CategorizableCustomer, "customer_category" | "sector_id">,
+  sectors: Pick<CustomerSector, "id" | "name" | "archived_at">[] = [],
+  options?: { includeArchivedTag?: boolean },
+): string {
+  if (c.sector_id) {
+    const found = sectors.find((s) => s.id === c.sector_id);
+    if (found) {
+      return options?.includeArchivedTag && found.archived_at ? `${found.name} (gearchiveerd)` : found.name;
+    }
+  }
+  return customerCategoryLabel(c.customer_category);
+}
+
+/** Effective VAT rate for a customer, used for display and numeric sorting in the customer list. */
+export function effectiveCustomerVatRate(c: {
+  vat_number?: string | null;
+  postal_code?: string | null;
+  vrij_beroep?: boolean | null;
+  default_vat_rate?: number | string | null;
+}, dutchBranch = false): number {
+  return vatRateForCustomer(c.vat_number ?? "", 21, undefined, {
+    postalCode: c.postal_code,
+    vrijBeroep: !!c.vrij_beroep,
+    defaultRate: c.default_vat_rate,
+    dutchBranch,
+  });
 }
 
 export type CategorizableCustomer = {
@@ -124,22 +164,15 @@ export function filterCustomersByCategoryAndSyndicus<T extends CategorizableCust
   filters: {
     categoryFilter: CustomerCategoryFilter;
     syndicusFilter?: string;
-    sectorFilter?: string;
   },
 ): T[] {
-  const { categoryFilter, syndicusFilter = "", sectorFilter = "" } = filters;
+  const { categoryFilter, syndicusFilter = "" } = filters;
   return customers.filter((c) => {
-    const cat = isCustomerCategory(c.customer_category) ? c.customer_category : null;
+    const unified = unifiedCategoryValue(c);
     if (categoryFilter === "unassigned") {
-      if (cat !== null) return false;
+      if (unified !== "") return false;
     } else if (categoryFilter !== "all") {
-      if (cat !== categoryFilter) return false;
-    }
-
-    if (sectorFilter === SECTOR_FILTER_NONE) {
-      if (c.sector_id) return false;
-    } else if (sectorFilter) {
-      if (c.sector_id !== sectorFilter) return false;
+      if (unified !== categoryFilter) return false;
     }
 
     if (categoryFilter === "vme" && syndicusFilter) {
@@ -163,12 +196,13 @@ export type CategoryPatchResult =
  */
 export function buildCategoryUpdatePatch(params: {
   nextCategory: CustomerCategory | null;
+  nextSectorId?: string | null;
   previousCategory?: string | null;
   syndicus?: SyndicusDir | null;
   vmePending?: boolean;
   clearSyndicusOnLeave?: boolean;
 }): CategoryPatchResult {
-  const { nextCategory, previousCategory, syndicus, vmePending = false, clearSyndicusOnLeave = false } = params;
+  const { nextCategory, nextSectorId = null, previousCategory, syndicus, vmePending = false, clearSyndicusOnLeave = false } = params;
 
   if (nextCategory === "vme") {
     if (syndicus?.id) {
@@ -177,6 +211,7 @@ export function buildCategoryUpdatePatch(params: {
         ok: true,
         patch: {
           customer_category: "vme",
+          sector_id: null,
           syndicus_id: syndicus.id,
           vme_syndicus_pending: false,
           ...details,
@@ -188,6 +223,7 @@ export function buildCategoryUpdatePatch(params: {
         ok: true,
         patch: {
           customer_category: "vme",
+          sector_id: null,
           syndicus_id: null,
           vme_syndicus_pending: true,
         },
@@ -200,7 +236,8 @@ export function buildCategoryUpdatePatch(params: {
   }
 
   const patch: Record<string, unknown> = {
-    customer_category: nextCategory,
+    customer_category: nextSectorId ? null : nextCategory,
+    sector_id: nextSectorId,
     vme_syndicus_pending: false,
   };
 
@@ -226,7 +263,6 @@ export type CustomerExportRow = {
   Klantnaam: string;
   Klantnummer: string;
   Categorie: string;
-  Sector: string;
   Syndicus: string;
   "Btw- / ondernemingsnummer": string;
   "E-mail"?: string;
@@ -247,8 +283,7 @@ export function buildCustomerExportRows(
     const base: CustomerExportRow = {
       Klantnaam: sanitizeSpreadsheetCell(c.name),
       Klantnummer: sanitizeSpreadsheetCell(c.customer_number),
-      Categorie: sanitizeSpreadsheetCell(customerCategoryLabel(c.customer_category)),
-      Sector: sanitizeSpreadsheetCell(resolveCustomerSectorName(c.sector_id, sectors)),
+      Categorie: sanitizeSpreadsheetCell(resolveUnifiedCategoryLabel(c, sectors)),
       Syndicus: sanitizeSpreadsheetCell(syndicusName),
       "Btw- / ondernemingsnummer": sanitizeSpreadsheetCell(c.vat_number),
     };
@@ -270,8 +305,8 @@ function csvEscape(cell: string): string {
 /** Builds an Excel-friendly UTF-8 BOM CSV string from already-sanitized export rows. */
 export function customersToCsv(rows: CustomerExportRow[], includeContactAndAddress: boolean): string {
   const headers: (keyof CustomerExportRow)[] = includeContactAndAddress
-    ? ["Klantnaam", "Klantnummer", "Categorie", "Sector", "Syndicus", "Btw- / ondernemingsnummer", "E-mail", "E-mail facturatie", "Telefoon", "Adres"]
-    : ["Klantnaam", "Klantnummer", "Categorie", "Sector", "Syndicus", "Btw- / ondernemingsnummer"];
+    ? ["Klantnaam", "Klantnummer", "Categorie", "Syndicus", "Btw- / ondernemingsnummer", "E-mail", "E-mail facturatie", "Telefoon", "Adres"]
+    : ["Klantnaam", "Klantnummer", "Categorie", "Syndicus", "Btw- / ondernemingsnummer"];
   const lines = [
     headers.map((h) => csvEscape(String(h))).join(";"),
     ...rows.map((r) => headers.map((h) => csvEscape(String(r[h] ?? ""))).join(";")),
