@@ -79,6 +79,17 @@ export type AppInvoiceInput = {
   status: string;
   net: number;
   lines: unknown;
+  work_order_id?: string | null;
+  resolved_customer_id?: string | null;
+  customer?: {
+    id?: string | null;
+    name?: string | null;
+    vatNumber?: string | null;
+    street?: string | null;
+    houseNumber?: string | null;
+    postalCode?: string | null;
+    city?: string | null;
+  } | null;
 };
 
 export type SimplaInvoiceLineInput = {
@@ -93,7 +104,18 @@ export type SimplaInvoiceInput = {
   doc_type: string;
   status: string;
   source: string;
+  counterparty?: string | null;
   lines: SimplaInvoiceLineInput[];
+};
+
+export type CustomerLookupInput = {
+  id: string;
+  name: string;
+  vat_number?: string | null;
+  street?: string | null;
+  house_number?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
 };
 
 export type BreakdownSlice = {
@@ -101,6 +123,18 @@ export type BreakdownSlice = {
   label: string;
   amountExVat: number;
   quantity: number;
+  sharePct: number;
+  isOther?: boolean;
+  isUnassigned?: boolean;
+};
+
+export type CustomerRevenueSlice = {
+  key: string;
+  customerId: string | null;
+  label: string;
+  amountExVat: number;
+  invoiceCount: number;
+  creditNoteCount: number;
   sharePct: number;
   isOther?: boolean;
   isUnassigned?: boolean;
@@ -122,6 +156,8 @@ export type AnnualRevenueSummary = {
   simplaMaxDate: string | null;
   simplaIncomplete: boolean;
   slices: BreakdownSlice[];
+  customerSlices: CustomerRevenueSlice[];
+  negativeCustomerAdjustments: CustomerRevenueSlice[];
 };
 
 const EXCLUDED_STATUSES = new Set([
@@ -141,6 +177,14 @@ const round2 = (v: number) => Math.round(v * 100) / 100;
 
 const normText = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+const normVat = (v: string | null | undefined) => {
+  const cleaned = String(v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return cleaned.length >= 8 ? cleaned : "";
+};
+
+const normAddressKey = (parts: Array<string | null | undefined>) =>
+  parts.map((p) => normText(String(p ?? ""))).filter(Boolean).join("|");
 
 export function isExcludedStatus(status: string | null | undefined): boolean {
   return EXCLUDED_STATUSES.has(normText(status ?? ""));
@@ -184,6 +228,13 @@ export function categorizeLineLabel(raw: string | null | undefined): string {
 }
 
 type AggBucket = { label: string; amountExVat: number; quantity: number };
+type CustomerAggBucket = {
+  customerId: string | null;
+  label: string;
+  amountExVat: number;
+  invoiceCount: number;
+  creditNoteCount: number;
+};
 
 export function buildAnnualRevenueSummary(params: {
   year: number;
@@ -193,10 +244,21 @@ export function buildAnnualRevenueSummary(params: {
   metric: BreakdownMetric;
   appInvoices: AppInvoiceInput[];
   simplaInvoices: SimplaInvoiceInput[];
+  customers?: CustomerLookupInput[];
   maxCategories?: number;
+  maxCustomers?: number;
   todayIso?: string;
 }): AnnualRevenueSummary {
-  const { year, sourceFilter, metric, appInvoices, simplaInvoices, maxCategories = 6 } = params;
+  const {
+    year,
+    sourceFilter,
+    metric,
+    appInvoices,
+    simplaInvoices,
+    customers = [],
+    maxCategories = 6,
+    maxCustomers = 6,
+  } = params;
   const from = params.from ?? `${year}-01-01`;
   const to = params.to ?? `${year}-12-31`;
   const inRange = (d: string | null | undefined) => !!d && d >= from && d <= to;
@@ -215,6 +277,122 @@ export function buildAnnualRevenueSummary(params: {
   const buckets = new Map<string, AggBucket>();
   const unassigned: AggBucket = { label: UNASSIGNED_LABEL, amountExVat: 0, quantity: 0 };
   let hasUnassigned = false;
+
+  // Build deterministic customer lookup tables so distinct legal entities are never merged
+  const customerById = new Map<string, CustomerLookupInput>();
+  const customersByVat = new Map<string, CustomerLookupInput[]>();
+  const customersByName = new Map<string, CustomerLookupInput[]>();
+  const customersByNameAddr = new Map<string, CustomerLookupInput[]>();
+  for (const c of customers) {
+    customerById.set(c.id, c);
+    const vat = normVat(c.vat_number);
+    if (vat) {
+      const list = customersByVat.get(vat) ?? [];
+      list.push(c);
+      customersByVat.set(vat, list);
+    }
+    const nameKey = normText(c.name);
+    if (nameKey) {
+      const list = customersByName.get(nameKey) ?? [];
+      list.push(c);
+      customersByName.set(nameKey, list);
+      const addr = normAddressKey([c.street, c.house_number, c.postal_code, c.city]);
+      if (addr) {
+        const naKey = `${nameKey}::${addr}`;
+        const naList = customersByNameAddr.get(naKey) ?? [];
+        naList.push(c);
+        customersByNameAddr.set(naKey, naList);
+      }
+    }
+  }
+
+  const customerBuckets = new Map<string, CustomerAggBucket>();
+  const unassignedCustomer: CustomerAggBucket = {
+    customerId: null,
+    label: UNASSIGNED_LABEL,
+    amountExVat: 0,
+    invoiceCount: 0,
+    creditNoteCount: 0,
+  };
+  let hasUnassignedCustomer = false;
+
+  const resolveCustomerIdentity = (input: {
+    explicitId?: string | null;
+    name?: string | null;
+    vatNumber?: string | null;
+    street?: string | null;
+    houseNumber?: string | null;
+    postalCode?: string | null;
+    city?: string | null;
+  }): { key: string; customerId: string | null; label: string; isUnassigned?: boolean } => {
+    const explicitId = input.explicitId?.trim() || "";
+    if (explicitId) {
+      const matched = customerById.get(explicitId);
+      const label = matched?.name?.trim() || input.name?.trim() || UNASSIGNED_LABEL;
+      return { key: `id:${explicitId}`, customerId: explicitId, label };
+    }
+
+    const vat = normVat(input.vatNumber);
+    if (vat) {
+      const byVat = customersByVat.get(vat);
+      if (byVat && byVat.length === 1 && byVat[0]) {
+        return { key: `id:${byVat[0].id}`, customerId: byVat[0].id, label: byVat[0].name.trim() };
+      }
+      const label = input.name?.trim() || vat;
+      return { key: `vat:${vat}`, customerId: null, label };
+    }
+
+    const rawName = input.name?.trim() || "";
+    const nameKey = normText(rawName);
+    if (!nameKey) {
+      return { key: "__unassigned__", customerId: null, label: UNASSIGNED_LABEL, isUnassigned: true };
+    }
+
+    const addr = normAddressKey([input.street, input.houseNumber, input.postalCode, input.city]);
+    if (addr) {
+      const byNameAddr = customersByNameAddr.get(`${nameKey}::${addr}`);
+      if (byNameAddr && byNameAddr.length === 1 && byNameAddr[0]) {
+        return { key: `id:${byNameAddr[0].id}`, customerId: byNameAddr[0].id, label: byNameAddr[0].name.trim() };
+      }
+    }
+
+    const byName = customersByName.get(nameKey);
+    if (byName && byName.length === 1 && byName[0]) {
+      return { key: `id:${byName[0].id}`, customerId: byName[0].id, label: byName[0].name.trim() };
+    }
+
+    // Distinct legal entities with the same name but different addresses stay separated
+    const fallbackKey = addr ? `name:${nameKey}::${addr}` : `name:${nameKey}`;
+    return { key: fallbackKey, customerId: null, label: rawName };
+  };
+
+  const addCustomerDoc = (
+    identity: { key: string; customerId: string | null; label: string; isUnassigned?: boolean },
+    amount: number,
+    isCredit: boolean,
+  ) => {
+    if (identity.isUnassigned) {
+      unassignedCustomer.amountExVat += amount;
+      if (isCredit) unassignedCustomer.creditNoteCount += 1;
+      else unassignedCustomer.invoiceCount += 1;
+      hasUnassignedCustomer = true;
+      return;
+    }
+    const prev = customerBuckets.get(identity.key);
+    if (prev) {
+      prev.amountExVat += amount;
+      if (isCredit) prev.creditNoteCount += 1;
+      else prev.invoiceCount += 1;
+    } else {
+      customerBuckets.set(identity.key, {
+        customerId: identity.customerId,
+        label: identity.label,
+        amountExVat: amount,
+        invoiceCount: isCredit ? 0 : 1,
+        creditNoteCount: isCredit ? 1 : 0,
+      });
+    }
+  };
 
   const addLine = (rawDesc: string | null | undefined, amount: number, qty: number) => {
     const label = categorizeLineLabel(rawDesc);
@@ -268,6 +446,17 @@ export function buildAnnualRevenueSummary(params: {
     werkbonnenDocCount += 1;
     if (isCredit) creditNoteCount += 1;
     else invoiceCount += 1;
+
+    const custIdentity = resolveCustomerIdentity({
+      explicitId: doc.resolved_customer_id ?? doc.customer?.id ?? null,
+      name: doc.customer?.name ?? null,
+      vatNumber: doc.customer?.vatNumber ?? null,
+      street: doc.customer?.street ?? null,
+      houseNumber: doc.customer?.houseNumber ?? null,
+      postalCode: doc.customer?.postalCode ?? null,
+      city: doc.customer?.city ?? null,
+    });
+    addCustomerDoc(custIdentity, docNet, isCredit);
   }
 
   // 2. Imported Simpla sales invoices from fin_invoices (source = 'simpla')
@@ -304,6 +493,11 @@ export function buildAnnualRevenueSummary(params: {
     if (!simplaMaxDate || doc.invoice_date > simplaMaxDate) simplaMaxDate = doc.invoice_date;
     if (isCredit) creditNoteCount += 1;
     else invoiceCount += 1;
+
+    const simplaIdentity = resolveCustomerIdentity({
+      name: doc.counterparty ?? null,
+    });
+    addCustomerDoc(simplaIdentity, docNet, isCredit);
   }
 
   const metricValue = (b: AggBucket) => (metric === "revenue" ? b.amountExVat : b.quantity);
@@ -353,6 +547,72 @@ export function buildAnnualRevenueSummary(params: {
     return { ...item, sharePct };
   });
 
+  // Build customer revenue slices: positive ranked top N + Overige + Niet toegewezen; negative corrections kept separate
+  const allCustomerEntries = [...customerBuckets.entries()].map(([key, b]) => ({
+    key,
+    customerId: b.customerId,
+    label: b.label,
+    amountExVat: round2(b.amountExVat),
+    invoiceCount: b.invoiceCount,
+    creditNoteCount: b.creditNoteCount,
+  }));
+
+  const positiveCustomers = allCustomerEntries
+    .filter((c) => c.amountExVat > 0.005)
+    .sort((a, b) => b.amountExVat - a.amountExVat);
+
+  const negativeCustomerAdjustments: CustomerRevenueSlice[] = allCustomerEntries
+    .filter((c) => c.amountExVat < -0.005)
+    .sort((a, b) => a.amountExVat - b.amountExVat)
+    .map((c) => ({ ...c, sharePct: 0 }));
+
+  const topCustomers = positiveCustomers.slice(0, maxCustomers);
+  const restCustomers = positiveCustomers.slice(maxCustomers);
+
+  const rawCustomerSlices: Omit<CustomerRevenueSlice, "sharePct">[] = topCustomers.map((c) => ({ ...c }));
+  if (restCustomers.length > 0) {
+    rawCustomerSlices.push({
+      key: "__other_customers__",
+      customerId: null,
+      label: OTHER_LABEL,
+      amountExVat: round2(restCustomers.reduce((s, c) => s + c.amountExVat, 0)),
+      invoiceCount: restCustomers.reduce((s, c) => s + c.invoiceCount, 0),
+      creditNoteCount: restCustomers.reduce((s, c) => s + c.creditNoteCount, 0),
+      isOther: true,
+    });
+  }
+  if (hasUnassignedCustomer) {
+    const unassignedAmt = round2(unassignedCustomer.amountExVat);
+    if (unassignedAmt > 0.005) {
+      rawCustomerSlices.push({
+        key: "__unassigned_customer__",
+        customerId: null,
+        label: UNASSIGNED_LABEL,
+        amountExVat: unassignedAmt,
+        invoiceCount: unassignedCustomer.invoiceCount,
+        creditNoteCount: unassignedCustomer.creditNoteCount,
+        isUnassigned: true,
+      });
+    } else if (unassignedAmt < -0.005) {
+      negativeCustomerAdjustments.push({
+        key: "__unassigned_customer__",
+        customerId: null,
+        label: UNASSIGNED_LABEL,
+        amountExVat: unassignedAmt,
+        invoiceCount: unassignedCustomer.invoiceCount,
+        creditNoteCount: unassignedCustomer.creditNoteCount,
+        sharePct: 0,
+        isUnassigned: true,
+      });
+    }
+  }
+
+  const positiveCustomerTotal = rawCustomerSlices.reduce((s, c) => s + Math.max(0, c.amountExVat), 0);
+  const customerSlices: CustomerRevenueSlice[] = rawCustomerSlices.map((item) => ({
+    ...item,
+    sharePct: positiveCustomerTotal > 0 && item.amountExVat > 0 ? round2((item.amountExVat / positiveCustomerTotal) * 100) : 0,
+  }));
+
   const simplaIncomplete =
     sourceFilter !== "werkbonnen" &&
     (simplaDocCount === 0 || !simplaMaxDate || simplaMaxDate < to);
@@ -373,5 +633,7 @@ export function buildAnnualRevenueSummary(params: {
     simplaMaxDate,
     simplaIncomplete,
     slices,
+    customerSlices,
+    negativeCustomerAdjustments,
   };
 }

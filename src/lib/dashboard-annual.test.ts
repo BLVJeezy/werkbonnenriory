@@ -6,6 +6,7 @@ import {
   OTHER_LABEL,
   UNASSIGNED_LABEL,
   type AppInvoiceInput,
+  type CustomerLookupInput,
   type SimplaInvoiceInput,
 } from "./dashboard-annual";
 
@@ -216,5 +217,156 @@ describe("buildAnnualRevenueSummary", () => {
     });
     expect(juneRes.totalExVat).toBe(300);
     expect(juneRes.slices.reduce((s, x) => s + x.amountExVat, 0)).toBe(300);
+  });
+
+  it("ranks top customers by net revenue ex VAT, subtracts credit notes, deduplicates Simpla, and preserves distinct legal entities", () => {
+    const customers: CustomerLookupInput[] = [
+      { id: "c-kozl", name: "KOZL vzw", vat_number: "BE0410556656", street: "Kruissteenweg", house_number: "17", postal_code: "3700", city: "Tongeren" },
+      { id: "c-dds", name: "Immo DDS", vat_number: "BE0450686051", street: "Chemin du vieux thier", house_number: "2", postal_code: "4190", city: "Fetrières" },
+      { id: "c-peeters-1", name: "Jan Peeters", street: "Kerkstraat", house_number: "1", postal_code: "3740", city: "Bilzen" },
+      { id: "c-peeters-2", name: "Jan Peeters", street: "Markt", house_number: "9", postal_code: "3500", city: "Hasselt" },
+    ];
+
+    const invoices: AppInvoiceInput[] = [
+      {
+        id: "i1",
+        number: "20260901",
+        issue_date: "2026-11-05",
+        kind: "factuur",
+        status: "verzonden",
+        net: 500,
+        lines: [{ description: "Interventie", quantity: 1, amount: 500 }],
+        resolved_customer_id: "c-kozl",
+        customer: { name: "KOZL vzw", vatNumber: "BE0410556656" },
+      },
+      {
+        id: "i2",
+        number: "20260902",
+        issue_date: "2026-11-06",
+        kind: "creditnota",
+        status: "verzonden",
+        net: -100,
+        lines: [{ description: "Correctie", quantity: 1, amount: 100 }],
+        customer: { name: "KOZL vzw", vatNumber: "BE 0410.556.656" }, // matched via VAT to same c-kozl
+      },
+      {
+        id: "i3",
+        number: "20260903",
+        issue_date: "2026-11-07",
+        kind: "factuur",
+        status: "concept", // excluded
+        net: 9999,
+        lines: [{ description: "Concept", quantity: 1, amount: 9999 }],
+        resolved_customer_id: "c-dds",
+      },
+      {
+        id: "i4",
+        number: "20260904",
+        issue_date: "2026-11-08",
+        kind: "factuur",
+        status: "betaald",
+        net: 200,
+        lines: [{ description: "Interventie", quantity: 1, amount: 200 }],
+        customer: { name: "Jan Peeters", street: "Kerkstraat", houseNumber: "1", postalCode: "3740", city: "Bilzen" },
+      },
+      {
+        id: "i5",
+        number: "20260905",
+        issue_date: "2026-11-09",
+        kind: "factuur",
+        status: "betaald",
+        net: 150,
+        lines: [{ description: "Interventie", quantity: 1, amount: 150 }],
+        customer: { name: "Jan Peeters", street: "Markt", houseNumber: "9", postalCode: "3500", city: "Hasselt" },
+      },
+      {
+        id: "i6",
+        number: "20260906",
+        issue_date: "2026-11-10",
+        kind: "factuur",
+        status: "verzonden",
+        net: 50,
+        lines: [{ description: "Losse bon", quantity: 1, amount: 50 }],
+        customer: null, // Niet toegewezen
+      },
+    ];
+
+    const simpla: SimplaInvoiceInput[] = [
+      {
+        id: "s-dup",
+        number: "20260901", // Duplicate of i1 -> skipped
+        invoice_date: "2026-11-05",
+        doc_type: "factuur",
+        status: "betaald",
+        source: "simpla",
+        counterparty: "KOZL vzw",
+        lines: [{ description: "Interventie", ex_vat: 500 }],
+      },
+      {
+        id: "s-dds",
+        number: "20260800",
+        invoice_date: "2026-11-04",
+        doc_type: "factuur",
+        status: "betaald",
+        source: "simpla",
+        counterparty: "Immo DDS",
+        lines: [{ description: "Interventie", ex_vat: 300 }],
+      },
+      {
+        id: "s-neg",
+        number: "20260801",
+        invoice_date: "2026-11-11",
+        doc_type: "creditnota",
+        status: "open",
+        source: "simpla",
+        counterparty: "Negatieve Klant BV",
+        lines: [{ description: "Credit", ex_vat: 80 }],
+      },
+    ];
+
+    const res = buildAnnualRevenueSummary({
+      year: 2026,
+      from: "2026-11-01",
+      to: "2026-11-24",
+      sourceFilter: "all",
+      metric: "revenue",
+      appInvoices: invoices,
+      simplaInvoices: simpla,
+      customers,
+      maxCustomers: 3,
+    });
+
+    // Positive customers: KOZL (400), Immo DDS (300), Jan Peeters Bilzen (200), Overige = Jan Peeters Hasselt (150), Niet toegewezen (50)
+    // Total positive = 1100; negative customer kept separate (-80)
+    expect(res.customerSlices.map((c) => [c.label, c.customerId, c.amountExVat])).toEqual([
+      ["KOZL vzw", "c-kozl", 400],
+      ["Immo DDS", "c-dds", 300],
+      ["Jan Peeters", "c-peeters-1", 200],
+      [OTHER_LABEL, null, 150],
+      [UNASSIGNED_LABEL, null, 50],
+    ]);
+    expect(res.negativeCustomerAdjustments.map((c) => [c.label, c.amountExVat])).toEqual([
+      ["Negatieve Klant BV", -80],
+    ]);
+
+    // Source filter "werkbonnen" excludes Immo DDS and Negatieve Klant BV
+    const onlyApp = buildAnnualRevenueSummary({
+      year: 2026,
+      from: "2026-11-01",
+      to: "2026-11-24",
+      sourceFilter: "werkbonnen",
+      metric: "revenue",
+      appInvoices: invoices,
+      simplaInvoices: simpla,
+      customers,
+      maxCustomers: 6,
+    });
+    expect(onlyApp.customerSlices.map((c) => [c.label, c.customerId, c.amountExVat])).toEqual([
+      ["KOZL vzw", "c-kozl", 400],
+      ["Jan Peeters", "c-peeters-1", 200],
+      ["Jan Peeters", "c-peeters-2", 150],
+      [UNASSIGNED_LABEL, null, 50],
+    ]);
+    expect(onlyApp.negativeCustomerAdjustments).toEqual([]);
   });
 });

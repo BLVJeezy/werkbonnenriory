@@ -10,11 +10,13 @@ import {
   resolveHeroPeriod,
   type AppInvoiceInput,
   type BreakdownMetric,
+  type CustomerLookupInput,
   type HeroPeriodMode,
   type RevenueSourceFilter,
   type SimplaInvoiceInput,
 } from "@/lib/dashboard-annual";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { DashboardTopCustomersCard } from "@/components/DashboardTopCustomersCard";
 
 const SLICE_COLORS = [
   "var(--chart-1)",
@@ -48,11 +50,11 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
   const { data, isFetching, error } = useQuery({
     queryKey: ["dashboard-annual-hero", queryYear],
     queryFn: async () => {
-      const [appInvoices, simplaRaw] = await Promise.all([
+      const [appInvoicesRaw, simplaRaw, customersRaw] = await Promise.all([
         fetchAll((a, b) =>
           supabase
             .from("invoices")
-            .select("id, number, issue_date, kind, status, net, lines")
+            .select("id, number, issue_date, kind, status, net, lines, customer, work_order_id, work_orders!invoices_work_order_id_fkey(customer_id)")
             .gte("issue_date", yearFrom)
             .lte("issue_date", yearTo)
             .order("id")
@@ -61,7 +63,7 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
         fetchAll((a, b) =>
           supabase
             .from("fin_invoices")
-            .select("id, number, invoice_date, doc_type, status, source, fin_invoice_lines(description, ex_vat)")
+            .select("id, number, invoice_date, doc_type, status, source, counterparty, fin_invoice_lines(description, ex_vat)")
             .eq("direction", "verkoop")
             .eq("source", "simpla")
             .gte("invoice_date", yearFrom)
@@ -69,7 +71,30 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
             .order("id")
             .range(a, b),
         ),
+        fetchAll((a, b) =>
+          supabase
+            .from("customers")
+            .select("id, name, vat_number, street, house_number, postal_code, city")
+            .order("id")
+            .range(a, b),
+        ),
       ]);
+
+      const appInvoices: AppInvoiceInput[] = (appInvoicesRaw ?? []).map((row: Record<string, unknown>) => {
+        const wo = row["work_orders"] as { customer_id?: string | null } | null | undefined;
+        return {
+          id: String(row["id"] ?? ""),
+          number: String(row["number"] ?? ""),
+          issue_date: String(row["issue_date"] ?? ""),
+          kind: String(row["kind"] ?? "factuur"),
+          status: String(row["status"] ?? ""),
+          net: Number(row["net"] ?? 0),
+          lines: row["lines"],
+          work_order_id: row["work_order_id"] == null ? null : String(row["work_order_id"]),
+          resolved_customer_id: wo?.customer_id ?? null,
+          customer: (row["customer"] as AppInvoiceInput["customer"]) ?? null,
+        };
+      });
 
       const simplaInvoices: SimplaInvoiceInput[] = (simplaRaw ?? []).map((row: Record<string, unknown>) => ({
         id: String(row["id"] ?? ""),
@@ -78,6 +103,7 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
         doc_type: String(row["doc_type"] ?? "factuur"),
         status: String(row["status"] ?? ""),
         source: String(row["source"] ?? ""),
+        counterparty: row["counterparty"] == null ? null : String(row["counterparty"]),
         lines: Array.isArray(row["fin_invoice_lines"])
           ? (row["fin_invoice_lines"] as Record<string, unknown>[]).map((l) => ({
               description: l["description"] == null ? null : String(l["description"]),
@@ -87,8 +113,9 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
       }));
 
       return {
-        appInvoices: (appInvoices ?? []) as AppInvoiceInput[],
+        appInvoices,
         simplaInvoices,
+        customers: (customersRaw ?? []) as CustomerLookupInput[],
       };
     },
   });
@@ -103,6 +130,7 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
         metric,
         appInvoices: data?.appInvoices ?? [],
         simplaInvoices: data?.simplaInvoices ?? [],
+        customers: data?.customers ?? [],
         todayIso: currentDay,
       }),
     [period.year, period.from, period.to, sourceFilter, metric, data, currentDay],
@@ -304,6 +332,19 @@ export function DashboardAnnualHero({ currentDay }: { currentDay: string }) {
           </div>
         )}
       </div>
+
+      {/* Eronder: Donutdiagram Klanten met de meeste omzet (gesynchroniseerd met periode en bron) */}
+      <DashboardTopCustomersCard
+        period={period}
+        sourceLabel={sourceLabel}
+        isFetching={isFetching}
+        slices={summary.customerSlices}
+        negativeAdjustments={summary.negativeCustomerAdjustments}
+        simplaIncomplete={summary.simplaIncomplete}
+        simplaDocCount={summary.simplaDocCount}
+        simplaMinDate={summary.simplaMinDate}
+        simplaMaxDate={summary.simplaMaxDate}
+      />
     </section>
   );
 }
