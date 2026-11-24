@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildSyndiciExportRows,
   customerDetailsFromDir,
   dirFromCustomer,
   mergeSyndicusDir,
   syndicusDirPatch,
   syndicusGroups,
   syndicusKey,
+  syndiciToCsv,
   type SyndicusDir,
 } from "./syndici";
 
@@ -144,5 +146,28 @@ describe("syndicusGroups", () => {
     expect(g[0]?.label).toBe("Pellettieri");
     expect(g[0]?.dir?.id).toBe("1");
     expect(g[0]?.rows.map((r) => r.id)).toEqual(["c4"]);
+  });
+
+  it("bouwt exportrijen en CSV voor geselecteerde syndici met formule-beveiliging", () => {
+    const g = syndicusGroups(
+      [{ id: "c1", name: "VME Zon", syndicus_id: "1", syndicus: null, syndicus_company: null }],
+      [{ ...fiche, id: "1", company: "=Pellettieri", contact: "Karel", phone: "011 41 70 20", email: "info@pellettieri.be", billing_email: "facturatie@pellettieri.be", street: "De Schiervellaan", house_number: "22", postal_code: "3500", city: "Hasselt", vat_number: "BE0641.989.154" }],
+    );
+    const rows = buildSyndiciExportRows(g);
+    expect(rows).toEqual([
+      {
+        Bedrijfsnaam: "'=Pellettieri",
+        Contactpersoon: "Karel",
+        "Ondernemings-/btw-nummer": "BE0641.989.154",
+        Adres: "De Schiervellaan 22, 3500 Hasselt",
+        Telefoon: "011 41 70 20",
+        "E-mail": "info@pellettieri.be",
+        "E-mail boekhouding": "facturatie@pellettieri.be",
+        "Aantal residenties": 1,
+      },
+    ]);
+    const csv = syndiciToCsv(rows);
+    expect(csv.startsWith("\uFEFFBedrijfsnaam;Contactpersoon;")).toBe(true);
+    expect(csv).toContain("'=Pellettieri;Karel;BE0641.989.154;");
   });
 });

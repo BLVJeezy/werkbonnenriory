@@ -14,8 +14,10 @@ import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
 import { lookupCompany } from "@/lib/company-lookup.functions";
 import {
   SYNDICUS_DIR_FIELDS,
+  buildSyndiciExportRows,
   dirFromCustomer,
   syndicusGroups,
+  syndiciToCsv,
   type SyndicusDir,
   type SyndicusDirField,
   type SyndicusDirInput,
@@ -176,6 +178,50 @@ function Syndici() {
   const [busy, setBusy] = useState(false);
   // De residentielijst van een syndicus is ingeklapt tenzij hier aan staat.
   const [openVme, setOpenVme] = useState<Record<string, boolean>>({});
+  const [sel, setSel] = useState<Set<string>>(new Set());
+
+  function toggleSel(key: string) {
+    setSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  const selectedGroups = useMemo(() => groups.filter((g) => sel.has(g.key)), [groups, sel]);
+
+  function downloadCsv(target: typeof groups, filename: string) {
+    const exportRows = buildSyndiciExportRows(target);
+    const csv = syndiciToCsv(exportRows);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+
+  async function downloadXlsx(target: typeof groups, filename: string) {
+    const XLSX = await import("xlsx");
+    const exportRows = buildSyndiciExportRows(target);
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Syndici");
+    const out = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
 
   function toggleResidenties(key: string) {
     setOpenVme((p) => ({ ...p, [key]: !p[key] }));
@@ -212,12 +258,20 @@ function Syndici() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="text-3xl font-black uppercase">Syndici</h1>
-        <Button size="sm" className="ml-auto" onClick={() => setOpen(open === "nieuw" ? null : "nieuw")}>
-          {open === "nieuw" ? "Sluiten" : "Nieuwe syndicus"}
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/klanten">Naar klanten</Link>
-        </Button>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => setOpen(open === "nieuw" ? null : "nieuw")}>
+            {open === "nieuw" ? "Sluiten" : "Nieuwe syndicus"}
+          </Button>
+          <Button size="sm" variant="outline" disabled={groups.length === 0} onClick={() => downloadCsv(groups, `syndici-${new Date().toISOString().slice(0, 10)}.csv`)}>
+            CSV export
+          </Button>
+          <Button size="sm" variant="outline" disabled={groups.length === 0} onClick={() => downloadXlsx(groups, `syndici-${new Date().toISOString().slice(0, 10)}.xlsx`)}>
+            Excel export
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/klanten">Naar klanten</Link>
+          </Button>
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground">
@@ -237,7 +291,16 @@ function Syndici() {
       <div className="flex flex-wrap items-center gap-2 pt-2">
         <h2 className="text-sm font-black uppercase tracking-wide">Per syndicus</h2>
         <span className="text-xs text-muted-foreground">klik op het aantal residenties om de lijst te openen</span>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
+          {groups.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSel(sel.size === groups.length ? new Set() : new Set(groups.map((g) => g.key)))}
+            >
+              {sel.size === groups.length ? "Alles deselecteren" : "Alles selecteren"}
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => allesResidenties(true)}>
             Alles uitklappen
           </Button>
@@ -246,6 +309,25 @@ function Syndici() {
           </Button>
         </div>
       </div>
+
+      {selectedGroups.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5">
+          <span className="text-sm font-bold">
+            {selectedGroups.length} {selectedGroups.length === 1 ? "syndicus" : "syndici"} geselecteerd
+          </span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => downloadCsv(selectedGroups, `syndici-selectie-${new Date().toISOString().slice(0, 10)}.csv`)}>
+              Selectie als CSV
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => downloadXlsx(selectedGroups, `syndici-selectie-${new Date().toISOString().slice(0, 10)}.xlsx`)}>
+              Selectie als Excel
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSel(new Set())}>
+              Selectie wissen
+            </Button>
+          </div>
+        </div>
+      )}
 
       {open === "nieuw" && (
         <Fiche
@@ -293,9 +375,16 @@ function Syndici() {
           <section
             key={g.key}
             id={`syndicus-${encodeURIComponent(g.key)}`}
-            className="scroll-mt-20 rounded-md border bg-card p-4"
+            className={`scroll-mt-20 rounded-md border bg-card p-4 ${sel.has(g.key) ? "border-primary/60 ring-1 ring-primary/30" : ""}`}
           >
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <input
+                type="checkbox"
+                checked={sel.has(g.key)}
+                onChange={() => toggleSel(g.key)}
+                aria-label={`${g.label} selecteren`}
+                className="size-4 shrink-0 self-center accent-primary"
+              />
               <h2 className="text-xl font-black uppercase">{g.label}</h2>
               {g.rows.length > 0 ? (
                 <button

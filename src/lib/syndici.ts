@@ -6,6 +6,8 @@ import {
   type SyndicusDetailField,
   type SyndicusDetails,
 } from "./syndicus";
+import { formatAddress } from "./address";
+import { sanitizeSpreadsheetCell } from "./customer-categories";
 
 export const SYNDICUS_DIR_FIELDS = [
   "company",
@@ -125,4 +127,78 @@ export function syndicusGroups<T extends SyndicusCustomer>(customers: T[], direc
   }
   for (const g of byKey.values()) g.rows.sort((a, b) => a.name.localeCompare(b.name, "nl"));
   return [...byKey.values()].sort((a, b) => a.label.localeCompare(b.label, "nl"));
+}
+
+export type SyndicusExportRow = {
+  Bedrijfsnaam: string;
+  Contactpersoon: string;
+  "Ondernemings-/btw-nummer": string;
+  Adres: string;
+  Telefoon: string;
+  "E-mail": string;
+  "E-mail boekhouding": string;
+  "Aantal residenties": number;
+};
+
+export function buildSyndiciExportRows<T extends SyndicusCustomer>(
+  groups: SyndicusGroup<T>[],
+): SyndicusExportRow[] {
+  return groups.map((g) => {
+    const bron: SyndicusDirInput =
+      g.dir ??
+      (() => {
+        const rows = g.rows as unknown as Record<string, unknown>[];
+        const r =
+          rows.find(
+            (x) =>
+              x["syndicus_street"] ||
+              x["syndicus_email"] ||
+              x["syndicus_phone"] ||
+              x["syndicus_vat_number"] ||
+              x["syndicus_billing_email"],
+          ) ?? rows[0];
+        return r ? dirFromCustomer(r) : {};
+      })();
+    const addr =
+      bron.street || bron.city
+        ? formatAddress({
+            street: bron.street ?? null,
+            house_number: bron.house_number ?? null,
+            postal_code: bron.postal_code ?? null,
+            city: bron.city ?? null,
+          })
+        : "";
+    return {
+      Bedrijfsnaam: sanitizeSpreadsheetCell(bron.company ?? g.label),
+      Contactpersoon: sanitizeSpreadsheetCell(bron.contact),
+      "Ondernemings-/btw-nummer": sanitizeSpreadsheetCell(bron.vat_number),
+      Adres: sanitizeSpreadsheetCell(addr),
+      Telefoon: sanitizeSpreadsheetCell(bron.phone),
+      "E-mail": sanitizeSpreadsheetCell(bron.email),
+      "E-mail boekhouding": sanitizeSpreadsheetCell(bron.billing_email),
+      "Aantal residenties": g.rows.length,
+    };
+  });
+}
+
+export function syndiciToCsv(rows: SyndicusExportRow[]): string {
+  const headers: (keyof SyndicusExportRow)[] = [
+    "Bedrijfsnaam",
+    "Contactpersoon",
+    "Ondernemings-/btw-nummer",
+    "Adres",
+    "Telefoon",
+    "E-mail",
+    "E-mail boekhouding",
+    "Aantal residenties",
+  ];
+  const escape = (v: string | number) => {
+    const s = String(v ?? "");
+    return /[";\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [
+    headers.map(escape).join(";"),
+    ...rows.map((r) => headers.map((h) => escape(r[h])).join(";")),
+  ];
+  return "\uFEFF" + lines.join("\r\n");
 }
