@@ -298,18 +298,24 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
           let matchedSyndicusId: string | null = null;
           if (isVme && !catRow?.syndicus_id) {
             const details = syndicusDetailsFromMail(x);
+            const fallbackBillingEmail =
+              details.syndicus_billing_email?.trim() ||
+              x.billing_email?.trim() ||
+              details.syndicus_email?.trim() ||
+              x.email?.trim() ||
+              null;
             const matched = matchSyndicusFromDirectory(syndiciDir, {
               company: details.syndicus_company ?? x.syndicus ?? null,
               vatNumber: details.syndicus_vat_number ?? null,
-              email: details.syndicus_email ?? null,
-              billingEmail: details.syndicus_billing_email ?? null,
+              email: details.syndicus_email ?? x.email ?? null,
+              billingEmail: details.syndicus_billing_email ?? x.billing_email ?? null,
             });
             if (matched) {
               matchedSyndicusId = matched.id;
-            } else if (details.syndicus_company?.trim()) {
+            } else if (details.syndicus_company?.trim() || fallbackBillingEmail) {
               try {
                 const newDir = syndicusDirPatch({
-                  company: details.syndicus_company,
+                  company: details.syndicus_company?.trim() || fallbackBillingEmail,
                   contact: details.syndicus_contact,
                   vat_number: details.syndicus_vat_number,
                   street: details.syndicus_street,
@@ -318,7 +324,7 @@ export async function importTaskMailbox(db: SupabaseClient<Database>, userId: st
                   city: details.syndicus_city,
                   phone: details.syndicus_phone,
                   email: details.syndicus_email,
-                  billing_email: details.syndicus_billing_email,
+                  billing_email: details.syndicus_billing_email?.trim() || fallbackBillingEmail,
                 });
                 const { data: insertedDir } = await db.from("syndici").insert(newDir).select("id, company, contact, vat_number, street, house_number, postal_code, city, phone, email, billing_email").single();
                 if (insertedDir) {
