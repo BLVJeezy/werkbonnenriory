@@ -1240,6 +1240,13 @@
       "when": 1795506255346,
       "tag": "0176_customer_category_and_syndicus_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1795507621982,
+      "tag": "0177_customer_sectors_and_customer_fk",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,7 @@ import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
 import { lookupCompany } from "@/lib/company-lookup.functions";
 import { PageHeader } from "@/components/PageHeader";
 import { VmeSyndicusDialog } from "@/components/VmeSyndicusDialog";
+import { CustomerSectorsDialog } from "@/components/CustomerSectorsDialog";
 import {
   buildCategoryUpdatePatch,
   buildCustomerExportRows,
@@ -29,12 +30,17 @@ import {
   customersToCsv,
   filterCustomersByCategoryAndSyndicus,
   isCustomerCategory,
+  NO_SECTOR_LABEL,
+  resolveCustomerSectorName,
   resolveCustomerSyndicusName,
+  SECTOR_FILTER_NONE,
+  selectableSectorsForCustomer,
   SYNDICUS_FILTER_PENDING,
   UNASSIGNED_CATEGORY_LABEL,
   VME_SYNDICUS_PENDING_LABEL,
   type CustomerCategory,
   type CustomerCategoryFilter,
+  type CustomerSector,
 } from "@/lib/customer-categories";
 import { useRole } from "@/lib/use-role";
 
@@ -102,11 +108,13 @@ function CustomerFormFields({
   setForm,
   templates = [],
   directory = [],
+  sectors = [],
 }: {
   form: Record<string, string>;
   setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   templates?: { name: string; details: SyndicusDetails }[];
   directory?: SyndicusDir[];
+  sectors?: CustomerSector[];
 }) {
   const lookup = useServerFn(lookupCompany);
   const [lookingUp, setLookingUp] = useState(false);
@@ -175,6 +183,20 @@ function CustomerFormFields({
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
+        </label>
+        <label className="min-w-48 flex-1 space-y-1">
+          <span className="block text-xs font-bold uppercase text-muted-foreground">Sector</span>
+          <SearchableSelect
+            aria-label="Sector"
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
+            value={form["sector_id"] ?? ""}
+            onChange={(e) => setForm((prev) => ({ ...prev, sector_id: e.target.value }))}
+          >
+            <option value="">{NO_SECTOR_LABEL}</option>
+            {selectableSectorsForCustomer(sectors, form["sector_id"]).map((s) => (
+              <option key={s.id} value={s.id}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
+            ))}
+          </SearchableSelect>
         </label>
         {form["customer_category"] === "vme" && (
           <>
@@ -275,14 +297,18 @@ function CustomerFormFields({
 function Klanten() {
   const qc = useQueryClient();
   const role = useRole();
+  const isAdmin = role === "admin";
   const canEditCategory = role === "admin" || role === "marketing";
   const canExportContact = role === "admin" || role === "marketing";
   const search = Route.useSearch();
   const [q, setQ] = useState(search.q ?? "");
   useEffect(() => setQ(search.q ?? ""), [search.q]);
   const [categoryFilter, setCategoryFilter] = useState<CustomerCategoryFilter>("all");
+  const [sectorFilter, setSectorFilter] = useState<string>("");
   const [syndicusFilter, setSyndicusFilter] = useState<string>("");
   const [bulkCategory, setBulkCategory] = useState<string>("");
+  const [bulkSector, setBulkSector] = useState<string>("");
+  const [sectorsDialogOpen, setSectorsDialogOpen] = useState(false);
   const [vmeDialog, setVmeDialog] = useState<{
     ids: string[];
     title: string;
@@ -312,13 +338,33 @@ function Klanten() {
       return (rows ?? []) as SyndicusDir[];
     },
   });
+  const { data: sectors = [] } = useQuery({
+    queryKey: ["customer_sectors"],
+    queryFn: async () => {
+      const { data: rows, error } = await supabase.from("customer_sectors").select("id, name, archived_at").order("name");
+      if (error) throw new Error(error.message);
+      return (rows ?? []) as CustomerSector[];
+    },
+  });
+  const sectorCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of data) {
+      const sid = (c as { sector_id?: string | null }).sector_id;
+      if (sid) counts[sid] = (counts[sid] ?? 0) + 1;
+    }
+    return counts;
+  }, [data]);
+  const filterSectors = useMemo(
+    () => sectors.filter((s) => !s.archived_at || (sectorCounts[s.id] ?? 0) > 0),
+    [sectors, sectorCounts],
+  );
   const branchName = (id: string | null | undefined) => branches.find((b) => b.id === id)?.name;
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
-  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus, c.syndicus_company, c.syndicus_contact, c.syndicus_email, c.syndicus_billing_email, c.syndicus_phone].filter(Boolean).join(' ') })), q).map(c => c.value));
-  const searchedRows = useMemo(() => data.filter((c) => matchingIds.has(c.id)), [data, q]);
+  const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus, c.syndicus_company, c.syndicus_contact, c.syndicus_email, c.syndicus_billing_email, c.syndicus_phone, resolveCustomerSectorName((c as { sector_id?: string | null }).sector_id, sectors)].filter(Boolean).join(' ') })), q).map(c => c.value));
+  const searchedRows = useMemo(() => data.filter((c) => matchingIds.has(c.id)), [data, q, sectors]);
   const rows = useMemo(
-    () => filterCustomersByCategoryAndSyndicus(searchedRows, { categoryFilter, syndicusFilter }),
-    [searchedRows, categoryFilter, syndicusFilter],
+    () => filterCustomersByCategoryAndSyndicus(searchedRows, { categoryFilter, syndicusFilter, sectorFilter }),
+    [searchedRows, categoryFilter, syndicusFilter, sectorFilter],
   );
   const categoryCounts = useMemo(() => {
     const counts: Record<CustomerCategoryFilter, number> = {
@@ -340,6 +386,7 @@ function Klanten() {
     nr: c => c.customer_number,
     naam: c => c.name,
     categorie: c => customerCategoryLabel((c as { customer_category?: string | null }).customer_category),
+    sector: c => resolveCustomerSectorName((c as { sector_id?: string | null }).sector_id, sectors),
     plaats: c => c.city,
     tel: c => c.phone,
     mail: c => c.email,
@@ -429,7 +476,7 @@ function Klanten() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ vrij_beroep: "", oud6: "", customer_category: "", syndicus_id: "", vme_syndicus_pending: "" });
+    setForm({ vrij_beroep: "", oud6: "", customer_category: "", sector_id: "", syndicus_id: "", vme_syndicus_pending: "" });
     setCreating(true);
   }
 
@@ -444,6 +491,7 @@ function Klanten() {
       ...customerPatch(form as Partial<CustomerRow>),
       ...syndicusDetailsPatch(form),
       customer_category: nextCat,
+      sector_id: form["sector_id"] || null,
       syndicus_id: nextCat === "vme" ? (selectedSyn?.id ?? null) : null,
       vme_syndicus_pending: nextCat === "vme" && !selectedSyn && form["vme_syndicus_pending"] === "1",
       contacts: parseContacts(JSON.parse(form["contacts"] || "[]")),
@@ -471,13 +519,14 @@ function Klanten() {
   function openEdit(c: (typeof data)[number]) {
     setCreating(false);
     setEditing(editing === c.id ? null : c.id);
-    const ext = c as { customer_category?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null };
+    const ext = c as { customer_category?: string | null; sector_id?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null };
     setForm({
       ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
       ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
       // Oudere rijen hebben de syndicus maar als één regel tekst: die in het vak bedrijfsnaam zetten.
       syndicus_company: (c.syndicus_company as string | null) ?? c.syndicus ?? "",
       customer_category: ext.customer_category ?? "",
+      sector_id: ext.sector_id ?? "",
       syndicus_id: ext.syndicus_id ?? "",
       vme_syndicus_pending: ext.vme_syndicus_pending ? "1" : "",
       vrij_beroep: c.vrij_beroep ? "1" : "",
@@ -502,6 +551,7 @@ function Klanten() {
       ...customerPatch(form as Partial<CustomerRow>),
       ...(clearSyn ? syndicusDetailsPatch({}) : syndicusDetailsPatch(form)),
       customer_category: nextCat,
+      sector_id: form["sector_id"] || null,
       syndicus_id: clearSyn ? null : (nextCat === "vme" ? (selectedSyn?.id ?? null) : (form["syndicus_id"] || null)),
       vme_syndicus_pending: nextCat === "vme" && !selectedSyn && form["vme_syndicus_pending"] === "1",
       contacts: parseContacts(JSON.parse(form["contacts"] || "[]")),
@@ -584,6 +634,26 @@ function Klanten() {
     setBulkCategory("");
   }
 
+  async function handleInlineSectorChange(c: (typeof data)[number], rawSectorId: string) {
+    const nextSectorId = rawSectorId || null;
+    await applyCategoryPatch(
+      [c.id],
+      { sector_id: nextSectorId },
+      `${c.name}: sector op ${resolveCustomerSectorName(nextSectorId, sectors)} gezet`,
+    );
+  }
+
+  async function handleBulkSectorApply() {
+    const ids = [...sel];
+    if (!ids.length) return;
+    const nextSectorId = bulkSector || null;
+    const label = resolveCustomerSectorName(nextSectorId, sectors);
+    if (!confirm(`Sector '${label}' toewijzen aan ${ids.length} geselecteerde klant(en)?`)) return;
+    await applyCategoryPatch(ids, { sector_id: nextSectorId }, `${ids.length} klant(en) ingesteld op sector '${label}'`);
+    setSel(new Set());
+    setBulkSector("");
+  }
+
   async function createSyndicusAndLink(ids: string[], company: string, contact: string) {
     await syncSyndicusFromCustomer({ data: { company, contact: contact || null } });
     const { data: rowsSyn, error } = await supabase.from("syndici").select("*").ilike("company", company).limit(1);
@@ -602,7 +672,7 @@ function Klanten() {
   }
 
   function exportFilteredCsv() {
-    const exportRows = buildCustomerExportRows(sort.sorted as never[], directory, { includeContactAndAddress: canExportContact });
+    const exportRows = buildCustomerExportRows(sort.sorted as never[], directory, { includeContactAndAddress: canExportContact }, sectors);
     const csv = customersToCsv(exportRows, canExportContact);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -617,7 +687,7 @@ function Klanten() {
 
   async function exportFilteredXlsx() {
     const XLSX = await import("xlsx");
-    const exportRows = buildCustomerExportRows(sort.sorted as never[], directory, { includeContactAndAddress: canExportContact });
+    const exportRows = buildCustomerExportRows(sort.sorted as never[], directory, { includeContactAndAddress: canExportContact }, sectors);
     const ws = XLSX.utils.json_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Klanten");
@@ -669,6 +739,11 @@ function Klanten() {
             <Button variant={creating ? "secondary" : "default"} onClick={() => (creating ? setCreating(false) : openCreate())}>
               {creating ? "Sluiten" : "Nieuwe klant"}
             </Button>
+            {isAdmin && (
+              <Button variant="outline" onClick={() => setSectorsDialogOpen(true)}>
+                Sectoren beheren
+              </Button>
+            )}
             <label>
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importExcel(f); }} />
               <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
@@ -680,7 +755,21 @@ function Klanten() {
       />
       <div className="space-y-3 rounded-xl border border-border/90 bg-card p-3.5 shadow-xs">
         <div className="flex flex-wrap items-center gap-2">
-          <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-lg flex-1" />
+          <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, sector, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-lg flex-1" />
+          <div className="min-w-44">
+            <SearchableSelect
+              aria-label="Filter op sector"
+              className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              value={sectorFilter}
+              onChange={(e) => setSectorFilter(e.target.value)}
+            >
+              <option value="">Alle sectoren</option>
+              <option value={SECTOR_FILTER_NONE}>{NO_SECTOR_LABEL}</option>
+              {filterSectors.map((s) => (
+                <option key={s.id} value={s.id}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
+              ))}
+            </SearchableSelect>
+          </div>
           {categoryFilter === "vme" && (
             <div className="min-w-52">
               <SearchableSelect
@@ -729,7 +818,7 @@ function Klanten() {
       {creating && (
         <div className="space-y-3 rounded-xl border border-primary/40 bg-card p-4 shadow-xs sm:p-5">
           <div className="border-b border-border/70 pb-2 text-sm font-bold text-foreground">Nieuwe klant aanmaken</div>
-          <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} />
+          <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} sectors={sectors} />
           <div className="flex gap-2">
             <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>
             <Button size="sm" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>Annuleren</Button>
@@ -741,20 +830,36 @@ function Klanten() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-bold">{sel.size} klant{sel.size > 1 ? "en" : ""} geselecteerd</span>
             {canEditCategory && (
-              <div className="flex items-center gap-1.5">
-                <select
-                  aria-label="Bulk klantcategorie"
-                  className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
-                  value={bulkCategory}
-                  onChange={(e) => setBulkCategory(e.target.value)}
-                >
-                  <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
-                  {CUSTOMER_CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
-                <Button size="sm" variant="outline" onClick={handleBulkCategoryApply}>Categorie toewijzen</Button>
-              </div>
+              <>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    aria-label="Bulk klantcategorie"
+                    className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                    value={bulkCategory}
+                    onChange={(e) => setBulkCategory(e.target.value)}
+                  >
+                    <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
+                    {CUSTOMER_CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" variant="outline" onClick={handleBulkCategoryApply}>Categorie toewijzen</Button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <SearchableSelect
+                    aria-label="Bulk sector"
+                    className="h-8 min-w-36 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                    value={bulkSector}
+                    onChange={(e) => setBulkSector(e.target.value)}
+                  >
+                    <option value="">{NO_SECTOR_LABEL}</option>
+                    {selectableSectorsForCustomer(sectors).map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </SearchableSelect>
+                  <Button size="sm" variant="outline" onClick={handleBulkSectorApply}>Sector toewijzen</Button>
+                </div>
+              </>
             )}
             <Button size="sm" variant={assignOpen ? "secondary" : "default"} onClick={() => setAssignOpen((o) => !o)}>Syndicus toewijzen</Button>
             <Button size="sm" variant="ghost" onClick={() => { setSel(new Set()); setAssignOpen(false); }}>Selectie wissen</Button>
@@ -791,6 +896,7 @@ function Klanten() {
             <SortTh k="nr" sort={sort} className="w-px">Nr.</SortTh>
             <SortTh k="naam" sort={sort}>Naam</SortTh>
             <SortTh k="categorie" sort={sort}>Categorie</SortTh>
+            <SortTh k="sector" sort={sort}>Sector</SortTh>
             <SortTh k="plaats" sort={sort} className="hidden md:table-cell">Adres</SortTh>
             <SortTh k="syndicus" sort={sort} className="hidden lg:table-cell">Syndicus</SortTh>
             <SortTh k="tel" sort={sort} className="hidden lg:table-cell">Telefoon</SortTh>
@@ -799,10 +905,10 @@ function Klanten() {
             <Th />
           </tr></thead>
           <tbody>
-            {sort.sorted.length === 0 && <tr><td colSpan={10} className="text-muted-foreground">Geen klanten.</td></tr>}
+            {sort.sorted.length === 0 && <tr><td colSpan={11} className="text-muted-foreground">Geen klanten.</td></tr>}
             {sort.sorted.map((c) => {
               const own = projects.filter(p => p.customer_id === c.id);
-              const ext = c as { customer_category?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null };
+              const ext = c as { customer_category?: string | null; sector_id?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null };
               const synDisplay = resolveCustomerSyndicusName({ ...ext, syndicus_company: c.syndicus_company, syndicus: c.syndicus }, directory);
               return (
                 <Fragment key={c.id}>
@@ -827,6 +933,25 @@ function Klanten() {
                         <span className="text-xs text-muted-foreground">{customerCategoryLabel(ext.customer_category)}</span>
                       )}
                     </td>
+                    <td className="whitespace-nowrap">
+                      {canEditCategory ? (
+                        <SearchableSelect
+                          aria-label={`Sector voor ${c.name}`}
+                          className="h-8 max-w-44 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground"
+                          value={ext.sector_id ?? ""}
+                          onChange={(e) => handleInlineSectorChange(c, e.target.value)}
+                        >
+                          <option value="">{NO_SECTOR_LABEL}</option>
+                          {selectableSectorsForCustomer(sectors, ext.sector_id).map((s) => (
+                            <option key={s.id} value={s.id}>{s.archived_at ? `${s.name} (gearchiveerd)` : s.name}</option>
+                          ))}
+                        </SearchableSelect>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {resolveCustomerSectorName(ext.sector_id, sectors, { includeArchivedTag: true })}
+                        </span>
+                      )}
+                    </td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
                     <td className="hidden text-muted-foreground lg:table-cell">{synDisplay || "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
@@ -843,11 +968,11 @@ function Klanten() {
                     </td>
                   </tr>
                   {editing === c.id && (
-                    <tr className="bg-muted/30"><td colSpan={10}>
+                    <tr className="bg-muted/30"><td colSpan={11}>
                       <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-                        <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} />
+                        <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} sectors={sectors} />
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
@@ -883,6 +1008,15 @@ function Klanten() {
             await applyCategoryPatch(vmeDialog.ids, res.patch, "VME opgeslagen (syndicus nog toe te wijzen)");
             setSel(new Set());
           }}
+        />
+      )}
+      {isAdmin && (
+        <CustomerSectorsDialog
+          open={sectorsDialogOpen}
+          onOpenChange={setSectorsDialogOpen}
+          sectors={sectors}
+          customerCounts={sectorCounts}
+          onChanged={() => qc.invalidateQueries({ queryKey: ["customer_sectors"] })}
         />
       )}
     </div>

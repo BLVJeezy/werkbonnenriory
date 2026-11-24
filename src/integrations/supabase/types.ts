@@ -729,6 +729,30 @@ export type Database = {
           },
         ]
       }
+      customer_sectors: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customer_videos: {
         Row: {
           created_at: string
@@ -795,6 +819,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           project_name: string | null
+          sector_id: string | null
           street: string | null
           syndicus: string | null
           syndicus_billing_email: string | null
@@ -832,6 +857,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           project_name?: string | null
+          sector_id?: string | null
           street?: string | null
           syndicus?: string | null
           syndicus_billing_email?: string | null
@@ -869,6 +895,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           project_name?: string | null
+          sector_id?: string | null
           street?: string | null
           syndicus?: string | null
           syndicus_billing_email?: string | null
@@ -892,6 +919,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "customer_sectors"
             referencedColumns: ["id"]
           },
           {

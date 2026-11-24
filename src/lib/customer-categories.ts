@@ -18,8 +18,61 @@ export const CUSTOMER_CATEGORIES: { value: CustomerCategory; label: string }[] =
 ];
 
 export const UNASSIGNED_CATEGORY_LABEL = "Niet ingedeeld";
+export const NO_SECTOR_LABEL = "Geen sector";
+export const SECTOR_FILTER_NONE = "__none__";
 export const VME_SYNDICUS_PENDING_LABEL = "Nog toe te wijzen";
 export const SYNDICUS_FILTER_PENDING = "__pending__";
+
+export type CustomerSector = {
+  id: string;
+  name: string;
+  archived_at?: string | null;
+};
+
+export function validateSectorName(
+  raw: string,
+  existing: CustomerSector[],
+  excludeId?: string,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = raw.trim();
+  if (!name) return { ok: false, error: "Vul een sectornaam in." };
+  const key = name.toLowerCase();
+  const clash = existing.find((s) => s.id !== excludeId && s.name.trim().toLowerCase() === key);
+  if (clash) {
+    return {
+      ok: false,
+      error: clash.archived_at
+        ? `De sector '${clash.name}' bestaat al (gearchiveerd). Heractiveer die sector in plaats van een duplicaat aan te maken.`
+        : `De sector '${clash.name}' bestaat al.`,
+    };
+  }
+  return { ok: true, name };
+}
+
+export function resolveCustomerSectorName(
+  sectorId: string | null | undefined,
+  sectors: Pick<CustomerSector, "id" | "name" | "archived_at">[],
+  options?: { includeArchivedTag?: boolean },
+): string {
+  if (!sectorId) return NO_SECTOR_LABEL;
+  const found = sectors.find((s) => s.id === sectorId);
+  if (!found) return NO_SECTOR_LABEL;
+  if (options?.includeArchivedTag && found.archived_at) return `${found.name} (gearchiveerd)`;
+  return found.name;
+}
+
+/** Active sectors sorted by name, plus the customer's currently linked sector if archived. */
+export function selectableSectorsForCustomer<T extends CustomerSector>(
+  sectors: T[],
+  currentSectorId?: string | null,
+): T[] {
+  const active = sectors.filter((s) => !s.archived_at);
+  const linkedArchived = currentSectorId
+    ? sectors.find((s) => s.id === currentSectorId && !!s.archived_at)
+    : undefined;
+  const list = linkedArchived ? [...active, linkedArchived] : active;
+  return [...list].sort((a, b) => a.name.localeCompare(b.name, "nl"));
+}
 
 const VALID_CATEGORIES = new Set<string>(CUSTOMER_CATEGORIES.map((c) => c.value));
 
@@ -37,6 +90,7 @@ export type CategorizableCustomer = {
   name: string;
   customer_number?: string | null;
   customer_category?: string | null;
+  sector_id?: string | null;
   syndicus_id?: string | null;
   vme_syndicus_pending?: boolean | null;
   syndicus?: string | null;
@@ -70,15 +124,22 @@ export function filterCustomersByCategoryAndSyndicus<T extends CategorizableCust
   filters: {
     categoryFilter: CustomerCategoryFilter;
     syndicusFilter?: string;
+    sectorFilter?: string;
   },
 ): T[] {
-  const { categoryFilter, syndicusFilter = "" } = filters;
+  const { categoryFilter, syndicusFilter = "", sectorFilter = "" } = filters;
   return customers.filter((c) => {
     const cat = isCustomerCategory(c.customer_category) ? c.customer_category : null;
     if (categoryFilter === "unassigned") {
       if (cat !== null) return false;
     } else if (categoryFilter !== "all") {
       if (cat !== categoryFilter) return false;
+    }
+
+    if (sectorFilter === SECTOR_FILTER_NONE) {
+      if (c.sector_id) return false;
+    } else if (sectorFilter) {
+      if (c.sector_id !== sectorFilter) return false;
     }
 
     if (categoryFilter === "vme" && syndicusFilter) {
@@ -165,6 +226,7 @@ export type CustomerExportRow = {
   Klantnaam: string;
   Klantnummer: string;
   Categorie: string;
+  Sector: string;
   Syndicus: string;
   "Btw- / ondernemingsnummer": string;
   "E-mail"?: string;
@@ -177,6 +239,7 @@ export function buildCustomerExportRows(
   customers: CategorizableCustomer[],
   directory: Pick<SyndicusDir, "id" | "company">[],
   options: { includeContactAndAddress: boolean },
+  sectors: Pick<CustomerSector, "id" | "name" | "archived_at">[] = [],
 ): CustomerExportRow[] {
   return customers.map((c) => {
     const isVme = c.customer_category === "vme";
@@ -185,6 +248,7 @@ export function buildCustomerExportRows(
       Klantnaam: sanitizeSpreadsheetCell(c.name),
       Klantnummer: sanitizeSpreadsheetCell(c.customer_number),
       Categorie: sanitizeSpreadsheetCell(customerCategoryLabel(c.customer_category)),
+      Sector: sanitizeSpreadsheetCell(resolveCustomerSectorName(c.sector_id, sectors)),
       Syndicus: sanitizeSpreadsheetCell(syndicusName),
       "Btw- / ondernemingsnummer": sanitizeSpreadsheetCell(c.vat_number),
     };
@@ -206,8 +270,8 @@ function csvEscape(cell: string): string {
 /** Builds an Excel-friendly UTF-8 BOM CSV string from already-sanitized export rows. */
 export function customersToCsv(rows: CustomerExportRow[], includeContactAndAddress: boolean): string {
   const headers: (keyof CustomerExportRow)[] = includeContactAndAddress
-    ? ["Klantnaam", "Klantnummer", "Categorie", "Syndicus", "Btw- / ondernemingsnummer", "E-mail", "E-mail facturatie", "Telefoon", "Adres"]
-    : ["Klantnaam", "Klantnummer", "Categorie", "Syndicus", "Btw- / ondernemingsnummer"];
+    ? ["Klantnaam", "Klantnummer", "Categorie", "Sector", "Syndicus", "Btw- / ondernemingsnummer", "E-mail", "E-mail facturatie", "Telefoon", "Adres"]
+    : ["Klantnaam", "Klantnummer", "Categorie", "Sector", "Syndicus", "Btw- / ondernemingsnummer"];
   const lines = [
     headers.map((h) => csvEscape(String(h))).join(";"),
     ...rows.map((r) => headers.map((h) => csvEscape(String(r[h] ?? ""))).join(";")),

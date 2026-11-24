@@ -5,13 +5,25 @@ import {
   customerCategoryLabel,
   customersToCsv,
   filterCustomersByCategoryAndSyndicus,
+  NO_SECTOR_LABEL,
+  resolveCustomerSectorName,
   sanitizeSpreadsheetCell,
+  SECTOR_FILTER_NONE,
+  selectableSectorsForCustomer,
   SYNDICUS_FILTER_PENDING,
   UNASSIGNED_CATEGORY_LABEL,
+  validateSectorName,
   VME_SYNDICUS_PENDING_LABEL,
   type CategorizableCustomer,
+  type CustomerSector,
 } from "./customer-categories";
 import type { SyndicusDir } from "./syndici";
+
+const sampleSectors: CustomerSector[] = [
+  { id: "sec-horeca", name: "Horeca", archived_at: null },
+  { id: "sec-bouw", name: "Bouwbedrijven", archived_at: null },
+  { id: "sec-oud", name: "Oude sector", archived_at: "2026-10-01T10:00:00Z" },
+];
 
 const dir: SyndicusDir[] = [
   {
@@ -71,6 +83,7 @@ const sampleCustomers: CategorizableCustomer[] = [
     name: "Bakkerij Peeters BV",
     customer_number: "K003",
     customer_category: "zakelijk",
+    sector_id: "sec-horeca",
     vat_number: "BE0410556656",
   },
   {
@@ -78,6 +91,7 @@ const sampleCustomers: CategorizableCustomer[] = [
     name: "=CMD|' /C calc'!A0",
     customer_number: "K004",
     customer_category: null,
+    sector_id: "sec-oud",
   },
 ];
 
@@ -152,15 +166,70 @@ describe("customer-categories", () => {
     expect(sanitizeSpreadsheetCell("+32499112233")).toBe("'+32499112233");
     expect(sanitizeSpreadsheetCell("Normale Klant")).toBe("Normale Klant");
 
-    const rows = buildCustomerExportRows(sampleCustomers, dir, { includeContactAndAddress: true });
+    const rows = buildCustomerExportRows(sampleCustomers, dir, { includeContactAndAddress: true }, sampleSectors);
     expect(rows[0]?.Syndicus).toBe("Immo Schrijnemakers BV");
     expect(rows[1]?.Syndicus).toBe(VME_SYNDICUS_PENDING_LABEL);
     expect(rows[3]?.Klantnaam).toBe("'=CMD|' /C calc'!A0");
     expect(rows[3]?.Categorie).toBe(UNASSIGNED_CATEGORY_LABEL);
+    expect(rows[0]?.Sector).toBe(NO_SECTOR_LABEL);
+    expect(rows[2]?.Sector).toBe("Horeca");
+    expect(rows[3]?.Sector).toBe("Oude sector");
 
     const csv = customersToCsv(rows, true);
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("Immo Schrijnemakers BV");
     expect(csv).toContain("'=CMD|' /C calc'!A0");
+    expect(csv).toContain("Categorie;Sector;Syndicus");
+    expect(csv).toContain("Horeca");
+  });
+
+  it("validates sector creation and rename against empty and duplicate names including archived", () => {
+    expect(validateSectorName("   ", sampleSectors).ok).toBe(false);
+    expect(validateSectorName("horeca", sampleSectors).ok).toBe(false);
+    const archivedClash = validateSectorName("Oude sector", sampleSectors);
+    expect(archivedClash.ok).toBe(false);
+    if (!archivedClash.ok) expect(archivedClash.error).toContain("gearchiveerd");
+
+    // Renaming a sector to its own name (different casing) is allowed
+    const selfRename = validateSectorName("HORECA", sampleSectors, "sec-horeca");
+    expect(selfRename).toEqual({ ok: true, name: "HORECA" });
+
+    // New unique sector is accepted and trimmed
+    expect(validateSectorName("  Retail  ", sampleSectors)).toEqual({ ok: true, name: "Retail" });
+  });
+
+  it("keeps archived sectors visible for linked customers while hiding them for new assignments", () => {
+    const forUnlinked = selectableSectorsForCustomer(sampleSectors, null);
+    expect(forUnlinked.map((s) => s.id)).toEqual(["sec-bouw", "sec-horeca"]);
+
+    const forLinked = selectableSectorsForCustomer(sampleSectors, "sec-oud");
+    expect(forLinked.map((s) => s.id)).toEqual(["sec-bouw", "sec-horeca", "sec-oud"]);
+
+    expect(resolveCustomerSectorName(null, sampleSectors)).toBe(NO_SECTOR_LABEL);
+    expect(resolveCustomerSectorName("sec-oud", sampleSectors, { includeArchivedTag: true })).toBe("Oude sector (gearchiveerd)");
+  });
+
+  it("combines main category, sector, unassigned sector and VME syndicus filters", () => {
+    expect(
+      filterCustomersByCategoryAndSyndicus(sampleCustomers, {
+        categoryFilter: "zakelijk",
+        sectorFilter: "sec-horeca",
+      }).map((c) => c.id),
+    ).toEqual(["c3"]);
+
+    expect(
+      filterCustomersByCategoryAndSyndicus(sampleCustomers, {
+        categoryFilter: "all",
+        sectorFilter: SECTOR_FILTER_NONE,
+      }).map((c) => c.id),
+    ).toEqual(["c1", "c2"]);
+
+    expect(
+      filterCustomersByCategoryAndSyndicus(sampleCustomers, {
+        categoryFilter: "vme",
+        syndicusFilter: "syn-1",
+        sectorFilter: SECTOR_FILTER_NONE,
+      }).map((c) => c.id),
+    ).toEqual(["c1"]);
   });
 });
