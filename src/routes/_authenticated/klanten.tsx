@@ -681,6 +681,43 @@ function Klanten() {
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
+  const selectedCustomers = useMemo(
+    () => data.filter((c) => sel.has(c.id)),
+    [data, sel],
+  );
+
+  function exportSelectionCsv() {
+    const exportRows = buildCustomerExportRows(selectedCustomers as never[], directory, { includeContactAndAddress: canExportContact }, sectors);
+    const csv = customersToCsv(exportRows, canExportContact);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `klanten-selectie-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+
+  async function exportSelectionXlsx() {
+    const XLSX = await import("xlsx");
+    const exportRows = buildCustomerExportRows(selectedCustomers as never[], directory, { includeContactAndAddress: canExportContact }, sectors);
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Klanten");
+    const out = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `klanten-selectie-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+
   async function importExcel(file: File) {
     setBusy(true);
     try {
@@ -817,6 +854,8 @@ function Klanten() {
               </div>
             )}
             <Button size="sm" variant={assignOpen ? "secondary" : "default"} onClick={() => setAssignOpen((o) => !o)}>Syndicus toewijzen</Button>
+            <Button size="sm" variant="outline" onClick={exportSelectionCsv}>Selectie als CSV</Button>
+            <Button size="sm" variant="outline" onClick={exportSelectionXlsx}>Selectie als Excel</Button>
             <Button size="sm" variant="ghost" onClick={() => { setSel(new Set()); setAssignOpen(false); }}>Selectie wissen</Button>
           </div>
           {assignOpen && (

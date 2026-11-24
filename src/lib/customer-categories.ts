@@ -1,6 +1,7 @@
 import { formatAddress } from "./address";
 import { customerDetailsFromDir, syndicusKey, type SyndicusDir } from "./syndici";
 import { syndicusDetailsPatch } from "./syndicus";
+import { parseContacts } from "./customer-contacts";
 import { vatRateForCustomer } from "./vat-number";
 
 export type CustomerCategory =
@@ -269,6 +270,7 @@ export type CustomerExportRow = {
   "E-mail facturatie"?: string;
   Telefoon?: string;
   Adres?: string;
+  Contactpersoon?: string;
 };
 
 export function buildCustomerExportRows(
@@ -292,6 +294,12 @@ export function buildCustomerExportRows(
       base["E-mail facturatie"] = sanitizeSpreadsheetCell(c.billing_email);
       base.Telefoon = sanitizeSpreadsheetCell(c.phone);
       base.Adres = sanitizeSpreadsheetCell(formatAddress(c));
+      base.Contactpersoon = sanitizeSpreadsheetCell(
+        parseContacts((c as { contacts?: unknown }).contacts)
+          .map((contact) => [contact.name, contact.role, contact.phone].filter(Boolean).join(" — "))
+          .filter(Boolean)
+          .join("; "),
+      );
     }
     return base;
   });
@@ -305,7 +313,7 @@ function csvEscape(cell: string): string {
 /** Builds an Excel-friendly UTF-8 BOM CSV string from already-sanitized export rows. */
 export function customersToCsv(rows: CustomerExportRow[], includeContactAndAddress: boolean): string {
   const headers: (keyof CustomerExportRow)[] = includeContactAndAddress
-    ? ["Klantnaam", "Klantnummer", "Categorie", "Syndicus", "Btw- / ondernemingsnummer", "E-mail", "E-mail facturatie", "Telefoon", "Adres"]
+    ? ["Klantnaam", "Klantnummer", "Categorie", "Syndicus", "Btw- / ondernemingsnummer", "E-mail", "E-mail facturatie", "Telefoon", "Adres", "Contactpersoon"]
     : ["Klantnaam", "Klantnummer", "Categorie", "Syndicus", "Btw- / ondernemingsnummer"];
   const lines = [
     headers.map((h) => csvEscape(String(h))).join(";"),
