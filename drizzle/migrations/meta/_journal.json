@@ -1233,6 +1233,13 @@
       "when": 1795455600649,
       "tag": "0175_credit_note_simpla_and_reversal",
       "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1795506255346,
+      "tag": "0176_customer_category_and_syndicus_fk",
+      "breakpoints": true
     }
   ]
 }

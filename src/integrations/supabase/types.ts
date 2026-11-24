@@ -782,6 +782,7 @@ export type Database = {
           city: string | null
           contacts: Json
           created_at: string
+          customer_category: string | null
           customer_number: string | null
           customer_numbers: string[]
           default_vat_rate: number | null
@@ -802,11 +803,13 @@ export type Database = {
           syndicus_contact: string | null
           syndicus_email: string | null
           syndicus_house_number: string | null
+          syndicus_id: string | null
           syndicus_phone: string | null
           syndicus_postal_code: string | null
           syndicus_street: string | null
           syndicus_vat_number: string | null
           vat_number: string | null
+          vme_syndicus_pending: boolean
           vrij_beroep: boolean
         }
         Insert: {
@@ -816,6 +819,7 @@ export type Database = {
           city?: string | null
           contacts?: Json
           created_at?: string
+          customer_category?: string | null
           customer_number?: string | null
           customer_numbers?: string[]
           default_vat_rate?: number | null
@@ -836,11 +840,13 @@ export type Database = {
           syndicus_contact?: string | null
           syndicus_email?: string | null
           syndicus_house_number?: string | null
+          syndicus_id?: string | null
           syndicus_phone?: string | null
           syndicus_postal_code?: string | null
           syndicus_street?: string | null
           syndicus_vat_number?: string | null
           vat_number?: string | null
+          vme_syndicus_pending?: boolean
           vrij_beroep?: boolean
         }
         Update: {
@@ -850,6 +856,7 @@ export type Database = {
           city?: string | null
           contacts?: Json
           created_at?: string
+          customer_category?: string | null
           customer_number?: string | null
           customer_numbers?: string[]
           default_vat_rate?: number | null
@@ -870,11 +877,13 @@ export type Database = {
           syndicus_contact?: string | null
           syndicus_email?: string | null
           syndicus_house_number?: string | null
+          syndicus_id?: string | null
           syndicus_phone?: string | null
           syndicus_postal_code?: string | null
           syndicus_street?: string | null
           syndicus_vat_number?: string | null
           vat_number?: string | null
+          vme_syndicus_pending?: boolean
           vrij_beroep?: boolean
         }
         Relationships: [
@@ -883,6 +892,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_syndicus_id_fkey"
+            columns: ["syndicus_id"]
+            isOneToOne: false
+            referencedRelation: "syndici"
             referencedColumns: ["id"]
           },
         ]

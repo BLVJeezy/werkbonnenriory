@@ -7,6 +7,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { SortTh, Th, tableCls, tableWrap, useSort } from "@/components/SortTable";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatAddress } from "@/lib/address";
@@ -19,6 +20,23 @@ import { parseContacts, type CustomerContact } from "@/lib/customer-contacts";
 import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
 import { lookupCompany } from "@/lib/company-lookup.functions";
 import { PageHeader } from "@/components/PageHeader";
+import { VmeSyndicusDialog } from "@/components/VmeSyndicusDialog";
+import {
+  buildCategoryUpdatePatch,
+  buildCustomerExportRows,
+  CUSTOMER_CATEGORIES,
+  customerCategoryLabel,
+  customersToCsv,
+  filterCustomersByCategoryAndSyndicus,
+  isCustomerCategory,
+  resolveCustomerSyndicusName,
+  SYNDICUS_FILTER_PENDING,
+  UNASSIGNED_CATEGORY_LABEL,
+  VME_SYNDICUS_PENDING_LABEL,
+  type CustomerCategory,
+  type CustomerCategoryFilter,
+} from "@/lib/customer-categories";
+import { useRole } from "@/lib/use-role";
 
 export const Route = createFileRoute("/_authenticated/klanten")({
   validateSearch: (search: Record<string, unknown>): { q?: string } => (typeof search["q"] === "string" && search["q"] ? { q: search["q"] } : {}),
@@ -79,7 +97,17 @@ function ContactsEditor({ form, setForm }: { form: Record<string, string>; setFo
 }
 
 /** De volledige klantfiche: eigen gegevens, syndicusblok en btw-keuzes. Gedeeld tussen bewerken en nieuw aanmaken. */
-function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>; templates?: { name: string; details: SyndicusDetails }[] }) {
+function CustomerFormFields({
+  form,
+  setForm,
+  templates = [],
+  directory = [],
+}: {
+  form: Record<string, string>;
+  setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  templates?: { name: string; details: SyndicusDetails }[];
+  directory?: SyndicusDir[];
+}) {
   const lookup = useServerFn(lookupCompany);
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupMessage, setLookupMessage] = useState("");
@@ -126,6 +154,76 @@ function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<st
   }
   return (
     <>
+      <div className="flex flex-wrap items-end gap-3 rounded-md border border-border/80 bg-muted/20 p-3">
+        <label className="min-w-48 flex-1 space-y-1">
+          <span className="block text-xs font-bold uppercase text-muted-foreground">Klantcategorie</span>
+          <select
+            aria-label="Klantcategorie"
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
+            value={form["customer_category"] ?? ""}
+            onChange={(e) => {
+              const next = e.target.value;
+              setForm((prev) => ({
+                ...prev,
+                customer_category: next,
+                vme_syndicus_pending: next === "vme" ? prev["vme_syndicus_pending"] ?? "" : "",
+              }));
+            }}
+          >
+            <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
+            {CUSTOMER_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </label>
+        {form["customer_category"] === "vme" && (
+          <>
+            <label className="min-w-56 flex-[2] space-y-1">
+              <span className="block text-xs font-bold uppercase text-primary">Verantwoordelijke syndicus (VME) *</span>
+              <SearchableSelect
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                value={form["syndicus_id"] ?? ""}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  const found = directory.find((d) => d.id === id);
+                  setForm((prev) => {
+                    const next: Record<string, string> = {
+                      ...prev,
+                      syndicus_id: id,
+                      vme_syndicus_pending: id ? "" : prev["vme_syndicus_pending"] ?? "",
+                    };
+                    if (found) {
+                      const details = customerDetailsFromDir(found);
+                      for (const f of SYNDICUS_FIELDS) next[f.key] = (details[f.key as SyndicusDetailField] as string | null) ?? "";
+                    }
+                    return next;
+                  });
+                }}
+              >
+                <option value="">— kies bestaande syndicus —</option>
+                {directory.map((d) => (
+                  <option key={d.id} value={d.id}>{d.company}{d.city ? ` (${d.city})` : ""}</option>
+                ))}
+              </SearchableSelect>
+            </label>
+            <label className="flex h-9 items-center gap-2 text-xs font-medium text-muted-foreground">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-primary"
+                checked={form["vme_syndicus_pending"] === "1" && !form["syndicus_id"]}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    syndicus_id: e.target.checked ? "" : prev["syndicus_id"] ?? "",
+                    vme_syndicus_pending: e.target.checked ? "1" : "",
+                  }))
+                }
+              />
+              {VME_SYNDICUS_PENDING_LABEL}
+            </label>
+          </>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2">
         {FIELDS.map((f) => (
           <label key={f.key} className={`space-y-1 ${f.className}`}>
@@ -176,9 +274,20 @@ function CustomerFormFields({ form, setForm, templates = [] }: { form: Record<st
 
 function Klanten() {
   const qc = useQueryClient();
+  const role = useRole();
+  const canEditCategory = role === "admin" || role === "marketing";
+  const canExportContact = role === "admin" || role === "marketing";
   const search = Route.useSearch();
   const [q, setQ] = useState(search.q ?? "");
   useEffect(() => setQ(search.q ?? ""), [search.q]);
+  const [categoryFilter, setCategoryFilter] = useState<CustomerCategoryFilter>("all");
+  const [syndicusFilter, setSyndicusFilter] = useState<string>("");
+  const [bulkCategory, setBulkCategory] = useState<string>("");
+  const [vmeDialog, setVmeDialog] = useState<{
+    ids: string[];
+    title: string;
+    initialSyndicusId?: string | null;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -206,8 +315,37 @@ function Klanten() {
   const branchName = (id: string | null | undefined) => branches.find((b) => b.id === id)?.name;
   const {data:projects=[]}=useQuery({queryKey:['customer_projects'],queryFn:async()=>{const {data,error}=await supabase.from('customer_projects').select('*').order('name');if(error)throw error;return data??[];}});
   const matchingIds = new Set(filterChoices(data.map(c => ({ value: c.id, label: c.name, search: [c.customer_number, ...(c.customer_numbers ?? []), c.street, c.house_number, c.postal_code, c.city, c.email, c.billing_email, c.phone, c.vat_number, c.syndicus, c.syndicus_company, c.syndicus_contact, c.syndicus_email, c.syndicus_billing_email, c.syndicus_phone].filter(Boolean).join(' ') })), q).map(c => c.value));
-  const rows = data.filter(c => matchingIds.has(c.id));
-  const sort = useSort(rows, { nr: c => c.customer_number, naam: c => c.name, plaats: c => c.city, tel: c => c.phone, mail: c => c.email, btw: c => c.vat_number, syndicus: c => c.syndicus ?? "" });
+  const searchedRows = useMemo(() => data.filter((c) => matchingIds.has(c.id)), [data, q]);
+  const rows = useMemo(
+    () => filterCustomersByCategoryAndSyndicus(searchedRows, { categoryFilter, syndicusFilter }),
+    [searchedRows, categoryFilter, syndicusFilter],
+  );
+  const categoryCounts = useMemo(() => {
+    const counts: Record<CustomerCategoryFilter, number> = {
+      all: searchedRows.length,
+      zakelijk: 0,
+      vme: 0,
+      particulier: 0,
+      patrimoniumvennootschap: 0,
+      unassigned: 0,
+    };
+    for (const c of searchedRows) {
+      const cat = (c as { customer_category?: string | null }).customer_category;
+      if (isCustomerCategory(cat)) counts[cat] += 1;
+      else counts.unassigned += 1;
+    }
+    return counts;
+  }, [searchedRows]);
+  const sort = useSort(rows, {
+    nr: c => c.customer_number,
+    naam: c => c.name,
+    categorie: c => customerCategoryLabel((c as { customer_category?: string | null }).customer_category),
+    plaats: c => c.city,
+    tel: c => c.phone,
+    mail: c => c.email,
+    btw: c => c.vat_number,
+    syndicus: c => resolveCustomerSyndicusName(c as { customer_category?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null; syndicus_company?: string | null; syndicus?: string | null }, directory),
+  });
   // Eén keuze per bekende syndicus: eerst de contactfiche (die is volledig), dan
   // de namen die voorlopig alleen bij klanten voorkomen.
   const templates = useMemo(() => {
@@ -291,12 +429,27 @@ function Klanten() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ vrij_beroep: "", oud6: "" });
+    setForm({ vrij_beroep: "", oud6: "", customer_category: "", syndicus_id: "", vme_syndicus_pending: "" });
     setCreating(true);
   }
 
   async function createCustomer() {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), contacts: parseContacts(JSON.parse(form["contacts"] || "[]")), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : null };
+    const nextCat = isCustomerCategory(form["customer_category"]) ? form["customer_category"] : null;
+    const selectedSyn = directory.find((d) => d.id === form["syndicus_id"]) ?? null;
+    if (nextCat === "vme" && !selectedSyn && form["vme_syndicus_pending"] !== "1" && !form["syndicus_company"]?.trim()) {
+      toast.error("Kies een verantwoordelijke syndicus voor deze VME of vink 'Nog toe te wijzen' aan.");
+      return;
+    }
+    const patch = {
+      ...customerPatch(form as Partial<CustomerRow>),
+      ...syndicusDetailsPatch(form),
+      customer_category: nextCat,
+      syndicus_id: nextCat === "vme" ? (selectedSyn?.id ?? null) : null,
+      vme_syndicus_pending: nextCat === "vme" && !selectedSyn && form["vme_syndicus_pending"] === "1",
+      contacts: parseContacts(JSON.parse(form["contacts"] || "[]")),
+      vrij_beroep: form["vrij_beroep"] === "1",
+      default_vat_rate: form["oud6"] === "1" ? 6 : null,
+    };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -318,11 +471,15 @@ function Klanten() {
   function openEdit(c: (typeof data)[number]) {
     setCreating(false);
     setEditing(editing === c.id ? null : c.id);
+    const ext = c as { customer_category?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null };
     setForm({
       ...Object.fromEntries(FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
       ...Object.fromEntries(SYNDICUS_FIELDS.map((f) => [f.key, (c[f.key] as string | null) ?? ""])),
       // Oudere rijen hebben de syndicus maar als één regel tekst: die in het vak bedrijfsnaam zetten.
       syndicus_company: (c.syndicus_company as string | null) ?? c.syndicus ?? "",
+      customer_category: ext.customer_category ?? "",
+      syndicus_id: ext.syndicus_id ?? "",
+      vme_syndicus_pending: ext.vme_syndicus_pending ? "1" : "",
       vrij_beroep: c.vrij_beroep ? "1" : "",
       oud6: Number(c.default_vat_rate) === 6 ? "1" : "",
       contacts: JSON.stringify(parseContacts((c as { contacts?: unknown }).contacts)),
@@ -330,7 +487,27 @@ function Klanten() {
   }
 
   async function save(c: (typeof data)[number]) {
-    const patch = { ...customerPatch(form as Partial<CustomerRow>), ...syndicusDetailsPatch(form), contacts: parseContacts(JSON.parse(form["contacts"] || "[]")), vrij_beroep: form["vrij_beroep"] === "1", default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate) };
+    const prevCat = (c as { customer_category?: string | null }).customer_category ?? null;
+    const nextCat = isCustomerCategory(form["customer_category"]) ? form["customer_category"] : null;
+    const selectedSyn = directory.find((d) => d.id === form["syndicus_id"]) ?? null;
+    if (nextCat === "vme" && !selectedSyn && form["vme_syndicus_pending"] !== "1" && !form["syndicus_company"]?.trim()) {
+      toast.error("Kies een verantwoordelijke syndicus voor deze VME of vink 'Nog toe te wijzen' aan.");
+      return;
+    }
+    let clearSyn = false;
+    if (prevCat === "vme" && nextCat !== "vme" && (form["syndicus_id"] || form["syndicus_company"]?.trim())) {
+      clearSyn = confirm("Deze klant is geen VME meer. Wil je de gekoppelde syndicusrelatie ook verwijderen? (OK = verwijderen, Annuleren = behouden)");
+    }
+    const patch = {
+      ...customerPatch(form as Partial<CustomerRow>),
+      ...(clearSyn ? syndicusDetailsPatch({}) : syndicusDetailsPatch(form)),
+      customer_category: nextCat,
+      syndicus_id: clearSyn ? null : (nextCat === "vme" ? (selectedSyn?.id ?? null) : (form["syndicus_id"] || null)),
+      vme_syndicus_pending: nextCat === "vme" && !selectedSyn && form["vme_syndicus_pending"] === "1",
+      contacts: parseContacts(JSON.parse(form["contacts"] || "[]")),
+      vrij_beroep: form["vrij_beroep"] === "1",
+      default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate),
+    };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
@@ -347,6 +524,113 @@ function Klanten() {
     setEditing(null);
     qc.invalidateQueries({ queryKey: ["customers"] });
     qc.invalidateQueries({ queryKey: ["syndici"] });
+  }
+
+  async function applyCategoryPatch(ids: string[], patch: Record<string, unknown>, successMsg: string) {
+    const { error } = await supabase
+      .from("customers")
+      .update(patch as Database["public"]["Tables"]["customers"]["Update"])
+      .in("id", ids);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(successMsg);
+    qc.invalidateQueries({ queryKey: ["customers"] });
+    qc.invalidateQueries({ queryKey: ["syndici"] });
+  }
+
+  async function handleInlineCategoryChange(c: (typeof data)[number], rawNext: string) {
+    const nextCat: CustomerCategory | null = isCustomerCategory(rawNext) ? rawNext : null;
+    const ext = c as { customer_category?: string | null; syndicus_id?: string | null };
+    if (nextCat === "vme") {
+      setVmeDialog({ ids: [c.id], title: `Klant: ${c.name}`, initialSyndicusId: ext.syndicus_id ?? null });
+      return;
+    }
+    let clearSyndicusOnLeave = false;
+    if (ext.customer_category === "vme" && (ext.syndicus_id || c.syndicus_company || c.syndicus)) {
+      clearSyndicusOnLeave = confirm(
+        `${c.name} is niet langer een VME. Wil je de gekoppelde syndicusrelatie ook verwijderen? (OK = verwijderen, Annuleren = behouden)`,
+      );
+    }
+    const res = buildCategoryUpdatePatch({
+      nextCategory: nextCat,
+      previousCategory: ext.customer_category ?? null,
+      clearSyndicusOnLeave,
+    });
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    await applyCategoryPatch([c.id], res.patch, `${c.name}: categorie op ${customerCategoryLabel(nextCat)} gezet`);
+  }
+
+  async function handleBulkCategoryApply() {
+    const ids = [...sel];
+    if (!ids.length) return;
+    const nextCat: CustomerCategory | null = isCustomerCategory(bulkCategory) ? bulkCategory : null;
+    if (nextCat === "vme") {
+      setVmeDialog({ ids, title: `${ids.length} geselecteerde klant(en) als VME instellen` });
+      return;
+    }
+    if (!confirm(`Categorie '${customerCategoryLabel(nextCat)}' toewijzen aan ${ids.length} geselecteerde klant(en)?`)) return;
+    const res = buildCategoryUpdatePatch({ nextCategory: nextCat });
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    await applyCategoryPatch(ids, res.patch, `${ids.length} klant(en) ingesteld als ${customerCategoryLabel(nextCat)}`);
+    setSel(new Set());
+    setBulkCategory("");
+  }
+
+  async function createSyndicusAndLink(ids: string[], company: string, contact: string) {
+    await syncSyndicusFromCustomer({ data: { company, contact: contact || null } });
+    const { data: rowsSyn, error } = await supabase.from("syndici").select("*").ilike("company", company).limit(1);
+    if (error || !rowsSyn?.[0]) {
+      toast.error(error?.message || "Nieuwe syndicus kon niet worden opgehaald.");
+      return;
+    }
+    const syn = rowsSyn[0] as SyndicusDir;
+    const res = buildCategoryUpdatePatch({ nextCategory: "vme", syndicus: syn });
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    await applyCategoryPatch(ids, res.patch, `VME gekoppeld aan ${syn.company}`);
+    setSel(new Set());
+  }
+
+  function exportFilteredCsv() {
+    const exportRows = buildCustomerExportRows(sort.sorted as never[], directory, { includeContactAndAddress: canExportContact });
+    const csv = customersToCsv(exportRows, canExportContact);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `klanten-${categoryFilter}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+
+  async function exportFilteredXlsx() {
+    const XLSX = await import("xlsx");
+    const exportRows = buildCustomerExportRows(sort.sorted as never[], directory, { includeContactAndAddress: canExportContact });
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Klanten");
+    const out = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `klanten-${categoryFilter}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
   async function importExcel(file: File) {
@@ -389,16 +673,63 @@ function Klanten() {
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importExcel(f); }} />
               <Button asChild variant="outline"><span>{busy ? "Inlezen…" : "Excel inlezen"}</span></Button>
             </label>
+            <Button variant="outline" disabled={sort.sorted.length === 0} onClick={exportFilteredCsv}>CSV export</Button>
+            <Button variant="outline" disabled={sort.sorted.length === 0} onClick={exportFilteredXlsx}>Excel export</Button>
           </>
         }
       />
-      <div className="rounded-xl border border-border/90 bg-card p-3.5 shadow-xs">
-        <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-lg" />
+      <div className="space-y-3 rounded-xl border border-border/90 bg-card p-3.5 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input type="search" aria-label="Klanten zoeken" placeholder="Zoek klantnummer, naam, adres of syndicus…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-lg flex-1" />
+          {categoryFilter === "vme" && (
+            <div className="min-w-52">
+              <SearchableSelect
+                aria-label="Filter op syndicus"
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                value={syndicusFilter}
+                onChange={(e) => setSyndicusFilter(e.target.value)}
+              >
+                <option value="">Alle syndici</option>
+                <option value={SYNDICUS_FILTER_PENDING}>{VME_SYNDICUS_PENDING_LABEL}</option>
+                {directory.map((d) => (
+                  <option key={d.id} value={d.id}>{d.company}</option>
+                ))}
+              </SearchableSelect>
+            </div>
+          )}
+          <span className="ml-auto text-xs text-muted-foreground">{rows.length} klant{rows.length === 1 ? "" : "en"}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter op klantcategorie">
+          {(
+            [
+              { key: "all", label: "Alle" },
+              ...CUSTOMER_CATEGORIES.map((c) => ({ key: c.value as CustomerCategoryFilter, label: c.label })),
+              { key: "unassigned", label: UNASSIGNED_CATEGORY_LABEL },
+            ] as { key: CustomerCategoryFilter; label: string }[]
+          ).map((tab) => {
+            const active = categoryFilter === tab.key;
+            return (
+              <Button
+                key={tab.key}
+                type="button"
+                size="sm"
+                variant={active ? "default" : "outline"}
+                className="h-7 px-2.5 text-xs"
+                onClick={() => {
+                  setCategoryFilter(tab.key);
+                  if (tab.key !== "vme") setSyndicusFilter("");
+                }}
+              >
+                {tab.label} ({categoryCounts[tab.key]})
+              </Button>
+            );
+          })}
+        </div>
       </div>
       {creating && (
         <div className="space-y-3 rounded-xl border border-primary/40 bg-card p-4 shadow-xs sm:p-5">
           <div className="border-b border-border/70 pb-2 text-sm font-bold text-foreground">Nieuwe klant aanmaken</div>
-          <CustomerFormFields form={form} setForm={setForm} templates={templates} />
+          <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} />
           <div className="flex gap-2">
             <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>
             <Button size="sm" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>Annuleren</Button>
@@ -409,6 +740,22 @@ function Klanten() {
         <div className="rounded-md border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-bold">{sel.size} klant{sel.size > 1 ? "en" : ""} geselecteerd</span>
+            {canEditCategory && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  aria-label="Bulk klantcategorie"
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value)}
+                >
+                  <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
+                  {CUSTOMER_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+                <Button size="sm" variant="outline" onClick={handleBulkCategoryApply}>Categorie toewijzen</Button>
+              </div>
+            )}
             <Button size="sm" variant={assignOpen ? "secondary" : "default"} onClick={() => setAssignOpen((o) => !o)}>Syndicus toewijzen</Button>
             <Button size="sm" variant="ghost" onClick={() => { setSel(new Set()); setAssignOpen(false); }}>Selectie wissen</Button>
           </div>
@@ -443,6 +790,7 @@ function Klanten() {
             <Th className="w-px"><input type="checkbox" className="h-4 w-4 accent-primary" aria-label="Alle getoonde klanten selecteren" checked={allShownSelected} onChange={(e) => setSel(e.target.checked ? new Set([...sel, ...rows.map((r) => r.id)]) : new Set())} /></Th>
             <SortTh k="nr" sort={sort} className="w-px">Nr.</SortTh>
             <SortTh k="naam" sort={sort}>Naam</SortTh>
+            <SortTh k="categorie" sort={sort}>Categorie</SortTh>
             <SortTh k="plaats" sort={sort} className="hidden md:table-cell">Adres</SortTh>
             <SortTh k="syndicus" sort={sort} className="hidden lg:table-cell">Syndicus</SortTh>
             <SortTh k="tel" sort={sort} className="hidden lg:table-cell">Telefoon</SortTh>
@@ -451,17 +799,36 @@ function Klanten() {
             <Th />
           </tr></thead>
           <tbody>
-            {sort.sorted.length === 0 && <tr><td colSpan={9} className="text-muted-foreground">Geen klanten.</td></tr>}
+            {sort.sorted.length === 0 && <tr><td colSpan={10} className="text-muted-foreground">Geen klanten.</td></tr>}
             {sort.sorted.map((c) => {
               const own = projects.filter(p => p.customer_id === c.id);
+              const ext = c as { customer_category?: string | null; syndicus_id?: string | null; vme_syndicus_pending?: boolean | null };
+              const synDisplay = resolveCustomerSyndicusName({ ...ext, syndicus_company: c.syndicus_company, syndicus: c.syndicus }, directory);
               return (
                 <Fragment key={c.id}>
                   <tr>
                     <td className="w-px"><input type="checkbox" className="h-4 w-4 accent-primary" aria-label={`${c.name} selecteren`} checked={sel.has(c.id)} onChange={(e) => toggleSel(c.id, e.target.checked)} /></td>
                     <td className="max-w-24 truncate font-mono text-xs text-muted-foreground" title={c.customer_number ?? ""}>{c.customer_number}</td>
-                    <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}{c.syndicus && <div className="text-xs font-normal text-muted-foreground lg:hidden">Syndicus: {c.syndicus}</div>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="font-bold">{c.name}{branchName((c as { branch_id?: string | null }).branch_id) && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs font-bold uppercase text-primary-foreground" title={(c as { branch_manual?: boolean }).branch_manual ? "Handmatig gekozen vestiging" : "Dichtstbijzijnde vestiging"}>{branchName((c as { branch_id?: string | null }).branch_id)}</span>}{own.length > 0 && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs">{own.length} project{own.length > 1 ? "en" : ""}</span>}{Number(c.default_vat_rate) === 6 && !c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">6% btw</span>}{c.vrij_beroep && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-xs font-normal">vrij beroep</span>}{synDisplay && <div className="text-xs font-normal text-muted-foreground lg:hidden">Syndicus: {synDisplay}</div>}<div className="text-xs font-normal text-muted-foreground md:hidden">{formatAddress(c)}</div></td>
+                    <td className="whitespace-nowrap">
+                      {canEditCategory ? (
+                        <select
+                          aria-label={`Categorie voor ${c.name}`}
+                          className="h-8 max-w-44 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground"
+                          value={ext.customer_category ?? ""}
+                          onChange={(e) => handleInlineCategoryChange(c, e.target.value)}
+                        >
+                          <option value="">{UNASSIGNED_CATEGORY_LABEL}</option>
+                          {CUSTOMER_CATEGORIES.map((cat) => (
+                            <option key={cat.value} value={cat.value}>{cat.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{customerCategoryLabel(ext.customer_category)}</span>
+                      )}
+                    </td>
                     <td className="hidden text-muted-foreground md:table-cell">{formatAddress(c) || "—"}</td>
-                    <td className="hidden text-muted-foreground lg:table-cell">{c.syndicus_company ?? c.syndicus ?? "—"}</td>
+                    <td className="hidden text-muted-foreground lg:table-cell">{synDisplay || "—"}</td>
                     <td className="hidden whitespace-nowrap lg:table-cell">{c.phone ?? "—"}</td>
                     <td className="hidden max-w-56 truncate 2xl:table-cell" title={c.email ?? ""}>{c.email ?? "—"}</td>
                     <td className="hidden whitespace-nowrap font-mono text-xs 2xl:table-cell">{c.vat_number ?? "—"}</td>
@@ -476,11 +843,11 @@ function Klanten() {
                     </td>
                   </tr>
                   {editing === c.id && (
-                    <tr className="bg-muted/30"><td colSpan={9}>
+                    <tr className="bg-muted/30"><td colSpan={10}>
                       <div className="space-y-3">
                         {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                         {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-                        <CustomerFormFields form={form} setForm={setForm} templates={templates} />
+                        <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} />
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>
@@ -494,6 +861,30 @@ function Klanten() {
           </tbody>
         </table>
       </div>
+      {vmeDialog && (
+        <VmeSyndicusDialog
+          open={true}
+          title={vmeDialog.title}
+          directory={directory}
+          initialSyndicusId={vmeDialog.initialSyndicusId ?? null}
+          onClose={() => setVmeDialog(null)}
+          onConfirmExisting={async (syn) => {
+            const res = buildCategoryUpdatePatch({ nextCategory: "vme", syndicus: syn });
+            if (!res.ok) { toast.error(res.error); return; }
+            await applyCategoryPatch(vmeDialog.ids, res.patch, `VME gekoppeld aan ${syn.company}`);
+            setSel(new Set());
+          }}
+          onCreateAndConfirm={async (company, contact) => {
+            await createSyndicusAndLink(vmeDialog.ids, company, contact);
+          }}
+          onConfirmPending={async () => {
+            const res = buildCategoryUpdatePatch({ nextCategory: "vme", vmePending: true });
+            if (!res.ok) { toast.error(res.error); return; }
+            await applyCategoryPatch(vmeDialog.ids, res.patch, "VME opgeslagen (syndicus nog toe te wijzen)");
+            setSel(new Set());
+          }}
+        />
+      )}
     </div>
   );
 }
