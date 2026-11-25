@@ -1268,6 +1268,13 @@
       "when": 1795619790034,
       "tag": "0180_create_customer_communications_audio",
       "breakpoints": true
+    },
+    {
+      "idx": 181,
+      "version": "7",
+      "when": 1795647835232,
+      "tag": "0181_customer_profile_changes",
+      "breakpoints": true
     }
   ]
 }

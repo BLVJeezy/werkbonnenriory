@@ -960,6 +960,44 @@ export type Database = {
           },
         ]
       }
+      customer_profile_changes: {
+        Row: {
+          changed_by_email: string | null
+          changes: Json
+          created_at: string
+          customer_id: string
+          id: string
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          changed_by_email?: string | null
+          changes: Json
+          created_at?: string
+          customer_id: string
+          id?: string
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          changed_by_email?: string | null
+          changes?: Json
+          created_at?: string
+          customer_id?: string
+          id?: string
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_profile_changes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_projects: {
         Row: {
           city: string | null
