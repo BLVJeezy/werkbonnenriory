@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowUpRight, Eraser, Minus, Pencil, Redo2, Stamp, Trash2, Type, Undo2, Upload } from "lucide-react";
+import { ArrowUpRight, Eraser, Hand, Minus, Pencil, Redo2, Stamp, Trash2, Type, Undo2, Upload, ZoomIn, ZoomOut } from "lucide-react";
 
 const BUCKET = "werkbon-fotos";
 
@@ -36,7 +36,7 @@ export type GroundPlanRecord = {
   backgroundUrl?: string | null;
 };
 
-type Tool = "pen" | "line" | "arrow" | "stamp" | "text" | "eraser";
+type Tool = "pan" | "pen" | "line" | "arrow" | "stamp" | "text" | "eraser";
 
 type Props = {
   open: boolean;
@@ -60,7 +60,9 @@ export function GroundPlanEditorDialog({
   onSaved,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const bgImgRef = useRef<HTMLImageElement | null>(null);
+  const panStartRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
 
   const [title, setTitle] = useState("Rioolstelsel");
   const [includeInPdf, setIncludeInPdf] = useState(true);
@@ -75,6 +77,7 @@ export function GroundPlanEditorDialog({
   const [bgPath, setBgPath] = useState<string | null>(null);
   const [bgSrc, setBgSrc] = useState<string | null>(null);
   const [aspect, setAspect] = useState<number>(4 / 3);
+  const [zoom, setZoom] = useState<number>(1);
   const [saving, setSaving] = useState(false);
 
   const drawingRef = useRef(false);
@@ -89,6 +92,7 @@ export function GroundPlanEditorDialog({
     setBgFile(null);
     setBgPath(existingPlan?.background_path ?? null);
     setBgSrc(existingPlan?.backgroundUrl ?? null);
+    setZoom(1);
   }, [open, existingPlan]);
 
   useEffect(() => {
@@ -103,7 +107,7 @@ export function GroundPlanEditorDialog({
     img.onload = () => {
       bgImgRef.current = img;
       if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-        setAspect(Math.max(0.5, Math.min(2.2, img.naturalWidth / img.naturalHeight)));
+        setAspect(Math.max(0.25, Math.min(4, img.naturalWidth / img.naturalHeight)));
       }
       redraw();
     };
@@ -153,6 +157,13 @@ export function GroundPlanEditorDialog({
 
   function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     e.currentTarget.setPointerCapture(e.pointerId);
+    if (tool === "pan") {
+      const box = scrollRef.current;
+      if (box) {
+        panStartRef.current = { x: e.clientX, y: e.clientY, left: box.scrollLeft, top: box.scrollTop };
+      }
+      return;
+    }
     const pt = getNormPoint(e);
     if (tool === "eraser") {
       const idx = findNearestElementIndex(elements, pt.x, pt.y);
@@ -180,6 +191,11 @@ export function GroundPlanEditorDialog({
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (tool === "pan" && panStartRef.current && scrollRef.current) {
+      scrollRef.current.scrollLeft = panStartRef.current.left - (e.clientX - panStartRef.current.x);
+      scrollRef.current.scrollTop = panStartRef.current.top - (e.clientY - panStartRef.current.y);
+      return;
+    }
     if (!drawingRef.current || !draft) return;
     const pt = getNormPoint(e);
     if (draft.kind === "stroke") {
@@ -190,6 +206,10 @@ export function GroundPlanEditorDialog({
   }
 
   function onPointerUp() {
+    if (panStartRef.current) {
+      panStartRef.current = null;
+      return;
+    }
     if (!drawingRef.current) return;
     drawingRef.current = false;
     if (draft) {
@@ -354,6 +374,7 @@ export function GroundPlanEditorDialog({
 
         <div className="flex flex-wrap items-center gap-1.5">
           {([
+            ["pan", "Slepen", Hand],
             ["line", "Leiding", Minus],
             ["arrow", "Stroomrichting", ArrowUpRight],
             ["pen", "Vrij tekenen", Pencil],
@@ -367,6 +388,9 @@ export function GroundPlanEditorDialog({
             </Button>
           ))}
           <div className="ml-auto flex items-center gap-1">
+            <Button size="sm" variant="outline" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))} disabled={zoom <= 0.5} title="Uitzoomen"><ZoomOut className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="outline" className="px-2 font-mono text-xs" onClick={() => setZoom(1)} title="Reset zoom">{Math.round(zoom * 100)}%</Button>
+            <Button size="sm" variant="outline" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))} disabled={zoom >= 3} title="Inzoomen"><ZoomIn className="h-3.5 w-3.5" /></Button>
             <Button size="sm" variant="outline" onClick={undo} disabled={elements.length === 0} title="Ongedaan maken"><Undo2 className="h-3.5 w-3.5" /></Button>
             <Button size="sm" variant="outline" onClick={redo} disabled={redoStack.length === 0} title="Opnieuw"><Redo2 className="h-3.5 w-3.5" /></Button>
             <Button size="sm" variant="outline" onClick={() => { if (elements.length && confirm("Alle getekende lijnen wissen?")) pushElements([]); }} disabled={elements.length === 0} title="Alles wissen"><Trash2 className="h-3.5 w-3.5" /></Button>
@@ -405,17 +429,23 @@ export function GroundPlanEditorDialog({
           </div>
         )}
 
-        <div className="flex min-h-[45dvh] flex-1 items-center justify-center overflow-hidden rounded-md border bg-muted/20">
-          <canvas
-            ref={canvasRef}
-            width={canvasW}
-            height={canvasH}
-            className="block max-h-full max-w-full touch-none select-none cursor-crosshair"
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-          />
+        <div
+          ref={scrollRef}
+          className="min-h-[45dvh] flex-1 overflow-auto rounded-md border bg-muted/20 p-2"
+        >
+          <div className="flex min-h-full min-w-full items-start justify-center">
+            <canvas
+              ref={canvasRef}
+              width={canvasW}
+              height={canvasH}
+              style={{ width: `${Math.round(zoom * 100)}%`, height: "auto", maxWidth: "none" }}
+              className={`block touch-none select-none ${tool === "pan" ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            />
+          </div>
         </div>
 
         <div className="flex justify-end gap-2">
