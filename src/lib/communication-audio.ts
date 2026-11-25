@@ -15,13 +15,6 @@ export const ALLOWED_AUDIO_MIME_EXTENSIONS: Readonly<Record<string, readonly str
 export const ALLOWED_AUDIO_MIME_TYPES = Object.keys(ALLOWED_AUDIO_MIME_EXTENSIONS);
 export const AUDIO_FILE_ACCEPT = ".mp3,.m4a,.mp4,.wav,.ogg,.webm,audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/webm";
 
-export const COMMUNICATION_SCOPE_NOTES = {
-  mailIncluded: ["info@riory.be", "afspraak@riory.be", "boekhouding@riory.be", "yordi@riory.be"],
-  mailExcluded: ["support@ (Invenix-reviews)", "Syncro19"],
-  mailSyncEnabled: false,
-  telavoxConfirmed: false,
-} as const;
-
 export type AudioReadinessState = {
   ready: boolean;
   featureEnabled: boolean;

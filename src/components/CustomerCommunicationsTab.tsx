@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import {
   AUDIO_FILE_ACCEPT,
   COMMUNICATION_AUDIO_BUCKET,
-  COMMUNICATION_SCOPE_NOTES,
   validateAudioUploadMeta,
 } from "@/lib/communication-audio";
 import {
@@ -77,7 +76,7 @@ export function CustomerCommunicationsTab({
 
   const [direction, setDirection] = useState<CallDirection>("inbound");
   const [phoneInput, setPhoneInput] = useState("");
-  const [confirmedCustomerId, setConfirmedCustomerId] = useState<string>(customerId);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customerId);
   const [projectId, setProjectId] = useState("");
   const [workOrderId, setWorkOrderId] = useState("");
   const [notes, setNotes] = useState("");
@@ -97,9 +96,22 @@ export function CustomerCommunicationsTab({
     );
   }, [direction, phoneInput, allCustomers, syndicusPhones]);
 
+  const targetCustomerId =
+    phoneMatch?.status === "ambiguous"
+      ? selectedCustomerId
+      : phoneMatch?.status === "matched"
+        ? selectedCustomerId
+        : customerId;
+
+  const isDifferentCustomer = targetCustomerId !== customerId;
+
   const handleUpload = async () => {
     if (!readiness?.ready) {
       toast.error("Audio-opslag is uitgeschakeld tot migratie- en beveiligingsreview zijn afgerond.");
+      return;
+    }
+    if (phoneMatch?.status === "ambiguous" && !phoneMatch.candidates.some((c) => c.customerId === targetCustomerId)) {
+      toast.error("Kies eerst expliciet de juiste klant voor dit gedeelde nummer.");
       return;
     }
     if (!file) {
@@ -119,12 +131,13 @@ export function CustomerCommunicationsTab({
 
     setUploading(true);
     try {
-      const targetCustomerId = confirmedCustomerId || customerId;
+      const scopedWorkOrderId = isDifferentCustomer ? null : workOrderId || null;
+      const scopedProjectId = isDifferentCustomer ? null : projectId || null;
       const { communicationId, storagePath } = await callPrepare({
         data: {
           customerId: targetCustomerId,
-          workOrderId: workOrderId || null,
-          projectId: projectId || null,
+          workOrderId: scopedWorkOrderId,
+          projectId: scopedProjectId,
           fileName: file.name,
           mimeType: file.type,
           sizeBytes: file.size,
@@ -141,8 +154,8 @@ export function CustomerCommunicationsTab({
         data: {
           communicationId,
           customerId: targetCustomerId,
-          workOrderId: workOrderId || null,
-          projectId: projectId || null,
+          workOrderId: scopedWorkOrderId,
+          projectId: scopedProjectId,
           direction,
           counterpartPhoneRaw: phoneInput.trim() || null,
           matchStatus: phoneMatch?.status ?? "manual",
@@ -195,7 +208,8 @@ export function CustomerCommunicationsTab({
       <div className="space-y-1">
         <h4 className="text-sm font-semibold">Communicatie — {customerName}</h4>
         <p className="text-xs text-muted-foreground">
-          Alleen toegankelijk voor Riory-beheerders. Niet zichtbaar in het klantenportaal of voor ploegen.
+          Enkel toegankelijk voor admin. Bestaande Telavox-opnames bewaren en afspelen bij de juiste klant — geen
+          opname, transcriptie, sync of portaaltoegang.
         </p>
       </div>
 
@@ -217,7 +231,7 @@ export function CustomerCommunicationsTab({
       ) : null}
 
       <div className="space-y-3 rounded-md border border-border p-3">
-        <div className="text-xs font-semibold">Handmatige audio-upload & nummerherkenning</div>
+        <div className="text-xs font-semibold">Telavox-opname bewaren bij klant</div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor={`comm-dir-${customerId}`}>Richting</Label>
@@ -247,22 +261,41 @@ export function CustomerCommunicationsTab({
         {phoneMatch && (
           <div className="rounded border border-border bg-muted/40 p-2 text-xs space-y-1">
             {phoneMatch.status === "matched" && (
-              <div>
-                Herkend nummer <span className="font-mono">{phoneMatch.e164}</span> →{" "}
-                <strong>{phoneMatch.customerName}</strong>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  Voorgestelde klant voor <span className="font-mono">{phoneMatch.e164}</span>:{" "}
+                  <strong>{phoneMatch.customerName}</strong>
+                </div>
+                {phoneMatch.customerId !== targetCustomerId && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedCustomerId(phoneMatch.customerId);
+                      setWorkOrderId("");
+                      setProjectId("");
+                    }}
+                  >
+                    Bevestig {phoneMatch.customerName}
+                  </Button>
+                )}
               </div>
             )}
             {phoneMatch.status === "ambiguous" && (
               <div className="space-y-1">
                 <div className="font-medium text-amber-700 dark:text-amber-400">
-                  Meerdere klanten gevonden voor <span className="font-mono">{phoneMatch.e164}</span> — kies
-                  handmatig:
+                  Meerdere klanten gevonden voor <span className="font-mono">{phoneMatch.e164}</span> (nooit
+                  automatisch toegewezen) — bevestig handmatig:
                 </div>
                 <select
                   aria-label="Bevestig klant bij dubbel nummer"
                   className="h-8 w-full rounded border border-input bg-background px-2 text-xs"
-                  value={confirmedCustomerId}
-                  onChange={(e) => setConfirmedCustomerId(e.target.value)}
+                  value={selectedCustomerId}
+                  onChange={(e) => {
+                    setSelectedCustomerId(e.target.value);
+                    setWorkOrderId("");
+                    setProjectId("");
+                  }}
                 >
                   {phoneMatch.candidates.map((cand) => (
                     <option key={cand.customerId} value={cand.customerId}>
@@ -288,6 +321,7 @@ export function CustomerCommunicationsTab({
               id={`comm-wo-${customerId}`}
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
               value={workOrderId}
+              disabled={isDifferentCustomer}
               onChange={(e) => setWorkOrderId(e.target.value)}
             >
               <option value="">Geen werkbon</option>
@@ -304,6 +338,7 @@ export function CustomerCommunicationsTab({
               id={`comm-proj-${customerId}`}
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
               value={projectId}
+              disabled={isDifferentCustomer}
               onChange={(e) => setProjectId(e.target.value)}
             >
               <option value="">Geen project</option>
@@ -318,7 +353,9 @@ export function CustomerCommunicationsTab({
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor={`comm-file-${customerId}`}>Audiobestand (MP3, M4A, WAV, OGG, WebM — max 25 MB)</Label>
+          <Label htmlFor={`comm-file-${customerId}`}>
+            Geëxporteerde Telavox-opname (MP3, M4A, WAV, OGG, WebM — max 25 MB)
+          </Label>
           <Input
             id={`comm-file-${customerId}`}
             type="file"
@@ -347,11 +384,11 @@ export function CustomerCommunicationsTab({
             disabled={!readiness?.ready || uploading}
             onChange={(e) => setLawfulConfirmed(e.target.checked)}
           />
-          <span>Ik bevestig dat deze audio-opname reeds rechtmatig werd opgenomen.</span>
+          <span>Ik bevestig dat dit een bestaande, rechtmatig opgenomen Telavox-opname is.</span>
         </label>
 
         <Button size="sm" disabled={!readiness?.ready || uploading || !file || !lawfulConfirmed} onClick={handleUpload}>
-          {uploading ? "Bezig met uploaden…" : "Opname uploaden"}
+          {uploading ? "Bezig met bewaren…" : "Opname bewaren"}
         </Button>
       </div>
 
@@ -401,17 +438,6 @@ export function CustomerCommunicationsTab({
           )}
         </div>
       )}
-
-      <div className="border-t border-border pt-2 text-[11px] text-muted-foreground space-y-0.5">
-        <div>
-          <strong>Mailscope (niet actief in deze versie):</strong> {COMMUNICATION_SCOPE_NOTES.mailIncluded.join(", ")}.
-          Uitgesloten: {COMMUNICATION_SCOPE_NOTES.mailExcluded.join(", ")}. Geen automatische mailsync.
-        </div>
-        <div>
-          <strong>Telefonie:</strong> Telavox is niet bevestigd; geen providerkoppeling, opnamefunctie of transcriptie
-          actief.
-        </div>
-      </div>
     </div>
   );
 }
