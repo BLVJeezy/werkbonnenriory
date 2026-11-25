@@ -48,4 +48,19 @@ describe('reviewfacturen API', () => {
     expect((await response.json()).invoices).toEqual([{ id: invoice.id, email: 'klant@example.com', sent_at: invoice.sent_at }]);
     expect(load).toHaveBeenCalledWith({ limit: 100 });
   });
+  it('ondersteunt GET met Bearer-header en queryparameters zonder 406 en weigert onbekende parameters', async () => {
+    const load = vi.fn().mockResolvedValue([invoice]);
+    const getReq = (qs: string, token?: string) => new Request(`https://werkbonnen.riory.be/api/public/reviews/invoices${qs}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    expect((await handleReviewFeed(getReq('?limit=1'), 'test-only-token', load)).status).toBe(401);
+    expect((await handleReviewFeed(getReq('?limit=1&token=leak', 'test-only-token'), 'test-only-token', load)).status).toBe(400);
+    expect((await handleReviewFeed(getReq('?limit=0', 'test-only-token'), 'test-only-token', load)).status).toBe(400);
+    expect(load).not.toHaveBeenCalled();
+    const ok = await handleReviewFeed(getReq(`?limit=1&sent_at=${encodeURIComponent(invoice.sent_at!)}&id=${invoice.id}`, 'test-only-token'), 'test-only-token', load);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get('cache-control')).toBe('private, no-store');
+    expect(load).toHaveBeenCalledWith({ limit: 1, cursor: { sent_at: invoice.sent_at, id: invoice.id } });
+  });
 });

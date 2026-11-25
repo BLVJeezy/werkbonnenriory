@@ -4,13 +4,18 @@ Met deze API haalt jullie extern reviewsysteem op welke klanten een reviewmail m
 
 ## Aanbevolen: na elke afgewerkte werkbon
 
-`POST https://werkbonnenriory.lovable.app/api/public/reviews/werkbonnen`
+`POST https://werkbonnen.riory.be/api/public/reviews/werkbonnen`
+
+> **Belangrijk (domeinovergang):** gebruik altijd `https://werkbonnen.riory.be`. Het oude adres `werkbonnenriory.lovable.app` stuurt door met HTTP `307` naar `werkbonnen.riory.be`, waardoor HTTP-clients de `Authorization`-header strippen of het verzoek niet volgen.
 
 Headers:
 - `Authorization: Bearer <REVIEW_INVOICES_API_TOKEN>`
 - `Content-Type: application/json`
+- `Accept: application/json`
 
 Eerste aanvraag: `{"limit":100}`
+
+`GET https://werkbonnen.riory.be/api/public/reviews/werkbonnen?limit=100` (optioneel met `completed_at` en `id`) wordt eveneens ondersteund met dezelfde `Authorization: Bearer`-header; geef de sleutel nooit mee in de URL.
 
 Antwoord (voorbeeld):
 
@@ -36,7 +41,7 @@ Volgende aanvragen: `{"limit":100,"cursor":{"completed_at":"…","id":"…"}}` m
 
 ## Alternatief: na verzonden factuur
 
-`POST https://werkbonnenriory.lovable.app/api/public/reviews/invoices` — zelfde sleutel en werking, maar met `invoices[]` en cursor `{ "sent_at", "id" }`. Enkel verzonden facturen (geen creditnota's of concepten).
+`POST https://werkbonnen.riory.be/api/public/reviews/invoices` (of `GET` met `?limit=100&sent_at=...&id=...`) — zelfde sleutel en werking, maar met `invoices[]` en cursor `{ "sent_at", "id" }`. Enkel verzonden facturen (geen creditnota's of concepten).
 
 ## Werkwijze voor het reviewsysteem
 
