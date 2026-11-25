@@ -213,8 +213,9 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
   );
   if (!portalEmailAllowed(email))
     throw new Error("Het klantenportaal is nog niet open voor dit account.");
-  // A staff account (admin-granted) only ever sees a read-only preview of the linked customer.
-  const preview = await isInternalUser(db, userId);
+  // A staff account (admin-granted) sees a read-only preview of a linked customer, unless every
+  // linked customer file is the staff member's own (same e-mail): then it is a normal customer view.
+  const preview = (await isInternalUser(db, userId)) && !(await linkedToOwnFile(db, active, email));
   let customerIds: string[];
   let scopeEmail = email;
   if (preview) {
@@ -244,6 +245,23 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
     primaryCustomerId: active[0]!.customer_id,
     accountIds: active.map((a) => a.id),
   };
+}
+
+async function linkedToOwnFile(
+  db: Db,
+  active: { customer_id: string }[],
+  email: string,
+): Promise<boolean> {
+  const { data, error } = await db
+    .from("customers")
+    .select("id, email, billing_email")
+    .in("id", uniq(active.map((a) => a.customer_id)));
+  if (error || !data?.length) return false;
+  const rows = data as { email: string | null; billing_email: string | null }[];
+  return (
+    rows.length === uniq(active.map((a) => a.customer_id)).length &&
+    rows.every((c) => sameEmail(c.email, email) || sameEmail(c.billing_email, email))
+  );
 }
 
 const PREVIEW_READ_ONLY = "Voorbeeldweergave: wijzigingen en aanvragen zijn uitgeschakeld.";
