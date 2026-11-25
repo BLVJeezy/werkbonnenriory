@@ -58,7 +58,9 @@ export function CustomerPortalAdmin({
     try {
       const res = await inviteFn({ data: { customerId, email: email.trim() } });
       setInviteUrl(res.inviteUrl);
-      toast.success("Eenmalige uitnodigingslink (72u geldig) aangemaakt. Er is nog geen mail verzonden.");
+      toast.success(
+        "Eenmalige uitnodigingslink (72u geldig) aangemaakt. Er is nog geen mail verzonden.",
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Uitnodiging aanmaken mislukt.");
@@ -71,7 +73,9 @@ export function CustomerPortalAdmin({
     setBusy(true);
     try {
       await toggleFn({ data: { accountId: acc.id, active: !acc.active } });
-      toast.success(acc.active ? "Portaaltoegang ingetrokken." : "Portaaltoegang opnieuw geactiveerd.");
+      toast.success(
+        acc.active ? "Portaaltoegang ingetrokken." : "Portaaltoegang opnieuw geactiveerd.",
+      );
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Status wijzigen mislukt.");
@@ -90,8 +94,12 @@ export function CustomerPortalAdmin({
     <div className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3">
       <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-primary">
         <KeyRound className="size-3.5" />
-        Klantenportaal (werkbonnen.riory.be/portaal)
+        Klantenportaal (www.riory.be/klantportaal)
       </div>
+      <p className="text-xs text-muted-foreground">
+        Klanten kunnen zelf inloggen met het e-mailadres van hun facturen of werkbonnen: ze krijgen
+        een inloglink per mail. Een uitnodiging is enkel nodig voor een ander e-mailadres.
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <Input
           type="email"
@@ -116,15 +124,26 @@ export function CustomerPortalAdmin({
       {accounts.length > 0 && (
         <div className="space-y-1.5 text-xs">
           {accounts.map((acc) => (
-            <div key={acc.id} className="flex flex-wrap items-center justify-between gap-2 rounded border bg-card px-2.5 py-1.5">
+            <div
+              key={acc.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded border bg-card px-2.5 py-1.5"
+            >
               <div>
                 <span className="font-medium">{acc.email}</span>
                 <span className="ml-2 text-muted-foreground">
                   {acc.active ? "Actief" : "Ingetrokken"}
-                  {acc.last_login_at ? ` · laatste login ${new Date(acc.last_login_at).toLocaleDateString("nl-BE")}` : ""}
+                  {acc.last_login_at
+                    ? ` · laatste login ${new Date(acc.last_login_at).toLocaleDateString("nl-BE")}`
+                    : ""}
                 </span>
               </div>
-              <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => handleToggle(acc)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => handleToggle(acc)}
+              >
                 {acc.active ? (
                   <>
                     <ShieldOff className="mr-1 size-3.5" />

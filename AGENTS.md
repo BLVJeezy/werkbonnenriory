@@ -53,3 +53,4 @@
 - Product-sales rules: src/lib/AGENTS.md.
 - Personnel budgets reuse the tikklok payroll engine and calendar-day hours history; admin+company-owner checks protect reads/saves, estimates stay separate from journal costs and saving replaces one monthly budget category, never payroll or bank entries.
 - Dashboard personnel charts reuse the protected personnel-budget read and its query cache, serialize monthly reads, and follow the accounting year/open-month toggle; estimates never enter journal totals.
+- Customer portal: customers log in with a one-time magic link (generateLink hashed_token in the URL hash, sent from the werkbon mailbox) to the e-mail of their invoices/work orders; `customer-portal.server.ts` links every customer record, work order, invoice and quote of that e-mail live, one portal account per login, inactive accounts are never re-enabled, and downloads re-check scope server-side.

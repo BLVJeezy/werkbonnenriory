@@ -178,8 +178,7 @@ export const readCustomerPortalInvite = createServerFn({ method: "POST" })
       .eq("id", inv.portal_account_id)
       .single();
     if (accErr || !acc || !acc.active) throw new Error(INVALID_INVITE);
-    const customerName =
-      (acc.customers as { name?: string } | null)?.name ?? "Vaste klant";
+    const customerName = (acc.customers as { name?: string } | null)?.name ?? "Vaste klant";
     return { email: acc.email, customerName };
   });
 
@@ -229,83 +228,206 @@ export const acceptCustomerPortalInvite = createServerFn({ method: "POST" })
         .from("customer_portal_invitations")
         .update({ consumed_at: null })
         .eq("token_hash", hash);
-      throw new Error("Wachtwoord opslaan mislukt. Kies een sterker wachtwoord en probeer opnieuw.");
+      throw new Error(
+        "Wachtwoord opslaan mislukt. Kies een sterker wachtwoord en probeer opnieuw.",
+      );
     }
 
-    const customerName =
-      (acc.customers as { name?: string } | null)?.name ?? "Vaste klant";
+    const customerName = (acc.customers as { name?: string } | null)?.name ?? "Vaste klant";
     return { email: acc.email, customerName };
+  });
+
+export const requestPortalLogin = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ email: z.string().trim().email().max(254) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { requestPortalLoginLink } = await import("./customer-portal.server");
+    try {
+      await requestPortalLoginLink(supabaseAdmin, data.email);
+    } catch (e) {
+      console.error("portal login request", e instanceof Error ? e.message : e);
+    }
+    // Never reveal whether an address is known.
+    return { ok: true as const };
   });
 
 export const getPortalOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: account, error: accErr } = await context.supabase
-      .from("customer_portal_accounts")
-      .select("id, customer_id, email, active")
-      .eq("user_id", context.userId)
-      .eq("active", true)
-      .maybeSingle();
-    if (accErr || !account) {
-      throw new Error("Geen actieve klantenportaaltoegang gevonden voor dit account.");
-    }
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
-      .from("customer_portal_accounts")
-      .update({ last_login_at: new Date().toISOString() })
-      .eq("id", account.id);
+    const { resolvePortalAccess, loadPortalScope } = await import("./customer-portal.server");
+    const { workOrderStage, invoicePortalState, invoiceOpenAmount, portalWorkAddress } =
+      await import("./customer-portal");
+    const access = await resolvePortalAccess(
+      supabaseAdmin,
+      context.userId,
+      (context.claims as { email?: unknown })?.email,
+    );
 
-    const [{ data: customer }, { data: workOrders }] = await Promise.all([
+    const [{ data: customers }, scope] = await Promise.all([
       supabaseAdmin
         .from("customers")
-        .select("id, name, street, house_number, postal_code, city, phone, email, billing_email, vat_number, customer_number")
-        .eq("id", account.customer_id)
-        .single(),
-      supabaseAdmin
-        .from("work_orders")
-        .select("id, number, status, scheduled_date, description, street, house_number, postal_code, city, site_street, site_house_number, site_postal_code, site_city, project_name, urgent, created_at, signed_at")
-        .eq("customer_id", account.customer_id)
-        .order("created_at", { ascending: false })
-        .limit(50),
+        .select(
+          "id, name, street, house_number, postal_code, city, phone, email, billing_email, vat_number, customer_number",
+        )
+        .in(
+          "id",
+          access.customerIds.length ? access.customerIds : ["00000000-0000-0000-0000-000000000000"],
+        ),
+      loadPortalScope(supabaseAdmin, access.email, access.customerIds),
     ]);
 
-    if (!customer) throw new Error("Klantgegevens niet gevonden.");
-
-    const woIds = (workOrders ?? []).map((w) => w.id);
-    const [{ data: invByCustomer }, { data: invByWo }] = await Promise.all([
-      supabaseAdmin
-        .from("invoices")
-        .select("id, number, issue_date, due_date, total, status, kind")
-        .eq("customer->>id", account.customer_id)
-        .neq("status", "draft")
-        .order("issue_date", { ascending: false })
-        .limit(50),
-      woIds.length > 0
-        ? supabaseAdmin
-            .from("invoices")
-            .select("id, number, issue_date, due_date, total, status, kind")
-            .in("work_order_id", woIds)
-            .neq("status", "draft")
-            .order("issue_date", { ascending: false })
-            .limit(50)
-        : Promise.resolve({ data: [] as { id: string; number: string; issue_date: string; due_date: string; total: number; status: string; kind: string }[] }),
-    ]);
-    const seen = new Set<string>();
-    const invoices = [...(invByCustomer ?? []), ...(invByWo ?? [])]
-      .filter((inv) => {
-        if (seen.has(inv.id)) return false;
-        seen.add(inv.id);
-        return true;
-      })
-      .sort((a, b) => (b.issue_date ?? "").localeCompare(a.issue_date ?? ""));
+    const woNumber = new Map<string, number | null>(
+      scope.workOrders.map((w: any) => [w.id, w.number ?? null]),
+    );
+    const today = new Date();
+    const primary = (customers ?? [])[0] ?? null;
 
     return {
-      accountEmail: account.email,
-      customer,
-      workOrders: workOrders ?? [],
-      invoices,
+      accountEmail: access.email,
+      customer: primary,
+      customers: customers ?? [],
+      workOrders: scope.workOrders.map((w: any) => ({
+        id: w.id as string,
+        number: (w.number ?? null) as number | null,
+        stage: workOrderStage(w),
+        scheduledDate: (w.scheduled_date ?? null) as string | null,
+        scheduledFrom: w.scheduled_from ? String(w.scheduled_from).slice(0, 5) : null,
+        scheduledUntil: w.scheduled_until ? String(w.scheduled_until).slice(0, 5) : null,
+        description:
+          (w.description ?? "").replace(/\[Aangevraagd via klantenportaal\]/g, "").trim() || null,
+        projectName: (w.project_name ?? null) as string | null,
+        address: portalWorkAddress(w),
+        urgent: !!w.urgent,
+        createdAt: w.created_at as string,
+        signedAt: (w.signed_at ?? null) as string | null,
+        hasPdf: w.status === "afgetekend",
+      })),
+      invoices: scope.invoices.map((inv: any) => ({
+        id: inv.id as string,
+        number: (inv.number ?? "") as string,
+        kind: (inv.kind ?? "factuur") as string,
+        issueDate: (inv.issue_date ?? null) as string | null,
+        dueDate: (inv.due_date ?? null) as string | null,
+        total: Number(inv.total ?? 0),
+        openAmount: invoiceOpenAmount(inv),
+        state: invoicePortalState(inv, today),
+        workOrderNumber: inv.work_order_id ? (woNumber.get(inv.work_order_id) ?? null) : null,
+      })),
+      quotes: scope.quotes.map((q: any) => ({
+        id: q.id as string,
+        number: (q.number ?? "") as string,
+        kind: (q.kind ?? "offerte") as string,
+        status: q.status as string,
+        total: Number(q.total ?? 0),
+        date: (q.sent_at ?? q.created_at) as string,
+        signedAt: (q.signed_at ?? null) as string | null,
+        signUrl: q.status === "verzonden" && q.token ? `/offerte/${q.token}` : null,
+      })),
     };
+  });
+
+const pdfResponse = (pdf: Uint8Array, filename: string) =>
+  new Response(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename.replace(/[^A-Za-z0-9._-]/g, "_")}"`,
+      "Cache-Control": "private, no-store",
+    },
+  });
+
+export const downloadPortalDocument = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ type: z.enum(["factuur", "werkbon"]), id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolvePortalAccess, loadPortalScope } = await import("./customer-portal.server");
+    const access = await resolvePortalAccess(
+      supabaseAdmin,
+      context.userId,
+      (context.claims as { email?: unknown })?.email,
+    );
+    const scope = await loadPortalScope(supabaseAdmin, access.email, access.customerIds);
+
+    if (data.type === "factuur") {
+      if (!scope.invoices.some((i: any) => i.id === data.id))
+        throw new Error("Document niet gevonden.");
+      const { data: inv, error } = await supabaseAdmin
+        .from("invoices")
+        .select("*")
+        .eq("id", data.id)
+        .single();
+      if (error || !inv) throw new Error("Document niet gevonden.");
+      const { data: snapshot } = await supabaseAdmin
+        .from("document_deliveries")
+        .select("pdf_base64")
+        .eq("document_id", inv.id)
+        .eq("document_type", inv.kind === "creditnota" ? "creditnota" : "factuur")
+        .eq("status", "accepted")
+        .order("sent_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      let pdf: Uint8Array;
+      if (snapshot?.pdf_base64)
+        pdf = Uint8Array.from(atob(snapshot.pdf_base64), (c) => c.charCodeAt(0));
+      else {
+        const { pdfData } = await import("./invoice-sending.server");
+        const { createInvoicePdf } = await import("./invoice-pdf");
+        pdf = await createInvoicePdf(await pdfData(supabaseAdmin, inv));
+      }
+      const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
+      return pdfResponse(pdf, `Riory-${label}-${inv.number ?? inv.id.slice(0, 8)}.pdf`);
+    }
+
+    const wo = scope.workOrders.find((w: any) => w.id === data.id);
+    if (!wo || wo.status !== "afgetekend") throw new Error("Werkbon is nog niet beschikbaar.");
+    const { data: full, error } = await supabaseAdmin
+      .from("work_orders")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (error || !full) throw new Error("Werkbon niet gevonden.");
+    const [times, materials, activity] = await Promise.all([
+      supabaseAdmin
+        .from("time_entries")
+        .select("started_at, ended_at")
+        .eq("work_order_id", full.id),
+      supabaseAdmin
+        .from("materials")
+        .select("name, quantity, unit")
+        .eq("work_order_id", full.id)
+        .order("created_at"),
+      full.activity_id
+        ? supabaseAdmin.from("activities").select("name").eq("id", full.activity_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+    if (times.error || materials.error || activity.error)
+      throw new Error("Werkbon kon niet geladen worden.");
+    const { werkbonMailData } = await import("./werkbon-mail");
+    const { totalSeconds } = await import("./time");
+    const { createWerkbonPdf } = await import("./werkbon-pdf");
+    const { loadWerkbonPhotos } = await import("./werkbon-photos.server");
+    // Same allowlisted content as the werkbon mail the customer already received.
+    const dto = werkbonMailData(
+      {
+        ...full,
+        distance_km: full.distance_km == null ? null : Number(full.distance_km),
+        paid_amount: full.paid_amount == null ? null : Number(full.paid_amount),
+      },
+      (activity.data as { name?: string } | null)?.name ?? null,
+      totalSeconds(times.data ?? [], Date.now()),
+      (materials.data ?? []).map((m) => ({
+        name: m.name,
+        quantity: Number(m.quantity),
+        unit: m.unit,
+      })),
+    );
+    const pdf = await createWerkbonPdf(dto, await loadWerkbonPhotos(supabaseAdmin, full.id));
+    return pdfResponse(pdf, `Riory-Werkbon-${full.number ?? "nieuw"}.pdf`);
   });
 
 export const submitPortalAppointmentRequest = createServerFn({ method: "POST" })
@@ -313,7 +435,11 @@ export const submitPortalAppointmentRequest = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
       .object({
-        description: z.string().trim().min(5, "Omschrijf kort het probleem of de gewenste werken.").max(2000),
+        description: z
+          .string()
+          .trim()
+          .min(5, "Omschrijf kort het probleem of de gewenste werken.")
+          .max(2000),
         preferredWindow: z.string().trim().max(120).optional(),
         contactPhone: z.string().trim().max(40).optional(),
         urgent: z.boolean().optional(),
@@ -323,25 +449,30 @@ export const submitPortalAppointmentRequest = createServerFn({ method: "POST" })
         worksitePostalCode: z.string().trim().max(20).optional(),
         worksiteCity: z.string().trim().max(80).optional(),
         projectName: z.string().trim().max(120).optional(),
+        customerId: z.string().uuid().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: account, error: accErr } = await context.supabase
-      .from("customer_portal_accounts")
-      .select("id, customer_id, email, active")
-      .eq("user_id", context.userId)
-      .eq("active", true)
-      .maybeSingle();
-    if (accErr || !account) {
-      throw new Error("Geen actieve klantenportaaltoegang gevonden.");
-    }
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolvePortalAccess } = await import("./customer-portal.server");
+    const access = await resolvePortalAccess(
+      supabaseAdmin,
+      context.userId,
+      (context.claims as { email?: unknown })?.email,
+    );
+    const customerId =
+      data.customerId && access.customerIds.includes(data.customerId)
+        ? data.customerId
+        : access.customerIds[0];
+    if (!customerId) throw new Error("Geen klantgegevens gevonden.");
+    const account = { email: access.email };
     const { data: customer, error: custErr } = await supabaseAdmin
       .from("customers")
-      .select("id, name, street, house_number, postal_code, city, phone, email, billing_email, default_vat_rate, branch_id")
-      .eq("id", account.customer_id)
+      .select(
+        "id, name, street, house_number, postal_code, city, phone, email, billing_email, default_vat_rate, branch_id",
+      )
+      .eq("id", customerId)
       .single();
     if (custErr || !customer) throw new Error("Klantgegevens niet gevonden.");
 
@@ -370,7 +501,7 @@ export const submitPortalAppointmentRequest = createServerFn({ method: "POST" })
         site_city: data.worksiteDifferent ? data.worksiteCity || null : null,
         project_name: data.projectName?.trim() || null,
         description: fullDescription,
-        status: "open",
+        status: "nieuw",
         scheduled_date: null,
         urgent: !!data.urgent,
         vat_rate: customer.default_vat_rate ?? 21,

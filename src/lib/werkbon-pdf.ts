@@ -174,7 +174,7 @@ export function werkbonPdfMessage(data: WerkbonData, recipient: string, pdfBase6
   if (signing) {
     text += `\n\nU kunt de werkbon digitaal ondertekenen in minder dan een minuut:\n${signing.url}\n! Uw persoonlijke code: ${signing.code} — vul deze code in op de tekenpagina.`;
   }
-  text += `\n\n✓ Ondertekenen kan op gsm, tablet of computer\n✓ U ontvangt meteen een bevestiging\n✓ Vragen? Antwoord gewoon op deze mail`;
+  text += `\n\n✓ Ondertekenen kan op gsm, tablet of computer\n✓ U ontvangt meteen een bevestiging\n✓ Al uw werkbonnen en facturen vindt u ook in het klantenportaal op www.riory.be/klantportaal\n✓ Vragen? Antwoord gewoon op deze mail`;
   text += `\n\nMet vriendelijke groeten,\nRiory`;
   return {
     subject: `Werkbon ${werkbonNr(data.number)} — ${data.customer}`,
