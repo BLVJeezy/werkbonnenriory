@@ -117,7 +117,7 @@ export const listCustomerCommunications = createServerFn({ method: "GET" })
     return (rows ?? []) as CustomerCommunicationRow[];
   });
 
-/** Admin-only: validates metadata, ownership, and returns a private upload path. */
+/** Admin-only: validates metadata & ownership, then issues a server-mediated signed upload token. */
 export const prepareAudioUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -131,23 +131,37 @@ export const prepareAudioUpload = createServerFn({ method: "POST" })
       lawfulBasisConfirmed: boolean;
     }) => i,
   )
-  .handler(async ({ data, context }): Promise<{ communicationId: string; storagePath: string }> => {
-    await assertCommunicationAdmin(context);
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ communicationId: string; storagePath: string; uploadToken: string }> => {
+      await assertCommunicationAdmin(context);
 
-    const meta = validateAudioUploadMeta({
-      fileName: data.fileName,
-      mimeType: data.mimeType,
-      sizeBytes: data.sizeBytes,
-      lawfulBasisConfirmed: data.lawfulBasisConfirmed,
-    });
-    if (!meta.ok) throw new Error(meta.error);
+      const meta = validateAudioUploadMeta({
+        fileName: data.fileName,
+        mimeType: data.mimeType,
+        sizeBytes: data.sizeBytes,
+        lawfulBasisConfirmed: data.lawfulBasisConfirmed,
+      });
+      if (!meta.ok) throw new Error(meta.error);
 
-    await verifyOwnershipOnServer(context.supabase, data.customerId, data.workOrderId, data.projectId);
+      await verifyOwnershipOnServer(context.supabase, data.customerId, data.workOrderId, data.projectId);
 
-    const communicationId = crypto.randomUUID();
-    const storagePath = buildCommunicationStoragePath(data.customerId, communicationId, meta.ext);
-    return { communicationId, storagePath };
-  });
+      const communicationId = crypto.randomUUID();
+      const storagePath = buildCommunicationStoragePath(data.customerId, communicationId, meta.ext);
+
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: signedUpload, error } = await supabaseAdmin.storage
+        .from(COMMUNICATION_AUDIO_BUCKET)
+        .createSignedUploadUrl(storagePath);
+      if (error || !signedUpload?.token) {
+        throw new Error("Privé-uploadlink kon niet worden aangemaakt.");
+      }
+
+      return { communicationId, storagePath, uploadToken: signedUpload.token };
+    },
+  );
 
 /** Admin-only: registers an uploaded private audio file and writes an upload audit entry. */
 export const registerCustomerAudio = createServerFn({ method: "POST" })
@@ -210,7 +224,11 @@ export const registerCustomerAudio = createServerFn({ method: "POST" })
         "id, customer_id, work_order_id, project_id, direction, counterpart_phone_raw, counterpart_phone_e164, match_status, storage_path, external_url, mime_type, size_bytes, duration_seconds, recorded_at, lawful_basis_confirmed, notes, created_at",
       )
       .single();
-    if (error || !row) throw new Error("Opname kon niet worden geregistreerd.");
+    if (error || !row) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.storage.from(COMMUNICATION_AUDIO_BUCKET).remove([expectedPath]);
+      throw new Error("Opname kon niet worden geregistreerd.");
+    }
 
     await recordAudit(context.supabase, {
       communication_id: data.communicationId,
@@ -299,7 +317,8 @@ export const getAudioPlaybackUrl = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!row?.storage_path) throw new Error("Audiobestand niet gevonden voor deze klant.");
 
-    const { data: signed, error } = await context.supabase.storage
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage
       .from(COMMUNICATION_AUDIO_BUCKET)
       .createSignedUrl(row.storage_path, SIGNED_PLAYBACK_TTL_SECONDS);
     if (error || !signed?.signedUrl) {
@@ -392,7 +411,8 @@ export const deleteCustomerCommunication = createServerFn({ method: "POST" })
     });
 
     if (existing.storage_path) {
-      await context.supabase.storage.from(COMMUNICATION_AUDIO_BUCKET).remove([existing.storage_path]);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.storage.from(COMMUNICATION_AUDIO_BUCKET).remove([existing.storage_path]);
     }
 
     const { error } = await context.supabase

@@ -251,3 +251,41 @@ export function matchCustomerByPhone(
 
   return { status: "unmatched", e164, reason: "no_match", candidates: [] };
 }
+
+/**
+ * Resolves the target customer for saving a recording.
+ * - Ambiguous numbers NEVER auto-select, even if openCustomerId is one of the candidates.
+ * - Unique matches to a different customer require explicit confirmation.
+ */
+export function resolveCustomerSelectionForSave(input: {
+  openCustomerId: string;
+  phoneMatch: PhoneMatchResult | null;
+  explicitCustomerId: string;
+}): { ok: true; customerId: string } | { ok: false; error: string } {
+  const explicit = input.explicitCustomerId.trim();
+
+  if (input.phoneMatch?.status === "ambiguous") {
+    if (!explicit) {
+      return { ok: false, error: "Kies eerst expliciet de juiste klant voor dit gedeelde nummer." };
+    }
+    if (!input.phoneMatch.candidates.some((c) => c.customerId === explicit)) {
+      return { ok: false, error: "Gekozen klant staat niet bij de kandidaten voor dit nummer." };
+    }
+    return { ok: true, customerId: explicit };
+  }
+
+  if (
+    input.phoneMatch?.status === "matched" &&
+    input.phoneMatch.customerId !== input.openCustomerId
+  ) {
+    if (explicit !== input.phoneMatch.customerId && explicit !== input.openCustomerId) {
+      return {
+        ok: false,
+        error: `Bevestig eerst expliciet of je wilt bewaren bij ${input.phoneMatch.customerName} of bij de geopende klant.`,
+      };
+    }
+    return { ok: true, customerId: explicit };
+  }
+
+  return { ok: true, customerId: input.openCustomerId };
+}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/communication-audio";
 import {
   matchCustomerByPhone,
+  resolveCustomerSelectionForSave,
   type CallDirection,
   type CustomerPhoneRecord,
 } from "@/lib/communication-phone";
@@ -71,7 +72,7 @@ export function CustomerCommunicationsTab({
   const [sourceMode, setSourceMode] = useState<"file" | "link">("file");
   const [direction, setDirection] = useState<CallDirection>("inbound");
   const [phoneInput, setPhoneInput] = useState("");
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customerId);
+  const [explicitCustomerId, setExplicitCustomerId] = useState<string>("");
   const [projectId, setProjectId] = useState("");
   const [workOrderId, setWorkOrderId] = useState("");
   const [notes, setNotes] = useState("");
@@ -80,6 +81,13 @@ export function CustomerCommunicationsTab({
   const [externalUrl, setExternalUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [activePlayback, setActivePlayback] = useState<{ id: string; url: string } | null>(null);
+
+  // Reset explicit customer confirmation when customer, direction, or phone number changes
+  useEffect(() => {
+    setExplicitCustomerId("");
+    setWorkOrderId("");
+    setProjectId("");
+  }, [customerId, direction, phoneInput]);
 
   const phoneMatch = useMemo(() => {
     if (!phoneInput.trim()) return null;
@@ -92,18 +100,22 @@ export function CustomerCommunicationsTab({
     );
   }, [direction, phoneInput, allCustomers, syndicusPhones]);
 
-  const targetCustomerId =
-    phoneMatch?.status === "ambiguous"
-      ? selectedCustomerId
-      : phoneMatch?.status === "matched"
-        ? selectedCustomerId
-        : customerId;
+  const selectionResult = useMemo(
+    () =>
+      resolveCustomerSelectionForSave({
+        openCustomerId: customerId,
+        phoneMatch,
+        explicitCustomerId,
+      }),
+    [customerId, phoneMatch, explicitCustomerId],
+  );
 
+  const targetCustomerId = selectionResult.ok ? selectionResult.customerId : customerId;
   const isDifferentCustomer = targetCustomerId !== customerId;
 
   const handleUpload = async () => {
-    if (phoneMatch?.status === "ambiguous" && !phoneMatch.candidates.some((c) => c.customerId === targetCustomerId)) {
-      toast.error("Kies eerst expliciet de juiste klant voor dit gedeelde nummer.");
+    if (!selectionResult.ok) {
+      toast.error(selectionResult.error);
       return;
     }
     setUploading(true);
@@ -150,7 +162,7 @@ export function CustomerCommunicationsTab({
           toast.error(check.error);
           return;
         }
-        const { communicationId, storagePath } = await callPrepare({
+        const { communicationId, storagePath, uploadToken } = await callPrepare({
           data: {
             customerId: targetCustomerId,
             workOrderId: scopedWorkOrderId,
@@ -164,7 +176,7 @@ export function CustomerCommunicationsTab({
 
         const { error: uploadErr } = await supabase.storage
           .from(COMMUNICATION_AUDIO_BUCKET)
-          .upload(storagePath, file, { contentType: file.type, upsert: false });
+          .uploadToSignedUrl(storagePath, uploadToken, file, { contentType: file.type });
         if (uploadErr) throw new Error("Upload naar privé-opslag mislukt.");
 
         await callRegister({
@@ -287,18 +299,23 @@ export function CustomerCommunicationsTab({
                   Voorgestelde klant voor <span className="font-mono">{phoneMatch.e164}</span>:{" "}
                   <strong>{phoneMatch.customerName}</strong>
                 </div>
-                {phoneMatch.customerId !== targetCustomerId && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedCustomerId(phoneMatch.customerId);
-                      setWorkOrderId("");
-                      setProjectId("");
-                    }}
-                  >
-                    Bevestig {phoneMatch.customerName}
-                  </Button>
+                {phoneMatch.customerId !== customerId && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      size="sm"
+                      variant={explicitCustomerId === phoneMatch.customerId ? "default" : "outline"}
+                      onClick={() => setExplicitCustomerId(phoneMatch.customerId)}
+                    >
+                      Bevestig {phoneMatch.customerName}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={explicitCustomerId === customerId ? "default" : "outline"}
+                      onClick={() => setExplicitCustomerId(customerId)}
+                    >
+                      Behoud {customerName}
+                    </Button>
+                  </div>
                 )}
               </div>
             )}
@@ -311,13 +328,10 @@ export function CustomerCommunicationsTab({
                 <select
                   aria-label="Bevestig klant bij dubbel nummer"
                   className="h-8 w-full rounded border border-input bg-background px-2 text-xs"
-                  value={selectedCustomerId}
-                  onChange={(e) => {
-                    setSelectedCustomerId(e.target.value);
-                    setWorkOrderId("");
-                    setProjectId("");
-                  }}
+                  value={explicitCustomerId}
+                  onChange={(e) => setExplicitCustomerId(e.target.value)}
                 >
+                  <option value="">— Kies expliciet de juiste klant —</option>
                   {phoneMatch.candidates.map((cand) => (
                     <option key={cand.customerId} value={cand.customerId}>
                       {cand.customerName}
@@ -427,6 +441,7 @@ export function CustomerCommunicationsTab({
           disabled={
             uploading ||
             !lawfulConfirmed ||
+            !selectionResult.ok ||
             (sourceMode === "file" ? !file : !externalUrl.trim())
           }
           onClick={handleUpload}

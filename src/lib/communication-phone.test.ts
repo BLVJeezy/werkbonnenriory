@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   matchCustomerByPhone,
   normalizePhoneToE164,
+  resolveCustomerSelectionForSave,
   type CustomerPhoneRecord,
 } from "@/lib/communication-phone";
 
@@ -144,5 +145,64 @@ describe("matchCustomerByPhone", () => {
     expect(
       matchCustomerByPhone({ direction: "inbound", callerPhone: "0475 00 00 01" }, SYNTHETIC_CUSTOMERS),
     ).toEqual({ status: "unmatched", e164: "+32475000001", reason: "no_match", candidates: [] });
+  });
+});
+
+describe("resolveCustomerSelectionForSave", () => {
+  const custA = "33333333-3333-4333-8333-333333333333";
+  const custB = "44444444-4444-4444-8444-444444444444";
+
+  it("does NOT treat the currently open customer being an ambiguous candidate as confirmation", () => {
+    const match = matchCustomerByPhone(
+      { direction: "inbound", callerPhone: "+32 499 88 77 66" },
+      SYNTHETIC_CUSTOMERS,
+    );
+    expect(match.status).toBe("ambiguous");
+
+    const unconfirmed = resolveCustomerSelectionForSave({
+      openCustomerId: custA,
+      phoneMatch: match,
+      explicitCustomerId: "",
+    });
+    expect(unconfirmed.ok).toBe(false);
+
+    const confirmed = resolveCustomerSelectionForSave({
+      openCustomerId: custA,
+      phoneMatch: match,
+      explicitCustomerId: custA,
+    });
+    expect(confirmed).toEqual({ ok: true, customerId: custA });
+  });
+
+  it("requires explicit confirmation when a unique match points to another customer", () => {
+    const match = matchCustomerByPhone(
+      { direction: "inbound", callerPhone: "+31 6 1234 5678" },
+      SYNTHETIC_CUSTOMERS,
+    );
+    expect(match.status).toBe("matched");
+
+    const unconfirmed = resolveCustomerSelectionForSave({
+      openCustomerId: custA,
+      phoneMatch: match,
+      explicitCustomerId: "",
+    });
+    expect(unconfirmed.ok).toBe(false);
+
+    const confirmedOther = resolveCustomerSelectionForSave({
+      openCustomerId: custA,
+      phoneMatch: match,
+      explicitCustomerId: "22222222-2222-4222-8222-222222222222",
+    });
+    expect(confirmedOther).toEqual({
+      ok: true,
+      customerId: "22222222-2222-4222-8222-222222222222",
+    });
+
+    const confirmedOpen = resolveCustomerSelectionForSave({
+      openCustomerId: custA,
+      phoneMatch: match,
+      explicitCustomerId: custA,
+    });
+    expect(confirmedOpen).toEqual({ ok: true, customerId: custA });
   });
 });
