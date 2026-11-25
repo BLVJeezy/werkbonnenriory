@@ -118,3 +118,22 @@ export function validateCommunicationOwnership(input: {
   }
   return { ok: true };
 }
+
+export function validateExternalAudioUrl(
+  raw: string | null | undefined,
+): { ok: true; url: string } | { ok: false; error: string } {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) {
+    return { ok: false, error: "Plak een geldige Telavox-link (https://…)." };
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return { ok: false, error: "Ongeldige URL. Gebruik een volledige https://-link." };
+  }
+  if (parsed.protocol !== "https:") {
+    return { ok: false, error: "Alleen beveiligde https://-links zijn toegestaan." };
+  }
+  return { ok: true, url: parsed.toString() };
+}

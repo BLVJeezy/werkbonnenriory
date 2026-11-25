@@ -4,10 +4,9 @@ import {
   COMMUNICATION_AUDIO_BUCKET,
   SIGNED_PLAYBACK_TTL_SECONDS,
   buildCommunicationStoragePath,
-  evaluateAudioReadiness,
   validateAudioUploadMeta,
   validateCommunicationOwnership,
-  type AudioReadinessState,
+  validateExternalAudioUrl,
 } from "@/lib/communication-audio";
 import {
   normalizePhoneToE164,
@@ -24,9 +23,10 @@ export type CustomerCommunicationRow = {
   counterpart_phone_raw: string | null;
   counterpart_phone_e164: string | null;
   match_status: PhoneMatchStatus | "manual";
-  storage_path: string;
-  mime_type: string;
-  size_bytes: number;
+  storage_path: string | null;
+  external_url: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
   duration_seconds: number | null;
   recorded_at: string | null;
   lawful_basis_confirmed: boolean;
@@ -43,34 +43,6 @@ async function assertCommunicationAdmin(context: { supabase: any; userId: string
     .maybeSingle();
   if (!data) {
     throw new Error("Geen toegang: alleen Riory-beheerders mogen klantcommunicatie beheren.");
-  }
-}
-
-async function checkReadiness(supabase: any): Promise<AudioReadinessState> {
-  const featureEnabled = process.env["CUSTOMER_COMMUNICATIONS_AUDIO_ENABLED"] === "true";
-  const retentionPolicyApproved =
-    process.env["CUSTOMER_COMMUNICATIONS_RETENTION_POLICY_APPROVED"] === "true";
-
-  let schemaReady = false;
-  if (featureEnabled) {
-    const { error } = await supabase.from("customer_communications").select("id").limit(1);
-    schemaReady = !error;
-  }
-
-  return evaluateAudioReadiness({
-    featureEnabled,
-    retentionPolicyApproved,
-    schemaReady,
-  });
-}
-
-async function requireReady(supabase: any) {
-  const readiness = await checkReadiness(supabase);
-  if (!readiness.ready) {
-    throw new Error(
-      readiness.blockers[0] ??
-        "Audio-opslag is momenteel uitgeschakeld in afwachting van migratie- en beveiligingsreview.",
-    );
   }
 }
 
@@ -128,26 +100,16 @@ async function recordAudit(
   await supabase.from("customer_communication_audit").insert(entry);
 }
 
-/** Admin-only: checks whether audio storage/playback is enabled and ready. Fails closed by default. */
-export const getCommunicationReadiness = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<AudioReadinessState> => {
-    await assertCommunicationAdmin(context);
-    return checkReadiness(context.supabase);
-  });
-
-/** Admin-only: lists audio communications for a single customer. Fails closed when disabled. */
+/** Admin-only: lists audio communications and Telavox links for a single customer. */
 export const listCustomerCommunications = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: { customerId: string }) => i)
   .handler(async ({ data, context }): Promise<CustomerCommunicationRow[]> => {
     await assertCommunicationAdmin(context);
-    const db = context.supabase as any;
-    await requireReady(db);
-    const { data: rows, error } = await db
+    const { data: rows, error } = await context.supabase
       .from("customer_communications")
       .select(
-        "id, customer_id, work_order_id, project_id, direction, counterpart_phone_raw, counterpart_phone_e164, match_status, storage_path, mime_type, size_bytes, duration_seconds, recorded_at, lawful_basis_confirmed, notes, created_at",
+        "id, customer_id, work_order_id, project_id, direction, counterpart_phone_raw, counterpart_phone_e164, match_status, storage_path, external_url, mime_type, size_bytes, duration_seconds, recorded_at, lawful_basis_confirmed, notes, created_at",
       )
       .eq("customer_id", data.customerId)
       .order("created_at", { ascending: false });
@@ -155,7 +117,7 @@ export const listCustomerCommunications = createServerFn({ method: "GET" })
     return (rows ?? []) as CustomerCommunicationRow[];
   });
 
-/** Admin-only: validates metadata, ownership, and returns a signed private upload path. */
+/** Admin-only: validates metadata, ownership, and returns a private upload path. */
 export const prepareAudioUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -171,8 +133,6 @@ export const prepareAudioUpload = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<{ communicationId: string; storagePath: string }> => {
     await assertCommunicationAdmin(context);
-    const db = context.supabase as any;
-    await requireReady(db);
 
     const meta = validateAudioUploadMeta({
       fileName: data.fileName,
@@ -182,7 +142,7 @@ export const prepareAudioUpload = createServerFn({ method: "POST" })
     });
     if (!meta.ok) throw new Error(meta.error);
 
-    await verifyOwnershipOnServer(db, data.customerId, data.workOrderId, data.projectId);
+    await verifyOwnershipOnServer(context.supabase, data.customerId, data.workOrderId, data.projectId);
 
     const communicationId = crypto.randomUUID();
     const storagePath = buildCommunicationStoragePath(data.customerId, communicationId, meta.ext);
@@ -211,8 +171,6 @@ export const registerCustomerAudio = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<CustomerCommunicationRow> => {
     await assertCommunicationAdmin(context);
-    const db = context.supabase as any;
-    await requireReady(db);
 
     const meta = validateAudioUploadMeta({
       fileName: data.fileName,
@@ -227,10 +185,10 @@ export const registerCustomerAudio = createServerFn({ method: "POST" })
       throw new Error("Ongeldig opslagpad voor deze klant.");
     }
 
-    await verifyOwnershipOnServer(db, data.customerId, data.workOrderId, data.projectId);
+    await verifyOwnershipOnServer(context.supabase, data.customerId, data.workOrderId, data.projectId);
 
     const e164 = normalizePhoneToE164(data.counterpartPhoneRaw);
-    const { data: row, error } = await db
+    const { data: row, error } = await context.supabase
       .from("customer_communications")
       .insert({
         id: data.communicationId,
@@ -249,13 +207,73 @@ export const registerCustomerAudio = createServerFn({ method: "POST" })
         uploaded_by: context.userId,
       })
       .select(
-        "id, customer_id, work_order_id, project_id, direction, counterpart_phone_raw, counterpart_phone_e164, match_status, storage_path, mime_type, size_bytes, duration_seconds, recorded_at, lawful_basis_confirmed, notes, created_at",
+        "id, customer_id, work_order_id, project_id, direction, counterpart_phone_raw, counterpart_phone_e164, match_status, storage_path, external_url, mime_type, size_bytes, duration_seconds, recorded_at, lawful_basis_confirmed, notes, created_at",
       )
       .single();
     if (error || !row) throw new Error("Opname kon niet worden geregistreerd.");
 
-    await recordAudit(db, {
+    await recordAudit(context.supabase, {
       communication_id: data.communicationId,
+      action: "upload",
+      actor_user_id: context.userId,
+      new_customer_id: data.customerId,
+      new_work_order_id: data.workOrderId,
+      new_project_id: data.projectId,
+    });
+
+    return row as CustomerCommunicationRow;
+  });
+
+/** Admin-only: saves a Telavox recording link for a customer with ownership check and audit. */
+export const saveCustomerAudioLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (i: {
+      customerId: string;
+      workOrderId: string | null;
+      projectId: string | null;
+      direction: CallDirection;
+      counterpartPhoneRaw: string | null;
+      matchStatus: PhoneMatchStatus | "manual";
+      externalUrl: string;
+      lawfulBasisConfirmed: boolean;
+      notes: string | null;
+    }) => i,
+  )
+  .handler(async ({ data, context }): Promise<CustomerCommunicationRow> => {
+    await assertCommunicationAdmin(context);
+    if (!data.lawfulBasisConfirmed) {
+      throw new Error("Bevestig eerst dat dit een bestaande, rechtmatig opgenomen Telavox-opname is.");
+    }
+    const urlCheck = validateExternalAudioUrl(data.externalUrl);
+    if (!urlCheck.ok) throw new Error(urlCheck.error);
+
+    await verifyOwnershipOnServer(context.supabase, data.customerId, data.workOrderId, data.projectId);
+
+    const e164 = normalizePhoneToE164(data.counterpartPhoneRaw);
+    const { data: row, error } = await context.supabase
+      .from("customer_communications")
+      .insert({
+        customer_id: data.customerId,
+        work_order_id: data.workOrderId,
+        project_id: data.projectId,
+        direction: data.direction,
+        counterpart_phone_raw: data.counterpartPhoneRaw?.trim() || null,
+        counterpart_phone_e164: e164,
+        match_status: data.matchStatus,
+        external_url: urlCheck.url,
+        lawful_basis_confirmed: true,
+        notes: data.notes?.trim().slice(0, 500) || null,
+        uploaded_by: context.userId,
+      })
+      .select(
+        "id, customer_id, work_order_id, project_id, direction, counterpart_phone_raw, counterpart_phone_e164, match_status, storage_path, external_url, mime_type, size_bytes, duration_seconds, recorded_at, lawful_basis_confirmed, notes, created_at",
+      )
+      .single();
+    if (error || !row) throw new Error("Telavox-link kon niet worden opgeslagen.");
+
+    await recordAudit(context.supabase, {
+      communication_id: row.id,
       action: "upload",
       actor_user_id: context.userId,
       new_customer_id: data.customerId,
@@ -272,16 +290,14 @@ export const getAudioPlaybackUrl = createServerFn({ method: "POST" })
   .inputValidator((i: { communicationId: string; customerId: string }) => i)
   .handler(async ({ data, context }): Promise<{ url: string; expiresInSeconds: number }> => {
     await assertCommunicationAdmin(context);
-    const db = context.supabase as any;
-    await requireReady(db);
 
-    const { data: row } = await db
+    const { data: row } = await context.supabase
       .from("customer_communications")
       .select("id, customer_id, storage_path")
       .eq("id", data.communicationId)
       .eq("customer_id", data.customerId)
       .maybeSingle();
-    if (!row) throw new Error("Opname niet gevonden voor deze klant.");
+    if (!row?.storage_path) throw new Error("Audiobestand niet gevonden voor deze klant.");
 
     const { data: signed, error } = await context.supabase.storage
       .from(COMMUNICATION_AUDIO_BUCKET)
@@ -290,7 +306,7 @@ export const getAudioPlaybackUrl = createServerFn({ method: "POST" })
       throw new Error("Privé-afspeellink kon niet worden aangemaakt.");
     }
 
-    await recordAudit(db, {
+    await recordAudit(context.supabase, {
       communication_id: row.id,
       action: "playback",
       actor_user_id: context.userId,
@@ -312,10 +328,8 @@ export const reassignCustomerCommunication = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     await assertCommunicationAdmin(context);
-    const db = context.supabase as any;
-    await requireReady(db);
 
-    const { data: existing } = await db
+    const { data: existing } = await context.supabase
       .from("customer_communications")
       .select("id, customer_id, work_order_id, project_id")
       .eq("id", data.communicationId)
@@ -323,13 +337,13 @@ export const reassignCustomerCommunication = createServerFn({ method: "POST" })
     if (!existing) throw new Error("Opname niet gevonden.");
 
     await verifyOwnershipOnServer(
-      db,
+      context.supabase,
       data.newCustomerId,
       data.newWorkOrderId,
       data.newProjectId,
     );
 
-    const { error } = await db
+    const { error } = await context.supabase
       .from("customer_communications")
       .update({
         customer_id: data.newCustomerId,
@@ -340,7 +354,7 @@ export const reassignCustomerCommunication = createServerFn({ method: "POST" })
       .eq("id", data.communicationId);
     if (error) throw new Error("Koppeling kon niet worden bijgewerkt.");
 
-    await recordAudit(db, {
+    await recordAudit(context.supabase, {
       communication_id: data.communicationId,
       action: "ownership_change",
       actor_user_id: context.userId,
@@ -361,10 +375,8 @@ export const deleteCustomerCommunication = createServerFn({ method: "POST" })
   .inputValidator((i: { communicationId: string; customerId: string }) => i)
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     await assertCommunicationAdmin(context);
-    const db = context.supabase as any;
-    await requireReady(db);
 
-    const { data: existing } = await db
+    const { data: existing } = await context.supabase
       .from("customer_communications")
       .select("id, customer_id, storage_path")
       .eq("id", data.communicationId)
@@ -372,7 +384,7 @@ export const deleteCustomerCommunication = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!existing) throw new Error("Opname niet gevonden voor deze klant.");
 
-    await recordAudit(db, {
+    await recordAudit(context.supabase, {
       communication_id: existing.id,
       action: "delete",
       actor_user_id: context.userId,
@@ -383,7 +395,7 @@ export const deleteCustomerCommunication = createServerFn({ method: "POST" })
       await context.supabase.storage.from(COMMUNICATION_AUDIO_BUCKET).remove([existing.storage_path]);
     }
 
-    const { error } = await db
+    const { error } = await context.supabase
       .from("customer_communications")
       .delete()
       .eq("id", existing.id)

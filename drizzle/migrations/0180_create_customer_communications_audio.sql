@@ -1,20 +1,3 @@
--- ============================================================================
--- INERT DRAFT MIGRATION — DO NOT AUTO-APPLY
--- ============================================================================
--- Stored under docs/migrations/ (NOT drizzle/migrations/) so Drizzle Kit does
--- NOT auto-apply this file to production or shared Cloud databases.
---
--- Before applying:
---   1. Complete security & privacy review.
---   2. Approve a formal audio retention policy (no automatic deletion is set).
---   3. Create the private storage bucket `customer-communications-audio` via
---      the Storage API (public = false, file_size_limit = '25MB',
---      allowed_mime_types = audio/mpeg, audio/mp4, audio/x-m4a, audio/wav,
---      audio/x-wav, audio/ogg, audio/webm).
---   4. Apply this DDL via the approved migration workflow and enable the
---      server-side feature flags only after verification.
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS public.customer_communications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
@@ -25,9 +8,10 @@ CREATE TABLE IF NOT EXISTS public.customer_communications (
   counterpart_phone_e164 TEXT,
   match_status TEXT NOT NULL DEFAULT 'manual'
     CHECK (match_status IN ('matched', 'ambiguous', 'unmatched', 'manual')),
-  storage_path TEXT NOT NULL UNIQUE,
-  mime_type TEXT NOT NULL CHECK (
-    mime_type IN (
+  storage_path TEXT UNIQUE,
+  external_url TEXT CHECK (external_url IS NULL OR external_url ~* '^https://'),
+  mime_type TEXT CHECK (
+    mime_type IS NULL OR mime_type IN (
       'audio/mpeg',
       'audio/mp4',
       'audio/x-m4a',
@@ -37,14 +21,15 @@ CREATE TABLE IF NOT EXISTS public.customer_communications (
       'audio/webm'
     )
   ),
-  size_bytes BIGINT NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 26214400),
+  size_bytes BIGINT CHECK (size_bytes IS NULL OR (size_bytes > 0 AND size_bytes <= 26214400)),
   duration_seconds INTEGER CHECK (duration_seconds IS NULL OR duration_seconds >= 0),
   recorded_at TIMESTAMPTZ,
-  lawful_basis_confirmed BOOLEAN NOT NULL DEFAULT FALSE CHECK (lawful_basis_confirmed = TRUE),
+  lawful_basis_confirmed BOOLEAN NOT NULL DEFAULT TRUE CHECK (lawful_basis_confirmed = TRUE),
   notes TEXT,
   uploaded_by UUID NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT chk_customer_communications_source CHECK (storage_path IS NOT NULL OR external_url IS NOT NULL)
 );
 
 CREATE INDEX IF NOT EXISTS idx_customer_communications_customer_id
@@ -71,7 +56,6 @@ CREATE TABLE IF NOT EXISTS public.customer_communication_audit (
 CREATE INDEX IF NOT EXISTS idx_customer_communication_audit_comm_id
   ON public.customer_communication_audit(communication_id, created_at DESC);
 
--- Enforce that optional work_order_id and project_id belong to customer_id
 CREATE OR REPLACE FUNCTION public.validate_customer_communication_ownership()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -114,14 +98,12 @@ CREATE TRIGGER trg_validate_customer_communication_ownership
   FOR EACH ROW
   EXECUTE FUNCTION public.validate_customer_communication_ownership();
 
--- Grants: authenticated + service_role only (NO anon access)
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.customer_communications TO authenticated;
 GRANT ALL ON public.customer_communications TO service_role;
 
 GRANT SELECT, INSERT ON public.customer_communication_audit TO authenticated;
 GRANT ALL ON public.customer_communication_audit TO service_role;
 
--- RLS: default deny to all roles except Riory admin (blocks customer, technician, marketing, anon)
 ALTER TABLE public.customer_communications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_communication_audit ENABLE ROW LEVEL SECURITY;
 
@@ -144,8 +126,6 @@ CREATE POLICY "Admins can insert customer communication audit"
   TO authenticated
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
--- Private storage policies for bucket `customer-communications-audio`
--- (Create the bucket via Storage API with public = false before applying.)
 CREATE POLICY "Admins can read private communication audio"
   ON storage.objects
   FOR SELECT

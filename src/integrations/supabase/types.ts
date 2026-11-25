@@ -673,6 +673,144 @@ export type Database = {
           },
         ]
       }
+      customer_communication_audit: {
+        Row: {
+          action: string
+          actor_user_id: string
+          communication_id: string
+          created_at: string
+          id: string
+          new_customer_id: string | null
+          new_project_id: string | null
+          new_work_order_id: string | null
+          previous_customer_id: string | null
+          previous_project_id: string | null
+          previous_work_order_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          communication_id: string
+          created_at?: string
+          id?: string
+          new_customer_id?: string | null
+          new_project_id?: string | null
+          new_work_order_id?: string | null
+          previous_customer_id?: string | null
+          previous_project_id?: string | null
+          previous_work_order_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          communication_id?: string
+          created_at?: string
+          id?: string
+          new_customer_id?: string | null
+          new_project_id?: string | null
+          new_work_order_id?: string | null
+          previous_customer_id?: string | null
+          previous_project_id?: string | null
+          previous_work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_communication_audit_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "customer_communications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_communications: {
+        Row: {
+          counterpart_phone_e164: string | null
+          counterpart_phone_raw: string | null
+          created_at: string
+          customer_id: string
+          direction: string
+          duration_seconds: number | null
+          external_url: string | null
+          id: string
+          lawful_basis_confirmed: boolean
+          match_status: string
+          mime_type: string | null
+          notes: string | null
+          project_id: string | null
+          recorded_at: string | null
+          size_bytes: number | null
+          storage_path: string | null
+          updated_at: string
+          uploaded_by: string
+          work_order_id: string | null
+        }
+        Insert: {
+          counterpart_phone_e164?: string | null
+          counterpart_phone_raw?: string | null
+          created_at?: string
+          customer_id: string
+          direction: string
+          duration_seconds?: number | null
+          external_url?: string | null
+          id?: string
+          lawful_basis_confirmed?: boolean
+          match_status?: string
+          mime_type?: string | null
+          notes?: string | null
+          project_id?: string | null
+          recorded_at?: string | null
+          size_bytes?: number | null
+          storage_path?: string | null
+          updated_at?: string
+          uploaded_by: string
+          work_order_id?: string | null
+        }
+        Update: {
+          counterpart_phone_e164?: string | null
+          counterpart_phone_raw?: string | null
+          created_at?: string
+          customer_id?: string
+          direction?: string
+          duration_seconds?: number | null
+          external_url?: string | null
+          id?: string
+          lawful_basis_confirmed?: boolean
+          match_status?: string
+          mime_type?: string | null
+          notes?: string | null
+          project_id?: string | null
+          recorded_at?: string | null
+          size_bytes?: number | null
+          storage_path?: string | null
+          updated_at?: string
+          uploaded_by?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_communications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_communications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_communications_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_ground_plans: {
         Row: {
           background_path: string | null

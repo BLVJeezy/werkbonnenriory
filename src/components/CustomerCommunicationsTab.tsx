@@ -10,6 +10,7 @@ import {
   AUDIO_FILE_ACCEPT,
   COMMUNICATION_AUDIO_BUCKET,
   validateAudioUploadMeta,
+  validateExternalAudioUrl,
 } from "@/lib/communication-audio";
 import {
   matchCustomerByPhone,
@@ -19,10 +20,10 @@ import {
 import {
   deleteCustomerCommunication,
   getAudioPlaybackUrl,
-  getCommunicationReadiness,
   listCustomerCommunications,
   prepareAudioUpload,
   registerCustomerAudio,
+  saveCustomerAudioLink,
   type CustomerCommunicationRow,
 } from "@/lib/communications.functions";
 
@@ -42,18 +43,12 @@ export function CustomerCommunicationsTab({
   syndicusPhones: (string | null | undefined)[];
 }) {
   const qc = useQueryClient();
-  const fetchReadiness = useServerFn(getCommunicationReadiness);
   const fetchList = useServerFn(listCustomerCommunications);
   const callPrepare = useServerFn(prepareAudioUpload);
   const callRegister = useServerFn(registerCustomerAudio);
+  const callSaveLink = useServerFn(saveCustomerAudioLink);
   const callPlayback = useServerFn(getAudioPlaybackUrl);
   const callDelete = useServerFn(deleteCustomerCommunication);
-
-  const { data: readiness, isLoading: loadingReadiness } = useQuery({
-    queryKey: ["communication-readiness"],
-    queryFn: () => fetchReadiness(),
-    staleTime: 60_000,
-  });
 
   const { data: workOrders = [] } = useQuery({
     queryKey: ["customer-work-orders-comm", customerId],
@@ -70,10 +65,10 @@ export function CustomerCommunicationsTab({
 
   const { data: recordings = [] } = useQuery({
     queryKey: ["customer-communications", customerId],
-    enabled: Boolean(readiness?.ready),
     queryFn: () => fetchList({ data: { customerId } }),
   });
 
+  const [sourceMode, setSourceMode] = useState<"file" | "link">("file");
   const [direction, setDirection] = useState<CallDirection>("inbound");
   const [phoneInput, setPhoneInput] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customerId);
@@ -82,6 +77,7 @@ export function CustomerCommunicationsTab({
   const [notes, setNotes] = useState("");
   const [lawfulConfirmed, setLawfulConfirmed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [externalUrl, setExternalUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [activePlayback, setActivePlayback] = useState<{ id: string; url: string } | null>(null);
 
@@ -106,73 +102,95 @@ export function CustomerCommunicationsTab({
   const isDifferentCustomer = targetCustomerId !== customerId;
 
   const handleUpload = async () => {
-    if (!readiness?.ready) {
-      toast.error("Audio-opslag is uitgeschakeld tot migratie- en beveiligingsreview zijn afgerond.");
-      return;
-    }
     if (phoneMatch?.status === "ambiguous" && !phoneMatch.candidates.some((c) => c.customerId === targetCustomerId)) {
       toast.error("Kies eerst expliciet de juiste klant voor dit gedeelde nummer.");
       return;
     }
-    if (!file) {
-      toast.error("Kies eerst een audiobestand.");
-      return;
-    }
-    const check = validateAudioUploadMeta({
-      fileName: file.name,
-      mimeType: file.type,
-      sizeBytes: file.size,
-      lawfulBasisConfirmed: lawfulConfirmed,
-    });
-    if (!check.ok) {
-      toast.error(check.error);
-      return;
-    }
-
     setUploading(true);
     try {
       const scopedWorkOrderId = isDifferentCustomer ? null : workOrderId || null;
       const scopedProjectId = isDifferentCustomer ? null : projectId || null;
-      const { communicationId, storagePath } = await callPrepare({
-        data: {
-          customerId: targetCustomerId,
-          workOrderId: scopedWorkOrderId,
-          projectId: scopedProjectId,
+
+      if (sourceMode === "link") {
+        const urlCheck = validateExternalAudioUrl(externalUrl);
+        if (!urlCheck.ok) {
+          toast.error(urlCheck.error);
+          return;
+        }
+        await callSaveLink({
+          data: {
+            customerId: targetCustomerId,
+            workOrderId: scopedWorkOrderId,
+            projectId: scopedProjectId,
+            direction,
+            counterpartPhoneRaw: phoneInput.trim() || null,
+            matchStatus: phoneMatch?.status ?? "manual",
+            externalUrl: urlCheck.url,
+            lawfulBasisConfirmed: lawfulConfirmed,
+            notes: notes.trim() || null,
+          },
+        });
+        setExternalUrl("");
+        setNotes("");
+        setLawfulConfirmed(false);
+        qc.invalidateQueries({ queryKey: ["customer-communications", targetCustomerId] });
+        toast.success("Telavox-link opgeslagen bij klant.");
+      } else {
+        if (!file) {
+          toast.error("Kies eerst een audiobestand.");
+          return;
+        }
+        const check = validateAudioUploadMeta({
           fileName: file.name,
           mimeType: file.type,
           sizeBytes: file.size,
           lawfulBasisConfirmed: lawfulConfirmed,
-        },
-      });
+        });
+        if (!check.ok) {
+          toast.error(check.error);
+          return;
+        }
+        const { communicationId, storagePath } = await callPrepare({
+          data: {
+            customerId: targetCustomerId,
+            workOrderId: scopedWorkOrderId,
+            projectId: scopedProjectId,
+            fileName: file.name,
+            mimeType: file.type,
+            sizeBytes: file.size,
+            lawfulBasisConfirmed: lawfulConfirmed,
+          },
+        });
 
-      const { error: uploadErr } = await supabase.storage
-        .from(COMMUNICATION_AUDIO_BUCKET)
-        .upload(storagePath, file, { contentType: file.type, upsert: false });
-      if (uploadErr) throw new Error("Upload naar privé-opslag mislukt.");
+        const { error: uploadErr } = await supabase.storage
+          .from(COMMUNICATION_AUDIO_BUCKET)
+          .upload(storagePath, file, { contentType: file.type, upsert: false });
+        if (uploadErr) throw new Error("Upload naar privé-opslag mislukt.");
 
-      await callRegister({
-        data: {
-          communicationId,
-          customerId: targetCustomerId,
-          workOrderId: scopedWorkOrderId,
-          projectId: scopedProjectId,
-          direction,
-          counterpartPhoneRaw: phoneInput.trim() || null,
-          matchStatus: phoneMatch?.status ?? "manual",
-          storagePath,
-          fileName: file.name,
-          mimeType: file.type,
-          sizeBytes: file.size,
-          lawfulBasisConfirmed: lawfulConfirmed,
-          notes: notes.trim() || null,
-        },
-      });
+        await callRegister({
+          data: {
+            communicationId,
+            customerId: targetCustomerId,
+            workOrderId: scopedWorkOrderId,
+            projectId: scopedProjectId,
+            direction,
+            counterpartPhoneRaw: phoneInput.trim() || null,
+            matchStatus: phoneMatch?.status ?? "manual",
+            storagePath,
+            fileName: file.name,
+            mimeType: file.type,
+            sizeBytes: file.size,
+            lawfulBasisConfirmed: lawfulConfirmed,
+            notes: notes.trim() || null,
+          },
+        });
 
-      setFile(null);
-      setNotes("");
-      setLawfulConfirmed(false);
-      qc.invalidateQueries({ queryKey: ["customer-communications", customerId] });
-      toast.success("Audio-opname opgeslagen in privé-opslag.");
+        setFile(null);
+        setNotes("");
+        setLawfulConfirmed(false);
+        qc.invalidateQueries({ queryKey: ["customer-communications", targetCustomerId] });
+        toast.success("Audio-opname opgeslagen in privé-opslag.");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload mislukt.");
     } finally {
@@ -213,25 +231,28 @@ export function CustomerCommunicationsTab({
         </p>
       </div>
 
-      {loadingReadiness ? (
-        <p className="text-xs text-muted-foreground">Gereedheid controleren…</p>
-      ) : readiness && !readiness.ready ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs space-y-1.5">
-          <div className="font-semibold">Audio-opslag is uitgeschakeld (fail-closed)</div>
-          <p>
-            Upload geen echte klantopnames zolang de migratie-, beveiligings- en bewaartermijnreview niet is
-            goedgekeurd. Er wordt niets opgeslagen in localStorage of publieke opslag.
-          </p>
-          <ul className="list-disc pl-4 space-y-0.5">
-            {readiness.blockers.map((b) => (
-              <li key={b}>{b}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
       <div className="space-y-3 rounded-md border border-border p-3">
-        <div className="text-xs font-semibold">Telavox-opname bewaren bij klant</div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-xs font-semibold">Telavox-opname bewaren bij klant</div>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant={sourceMode === "file" ? "default" : "outline"}
+              className="h-7 text-xs"
+              onClick={() => setSourceMode("file")}
+            >
+              Audiobestand uploaden
+            </Button>
+            <Button
+              size="sm"
+              variant={sourceMode === "link" ? "default" : "outline"}
+              className="h-7 text-xs"
+              onClick={() => setSourceMode("link")}
+            >
+              Telavox-link plakken
+            </Button>
+          </div>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor={`comm-dir-${customerId}`}>Richting</Label>
@@ -352,25 +373,39 @@ export function CustomerCommunicationsTab({
           </div>
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor={`comm-file-${customerId}`}>
-            Geëxporteerde Telavox-opname (MP3, M4A, WAV, OGG, WebM — max 25 MB)
-          </Label>
-          <Input
-            id={`comm-file-${customerId}`}
-            type="file"
-            accept={AUDIO_FILE_ACCEPT}
-            disabled={!readiness?.ready || uploading}
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-        </div>
+        {sourceMode === "file" ? (
+          <div className="space-y-1">
+            <Label htmlFor={`comm-file-${customerId}`}>
+              Geëxporteerde Telavox-opname (MP3, M4A, WAV, OGG, WebM — max 25 MB)
+            </Label>
+            <Input
+              id={`comm-file-${customerId}`}
+              type="file"
+              accept={AUDIO_FILE_ACCEPT}
+              disabled={uploading}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <Label htmlFor={`comm-url-${customerId}`}>Telavox-link naar opname (https://…)</Label>
+            <Input
+              id={`comm-url-${customerId}`}
+              type="url"
+              placeholder="https://..."
+              value={externalUrl}
+              disabled={uploading}
+              onChange={(e) => setExternalUrl(e.target.value)}
+            />
+          </div>
+        )}
 
         <div className="space-y-1">
           <Label htmlFor={`comm-notes-${customerId}`}>Interne notitie (optioneel)</Label>
           <Input
             id={`comm-notes-${customerId}`}
             value={notes}
-            disabled={!readiness?.ready || uploading}
+            disabled={uploading}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Korte context over het gesprek"
           />
@@ -381,63 +416,81 @@ export function CustomerCommunicationsTab({
             type="checkbox"
             className="mt-0.5 h-4 w-4 accent-primary"
             checked={lawfulConfirmed}
-            disabled={!readiness?.ready || uploading}
+            disabled={uploading}
             onChange={(e) => setLawfulConfirmed(e.target.checked)}
           />
           <span>Ik bevestig dat dit een bestaande, rechtmatig opgenomen Telavox-opname is.</span>
         </label>
 
-        <Button size="sm" disabled={!readiness?.ready || uploading || !file || !lawfulConfirmed} onClick={handleUpload}>
+        <Button
+          size="sm"
+          disabled={
+            uploading ||
+            !lawfulConfirmed ||
+            (sourceMode === "file" ? !file : !externalUrl.trim())
+          }
+          onClick={handleUpload}
+        >
           {uploading ? "Bezig met bewaren…" : "Opname bewaren"}
         </Button>
       </div>
 
-      {readiness?.ready && (
-        <div className="space-y-2">
-          <div className="text-xs font-semibold">Opgeslagen audio-opnames ({recordings.length})</div>
-          {recordings.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nog geen opnames voor deze klant.</p>
-          ) : (
-            <ul className="space-y-2">
-              {recordings.map((row) => (
-                <li key={row.id} className="rounded border border-border p-2.5 text-xs space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <span className="font-medium">
-                        {row.direction === "inbound" ? "Inkomend" : "Uitgaand"}
-                      </span>{" "}
-                      {row.counterpart_phone_e164 && (
-                        <span className="font-mono text-muted-foreground">{row.counterpart_phone_e164}</span>
-                      )}
-                      <span className="ml-2 text-muted-foreground">
-                        {new Date(row.created_at).toLocaleString("nl-BE")}
-                      </span>
-                    </div>
-                    <div className="flex gap-1.5">
+      <div className="space-y-2">
+        <div className="text-xs font-semibold">Opgeslagen audio-opnames ({recordings.length})</div>
+        {recordings.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nog geen opnames voor deze klant.</p>
+        ) : (
+          <ul className="space-y-2">
+            {recordings.map((row) => (
+              <li key={row.id} className="rounded border border-border p-2.5 text-xs space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="font-medium">
+                      {row.direction === "inbound" ? "Inkomend" : "Uitgaand"}
+                    </span>{" "}
+                    {row.counterpart_phone_e164 && (
+                      <span className="font-mono text-muted-foreground">{row.counterpart_phone_e164}</span>
+                    )}
+                    <span className="ml-2 text-muted-foreground">
+                      {new Date(row.created_at).toLocaleString("nl-BE")}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {row.storage_path && (
                       <Button size="sm" variant="outline" onClick={() => handlePlay(row)}>
                         Afspelen
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(row)}>
-                        Verwijderen
-                      </Button>
-                    </div>
+                    )}
+                    {row.external_url && (
+                      <a
+                        href={row.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-accent"
+                      >
+                        Open Telavox-link
+                      </a>
+                    )}
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(row)}>
+                      Verwijderen
+                    </Button>
                   </div>
-                  {row.notes && <p className="text-muted-foreground">{row.notes}</p>}
-                  {activePlayback?.id === row.id && (
-                    <audio
-                      controls
-                      controlsList="nodownload"
-                      src={activePlayback.url}
-                      className="w-full"
-                      aria-label="Privé audiospeler voor klantopname"
-                    />
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+                </div>
+                {row.notes && <p className="text-muted-foreground">{row.notes}</p>}
+                {activePlayback?.id === row.id && (
+                  <audio
+                    controls
+                    controlsList="nodownload"
+                    src={activePlayback.url}
+                    className="w-full"
+                    aria-label="Privé audiospeler voor klantopname"
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

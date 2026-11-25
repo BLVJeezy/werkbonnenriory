@@ -20,21 +20,31 @@ export type StampType =
   | "infiltratie"
   | "sifonput"
   | "terugslagklep"
-  | "straataansluiting";
+  | "straataansluiting"
+  | "rond_deksel"
+  | "vierkant_deksel"
+  | "kolk"
+  | "vetafscheider"
+  | "pompput";
 
 export type StampPreset = {
   id: StampType;
   label: string;
   code: string;
-  shape: "square" | "circle" | "diamond" | "triangle";
+  shape: "square" | "circle" | "diamond" | "triangle" | "double_circle" | "double_square" | "grate";
 };
 
 export const STAMP_PRESETS: readonly StampPreset[] = [
   { id: "toezichtsput", label: "Toezichtsput", code: "TP", shape: "square" },
   { id: "septische_put", label: "Septische put", code: "SP", shape: "circle" },
   { id: "regenwaterput", label: "Regenwaterput", code: "RWP", shape: "circle" },
+  { id: "pompput", label: "Pompput", code: "PMP", shape: "double_circle" },
+  { id: "vetafscheider", label: "Vetafscheider", code: "VET", shape: "square" },
   { id: "infiltratie", label: "Infiltratiekrat", code: "INF", shape: "square" },
   { id: "sifonput", label: "Sifonput / reukafsnijder", code: "SIF", shape: "diamond" },
+  { id: "rond_deksel", label: "Rond deksel", code: "RD", shape: "double_circle" },
+  { id: "vierkant_deksel", label: "Vierkant deksel", code: "VD", shape: "double_square" },
+  { id: "kolk", label: "Straatkolk / rooster", code: "KLK", shape: "grate" },
   { id: "terugslagklep", label: "Terugslagklep", code: "TSK", shape: "triangle" },
   { id: "straataansluiting", label: "Straataansluiting", code: "STR", shape: "diamond" },
 ] as const;
@@ -212,9 +222,9 @@ export function drawPlanElements(ctx: CanvasRenderingContext2D, w: number, h: nu
       ctx.strokeStyle = el.color;
       ctx.lineWidth = Math.max(2, 3 * scale);
       ctx.beginPath();
-      if (preset.shape === "circle") {
+      if (preset.shape === "circle" || preset.shape === "double_circle") {
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      } else if (preset.shape === "square") {
+      } else if (preset.shape === "square" || preset.shape === "double_square" || preset.shape === "grate") {
         ctx.rect(cx - r, cy - r, r * 2, r * 2);
       } else if (preset.shape === "diamond") {
         ctx.moveTo(cx, cy - r * 1.15);
@@ -230,6 +240,24 @@ export function drawPlanElements(ctx: CanvasRenderingContext2D, w: number, h: nu
       }
       ctx.fill();
       ctx.stroke();
+      if (preset.shape === "double_circle") {
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(1.2, 1.8 * scale);
+        ctx.arc(cx, cy, r * 0.76, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (preset.shape === "double_square") {
+        const ir = r * 0.74;
+        ctx.lineWidth = Math.max(1.2, 1.8 * scale);
+        ctx.strokeRect(cx - ir, cy - ir, ir * 2, ir * 2);
+      } else if (preset.shape === "grate") {
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(1, 1.4 * scale);
+        for (const offset of [-0.45, 0.45]) {
+          ctx.moveTo(cx - r * 0.75, cy + r * offset);
+          ctx.lineTo(cx + r * 0.75, cy + r * offset);
+        }
+        ctx.stroke();
+      }
       ctx.fillStyle = el.color;
       ctx.font = `700 ${Math.max(10, Math.round(11 * scale))}px sans-serif`;
       ctx.textAlign = "center";

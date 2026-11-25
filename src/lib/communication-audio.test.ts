@@ -6,6 +6,7 @@ import {
   isAllowedCommunicationRole,
   validateAudioUploadMeta,
   validateCommunicationOwnership,
+  validateExternalAudioUrl,
 } from "@/lib/communication-audio";
 
 describe("communication-audio role & readiness controls", () => {
@@ -125,5 +126,15 @@ describe("communication-audio MIME, size, storage path & ownership validation", 
         projectCustomerId: custB,
       }).ok,
     ).toBe(false);
+  });
+
+  it("accepts only valid https Telavox links and rejects http/javascript/empty", () => {
+    expect(validateExternalAudioUrl("https://app.telavox.se/recordings/abc-123")).toEqual({
+      ok: true,
+      url: "https://app.telavox.se/recordings/abc-123",
+    });
+    expect(validateExternalAudioUrl("http://app.telavox.se/recordings/abc").ok).toBe(false);
+    expect(validateExternalAudioUrl("javascript:alert(1)").ok).toBe(false);
+    expect(validateExternalAudioUrl("").ok).toBe(false);
   });
 });
