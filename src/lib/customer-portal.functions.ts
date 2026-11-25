@@ -239,16 +239,29 @@ export const acceptCustomerPortalInvite = createServerFn({ method: "POST" })
 
 export const requestPortalLogin = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ email: z.string().trim().email().max(254) }).parse(input),
+    z
+      .object({
+        email: z
+          .string()
+          .trim()
+          .email()
+          .max(254)
+          .refine((v) => !v.includes("*")),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { requestPortalLoginLink } = await import("./customer-portal.server");
+    const started = Date.now();
     try {
       await requestPortalLoginLink(supabaseAdmin, data.email);
     } catch (e) {
       console.error("portal login request", e instanceof Error ? e.message : e);
     }
+    // Equal response time for known and unknown addresses, so timing reveals nothing.
+    const wait = 1500 - (Date.now() - started);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     // Never reveal whether an address is known.
     return { ok: true as const };
   });
@@ -283,12 +296,16 @@ export const getPortalOverview = createServerFn({ method: "POST" })
       scope.workOrders.map((w: any) => [w.id, w.number ?? null]),
     );
     const today = new Date();
-    const primary = (customers ?? [])[0] ?? null;
+    const ordered = [...(customers ?? [])].sort(
+      (x, y) =>
+        Number(y.id === access.primaryCustomerId) - Number(x.id === access.primaryCustomerId),
+    );
+    const primary = ordered[0] ?? null;
 
     return {
       accountEmail: access.email,
       customer: primary,
-      customers: customers ?? [],
+      customers: ordered,
       workOrders: scope.workOrders.map((w: any) => ({
         id: w.id as string,
         number: (w.number ?? null) as number | null,

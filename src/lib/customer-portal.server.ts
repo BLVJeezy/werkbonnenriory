@@ -4,17 +4,21 @@ import {
   buildPortalLoginUrl,
   escapeIlike,
   normalizePortalEmail,
+  nextPortalLoginLog,
+  portalEmailAllowed,
+  portalLoginAllowed,
   portalLoginMailText,
-  portalLoginThrottled,
+  sameEmail,
 } from "./customer-portal";
 
 type Db = any;
 
 const WO_FIELDS =
-  "id, number, status, scheduled_date, scheduled_from, scheduled_until, description, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, project_name, urgent, created_at, signed_at, customer_id, not_needed";
+  "id, number, status, email, billing_email, scheduled_date, scheduled_from, scheduled_until, description, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, project_name, urgent, created_at, signed_at, customer_id, not_needed";
 const INVOICE_FIELDS =
-  "id, number, kind, status, issue_date, due_date, total, paid_amount, paid_at, work_order_id, sent_at";
-const QUOTE_FIELDS = "id, number, kind, status, total, created_at, sent_at, signed_at, token";
+  "id, number, kind, status, issue_date, due_date, total, paid_amount, paid_at, work_order_id, sent_at, customer";
+const QUOTE_FIELDS =
+  "id, number, kind, status, total, created_at, sent_at, signed_at, token, customer";
 const SCOPE_LIMIT = 200;
 
 function uniq<T>(xs: Iterable<T>): T[] {
@@ -29,39 +33,54 @@ function check<T>(res: { data: T | null; error: unknown }, what: string): T {
   return (res.data ?? ([] as unknown)) as T;
 }
 
+const invoiceEmail = (row: { customer?: { email?: string | null } | null }) =>
+  row.customer?.email ?? null;
+
 /** Every customer record that belongs to this e-mail address: customer file, work orders and sent invoices. */
 export async function findPortalCustomerIds(db: Db, rawEmail: string): Promise<string[]> {
-  const email = escapeIlike(normalizePortalEmail(rawEmail));
-  if (!email) return [];
+  const target = normalizePortalEmail(rawEmail);
+  if (!target || !portalEmailAllowed(target)) return [];
+  const pattern = escapeIlike(target);
   const [c1, c2, w1, w2, inv] = await Promise.all([
-    db.from("customers").select("id").ilike("email", email).limit(SCOPE_LIMIT),
-    db.from("customers").select("id").ilike("billing_email", email).limit(SCOPE_LIMIT),
+    db.from("customers").select("id, email").ilike("email", pattern).limit(SCOPE_LIMIT),
+    db
+      .from("customers")
+      .select("id, billing_email")
+      .ilike("billing_email", pattern)
+      .limit(SCOPE_LIMIT),
     db
       .from("work_orders")
-      .select("customer_id")
-      .ilike("email", email)
+      .select("customer_id, email")
+      .ilike("email", pattern)
       .not("customer_id", "is", null)
       .limit(SCOPE_LIMIT),
     db
       .from("work_orders")
-      .select("customer_id")
-      .ilike("billing_email", email)
+      .select("customer_id, billing_email")
+      .ilike("billing_email", pattern)
       .not("customer_id", "is", null)
       .limit(SCOPE_LIMIT),
     db
       .from("invoices")
-      .select("work_order_id")
-      .ilike("customer->>email", email)
+      .select("work_order_id, customer")
+      .ilike("customer->>email", pattern)
       .not("work_order_id", "is", null)
       .limit(SCOPE_LIMIT),
   ]);
+  // ilike is only a pre-filter: every hit is re-checked for an exact address match.
   const ids = new Set<string>();
-  for (const r of check<{ id: string }[]>(c1, "customers")) ids.add(r.id);
-  for (const r of check<{ id: string }[]>(c2, "customers")) ids.add(r.id);
-  for (const r of check<{ customer_id: string }[]>(w1, "work_orders")) ids.add(r.customer_id);
-  for (const r of check<{ customer_id: string }[]>(w2, "work_orders")) ids.add(r.customer_id);
+  for (const r of check<{ id: string; email: string | null }[]>(c1, "customers"))
+    if (sameEmail(r.email, target)) ids.add(r.id);
+  for (const r of check<{ id: string; billing_email: string | null }[]>(c2, "customers"))
+    if (sameEmail(r.billing_email, target)) ids.add(r.id);
+  for (const r of check<{ customer_id: string; email: string | null }[]>(w1, "work_orders"))
+    if (sameEmail(r.email, target)) ids.add(r.customer_id);
+  for (const r of check<{ customer_id: string; billing_email: string | null }[]>(w2, "work_orders"))
+    if (sameEmail(r.billing_email, target)) ids.add(r.customer_id);
   const invWoIds = uniq(
-    check<{ work_order_id: string }[]>(inv, "invoices").map((r) => r.work_order_id),
+    check<{ work_order_id: string; customer: { email?: string | null } | null }[]>(inv, "invoices")
+      .filter((r) => sameEmail(invoiceEmail(r), target))
+      .map((r) => r.work_order_id),
   );
   if (invWoIds.length) {
     const res = await db
@@ -76,7 +95,10 @@ export async function findPortalCustomerIds(db: Db, rawEmail: string): Promise<s
 
 /** Everything a portal user may see: own customer records plus documents addressed to their e-mail. */
 export async function loadPortalScope(db: Db, rawEmail: string, customerIds: readonly string[]) {
-  const email = escapeIlike(normalizePortalEmail(rawEmail));
+  const target = normalizePortalEmail(rawEmail);
+  const byEmailAllowed = !!target && portalEmailAllowed(target);
+  const pattern = escapeIlike(target);
+  const none = Promise.resolve({ data: [], error: null });
   const [byCustomer, byEmail, byBilling] = await Promise.all([
     customerIds.length
       ? db
@@ -85,30 +107,35 @@ export async function loadPortalScope(db: Db, rawEmail: string, customerIds: rea
           .in("customer_id", customerIds)
           .order("created_at", { ascending: false })
           .limit(SCOPE_LIMIT)
-      : Promise.resolve({ data: [], error: null }),
-    db
-      .from("work_orders")
-      .select(WO_FIELDS)
-      .ilike("email", email)
-      .order("created_at", { ascending: false })
-      .limit(SCOPE_LIMIT),
-    db
-      .from("work_orders")
-      .select(WO_FIELDS)
-      .ilike("billing_email", email)
-      .order("created_at", { ascending: false })
-      .limit(SCOPE_LIMIT),
+      : none,
+    byEmailAllowed
+      ? db
+          .from("work_orders")
+          .select(WO_FIELDS)
+          .ilike("email", pattern)
+          .order("created_at", { ascending: false })
+          .limit(SCOPE_LIMIT)
+      : none,
+    byEmailAllowed
+      ? db
+          .from("work_orders")
+          .select(WO_FIELDS)
+          .ilike("billing_email", pattern)
+          .order("created_at", { ascending: false })
+          .limit(SCOPE_LIMIT)
+      : none,
   ]);
   const woMap = new Map<string, any>();
-  for (const list of [byCustomer, byEmail, byBilling]) {
-    for (const w of check<any[]>(list, "work_orders")) if (!w.not_needed) woMap.set(w.id, w);
-  }
+  for (const w of check<any[]>(byCustomer, "work_orders")) if (!w.not_needed) woMap.set(w.id, w);
+  for (const w of check<any[]>(byEmail, "work_orders"))
+    if (!w.not_needed && sameEmail(w.email, target)) woMap.set(w.id, w);
+  for (const w of check<any[]>(byBilling, "work_orders"))
+    if (!w.not_needed && sameEmail(w.billing_email, target)) woMap.set(w.id, w);
   const workOrders = [...woMap.values()]
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
     .slice(0, SCOPE_LIMIT);
   const woIds = workOrders.map((w) => w.id as string);
 
-  const none = Promise.resolve({ data: [], error: null });
   const [i1, i2, i3, q1, q2, q3, q4] = await Promise.all([
     woIds.length
       ? db.from("invoices").select(INVOICE_FIELDS).in("work_order_id", woIds).limit(SCOPE_LIMIT)
@@ -120,7 +147,13 @@ export async function loadPortalScope(db: Db, rawEmail: string, customerIds: rea
           .overlaps("extra_work_order_ids", woIds)
           .limit(SCOPE_LIMIT)
       : none,
-    db.from("invoices").select(INVOICE_FIELDS).ilike("customer->>email", email).limit(SCOPE_LIMIT),
+    byEmailAllowed
+      ? db
+          .from("invoices")
+          .select(INVOICE_FIELDS)
+          .ilike("customer->>email", pattern)
+          .limit(SCOPE_LIMIT)
+      : none,
     customerIds.length
       ? db.from("quotes").select(QUOTE_FIELDS).in("customer_id", customerIds).limit(SCOPE_LIMIT)
       : none,
@@ -130,25 +163,30 @@ export async function loadPortalScope(db: Db, rawEmail: string, customerIds: rea
     woIds.length
       ? db.from("quotes").select(QUOTE_FIELDS).in("source_work_order_id", woIds).limit(SCOPE_LIMIT)
       : none,
-    db.from("quotes").select(QUOTE_FIELDS).ilike("customer->>email", email).limit(SCOPE_LIMIT),
+    byEmailAllowed
+      ? db.from("quotes").select(QUOTE_FIELDS).ilike("customer->>email", pattern).limit(SCOPE_LIMIT)
+      : none,
   ]);
 
   const invMap = new Map<string, any>();
-  for (const list of [i1, i2, i3]) {
-    for (const inv of check<any[]>(list, "invoices")) {
-      const sent = !!inv.sent_at || inv.status === "verzonden" || inv.status === "betaald";
-      if (sent && inv.status !== "concept" && inv.status !== "draft") invMap.set(inv.id, inv);
-    }
-  }
+  const addInvoice = (inv: any) => {
+    const sent = !!inv.sent_at || inv.status === "verzonden" || inv.status === "betaald";
+    if (sent && inv.status !== "concept" && inv.status !== "draft") invMap.set(inv.id, inv);
+  };
+  for (const inv of check<any[]>(i1, "invoices")) addInvoice(inv);
+  for (const inv of check<any[]>(i2, "invoices")) addInvoice(inv);
+  for (const inv of check<any[]>(i3, "invoices"))
+    if (sameEmail(invoiceEmail(inv), target)) addInvoice(inv);
   const invoices = [...invMap.values()].sort((a, b) =>
     String(b.issue_date ?? b.sent_at ?? "").localeCompare(String(a.issue_date ?? a.sent_at ?? "")),
   );
 
   const qMap = new Map<string, any>();
-  for (const list of [q1, q2, q3, q4]) {
-    for (const q of check<any[]>(list, "quotes"))
-      if (q.status === "verzonden" || q.status === "akkoord") qMap.set(q.id, q);
-  }
+  const addQuote = (q: any) => {
+    if (q.status === "verzonden" || q.status === "akkoord") qMap.set(q.id, q);
+  };
+  for (const list of [q1, q2, q3]) for (const q of check<any[]>(list, "quotes")) addQuote(q);
+  for (const q of check<any[]>(q4, "quotes")) if (sameEmail(invoiceEmail(q), target)) addQuote(q);
   const quotes = [...qMap.values()].sort((a, b) =>
     String(b.created_at).localeCompare(String(a.created_at)),
   );
@@ -168,6 +206,8 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
   const active = accounts.filter((a) => a.active);
   if (!active.length)
     throw new Error("Geen actieve toegang tot het klantenportaal voor dit account.");
+  if (await isInternalUser(db, userId))
+    throw new Error("Dit is een Riory-medewerkersaccount. Log in met een klantaccount.");
   const email = normalizePortalEmail(
     typeof claimsEmail === "string" && claimsEmail ? claimsEmail : active[0]!.email,
   );
@@ -180,7 +220,19 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
       "id",
       active.map((a) => a.id),
     );
-  return { email, customerIds, accountIds: active.map((a) => a.id) };
+  return {
+    email,
+    customerIds,
+    primaryCustomerId: active[0]!.customer_id,
+    accountIds: active.map((a) => a.id),
+  };
+}
+
+/** Staff accounts (admin, technician, marketing) never get passwordless portal access. */
+async function isInternalUser(db: Db, userId: string): Promise<boolean> {
+  const { data, error } = await db.from("user_roles").select("role").eq("user_id", userId);
+  if (error) return true;
+  return ((data ?? []) as { role: string }[]).some((r) => r.role !== "customer");
 }
 
 function randomPassword(): string {
@@ -241,20 +293,24 @@ async function sendViaRioryMailbox(
  */
 export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<void> {
   const email = normalizePortalEmail(rawEmail);
+  if (!portalEmailAllowed(email)) return;
   const customerIds = await findPortalCustomerIds(db, email);
   if (!customerIds.length) return;
 
   const { data: existing } = await db
     .from("customer_portal_accounts")
-    .select("id, user_id, customer_id, active")
+    .select("id, user_id, customer_id, active, email")
     .ilike("email", escapeIlike(email))
     .limit(20);
-  const known = (existing ?? []) as {
-    id: string;
-    user_id: string | null;
-    customer_id: string;
-    active: boolean;
-  }[];
+  const known = (
+    (existing ?? []) as {
+      id: string;
+      user_id: string | null;
+      customer_id: string;
+      active: boolean;
+      email: string;
+    }[]
+  ).filter((a) => sameEmail(a.email, email));
   // An admin switched portal access off for this address: never re-enable it automatically.
   if (known.length && !known.some((a) => a.active)) return;
 
@@ -262,7 +318,8 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
   if (userId) {
     const { data: u } = await db.auth.admin.getUserById(userId);
     if (!u?.user) userId = null;
-    else if (portalLoginThrottled(u.user.app_metadata?.portal_login_sent_at as string | undefined))
+    else if (await isInternalUser(db, userId)) return;
+    else if (!portalLoginAllowed(u.user.app_metadata?.portal_login_log as string[] | undefined))
       return;
   }
 
@@ -292,9 +349,10 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
     return;
   }
   userId = link.user.id as string;
+  if (!created && (await isInternalUser(db, userId))) return;
   if (
     !created &&
-    portalLoginThrottled(link.user.app_metadata?.portal_login_sent_at as string | undefined)
+    !portalLoginAllowed(link.user.app_metadata?.portal_login_log as string[] | undefined)
   )
     return;
   if (created) {
@@ -334,7 +392,9 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
     await db.auth.admin.updateUserById(userId, {
       app_metadata: {
         ...(link.user.app_metadata ?? {}),
-        portal_login_sent_at: new Date().toISOString(),
+        portal_login_log: nextPortalLoginLog(
+          link.user.app_metadata?.portal_login_log as string[] | undefined,
+        ),
       },
     });
   }

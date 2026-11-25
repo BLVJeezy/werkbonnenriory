@@ -255,7 +255,8 @@ function PortalHomePage() {
     if (!data) return null;
     const running = data.workOrders.filter((w) => w.stage !== "afgewerkt");
     const openInvoices = data.invoices.filter((i) => i.state === "open" || i.state === "vervallen");
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const next = [...data.workOrders]
       .filter((w) => w.stage === "gepland" && w.scheduledDate && w.scheduledDate >= today)
       .sort((a, b) => (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? ""))[0];
@@ -281,7 +282,7 @@ function PortalHomePage() {
     [data],
   );
 
-  const firstName = (data?.customer?.name ?? "").split(/\s+/)[0] ?? "";
+  const displayName = (data?.customer?.name ?? "").trim();
   const tabs: { key: Tab; label: string; icon: typeof FileText; count?: number | undefined }[] = [
     { key: "overzicht", label: "Overzicht", icon: LayoutGrid },
     { key: "projecten", label: "Werkbonnen", icon: FolderOpen, count: data?.workOrders.length },
@@ -421,7 +422,7 @@ function PortalHomePage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                  {firstName ? `Welkom, ${firstName}` : "Welkom"}
+                  {displayName ? `Welkom, ${displayName}` : "Welkom"}
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {data.customers.length > 1
@@ -434,11 +435,13 @@ function PortalHomePage() {
               </Button>
             </div>
 
-            <nav className="-mx-4 overflow-x-auto px-4">
+            <nav aria-label="Klantenportaal" className="-mx-4 overflow-x-auto px-4">
               <div className="inline-flex min-w-full gap-1 rounded-xl border border-black/5 bg-white p-1 sm:min-w-0">
                 {tabs.map((t) => (
                   <button
                     key={t.key}
+                    type="button"
+                    aria-current={tab === t.key ? "page" : undefined}
                     onClick={() => setTab(t.key)}
                     className={cn(
                       "inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",

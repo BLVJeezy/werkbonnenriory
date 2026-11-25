@@ -55,7 +55,8 @@ export function buildPortalAppointmentDescription(input: PortalAppointmentInput)
 // Inloggen met het e-mailadres van bestaande facturen/werkbonnen (magic link)
 // ---------------------------------------------------------------------------
 
-export const PORTAL_LOGIN_THROTTLE_SECONDS = 60;
+export const PORTAL_LOGIN_MIN_GAP_SECONDS = 120;
+export const PORTAL_LOGIN_MAX_PER_DAY = 5;
 
 export function normalizePortalEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -77,14 +78,37 @@ export function buildPortalLoginUrl(tokenHash: string): string {
   return `${PORTAL_BASE_URL}/portaal/inloggen#login=${tokenHash}`;
 }
 
-export function portalLoginThrottled(
-  lastSentAt: string | null | undefined,
+/** Rate limit per address: at most one mail every 2 minutes and 5 per 24 hours. */
+export function portalLoginAllowed(
+  log: readonly string[] | null | undefined,
   now = new Date(),
 ): boolean {
-  if (!lastSentAt) return false;
-  const last = new Date(lastSentAt).getTime();
-  if (Number.isNaN(last)) return false;
-  return now.getTime() - last < PORTAL_LOGIN_THROTTLE_SECONDS * 1000;
+  const times = (log ?? []).map((t) => new Date(t).getTime()).filter((t) => !Number.isNaN(t));
+  const nowMs = now.getTime();
+  if (times.some((t) => nowMs - t < PORTAL_LOGIN_MIN_GAP_SECONDS * 1000)) return false;
+  return times.filter((t) => nowMs - t < 24 * 3600 * 1000).length < PORTAL_LOGIN_MAX_PER_DAY;
+}
+
+/** Keep only the last 24 hours of login-mail timestamps, plus the new one. */
+export function nextPortalLoginLog(
+  log: readonly string[] | null | undefined,
+  now = new Date(),
+): string[] {
+  const keep = (log ?? []).filter((t) => {
+    const ms = new Date(t).getTime();
+    return !Number.isNaN(ms) && now.getTime() - ms < 24 * 3600 * 1000;
+  });
+  return [...keep, now.toISOString()].slice(-PORTAL_LOGIN_MAX_PER_DAY);
+}
+
+/** PostgREST treats `*` as a wildcard that cannot be escaped, so such addresses are refused outright. */
+export function portalEmailAllowed(email: string): boolean {
+  return !email.includes("*");
+}
+
+/** Exact, case-insensitive comparison used to double-check every ilike match server-side. */
+export function sameEmail(value: string | null | undefined, normalized: string): boolean {
+  return !!value && normalizePortalEmail(value) === normalized;
 }
 
 export function portalLoginMailText(link: string): string {
