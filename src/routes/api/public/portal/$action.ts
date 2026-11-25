@@ -15,6 +15,7 @@ const loginInput = z.object({
     .max(254)
     .refine((v) => !v.includes("*")),
 });
+const exchangeInput = z.object({ token: z.string().regex(/^[a-zA-Z0-9_-]{32,512}$/) });
 const documentInput = z.object({ type: z.enum(["factuur", "werkbon"]), id: z.string().uuid() });
 const appointmentInput = z.object({
   description: z
@@ -89,13 +90,27 @@ export const Route = createFileRoute("/api/public/portal/$action")({
           return reply({ ok: true });
         }
 
-        const token = request.headers.get("Authorization")?.match(/^Bearer (\S{20,4096})$/)?.[1];
+        if (params.action === "exchange") {
+          const parsed = exchangeInput.safeParse(body);
+          if (!parsed.success) return reply({ error: "Ongeldige inloglink." }, 400);
+          try {
+            const result = await portal.exchangePortalLoginToken(supabaseAdmin, parsed.data.token);
+            if (!result) return reply({ error: "Deze inloglink is verlopen of al gebruikt." }, 401);
+            return reply(result);
+          } catch (e) {
+            return reply({ error: e instanceof Error ? e.message : "Inloggen mislukt." }, 403);
+          }
+        }
+
+        // Data actions only accept a portal token, never a Supabase session.
+        const token = request.headers
+          .get("Authorization")
+          ?.match(/^Bearer (rp1\.\S{20,4096})$/)?.[1];
         if (!token) return reply({ error: "Niet ingelogd." }, 401);
-        const { data: auth, error: authErr } = await supabaseAdmin.auth.getUser(token);
-        if (authErr || !auth?.user)
-          return reply({ error: "Sessie verlopen. Log opnieuw in." }, 401);
-        const userId = auth.user.id;
-        const email = auth.user.email ?? null;
+        const claims = await portal.verifyPortalRequestToken(token);
+        if (!claims) return reply({ error: "Sessie verlopen. Log opnieuw in." }, 401);
+        const userId = claims.uid;
+        const email = claims.email;
 
         try {
           if (params.action === "overview") {

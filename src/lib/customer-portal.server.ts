@@ -791,3 +791,54 @@ export async function portalLoginUrlForGoogleUser(
   if (linkErr || !link?.properties?.hashed_token) return null;
   return buildPortalLoginUrl(link.properties.hashed_token);
 }
+
+// ---------------------------------------------------------------------------
+// Portal tokens: the portal on riory.be never holds a Supabase session
+// ---------------------------------------------------------------------------
+
+function authEnv() {
+  const url = process.env["SUPABASE_URL"];
+  const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+  if (!url || !key) throw new Error("Portaal is niet correct geconfigureerd.");
+  return { url, key };
+}
+
+/**
+ * Trade the one-time login link (magic link hash) for a portal-only token.
+ * The Supabase session that verification creates is revoked immediately.
+ */
+export async function exchangePortalLoginToken(db: Db, tokenHash: string) {
+  const { validPortalLoginToken } = await import("./customer-portal");
+  const { signPortalToken } = await import("./portal-token");
+  if (!validPortalLoginToken(tokenHash)) return null;
+  const { url, key } = authEnv();
+  let session: { access_token?: string; user?: { id?: string; email?: string } } | null = null;
+  for (const type of ["magiclink", "email"]) {
+    const res = await fetch(`${url}/auth/v1/verify`, {
+      method: "POST",
+      headers: { apikey: key, "Content-Type": "application/json" },
+      body: JSON.stringify({ type, token_hash: tokenHash }),
+    });
+    if (res.ok) {
+      session = await res.json();
+      break;
+    }
+  }
+  const userId = session?.user?.id;
+  const email = session?.user?.email;
+  if (session?.access_token) {
+    await fetch(`${url}/auth/v1/logout?scope=local`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${session.access_token}` },
+    }).catch(() => undefined);
+  }
+  if (!userId || !email) return null;
+  await resolvePortalAccess(db, userId, email); // throws when this login has no portal access
+  return signPortalToken({ uid: userId, email }, key);
+}
+
+/** Verify a portal token from the Authorization header. */
+export async function verifyPortalRequestToken(token: string) {
+  const { verifyPortalToken } = await import("./portal-token");
+  return verifyPortalToken(token, authEnv().key);
+}
