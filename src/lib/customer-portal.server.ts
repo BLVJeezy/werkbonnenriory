@@ -466,7 +466,7 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
   );
   const { data: lastChanges } = await db
     .from("customer_profile_changes")
-    .select("customer_id, created_at")
+    .select("customer_id, created_at, changes")
     .in(
       "customer_id",
       ordered.map((c: { id: string }) => c.id).concat(["00000000-0000-0000-0000-000000000000"]),
@@ -474,12 +474,33 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
     .order("created_at", { ascending: false })
     .limit(50);
   const lastChange = new Map<string, string>();
-  for (const r of (lastChanges ?? []) as { customer_id: string; created_at: string }[]) {
+  const history = new Map<
+    string,
+    { created_at: string; changes: { field: string; before: string | null; after: string | null }[] }[]
+  >();
+  for (const r of (lastChanges ?? []) as {
+    customer_id: string;
+    created_at: string;
+    changes: unknown;
+  }[]) {
     if (!lastChange.has(r.customer_id)) lastChange.set(r.customer_id, r.created_at);
+    const list = history.get(r.customer_id) ?? [];
+    const changes = Array.isArray(r.changes)
+      ? (r.changes as { field?: unknown; before?: unknown; after?: unknown }[])
+          .filter((c) => typeof c?.field === "string")
+          .map((c) => ({
+            field: c.field as string,
+            before: typeof c.before === "string" ? c.before : null,
+            after: typeof c.after === "string" ? c.after : null,
+          }))
+      : [];
+    if (list.length < 10 && changes.length) list.push({ created_at: r.created_at, changes });
+    history.set(r.customer_id, list);
   }
   const withChange = ordered.map((c: { id: string }) => ({
     ...c,
     profile_updated_at: lastChange.get(c.id) ?? null,
+    profile_history: history.get(c.id) ?? [],
   }));
   const woNumber = new Map<string, number | null>(
     scope.workOrders.map((w: any) => [w.id, w.number ?? null]),
@@ -950,8 +971,25 @@ export async function updatePortalProfile(
   const structured = fields
     .filter((f) => f in next && (prev[f] ?? "").trim() !== (next[f] ?? "").trim())
     .map((f) => ({ field: f, before: prev[f] ?? null, after: next[f] ?? null }));
+  // Keep the old data first: without a stored history entry nothing is overwritten.
+  const { data: logRow, error: logErr } = await db
+    .from("customer_profile_changes")
+    .insert({
+      customer_id: input.customerId,
+      user_id: userId,
+      changed_by_email: access.email,
+      source: "klantenportaal",
+      changes: structured,
+    })
+    .select("id")
+    .single();
+  if (logErr || !logRow) {
+    console.error("portal profile history", logErr?.message);
+    throw new Error("Opslaan mislukt. Probeer opnieuw.");
+  }
   const { error: upErr } = await db.from("customers").update(next).eq("id", input.customerId);
   if (upErr) {
+    await db.from("customer_profile_changes").delete().eq("id", (logRow as { id: string }).id);
     if ((upErr as { code?: string }).code === "23505") {
       throw new Error(
         "Deze naam en dit adres staan al op een andere klantfiche. Mail info@riory.be, dan passen wij het aan.",
@@ -959,15 +997,6 @@ export async function updatePortalProfile(
     }
     throw new Error("Opslaan mislukt. Probeer opnieuw.");
   }
-  // History: when and what the customer changed (read by admins in the customer file).
-  const { error: logErr } = await db.from("customer_profile_changes").insert({
-    customer_id: input.customerId,
-    user_id: userId,
-    changed_by_email: access.email,
-    source: "klantenportaal",
-    changes: structured,
-  });
-  if (logErr) console.error("portal profile history", logErr.message);
   await sendViaRioryMailbox(
     db,
     RIORY_INBOX,
