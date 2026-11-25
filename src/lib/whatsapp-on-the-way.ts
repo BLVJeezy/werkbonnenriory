@@ -6,7 +6,20 @@ export const WHATSAPP_ON_THE_WAY_DRAFT_TEXT =
   "Dag, de technieker van Riory is onderweg voor uw afspraak.";
 
 export type WhatsAppSendState = "prepared" | "accepted" | "uncertain" | "failed";
-export type WhatsAppConsentStatus = "granted" | "withdrawn" | "missing";
+export type WhatsAppConsentStatus = "granted" | "withdrawn" | "missing" | "ambiguous" | "error";
+export type WhatsAppRecipientScope = "site_contact" | "customer";
+
+export type WhatsAppEligibilityFailureReason =
+  | "unauthorized"
+  | "unassigned"
+  | "terminal_work_order"
+  | "missing_phone"
+  | "ambiguous_phone"
+  | "unsupported_country"
+  | "missing_consent"
+  | "withdrawn_consent"
+  | "ambiguous_consent"
+  | "consent_lookup_error";
 
 const TERMINAL_STATUSES = new Set([
   "afgetekend",
@@ -61,22 +74,60 @@ export function canActorSendWorkOrderWhatsApp(input: {
 }
 
 /**
- * Resolves the single authorized BE/NL E.164 recipient from the work order or customer record.
- * Rejects missing, non-BE/NL, or ambiguous (>1 distinct) numbers.
+ * Resolves the single unambiguous BE/NL E.164 appointment recipient from the work order.
+ * - When `useSiteAddress` is true and `siteContactPhone` is provided, the worksite contact
+ *   is the official designated recipient (`site_contact`).
+ * - Never silently chooses between conflicting worksite and billed-customer numbers.
+ * - Rejects missing, non-BE/NL, or ambiguous (>1 distinct) numbers.
  */
 export function resolveWorkOrderWhatsAppRecipient(input: {
+  useSiteAddress?: boolean | null | undefined;
+  siteContactPhone?: string | null | undefined;
   workOrderPhone?: string | null | undefined;
   customerPhone?: string | null | undefined;
   customerContacts?: unknown;
 }):
-  | { ok: true; e164: string; masked: string }
+  | { ok: true; e164: string; masked: string; recipientScope: WhatsAppRecipientScope }
   | { ok: false; reason: "missing_phone" | "ambiguous_phone" | "unsupported_country" } {
-  const woNorm = normalizePhoneToE164(input.workOrderPhone);
-  if (woNorm) {
-    if (!woNorm.startsWith("+32") && !woNorm.startsWith("+31")) {
+  const siteRaw = String(input.siteContactPhone ?? "").trim();
+  const woRaw = String(input.workOrderPhone ?? "").trim();
+  const siteNorm = normalizePhoneToE164(siteRaw);
+  const woNorm = normalizePhoneToE164(woRaw);
+
+  const checkBeNl = (
+    e164: string,
+    recipientScope: WhatsAppRecipientScope,
+  ):
+    | { ok: true; e164: string; masked: string; recipientScope: WhatsAppRecipientScope }
+    | { ok: false; reason: "unsupported_country" } => {
+    if (!e164.startsWith("+32") && !e164.startsWith("+31")) {
       return { ok: false, reason: "unsupported_country" };
     }
-    return { ok: true, e164: woNorm, masked: maskE164Phone(woNorm) };
+    return { ok: true, e164, masked: maskE164Phone(e164), recipientScope };
+  };
+
+  // Official worksite contact designated on the work order
+  if (input.useSiteAddress && siteRaw.length > 0) {
+    if (!siteNorm) return { ok: false, reason: "missing_phone" };
+    return checkBeNl(siteNorm, "site_contact");
+  }
+
+  // Conflicting worksite and billed-customer numbers without explicit worksite designation
+  if (siteRaw.length > 0 && woRaw.length > 0) {
+    if (!siteNorm || !woNorm || siteNorm !== woNorm) {
+      return { ok: false, reason: "ambiguous_phone" };
+    }
+    return checkBeNl(woNorm, "customer");
+  }
+
+  if (siteRaw.length > 0) {
+    if (!siteNorm) return { ok: false, reason: "missing_phone" };
+    return checkBeNl(siteNorm, "site_contact");
+  }
+
+  if (woRaw.length > 0) {
+    if (!woNorm) return { ok: false, reason: "missing_phone" };
+    return checkBeNl(woNorm, "customer");
   }
 
   const candidates = new Set<string>();
@@ -96,10 +147,7 @@ export function resolveWorkOrderWhatsAppRecipient(input: {
   }
 
   const only = Array.from(candidates)[0]!;
-  if (!only.startsWith("+32") && !only.startsWith("+31")) {
-    return { ok: false, reason: "unsupported_country" };
-  }
-  return { ok: true, e164: only, masked: maskE164Phone(only) };
+  return checkBeNl(only, "customer");
 }
 
 export function evaluateWhatsAppSendEligibility(input: {
@@ -108,24 +156,15 @@ export function evaluateWhatsAppSendEligibility(input: {
   workOrderTechnicianId: string | null;
   workOrderStatus: string | null | undefined;
   signedAt?: string | null;
+  useSiteAddress?: boolean | null;
+  siteContactPhone?: string | null;
   workOrderPhone?: string | null;
   customerPhone?: string | null;
   customerContacts?: unknown;
   consentStatus: WhatsAppConsentStatus;
 }):
-  | { ok: true; e164: string; masked: string }
-  | {
-      ok: false;
-      reason:
-        | "unauthorized"
-        | "unassigned"
-        | "terminal_work_order"
-        | "missing_phone"
-        | "ambiguous_phone"
-        | "unsupported_country"
-        | "missing_consent"
-        | "withdrawn_consent";
-    } {
+  | { ok: true; e164: string; masked: string; recipientScope: WhatsAppRecipientScope }
+  | { ok: false; reason: WhatsAppEligibilityFailureReason } {
   const auth = canActorSendWorkOrderWhatsApp({
     roles: input.roles,
     actorTechnicianId: input.actorTechnicianId,
@@ -138,12 +177,20 @@ export function evaluateWhatsAppSendEligibility(input: {
   }
 
   const recipient = resolveWorkOrderWhatsAppRecipient({
+    useSiteAddress: input.useSiteAddress,
+    siteContactPhone: input.siteContactPhone,
     workOrderPhone: input.workOrderPhone,
     customerPhone: input.customerPhone,
     customerContacts: input.customerContacts,
   });
   if (!recipient.ok) return recipient;
 
+  if (input.consentStatus === "error") {
+    return { ok: false, reason: "consent_lookup_error" };
+  }
+  if (input.consentStatus === "ambiguous") {
+    return { ok: false, reason: "ambiguous_consent" };
+  }
   if (input.consentStatus === "withdrawn") {
     return { ok: false, reason: "withdrawn_consent" };
   }
@@ -151,7 +198,12 @@ export function evaluateWhatsAppSendEligibility(input: {
     return { ok: false, reason: "missing_consent" };
   }
 
-  return { ok: true, e164: recipient.e164, masked: recipient.masked };
+  return {
+    ok: true,
+    e164: recipient.e164,
+    masked: recipient.masked,
+    recipientScope: recipient.recipientScope,
+  };
 }
 
 /** Builds the fixed static Meta WhatsApp Cloud API utility template payload (no PII parameters). */

@@ -46,12 +46,17 @@ CREATE INDEX IF NOT EXISTS idx_work_order_whatsapp_sends_wo
 GRANT SELECT, INSERT, UPDATE ON public.customer_whatsapp_consents TO authenticated;
 GRANT ALL ON public.customer_whatsapp_consents TO service_role;
 
-GRANT SELECT, INSERT, UPDATE ON public.work_order_whatsapp_sends TO authenticated;
+-- Send audit and idempotency writes are strictly server-mediated (service_role only).
+-- Technicians and other authenticated users cannot forge, insert, update, or delete rows directly.
+GRANT SELECT ON public.work_order_whatsapp_sends TO authenticated;
 GRANT ALL ON public.work_order_whatsapp_sends TO service_role;
 
 ALTER TABLE public.customer_whatsapp_consents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.work_order_whatsapp_sends ENABLE ROW LEVEL SECURITY;
 
+-- Consent rows remain admin-only for direct access; technicians never read this table directly.
+-- Server functions verify work-order authorization first, then query exact (customer_id, phone_e164)
+-- via service_role without returning consent rows to the client.
 CREATE POLICY "Admins can manage WhatsApp consents"
   ON public.customer_whatsapp_consents
   FOR ALL
@@ -62,32 +67,6 @@ CREATE POLICY "Admins can manage WhatsApp consents"
 CREATE POLICY "Admins and assigned technicians can view WhatsApp sends"
   ON public.work_order_whatsapp_sends
   FOR SELECT
-  TO authenticated
-  USING (
-    public.has_role(auth.uid(), 'admin')
-    OR EXISTS (
-      SELECT 1 FROM public.work_orders wo
-      WHERE wo.id = work_order_whatsapp_sends.work_order_id
-        AND wo.technician_id = public.my_technician_id()
-    )
-  );
-
-CREATE POLICY "Admins and assigned technicians can insert WhatsApp sends"
-  ON public.work_order_whatsapp_sends
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    public.has_role(auth.uid(), 'admin')
-    OR EXISTS (
-      SELECT 1 FROM public.work_orders wo
-      WHERE wo.id = work_order_whatsapp_sends.work_order_id
-        AND wo.technician_id = public.my_technician_id()
-    )
-  );
-
-CREATE POLICY "Admins and assigned technicians can update WhatsApp sends"
-  ON public.work_order_whatsapp_sends
-  FOR UPDATE
   TO authenticated
   USING (
     public.has_role(auth.uid(), 'admin')
