@@ -21,6 +21,7 @@ import { noInterventionFee } from "@/lib/invoice";
 import { computeDistance } from "@/lib/distance.functions";
 import { TaskActions } from "@/components/TaskActions";
 import { WorkOrderPhotos } from "@/components/WorkOrderPhotos";
+import { WorkOrderGroundPlans } from "@/components/WorkOrderGroundPlans";
 import { WorkOrderVideos } from "@/components/WorkOrderVideos";
 import { sendWerkbonEmail } from "@/lib/werkbon-mail.functions";
 import { bestekFromWorkOrder, quoteFromTask } from "@/lib/quotes.functions";
@@ -570,6 +571,7 @@ function Detail() {
 
 
       <WorkOrderPhotos workOrderId={id} locked={matLocked} />
+      <WorkOrderGroundPlans workOrderId={id} customerId={wo.customer_id ?? null} projectId={wo.project_id ?? null} locked={matLocked} />
       {isAdmin && <WorkOrderVideos workOrderId={id} customerId={wo.customer_id ?? null} hasEmail={!!wo.email} />}
       {isAdmin && !locked && <AppointmentPanel id={id} external={!!techs.find(t=>t.id===wo.technician_id)?.external_planning} scheduled={!!wo.scheduled_date} />}
       {isAdmin && !locked && <section className="no-print space-y-2 border-t pt-4">

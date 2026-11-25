@@ -673,6 +673,73 @@ export type Database = {
           },
         ]
       }
+      customer_ground_plans: {
+        Row: {
+          background_path: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          drawing_data: Json
+          id: string
+          include_in_pdf: boolean
+          project_id: string | null
+          rendered_path: string
+          title: string
+          updated_at: string
+          work_order_id: string | null
+        }
+        Insert: {
+          background_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          drawing_data?: Json
+          id?: string
+          include_in_pdf?: boolean
+          project_id?: string | null
+          rendered_path: string
+          title?: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Update: {
+          background_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          drawing_data?: Json
+          id?: string
+          include_in_pdf?: boolean
+          project_id?: string | null
+          rendered_path?: string
+          title?: string
+          updated_at?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_ground_plans_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_ground_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_ground_plans_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_portal_accounts: {
         Row: {
           active: boolean

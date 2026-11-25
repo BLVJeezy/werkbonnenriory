@@ -23,6 +23,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { VmeSyndicusDialog } from "@/components/VmeSyndicusDialog";
 import { CustomerSectorsDialog } from "@/components/CustomerSectorsDialog";
 import { CustomerPortalAdmin } from "@/components/CustomerPortalAdmin";
+import { CustomerGroundPlans } from "@/components/CustomerGroundPlans";
 import {
   buildCategoryUpdatePatch,
   buildCustomerExportRows,
@@ -962,6 +963,7 @@ function Klanten() {
                             defaultEmail={c.email ?? c.billing_email ?? ""}
                           />
                         )}
+                        {isAdmin && <CustomerGroundPlans customerId={c.id} projects={own} />}
                         <div className="flex gap-2">
                           <Button size="sm" disabled={saving} onClick={() => save(c)}>{saving ? "Bezig…" : "Opslaan"}</Button>
                           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setEditing(null)}>Annuleren</Button>

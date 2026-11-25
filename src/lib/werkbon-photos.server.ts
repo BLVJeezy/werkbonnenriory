@@ -12,5 +12,18 @@ export async function loadWerkbonPhotos(supabase: SupabaseClient<Database>, work
     if (downloadError || !file) throw new Error('Een foto kon niet geladen worden; de werkbon is niet verzonden');
     photos.push(new Uint8Array(await file.arrayBuffer()));
   }
+  const { data: plans, error: planErr } = await supabase
+    .from('customer_ground_plans')
+    .select('rendered_path')
+    .eq('work_order_id', workOrderId)
+    .eq('include_in_pdf', true)
+    .order('created_at')
+    .order('id');
+  if (planErr) throw new Error('Grondplannen van de werkbon konden niet geladen worden');
+  for (const plan of plans ?? []) {
+    const { data: file, error: downloadError } = await supabase.storage.from('werkbon-fotos').download(plan.rendered_path);
+    if (downloadError || !file) throw new Error('Een grondplan kon niet geladen worden; de werkbon is niet verzonden');
+    photos.push(new Uint8Array(await file.arrayBuffer()));
+  }
   return photos;
 }
