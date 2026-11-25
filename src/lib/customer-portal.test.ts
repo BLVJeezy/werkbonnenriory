@@ -143,3 +143,23 @@ describe("customer-portal hardening", () => {
     ]);
   });
 });
+
+import { PORTAL_SERVICES, portalProfileChanges, portalService } from "./customer-portal";
+
+describe("customer-portal services and profile", () => {
+  it("has unique service keys and maps known activities", () => {
+    expect(new Set(PORTAL_SERVICES.map((s) => s.key)).size).toBe(PORTAL_SERVICES.length);
+    expect(portalService("septisch")?.activity).toBe("Ledigen septische put");
+    expect(portalService("wc")?.activity).toBeNull();
+    expect(portalService("onbestaand")).toBeNull();
+  });
+
+  it("lists only fields that really changed", () => {
+    expect(
+      portalProfileChanges(
+        { name: "Jan", phone: "0470 00 00 00", city: "Bilzen", billing_email: null },
+        { name: " Jan ", phone: "0470 11 11 11", city: "Bilzen", billing_email: "" },
+      ),
+    ).toEqual(["Telefoon: 0470 00 00 00 → 0470 11 11 11"]);
+  });
+});

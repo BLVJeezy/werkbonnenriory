@@ -33,6 +33,23 @@ const appointmentInput = z.object({
   worksiteCity: z.string().trim().max(80).optional(),
   projectName: z.string().trim().max(120).optional(),
   customerId: z.string().uuid().optional(),
+  service: z.string().max(40).optional(),
+});
+const optText = (max: number) => z.string().trim().max(max).optional();
+const profileInput = z.object({
+  customerId: z.string().uuid(),
+  name: z.string().trim().min(2, "Vul uw naam in.").max(120),
+  phone: optText(40),
+  street: optText(120),
+  house_number: optText(20),
+  postal_code: optText(20),
+  city: optText(80),
+  billing_email: z
+    .union([z.literal(""), z.string().trim().email("Ongeldig factuur-e-mailadres.").max(254)])
+    .optional(),
+});
+const invoiceRequestInput = z.object({
+  message: z.string().trim().min(3, "Zeg welke factuur u zoekt.").max(1000),
 });
 
 async function corsHeaders(request: Request): Promise<Record<string, string>> {
@@ -145,10 +162,44 @@ export const Route = createFileRoute("/api/public/portal/$action")({
               await portal.createPortalAppointment(supabaseAdmin, userId, email, parsed.data),
             );
           }
+          if (params.action === "profile") {
+            const parsed = profileInput.safeParse(body);
+            if (!parsed.success) {
+              return reply(
+                { error: parsed.error.issues[0]?.message ?? "Ongeldige gegevens." },
+                400,
+              );
+            }
+            return reply(
+              await portal.updatePortalProfile(supabaseAdmin, userId, email, parsed.data),
+            );
+          }
+          if (params.action === "invoice-request") {
+            const parsed = invoiceRequestInput.safeParse(body);
+            if (!parsed.success) {
+              return reply(
+                { error: parsed.error.issues[0]?.message ?? "Ongeldige aanvraag." },
+                400,
+              );
+            }
+            return reply(
+              await portal.requestPortalInvoiceCopy(
+                supabaseAdmin,
+                userId,
+                email,
+                parsed.data.message,
+              ),
+            );
+          }
           return reply({ error: "Onbekende actie." }, 404);
         } catch (e) {
           const message = e instanceof Error ? e.message : "Er ging iets mis.";
-          return reply({ error: message }, /toegang|medewerkersaccount/i.test(message) ? 403 : 400);
+          const status = /Voorbeeldweergave/.test(message)
+            ? 409
+            : /toegang|medewerkersaccount/i.test(message)
+              ? 403
+              : 400;
+          return reply({ error: message }, status);
         }
       },
     },

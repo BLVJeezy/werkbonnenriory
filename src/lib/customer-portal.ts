@@ -241,3 +241,77 @@ export function groupPortalProjects<T extends ProjectSource>(
   }
   return [...groups.values()];
 }
+
+// ---------------------------------------------------------------------------
+// Diensten die een klant kan kiezen bij een nieuwe afspraak
+// ---------------------------------------------------------------------------
+
+export type PortalService = { key: string; label: string; activity: string | null };
+
+/** `activity` = naam in de tabel activities; null laat Riory de juiste prestatie kiezen (dag/avond/nacht…). */
+export const PORTAL_SERVICES: readonly PortalService[] = [
+  { key: "wc", label: "WC verstopt", activity: null },
+  { key: "afvoer", label: "Afvoer, gootsteen of douche verstopt", activity: null },
+  { key: "riool", label: "Riool verstopt", activity: null },
+  { key: "camera", label: "Camera-inspectie", activity: null },
+  { key: "septisch", label: "Septische put ledigen", activity: "Ledigen septische put" },
+  {
+    key: "regenput",
+    label: "Regenput reinigen of kelder leegpompen",
+    activity: "Reiniging van regenput",
+  },
+  { key: "dakgoot", label: "Dakgootreiniging", activity: "Dakgootreiniging" },
+  {
+    key: "herstel",
+    label: "Rioolherstel of grondwerken",
+    activity: "Rioleringsherstel en grondwerken",
+  },
+  { key: "lekkage", label: "Lekkage opsporen", activity: null },
+  {
+    key: "offerte",
+    label: "Plaatsbezoek voor een offerte",
+    activity: "Ter plaatse gaan voor offerte",
+  },
+  { key: "andere", label: "Iets anders", activity: null },
+];
+
+export function portalService(key: string | null | undefined): PortalService | null {
+  return PORTAL_SERVICES.find((s) => s.key === key) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Klantgegevens die de klant zelf mag aanpassen
+// ---------------------------------------------------------------------------
+
+export const PORTAL_PROFILE_FIELDS = [
+  "name",
+  "phone",
+  "street",
+  "house_number",
+  "postal_code",
+  "city",
+  "billing_email",
+] as const;
+export type PortalProfileField = (typeof PORTAL_PROFILE_FIELDS)[number];
+
+export const PORTAL_PROFILE_LABELS: Record<PortalProfileField, string> = {
+  name: "Naam",
+  phone: "Telefoon",
+  street: "Straat",
+  house_number: "Nummer",
+  postal_code: "Postcode",
+  city: "Gemeente",
+  billing_email: "Factuur-e-mail",
+};
+
+/** Lines "Veld: oud → nieuw" for every field that really changed (trimmed, empty = leeg). */
+export function portalProfileChanges(
+  before: Partial<Record<PortalProfileField, string | null>>,
+  after: Partial<Record<PortalProfileField, string | null>>,
+): string[] {
+  const norm = (v: string | null | undefined) => (v ?? "").trim();
+  return PORTAL_PROFILE_FIELDS.filter((f) => f in after && norm(before[f]) !== norm(after[f])).map(
+    (f) =>
+      `${PORTAL_PROFILE_LABELS[f]}: ${norm(before[f]) || "(leeg)"} → ${norm(after[f]) || "(leeg)"}`,
+  );
+}

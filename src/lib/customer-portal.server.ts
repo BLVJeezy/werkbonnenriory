@@ -213,8 +213,22 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
   );
   if (!portalEmailAllowed(email))
     throw new Error("Het klantenportaal is nog niet open voor dit account.");
-  const linked = await findPortalCustomerIds(db, email);
-  const customerIds = uniq([...active.map((a) => a.customer_id), ...linked]);
+  // A staff account (admin-granted) only ever sees a read-only preview of the linked customer.
+  const preview = await isInternalUser(db, userId);
+  let customerIds: string[];
+  let scopeEmail = email;
+  if (preview) {
+    customerIds = uniq(active.map((a) => a.customer_id));
+    const { data: c } = await db
+      .from("customers")
+      .select("email")
+      .eq("id", active[0]!.customer_id)
+      .maybeSingle();
+    scopeEmail = c?.email ? normalizePortalEmail(c.email) : "";
+  } else {
+    const linked = await findPortalCustomerIds(db, email);
+    customerIds = uniq([...active.map((a) => a.customer_id), ...linked]);
+  }
   await db
     .from("customer_portal_accounts")
     .update({ last_login_at: new Date().toISOString() })
@@ -224,11 +238,15 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
     );
   return {
     email,
+    scopeEmail,
+    preview,
     customerIds,
     primaryCustomerId: active[0]!.customer_id,
     accountIds: active.map((a) => a.id),
   };
 }
+
+const PREVIEW_READ_ONLY = "Voorbeeldweergave: wijzigingen en aanvragen zijn uitgeschakeld.";
 
 async function isInternalUser(db: Db, userId: string): Promise<boolean> {
   const { data, error } = await db.from("user_roles").select("role").eq("user_id", userId);
@@ -432,12 +450,14 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
   const [{ data: customers }, scope] = await Promise.all([
     db
       .from("customers")
-      .select("id, name, street, house_number, postal_code, city, phone")
+      .select(
+        "id, name, street, house_number, postal_code, city, phone, email, billing_email, vat_number, customer_number",
+      )
       .in(
         "id",
         access.customerIds.length ? access.customerIds : ["00000000-0000-0000-0000-000000000000"],
       ),
-    loadPortalScope(db, access.email, access.customerIds),
+    loadPortalScope(db, access.scopeEmail, access.customerIds),
   ]);
   const ordered = [
     ...((customers ?? []) as { id: string; name: string; phone: string | null }[]),
@@ -448,8 +468,13 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
     scope.workOrders.map((w: any) => [w.id, w.number ?? null]),
   );
   const today = new Date();
+  const { PORTAL_SERVICES } = await import("./customer-portal");
   return {
     accountEmail: access.email,
+    preview: access.preview
+      ? { name: (ordered[0] as { name?: string } | undefined)?.name ?? "klant" }
+      : null,
+    services: PORTAL_SERVICES.map((sv) => ({ key: sv.key, label: sv.label })),
     customer: ordered[0] ?? null,
     customers: ordered,
     workOrders: scope.workOrders.map((w: any) => ({
@@ -504,7 +529,7 @@ export async function buildPortalDocument(
   input: { type: "factuur" | "werkbon"; id: string },
 ): Promise<{ pdf: Uint8Array; filename: string }> {
   const access = await resolvePortalAccess(db, userId, claimsEmail);
-  const scope = await loadPortalScope(db, access.email, access.customerIds);
+  const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
 
   if (input.type === "factuur") {
     if (!scope.invoices.some((i: any) => i.id === input.id))
@@ -588,6 +613,7 @@ export type PortalAppointmentRequest = {
   worksiteCity?: string | undefined;
   projectName?: string | undefined;
   customerId?: string | undefined;
+  service?: string | undefined;
 };
 
 export async function createPortalAppointment(
@@ -598,6 +624,18 @@ export async function createPortalAppointment(
 ) {
   const { buildPortalAppointmentDescription } = await import("./customer-portal");
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.preview) throw new Error(PREVIEW_READ_ONLY);
+  const { portalService } = await import("./customer-portal");
+  const service = portalService(data.service);
+  let activityId: string | null = null;
+  if (service?.activity) {
+    const { data: act } = await db
+      .from("activities")
+      .select("id")
+      .eq("name", service.activity)
+      .maybeSingle();
+    activityId = (act?.id as string | undefined) ?? null;
+  }
   const customerId =
     data.customerId && access.customerIds.includes(data.customerId)
       ? data.customerId
@@ -628,8 +666,9 @@ export async function createPortalAppointment(
       site_city: data.worksiteDifferent ? data.worksiteCity || null : null,
       use_site_address: !!data.worksiteDifferent,
       project_name: data.projectName?.trim() || null,
+      activity_id: activityId,
       description: buildPortalAppointmentDescription({
-        description: data.description,
+        description: service ? `Dienst: ${service.label}\n${data.description}` : data.description,
         preferredWindow: data.preferredWindow,
         contactPhone: data.contactPhone,
         urgent: data.urgent,
@@ -841,4 +880,105 @@ export async function exchangePortalLoginToken(db: Db, tokenHash: string) {
 export async function verifyPortalRequestToken(token: string) {
   const { verifyPortalToken } = await import("./portal-token");
   return verifyPortalToken(token, authEnv().key);
+}
+
+export type PortalProfileInput = {
+  customerId: string;
+  name: string;
+  phone?: string | undefined;
+  street?: string | undefined;
+  house_number?: string | undefined;
+  postal_code?: string | undefined;
+  city?: string | undefined;
+  billing_email?: string | undefined;
+};
+
+const RIORY_INBOX = "info@riory.be";
+
+/** The customer updates their own contact details; Riory gets a mail with what changed. */
+export async function updatePortalProfile(
+  db: Db,
+  userId: string,
+  claimsEmail: unknown,
+  input: PortalProfileInput,
+) {
+  const { portalProfileChanges } = await import("./customer-portal");
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.preview) throw new Error(PREVIEW_READ_ONLY);
+  if (!access.customerIds.includes(input.customerId))
+    throw new Error("Klantgegevens niet gevonden.");
+  const fields = [
+    "name",
+    "phone",
+    "street",
+    "house_number",
+    "postal_code",
+    "city",
+    "billing_email",
+  ] as const;
+  const { data: before, error } = await db
+    .from("customers")
+    .select(fields.join(", "))
+    .eq("id", input.customerId)
+    .single();
+  if (error || !before) throw new Error("Klantgegevens niet gevonden.");
+  const next: Record<string, string | null> = {};
+  for (const f of fields) {
+    if (f in input) next[f] = (input[f] ?? "").trim() || null;
+  }
+  if (!next["name"]) throw new Error("Vul uw naam in.");
+  const changes = portalProfileChanges(before as Record<string, string | null>, next);
+  if (!changes.length) return { changed: 0 };
+  const { error: upErr } = await db.from("customers").update(next).eq("id", input.customerId);
+  if (upErr) {
+    if ((upErr as { code?: string }).code === "23505") {
+      throw new Error(
+        "Deze naam en dit adres staan al op een andere klantfiche. Mail info@riory.be, dan passen wij het aan.",
+      );
+    }
+    throw new Error("Opslaan mislukt. Probeer opnieuw.");
+  }
+  await sendViaRioryMailbox(
+    db,
+    RIORY_INBOX,
+    `Klantenportaal — gegevens gewijzigd door ${next["name"]}`,
+    [
+      `De klant (${access.email}) paste zelf zijn gegevens aan in het klantenportaal:`,
+      "",
+      ...changes.map((c) => `• ${c}`),
+      "",
+      "Controleer of dit klopt met eventuele lopende werkbonnen en facturen.",
+    ].join("\n"),
+  ).catch(() => false);
+  return { changed: changes.length };
+}
+
+/** Older invoices (from before the work-order system) live in Simpla: the customer asks Riory to send them. */
+export async function requestPortalInvoiceCopy(
+  db: Db,
+  userId: string,
+  claimsEmail: unknown,
+  message: string,
+) {
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.preview) throw new Error(PREVIEW_READ_ONLY);
+  const { data: c } = await db
+    .from("customers")
+    .select("name, customer_number")
+    .eq("id", access.primaryCustomerId)
+    .maybeSingle();
+  const sent = await sendViaRioryMailbox(
+    db,
+    RIORY_INBOX,
+    `Klantenportaal — factuur opgevraagd door ${c?.name ?? access.email}`,
+    [
+      `${c?.name ?? "Een klant"}${c?.customer_number ? ` (klantnr. ${c.customer_number})` : ""} vraagt via het klantenportaal een oudere factuur op.`,
+      "",
+      `Bericht: ${message.trim()}`,
+      "",
+      `Stuur de factuur naar: ${access.email}`,
+    ].join("\n"),
+  );
+  if (!sent) throw new Error("Uw aanvraag kon niet verstuurd worden. Mail naar info@riory.be.");
+  return { ok: true };
 }
