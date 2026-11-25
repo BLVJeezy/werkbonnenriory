@@ -69,11 +69,11 @@ function GoogleHandoff() {
       setText("U wordt ingelogd…");
       try {
         const { url } = await handoff();
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: "local" });
         if (!url) return back("geen-klant");
         window.location.replace(url);
       } catch {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: "local" });
         back("google");
       }
     })();
