@@ -464,6 +464,23 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
   ].sort(
     (x, y) => Number(y.id === access.primaryCustomerId) - Number(x.id === access.primaryCustomerId),
   );
+  const { data: lastChanges } = await db
+    .from("customer_profile_changes")
+    .select("customer_id, created_at")
+    .in(
+      "customer_id",
+      ordered.map((c: { id: string }) => c.id).concat(["00000000-0000-0000-0000-000000000000"]),
+    )
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const lastChange = new Map<string, string>();
+  for (const r of (lastChanges ?? []) as { customer_id: string; created_at: string }[]) {
+    if (!lastChange.has(r.customer_id)) lastChange.set(r.customer_id, r.created_at);
+  }
+  const withChange = ordered.map((c: { id: string }) => ({
+    ...c,
+    profile_updated_at: lastChange.get(c.id) ?? null,
+  }));
   const woNumber = new Map<string, number | null>(
     scope.workOrders.map((w: any) => [w.id, w.number ?? null]),
   );
@@ -475,8 +492,8 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
       ? { name: (ordered[0] as { name?: string } | undefined)?.name ?? "klant" }
       : null,
     services: PORTAL_SERVICES.map((sv) => ({ key: sv.key, label: sv.label })),
-    customer: ordered[0] ?? null,
-    customers: ordered,
+    customer: withChange[0] ?? null,
+    customers: withChange,
     workOrders: scope.workOrders.map((w: any) => ({
       id: w.id as string,
       number: (w.number ?? null) as number | null,
@@ -929,6 +946,10 @@ export async function updatePortalProfile(
   if (!next["name"]) throw new Error("Vul uw naam in.");
   const changes = portalProfileChanges(before as Record<string, string | null>, next);
   if (!changes.length) return { changed: 0 };
+  const prev = before as Record<string, string | null>;
+  const structured = fields
+    .filter((f) => f in next && (prev[f] ?? "").trim() !== (next[f] ?? "").trim())
+    .map((f) => ({ field: f, before: prev[f] ?? null, after: next[f] ?? null }));
   const { error: upErr } = await db.from("customers").update(next).eq("id", input.customerId);
   if (upErr) {
     if ((upErr as { code?: string }).code === "23505") {
@@ -938,6 +959,15 @@ export async function updatePortalProfile(
     }
     throw new Error("Opslaan mislukt. Probeer opnieuw.");
   }
+  // History: when and what the customer changed (read by admins in the customer file).
+  const { error: logErr } = await db.from("customer_profile_changes").insert({
+    customer_id: input.customerId,
+    user_id: userId,
+    changed_by_email: access.email,
+    source: "klantenportaal",
+    changes: structured,
+  });
+  if (logErr) console.error("portal profile history", logErr.message);
   await sendViaRioryMailbox(
     db,
     RIORY_INBOX,

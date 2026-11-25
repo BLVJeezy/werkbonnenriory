@@ -1,5 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+import { PORTAL_PROFILE_LABELS } from "@/lib/customer-portal";
 import { toast } from "sonner";
 import { Copy, KeyRound, ShieldOff, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import {
   grantCustomerPortalAccess,
   listCustomerPortalAccounts,
+  listCustomerProfileChanges,
   setCustomerPortalActive,
 } from "@/lib/customer-portal.functions";
 
 const PORTAL_URL = "https://www.riory.be/klantportaal";
+const PROFILE_LABELS: Record<string, string> = PORTAL_PROFILE_LABELS;
 
 type PortalAccount = {
   id: string;
@@ -31,6 +34,10 @@ export function CustomerPortalAdmin({
   const listFn = useServerFn(listCustomerPortalAccounts);
   const grantFn = useServerFn(grantCustomerPortalAccess);
   const toggleFn = useServerFn(setCustomerPortalActive);
+  const changesFn = useServerFn(listCustomerProfileChanges);
+  const [changes, setChanges] = useState<Awaited<ReturnType<typeof listCustomerProfileChanges>>>(
+    [],
+  );
 
   const [accounts, setAccounts] = useState<PortalAccount[]>([]);
   const [email, setEmail] = useState(defaultEmail);
@@ -41,6 +48,7 @@ export function CustomerPortalAdmin({
     try {
       const rows = await listFn({ data: { customerId } });
       setAccounts(rows);
+      setChanges(await changesFn({ data: { customerId } }));
     } catch {
       // Ignore if not loaded yet
     }
@@ -158,6 +166,30 @@ export function CustomerPortalAdmin({
                   </>
                 )}
               </Button>
+            </div>
+          ))}
+        </div>
+      )}
+      {changes.length > 0 && (
+        <div className="space-y-1.5 pt-1">
+          <p className="text-xs font-medium text-muted-foreground">
+            Gegevens aangepast door de klant
+          </p>
+          {changes.map((c) => (
+            <div key={c.id} className="rounded border bg-card px-2.5 py-1.5 text-xs">
+              <p className="text-muted-foreground">
+                {new Date(c.createdAt).toLocaleString("nl-BE", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+                {c.by ? ` · ${c.by}` : ""}
+              </p>
+              {c.changes.map((ch, idx) => (
+                <p key={idx}>
+                  <span className="font-medium">{PROFILE_LABELS[ch.field] ?? ch.field}:</span>{" "}
+                  {ch.before || "(leeg)"} → {ch.after || "(leeg)"}
+                </p>
+              ))}
             </div>
           ))}
         </div>

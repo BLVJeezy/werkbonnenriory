@@ -66,3 +66,28 @@ export const portalGoogleHandoff = createServerFn({ method: "POST" })
     );
     return { url };
   });
+
+/** Admin: history of contact details the customer changed themselves in the portal. */
+export const listCustomerProfileChanges = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ customerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data: rows, error } = await context.supabase
+      .from("customer_profile_changes")
+      .select("id, created_at, changed_by_email, source, changes")
+      .eq("customer_id", data.customerId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) throw new Error("Wijzigingen konden niet geladen worden.");
+    return (rows ?? []).map((r) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      by: r.changed_by_email,
+      changes: (Array.isArray(r.changes) ? r.changes : []) as {
+        field: string;
+        before: string | null;
+        after: string | null;
+      }[],
+    }));
+  });
