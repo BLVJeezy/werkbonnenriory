@@ -52,7 +52,7 @@ export const Route = createFileRoute("/_authenticated")({
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
       const isInternal = roles?.some((r) => r.role === "admin" || r.role === "technician" || r.role === "marketing");
       if (!isInternal && roles?.some((r) => r.role === "customer")) {
-        throw redirect({ to: "/portaal" });
+        throw redirect({ href: "https://www.riory.be/klantportaal" });
       }
       return;
     }

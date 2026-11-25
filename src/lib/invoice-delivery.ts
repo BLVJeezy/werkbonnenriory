@@ -22,8 +22,8 @@ const file = (a: Att) => ({ "@odata.type": "#microsoft.graph.fileAttachment", ..
 
 export function invoiceMail(to: string, number: string, contentBytes: string, format: "pdf" | "ubl", label = "Factuur", docUrl?: string, paid = false) {
   const text = paid
-    ? `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Deze ${label.toLowerCase()} is al betaald — bedankt!\n✓ U hoeft verder niets te doen\n✓ Al uw werkbonnen en facturen vindt u ook in het klantenportaal op werkbonnen.riory.be/portaal\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`
-    : `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Betalen kan eenvoudig met de betaalcode op de factuur\n✓ U ontvangt een bevestiging zodra uw betaling verwerkt is\n✓ Al uw werkbonnen en facturen vindt u ook in het klantenportaal op werkbonnen.riory.be/portaal\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`;
+    ? `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Deze ${label.toLowerCase()} is al betaald — bedankt!\n✓ U hoeft verder niets te doen\n✓ Al uw werkbonnen en facturen vindt u ook in het klantenportaal op www.riory.be/klantportaal\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`
+    : `Beste klant,\n\nBedankt voor uw vertrouwen in Riory. In de bijlage vindt u ${label.toLowerCase()} ${number} als pdf.\n\n✓ Betalen kan eenvoudig met de betaalcode op de factuur\n✓ U ontvangt een bevestiging zodra uw betaling verwerkt is\n✓ Al uw werkbonnen en facturen vindt u ook in het klantenportaal op www.riory.be/klantportaal\n✓ Vragen? Antwoord gewoon op deze mail\n\nMet vriendelijke groeten,\nRiory`;
   return { message: {
     subject: `${label} ${number} — Riory`,
     body: format === "pdf"

@@ -1,33 +1,15 @@
-export const PORTAL_BASE_URL = "https://werkbonnen.riory.be";
+/** The customer portal lives on the official website, next to the Riory admin. */
+export const PORTAL_PUBLIC_URL = "https://www.riory.be/klantportaal";
 export const RIORY_WEBSITE_URL = "https://www.riory.be";
-export const PORTAL_PASSWORD_MESSAGE = "Kies een wachtwoord van minstens 8 tekens.";
-export const PORTAL_INVITE_TTL_HOURS = 72;
 
-export function buildPortalInviteUrl(token: string): string {
-  return `${PORTAL_BASE_URL}/portaal/uitnodiging#${token}`;
-}
-
-/**
- * Only allow relative paths inside /portaal to prevent open-redirect attacks
- * when external sites (such as riory.be) link to /portaal/inloggen?next=...
- */
-export function sanitizePortalNext(next: string | null | undefined): string {
-  if (!next) return "/portaal";
-  const trimmed = next.trim();
-  if (!trimmed.startsWith("/portaal")) return "/portaal";
-  if (trimmed.startsWith("//") || trimmed.includes("\\")) return "/portaal";
-  if (trimmed.startsWith("/portaal/inloggen") || trimmed.startsWith("/portaal/uitnodiging")) {
-    return "/portaal";
-  }
-  return trimmed;
-}
-
-export function portalInvitationUsable(
-  inv: { expires_at: string; consumed_at: string | null },
-  now = new Date(),
-): boolean {
-  if (inv.consumed_at) return false;
-  return new Date(inv.expires_at).getTime() > now.getTime();
+/** Origins allowed to call the portal API (riory.be and its Vercel previews). */
+export function portalOriginAllowed(origin: string | null | undefined): boolean {
+  if (!origin) return false;
+  return (
+    origin === "https://www.riory.be" ||
+    origin === "https://riory.be" ||
+    /^https:\/\/riory-[a-z0-9-]+-blvjeezys-projects\.vercel\.app$/.test(origin)
+  );
 }
 
 export type PortalAppointmentInput = {
@@ -75,7 +57,7 @@ export function validPortalLoginToken(token: string): boolean {
 /** One-time login link; the token lives in the hash so it never reaches server logs or referrers. */
 export function buildPortalLoginUrl(tokenHash: string): string {
   if (!validPortalLoginToken(tokenHash)) throw new Error("Ongeldige inlogcode");
-  return `${PORTAL_BASE_URL}/portaal/inloggen#login=${tokenHash}`;
+  return `${PORTAL_PUBLIC_URL}#login=${tokenHash}`;
 }
 
 /** Rate limit per address: at most one mail every 2 minutes and 5 per 24 hours. */

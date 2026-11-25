@@ -294,8 +294,7 @@ async function sendViaRioryMailbox(
 export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<void> {
   const email = normalizePortalEmail(rawEmail);
   if (!portalEmailAllowed(email)) return;
-  const customerIds = await findPortalCustomerIds(db, email);
-  if (!customerIds.length) return;
+  const linkedIds = await findPortalCustomerIds(db, email);
 
   const { data: existing } = await db
     .from("customer_portal_accounts")
@@ -313,6 +312,11 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
   ).filter((a) => sameEmail(a.email, email));
   // An admin switched portal access off for this address: never re-enable it automatically.
   if (known.length && !known.some((a) => a.active)) return;
+  const customerIds = uniq([
+    ...known.filter((a) => a.active).map((a) => a.customer_id),
+    ...linkedIds,
+  ]);
+  if (!customerIds.length) return;
 
   let userId: string | null = known.find((a) => a.user_id)?.user_id ?? null;
   if (userId) {
@@ -398,4 +402,292 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
       },
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Portal API used by www.riory.be/klantportaal
+// ---------------------------------------------------------------------------
+
+export async function buildPortalOverview(db: Db, userId: string, claimsEmail: unknown) {
+  const { workOrderStage, invoicePortalState, invoiceOpenAmount, portalWorkAddress } =
+    await import("./customer-portal");
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  const [{ data: customers }, scope] = await Promise.all([
+    db
+      .from("customers")
+      .select("id, name, street, house_number, postal_code, city, phone")
+      .in(
+        "id",
+        access.customerIds.length ? access.customerIds : ["00000000-0000-0000-0000-000000000000"],
+      ),
+    loadPortalScope(db, access.email, access.customerIds),
+  ]);
+  const ordered = [
+    ...((customers ?? []) as { id: string; name: string; phone: string | null }[]),
+  ].sort(
+    (x, y) => Number(y.id === access.primaryCustomerId) - Number(x.id === access.primaryCustomerId),
+  );
+  const woNumber = new Map<string, number | null>(
+    scope.workOrders.map((w: any) => [w.id, w.number ?? null]),
+  );
+  const today = new Date();
+  return {
+    accountEmail: access.email,
+    customer: ordered[0] ?? null,
+    customers: ordered,
+    workOrders: scope.workOrders.map((w: any) => ({
+      id: w.id as string,
+      number: (w.number ?? null) as number | null,
+      stage: workOrderStage(w),
+      scheduledDate: (w.scheduled_date ?? null) as string | null,
+      scheduledFrom: w.scheduled_from ? String(w.scheduled_from).slice(0, 5) : null,
+      scheduledUntil: w.scheduled_until ? String(w.scheduled_until).slice(0, 5) : null,
+      description:
+        String(w.description ?? "")
+          .replace(/\[Aangevraagd via klantenportaal\]/g, "")
+          .trim() || null,
+      projectName: (w.project_name ?? null) as string | null,
+      address: portalWorkAddress(w),
+      urgent: !!w.urgent,
+      createdAt: w.created_at as string,
+      signedAt: (w.signed_at ?? null) as string | null,
+      hasPdf: w.status === "afgetekend",
+    })),
+    invoices: scope.invoices.map((inv: any) => ({
+      id: inv.id as string,
+      number: (inv.number ?? "") as string,
+      kind: (inv.kind ?? "factuur") as string,
+      issueDate: (inv.issue_date ?? null) as string | null,
+      dueDate: (inv.due_date ?? null) as string | null,
+      total: Number(inv.total ?? 0),
+      openAmount: invoiceOpenAmount(inv),
+      state: invoicePortalState(inv, today),
+      workOrderNumber: inv.work_order_id ? (woNumber.get(inv.work_order_id) ?? null) : null,
+    })),
+    quotes: scope.quotes.map((q: any) => ({
+      id: q.id as string,
+      number: (q.number ?? "") as string,
+      kind: (q.kind ?? "offerte") as string,
+      status: q.status as string,
+      total: Number(q.total ?? 0),
+      date: (q.sent_at ?? q.created_at) as string,
+      signedAt: (q.signed_at ?? null) as string | null,
+      signUrl:
+        q.status === "verzonden" && q.token ? `${PORTAL_DOCUMENT_HOST}/offerte/${q.token}` : null,
+    })),
+  };
+}
+
+const PORTAL_DOCUMENT_HOST = "https://werkbonnen.riory.be";
+
+export async function buildPortalDocument(
+  db: Db,
+  userId: string,
+  claimsEmail: unknown,
+  input: { type: "factuur" | "werkbon"; id: string },
+): Promise<{ pdf: Uint8Array; filename: string }> {
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  const scope = await loadPortalScope(db, access.email, access.customerIds);
+
+  if (input.type === "factuur") {
+    if (!scope.invoices.some((i: any) => i.id === input.id))
+      throw new Error("Document niet gevonden.");
+    const { data: inv, error } = await db.from("invoices").select("*").eq("id", input.id).single();
+    if (error || !inv) throw new Error("Document niet gevonden.");
+    const { data: snapshot } = await db
+      .from("document_deliveries")
+      .select("pdf_base64")
+      .eq("document_id", inv.id)
+      .eq("document_type", inv.kind === "creditnota" ? "creditnota" : "factuur")
+      .eq("status", "accepted")
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    let pdf: Uint8Array;
+    if (snapshot?.pdf_base64)
+      pdf = Uint8Array.from(atob(snapshot.pdf_base64), (c) => c.charCodeAt(0));
+    else {
+      const { pdfData } = await import("./invoice-sending.server");
+      const { createInvoicePdf } = await import("./invoice-pdf");
+      pdf = await createInvoicePdf(await pdfData(db, inv));
+    }
+    const label = inv.kind === "creditnota" ? "Creditnota" : "Factuur";
+    return { pdf, filename: `Riory-${label}-${inv.number ?? String(inv.id).slice(0, 8)}.pdf` };
+  }
+
+  const wo = scope.workOrders.find((w: any) => w.id === input.id);
+  if (!wo || wo.status !== "afgetekend") throw new Error("Werkbon is nog niet beschikbaar.");
+  const { data: full, error } = await db
+    .from("work_orders")
+    .select("*")
+    .eq("id", input.id)
+    .single();
+  if (error || !full) throw new Error("Werkbon niet gevonden.");
+  const [times, materials, activity] = await Promise.all([
+    db.from("time_entries").select("started_at, ended_at").eq("work_order_id", full.id),
+    db
+      .from("materials")
+      .select("name, quantity, unit")
+      .eq("work_order_id", full.id)
+      .order("created_at"),
+    full.activity_id
+      ? db.from("activities").select("name").eq("id", full.activity_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (times.error || materials.error || activity.error)
+    throw new Error("Werkbon kon niet geladen worden.");
+  const { werkbonMailData } = await import("./werkbon-mail");
+  const { totalSeconds } = await import("./time");
+  const { createWerkbonPdf } = await import("./werkbon-pdf");
+  const { loadWerkbonPhotos } = await import("./werkbon-photos.server");
+  // Same allowlisted content as the werkbon mail the customer already received.
+  const dto = werkbonMailData(
+    {
+      ...full,
+      distance_km: full.distance_km == null ? null : Number(full.distance_km),
+      paid_amount: full.paid_amount == null ? null : Number(full.paid_amount),
+    },
+    (activity.data as { name?: string } | null)?.name ?? null,
+    totalSeconds(times.data ?? [], Date.now()),
+    ((materials.data ?? []) as { name: string; quantity: number; unit: string }[]).map((m) => ({
+      name: m.name,
+      quantity: Number(m.quantity),
+      unit: m.unit,
+    })),
+  );
+  const pdf = await createWerkbonPdf(dto, await loadWerkbonPhotos(db, full.id));
+  return { pdf, filename: `Riory-Werkbon-${full.number ?? "nieuw"}.pdf` };
+}
+
+export type PortalAppointmentRequest = {
+  description: string;
+  preferredWindow?: string | undefined;
+  contactPhone?: string | undefined;
+  urgent?: boolean | undefined;
+  worksiteDifferent?: boolean | undefined;
+  worksiteStreet?: string | undefined;
+  worksiteHouseNumber?: string | undefined;
+  worksitePostalCode?: string | undefined;
+  worksiteCity?: string | undefined;
+  projectName?: string | undefined;
+  customerId?: string | undefined;
+};
+
+export async function createPortalAppointment(
+  db: Db,
+  userId: string,
+  claimsEmail: unknown,
+  data: PortalAppointmentRequest,
+) {
+  const { buildPortalAppointmentDescription } = await import("./customer-portal");
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  const customerId =
+    data.customerId && access.customerIds.includes(data.customerId)
+      ? data.customerId
+      : access.primaryCustomerId;
+  const { data: customer, error: custErr } = await db
+    .from("customers")
+    .select(
+      "id, name, street, house_number, postal_code, city, phone, email, billing_email, default_vat_rate, branch_id",
+    )
+    .eq("id", customerId)
+    .single();
+  if (custErr || !customer) throw new Error("Klantgegevens niet gevonden.");
+  const { data: created, error: insErr } = await db
+    .from("work_orders")
+    .insert({
+      customer_id: customer.id,
+      customer_name: customer.name,
+      email: customer.email ?? access.email,
+      billing_email: customer.billing_email ?? customer.email ?? access.email,
+      phone: data.contactPhone?.trim() || customer.phone,
+      street: customer.street,
+      house_number: customer.house_number,
+      postal_code: customer.postal_code,
+      city: customer.city,
+      site_street: data.worksiteDifferent ? data.worksiteStreet || null : null,
+      site_house_number: data.worksiteDifferent ? data.worksiteHouseNumber || null : null,
+      site_postal_code: data.worksiteDifferent ? data.worksitePostalCode || null : null,
+      site_city: data.worksiteDifferent ? data.worksiteCity || null : null,
+      use_site_address: !!data.worksiteDifferent,
+      project_name: data.projectName?.trim() || null,
+      description: buildPortalAppointmentDescription({
+        description: data.description,
+        preferredWindow: data.preferredWindow,
+        contactPhone: data.contactPhone,
+        urgent: data.urgent,
+      }),
+      status: "nieuw",
+      scheduled_date: null,
+      urgent: !!data.urgent,
+      vat_rate: customer.default_vat_rate ?? 21,
+      branch_id: customer.branch_id,
+      received_at: new Date().toISOString(),
+    })
+    .select("id, created_at")
+    .single();
+  if (insErr || !created)
+    throw new Error("Afspraakaanvraag kon niet worden opgeslagen. Probeer opnieuw.");
+  return { id: created.id as string, createdAt: created.created_at as string };
+}
+
+/** Admin: give portal access to an address that is not on the customer's records (no mail is sent). */
+export async function grantPortalAccess(
+  db: Db,
+  customerId: string,
+  rawEmail: string,
+  adminId: string,
+) {
+  const email = normalizePortalEmail(rawEmail);
+  if (!portalEmailAllowed(email)) throw new Error("Ongeldig e-mailadres.");
+  const { data: existing } = await db
+    .from("customer_portal_accounts")
+    .select("id, user_id, customer_id, active, email")
+    .ilike("email", escapeIlike(email))
+    .limit(20);
+  const rows = (
+    (existing ?? []) as {
+      id: string;
+      user_id: string | null;
+      customer_id: string;
+      active: boolean;
+      email: string;
+    }[]
+  ).filter((r) => sameEmail(r.email, email));
+  const same = rows.find((r) => r.customer_id === customerId);
+  if (same) {
+    if (!same.active)
+      await db
+        .from("customer_portal_accounts")
+        .update({ active: true, revoked_at: null })
+        .eq("id", same.id);
+    return { email };
+  }
+  if (rows.some((r) => r.user_id)) {
+    throw new Error(
+      "Dit e-mailadres heeft al portaaltoegang via een andere klantfiche. Zet hetzelfde e-mailadres op deze klantfiche, dan wordt ze automatisch gekoppeld.",
+    );
+  }
+  let userId: string | null = null;
+  const { data: c, error } = await db.auth.admin.createUser({
+    email,
+    password: randomPassword(),
+    email_confirm: true,
+    user_metadata: { portal_customer_id: customerId },
+  });
+  if (c?.user) {
+    userId = c.user.id;
+    await db.from("user_roles").insert({ user_id: userId, role: "customer" });
+  } else if (error && /already|exists|registered/i.test(error.message ?? "")) {
+    const { data: link } = await db.auth.admin.generateLink({ type: "magiclink", email });
+    userId = (link?.user?.id as string | undefined) ?? null;
+    if (userId && (await isInternalUser(db, userId)))
+      throw new Error("Dit e-mailadres hoort bij een intern Riory-account.");
+  }
+  if (!userId) throw new Error("Portaaltoegang aanmaken mislukt.");
+  const { error: insErr } = await db
+    .from("customer_portal_accounts")
+    .insert({ customer_id: customerId, user_id: userId, email, active: true, created_by: adminId });
+  if (insErr) throw new Error("Portaaltoegang aanmaken mislukt.");
+  return { email };
 }

@@ -58,7 +58,8 @@ function AuthPage() {
       if (me.user) {
         const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", me.user.id);
         if (roles?.some((r) => r.role === "customer") && !roles.some((r) => r.role !== "customer")) {
-          navigate({ to: "/portaal" });
+          await supabase.auth.signOut();
+          window.location.assign("https://www.riory.be/klantportaal");
           return;
         }
       }

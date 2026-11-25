@@ -5,10 +5,12 @@ import { Copy, KeyRound, ShieldOff, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  createCustomerPortalInvite,
+  grantCustomerPortalAccess,
   listCustomerPortalAccounts,
   setCustomerPortalActive,
 } from "@/lib/customer-portal.functions";
+
+const PORTAL_URL = "https://www.riory.be/klantportaal";
 
 type PortalAccount = {
   id: string;
@@ -27,7 +29,7 @@ export function CustomerPortalAdmin({
   defaultEmail: string;
 }) {
   const listFn = useServerFn(listCustomerPortalAccounts);
-  const inviteFn = useServerFn(createCustomerPortalInvite);
+  const grantFn = useServerFn(grantCustomerPortalAccess);
   const toggleFn = useServerFn(setCustomerPortalActive);
 
   const [accounts, setAccounts] = useState<PortalAccount[]>([]);
@@ -51,19 +53,19 @@ export function CustomerPortalAdmin({
 
   async function handleInvite() {
     if (!email.trim()) {
-      toast.error("Vul een e-mailadres in voor de portaaluitnodiging.");
+      toast.error("Vul een e-mailadres in.");
       return;
     }
     setBusy(true);
     try {
-      const res = await inviteFn({ data: { customerId, email: email.trim() } });
-      setInviteUrl(res.inviteUrl);
+      const res = await grantFn({ data: { customerId, email: email.trim() } });
+      setInviteUrl(PORTAL_URL);
       toast.success(
-        "Eenmalige uitnodigingslink (72u geldig) aangemaakt. Er is nog geen mail verzonden.",
+        `${res.email} kan nu inloggen op www.riory.be/klantportaal. Er is geen mail verzonden.`,
       );
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Uitnodiging aanmaken mislukt.");
+      toast.error(e instanceof Error ? e.message : "Portaaltoegang geven mislukt.");
     } finally {
       setBusy(false);
     }
@@ -87,7 +89,7 @@ export function CustomerPortalAdmin({
   async function copyInvite() {
     if (!inviteUrl) return;
     await navigator.clipboard.writeText(inviteUrl);
-    toast.success("Uitnodigingslink gekopieerd.");
+    toast.success("Portaallink gekopieerd.");
   }
 
   return (
@@ -98,7 +100,7 @@ export function CustomerPortalAdmin({
       </div>
       <p className="text-xs text-muted-foreground">
         Klanten kunnen zelf inloggen met het e-mailadres van hun facturen of werkbonnen: ze krijgen
-        een inloglink per mail. Een uitnodiging is enkel nodig voor een ander e-mailadres.
+        een inloglink per mail. Gebruikt de klant een ander e-mailadres? Geef dat hieronder toegang.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <Input
@@ -109,7 +111,7 @@ export function CustomerPortalAdmin({
           onChange={(e) => setEmail(e.target.value)}
         />
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={handleInvite}>
-          Uitnodigingslink maken (72u)
+          Toegang geven
         </Button>
       </div>
       {inviteUrl && (

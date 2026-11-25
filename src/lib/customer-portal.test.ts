@@ -1,58 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
-  PORTAL_BASE_URL,
+  PORTAL_PUBLIC_URL,
   buildPortalAppointmentDescription,
-  buildPortalInviteUrl,
-  portalInvitationUsable,
-  sanitizePortalNext,
+  portalOriginAllowed,
 } from "./customer-portal";
 
 describe("customer-portal helpers", () => {
-  it("builds invite URL on werkbonnen.riory.be with token in hash fragment", () => {
-    const token = "a".repeat(64);
-    expect(buildPortalInviteUrl(token)).toBe(`${PORTAL_BASE_URL}/portaal/uitnodiging#${token}`);
+  it("only allows riory.be origins to call the portal API", () => {
+    expect(portalOriginAllowed("https://www.riory.be")).toBe(true);
+    expect(portalOriginAllowed("https://riory.be")).toBe(true);
+    expect(portalOriginAllowed("https://riory-abc123-blvjeezys-projects.vercel.app")).toBe(true);
+    expect(portalOriginAllowed("https://evil.example")).toBe(false);
+    expect(portalOriginAllowed("https://www.riory.be.evil.example")).toBe(false);
+    expect(portalOriginAllowed(null)).toBe(false);
   });
 
-  it("sanitizes next parameter to stay strictly inside /portaal", () => {
-    expect(sanitizePortalNext("/portaal")).toBe("/portaal");
-    expect(sanitizePortalNext("/portaal?actie=afspraak")).toBe("/portaal?actie=afspraak");
-    expect(sanitizePortalNext("https://evil.example/phish")).toBe("/portaal");
-    expect(sanitizePortalNext("//evil.example/phish")).toBe("/portaal");
-    expect(sanitizePortalNext("/dashboard")).toBe("/portaal");
-    expect(sanitizePortalNext("/portaal/inloggen")).toBe("/portaal");
-    expect(sanitizePortalNext(undefined)).toBe("/portaal");
-  });
-
-  it("validates invitation expiry and single-use consumption", () => {
-    const now = new Date("2026-11-24T12:00:00Z");
+  it("marks portal appointment requests", () => {
     expect(
-      portalInvitationUsable({ expires_at: "2026-11-27T12:00:00Z", consumed_at: null }, now),
-    ).toBe(true);
-    expect(
-      portalInvitationUsable({ expires_at: "2026-11-24T11:59:59Z", consumed_at: null }, now),
-    ).toBe(false);
-    expect(
-      portalInvitationUsable(
-        { expires_at: "2026-11-27T12:00:00Z", consumed_at: "2026-11-24T12:00:00Z" },
-        now,
-      ),
-    ).toBe(false);
-  });
-
-  it("formats portal appointment description for Kalender -> Nog in te plannen", () => {
-    const text = buildPortalAppointmentDescription({
-      description: "Verstopping keukenafvoer",
-      preferredWindow: "Donderdag voormiddag",
-      contactPhone: "0470 12 34 56",
-      urgent: true,
-    });
-    expect(text).toContain("Verstopping keukenafvoer");
-    expect(text).toContain("Voorkeur moment: Donderdag voormiddag");
-    expect(text).toContain("Contacttelefoon aanvraag: 0470 12 34 56");
-    expect(text).toContain("Aangeduid als dringend door klant.");
-    expect(text).toContain("[Aangevraagd via klantenportaal]");
+      buildPortalAppointmentDescription({ description: "Wc verstopt", urgent: true }),
+    ).toContain("[Aangevraagd via klantenportaal]");
   });
 });
+
 import {
   buildPortalLoginUrl,
   escapeIlike,
@@ -71,7 +40,7 @@ describe("customer-portal email login helpers", () => {
 
   it("puts the login token in the hash and rejects malformed tokens", () => {
     const t = "b".repeat(56);
-    expect(buildPortalLoginUrl(t)).toBe(`${PORTAL_BASE_URL}/portaal/inloggen#login=${t}`);
+    expect(buildPortalLoginUrl(t)).toBe(`${PORTAL_PUBLIC_URL}#login=${t}`);
     expect(() => buildPortalLoginUrl("x?y=1")).toThrow();
   });
 });
