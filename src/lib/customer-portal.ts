@@ -84,8 +84,15 @@ export function nextPortalLoginLog(
 }
 
 /** PostgREST treats `*` as a wildcard that cannot be escaped, so such addresses are refused outright. */
+/**
+ * Test phase: only these addresses may use the portal. Set to null to open it to every customer.
+ */
+export const PORTAL_TEST_ALLOWLIST: readonly string[] | null = ["jasonbalongo@gmail.com"];
+
 export function portalEmailAllowed(email: string): boolean {
-  return !email.includes("*");
+  if (email.includes("*")) return false;
+  if (PORTAL_TEST_ALLOWLIST === null) return true;
+  return PORTAL_TEST_ALLOWLIST.includes(email.trim().toLowerCase());
 }
 
 /** Exact, case-insensitive comparison used to double-check every ilike match server-side. */

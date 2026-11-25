@@ -211,6 +211,8 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
   const email = normalizePortalEmail(
     typeof claimsEmail === "string" && claimsEmail ? claimsEmail : active[0]!.email,
   );
+  if (!portalEmailAllowed(email))
+    throw new Error("Het klantenportaal is nog niet open voor dit account.");
   const linked = await findPortalCustomerIds(db, email);
   const customerIds = uniq([...active.map((a) => a.customer_id), ...linked]);
   await db
@@ -654,7 +656,10 @@ export async function grantPortalAccess(
   adminId: string,
 ) {
   const email = normalizePortalEmail(rawEmail);
-  if (!portalEmailAllowed(email)) throw new Error("Ongeldig e-mailadres.");
+  if (!portalEmailAllowed(email))
+    throw new Error(
+      "Het klantenportaal is in testfase: enkel de testaccounts kunnen voorlopig toegang krijgen.",
+    );
   const { data: existing } = await db
     .from("customer_portal_accounts")
     .select("id, user_id, customer_id, active, email")
@@ -725,13 +730,7 @@ export async function portalLoginUrlForGoogleUser(
   const email = typeof rawEmail === "string" ? normalizePortalEmail(rawEmail) : "";
   const { data: u } = await db.auth.admin.getUserById(userId);
   const user = u?.user;
-  if (
-    !user ||
-    !email ||
-    !portalEmailAllowed(email) ||
-    normalizePortalEmail(user.email ?? "") !== email
-  )
-    return null;
+  if (!user || !email || normalizePortalEmail(user.email ?? "") !== email) return null;
 
   const { data: roleRows } = await db.from("user_roles").select("role").eq("user_id", userId);
   const roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);

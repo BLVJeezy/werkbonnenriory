@@ -113,6 +113,7 @@ describe("customer-portal display helpers", () => {
 
 import {
   nextPortalLoginLog,
+  PORTAL_TEST_ALLOWLIST,
   portalEmailAllowed,
   portalLoginAllowed,
   sameEmail,
@@ -121,7 +122,8 @@ import {
 describe("customer-portal hardening", () => {
   it("refuses PostgREST wildcards and only accepts exact address matches", () => {
     expect(portalEmailAllowed("a*@gmail.com")).toBe(false);
-    expect(portalEmailAllowed("first_last@riory.be")).toBe(true);
+    expect(portalEmailAllowed("first_last@riory.be")).toBe(PORTAL_TEST_ALLOWLIST === null);
+    expect(portalEmailAllowed(" JasonBalongo@gmail.com")).toBe(true);
     expect(sameEmail(" Jason@Gmail.com ", "jason@gmail.com")).toBe(true);
     expect(sameEmail("jasonX@gmail.com", "jason@gmail.com")).toBe(false);
     expect(sameEmail(null, "jason@gmail.com")).toBe(false);
