@@ -52,3 +52,17 @@ export const setCustomerPortalActive = createServerFn({ method: "POST" })
     if (error) throw new Error("Status wijzigen mislukt.");
     return { ok: true };
   });
+
+/** Google sign-in hand-off: turns the Google session on this domain into a one-time portal login on www.riory.be. */
+export const portalGoogleHandoff = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { portalLoginUrlForGoogleUser } = await import("./customer-portal.server");
+    const url = await portalLoginUrlForGoogleUser(
+      supabaseAdmin,
+      context.userId,
+      (context.claims as { email?: unknown })?.email,
+    );
+    return { url };
+  });

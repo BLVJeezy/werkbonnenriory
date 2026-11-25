@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AdminUitnodigingRouteImport } from './routes/admin-uitnodiging'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as KlantportaalGoogleRouteImport } from './routes/klantportaal-google'
 import { Route as PloegUitnodigingRouteImport } from './routes/ploeg-uitnodiging'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TikklokRouteImport } from './routes/tikklok'
@@ -85,6 +86,11 @@ const AdminUitnodigingRoute = AdminUitnodigingRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KlantportaalGoogleRoute = KlantportaalGoogleRouteImport.update({
+  id: '/klantportaal-google',
+  path: '/klantportaal-google',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PloegUitnodigingRoute = PloegUitnodigingRouteImport.update({
@@ -391,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin-uitnodiging': typeof AdminUitnodigingRoute
   '/auth': typeof AuthRoute
+  '/klantportaal-google': typeof KlantportaalGoogleRoute
   '/ploeg-uitnodiging': typeof PloegUitnodigingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/tikklok': typeof TikklokRoute
@@ -450,6 +457,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin-uitnodiging': typeof AdminUitnodigingRoute
   '/auth': typeof AuthRoute
+  '/klantportaal-google': typeof KlantportaalGoogleRoute
   '/ploeg-uitnodiging': typeof PloegUitnodigingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/tikklok': typeof TikklokRoute
@@ -511,6 +519,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/admin-uitnodiging': typeof AdminUitnodigingRoute
   '/auth': typeof AuthRoute
+  '/klantportaal-google': typeof KlantportaalGoogleRoute
   '/ploeg-uitnodiging': typeof PloegUitnodigingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/tikklok': typeof TikklokRoute
@@ -572,6 +581,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-uitnodiging'
     | '/auth'
+    | '/klantportaal-google'
     | '/ploeg-uitnodiging'
     | '/reset-password'
     | '/tikklok'
@@ -631,6 +641,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-uitnodiging'
     | '/auth'
+    | '/klantportaal-google'
     | '/ploeg-uitnodiging'
     | '/reset-password'
     | '/tikklok'
@@ -691,6 +702,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/admin-uitnodiging'
     | '/auth'
+    | '/klantportaal-google'
     | '/ploeg-uitnodiging'
     | '/reset-password'
     | '/tikklok'
@@ -752,6 +764,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AdminUitnodigingRoute: typeof AdminUitnodigingRoute
   AuthRoute: typeof AuthRoute
+  KlantportaalGoogleRoute: typeof KlantportaalGoogleRoute
   PloegUitnodigingRoute: typeof PloegUitnodigingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TikklokRoute: typeof TikklokRoute
@@ -810,6 +823,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/klantportaal-google': {
+      id: '/klantportaal-google'
+      path: '/klantportaal-google'
+      fullPath: '/klantportaal-google'
+      preLoaderRoute: typeof KlantportaalGoogleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ploeg-uitnodiging': {
@@ -1260,6 +1280,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AdminUitnodigingRoute: AdminUitnodigingRoute,
   AuthRoute: AuthRoute,
+  KlantportaalGoogleRoute: KlantportaalGoogleRoute,
   PloegUitnodigingRoute: PloegUitnodigingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TikklokRoute: TikklokRoute,

@@ -51,7 +51,9 @@ export const Route = createFileRoute("/_authenticated")({
     if (data.user) {
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
       const isInternal = roles?.some((r) => r.role === "admin" || r.role === "technician" || r.role === "marketing");
-      if (!isInternal && roles?.some((r) => r.role === "customer")) {
+      if (!isInternal) {
+        // Customers (and any login without a staff role, e.g. a Google sign-in) belong in the portal on riory.be.
+        await supabase.auth.signOut();
         throw redirect({ href: "https://www.riory.be/klantportaal" });
       }
       return;

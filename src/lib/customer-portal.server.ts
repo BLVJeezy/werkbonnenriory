@@ -206,8 +206,8 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
   const active = accounts.filter((a) => a.active);
   if (!active.length)
     throw new Error("Geen actieve toegang tot het klantenportaal voor dit account.");
-  if (await isInternalUser(db, userId))
-    throw new Error("Dit is een Riory-medewerkersaccount. Log in met een klantaccount.");
+  if (await staffBlocked(db, userId))
+    throw new Error("Dit is een Riory-medewerkersaccount zonder portaaltoegang.");
   const email = normalizePortalEmail(
     typeof claimsEmail === "string" && claimsEmail ? claimsEmail : active[0]!.email,
   );
@@ -228,11 +228,26 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
   };
 }
 
-/** Staff accounts (admin, technician, marketing) never get passwordless portal access. */
 async function isInternalUser(db: Db, userId: string): Promise<boolean> {
   const { data, error } = await db.from("user_roles").select("role").eq("user_id", userId);
   if (error) return true;
   return ((data ?? []) as { role: string }[]).some((r) => r.role !== "customer");
+}
+
+/**
+ * Staff accounts (admin, technician, marketing) only get portal access when an admin
+ * explicitly granted it ("Toegang geven" in the customer file); never automatically.
+ */
+async function staffBlocked(db: Db, userId: string): Promise<boolean> {
+  if (!(await isInternalUser(db, userId))) return false;
+  const { data } = await db
+    .from("customer_portal_accounts")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("active", true)
+    .not("created_by", "is", null)
+    .limit(1);
+  return !(data ?? []).length;
 }
 
 function randomPassword(): string {
@@ -322,7 +337,7 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
   if (userId) {
     const { data: u } = await db.auth.admin.getUserById(userId);
     if (!u?.user) userId = null;
-    else if (await isInternalUser(db, userId)) return;
+    else if (await staffBlocked(db, userId)) return;
     else if (!portalLoginAllowed(u.user.app_metadata?.portal_login_log as string[] | undefined))
       return;
   }
@@ -353,7 +368,7 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
     return;
   }
   userId = link.user.id as string;
-  if (!created && (await isInternalUser(db, userId))) return;
+  if (!created && (await staffBlocked(db, userId))) return;
   if (
     !created &&
     !portalLoginAllowed(link.user.app_metadata?.portal_login_log as string[] | undefined)
@@ -656,12 +671,19 @@ export async function grantPortalAccess(
   ).filter((r) => sameEmail(r.email, email));
   const same = rows.find((r) => r.customer_id === customerId);
   if (same) {
-    if (!same.active)
-      await db
-        .from("customer_portal_accounts")
-        .update({ active: true, revoked_at: null })
-        .eq("id", same.id);
+    await db
+      .from("customer_portal_accounts")
+      .update({ active: true, revoked_at: null, created_by: adminId })
+      .eq("id", same.id);
     return { email };
+  }
+  const linkedRow = rows.find((r) => r.user_id && r.active);
+  if (linkedRow) {
+    // Already a login for this address: record the admin's explicit grant on it.
+    await db
+      .from("customer_portal_accounts")
+      .update({ created_by: adminId })
+      .eq("id", linkedRow.id);
   }
   if (rows.some((r) => r.user_id)) {
     throw new Error(
@@ -681,8 +703,6 @@ export async function grantPortalAccess(
   } else if (error && /already|exists|registered/i.test(error.message ?? "")) {
     const { data: link } = await db.auth.admin.generateLink({ type: "magiclink", email });
     userId = (link?.user?.id as string | undefined) ?? null;
-    if (userId && (await isInternalUser(db, userId)))
-      throw new Error("Dit e-mailadres hoort bij een intern Riory-account.");
   }
   if (!userId) throw new Error("Portaaltoegang aanmaken mislukt.");
   const { error: insErr } = await db
@@ -690,4 +710,74 @@ export async function grantPortalAccess(
     .insert({ customer_id: customerId, user_id: userId, email, active: true, created_by: adminId });
   if (insErr) throw new Error("Portaaltoegang aanmaken mislukt.");
   return { email };
+}
+
+/**
+ * Google sign-in for the portal: the customer signed in with Google on werkbonnen.riory.be/klantportaal-google;
+ * if that Google address belongs to a customer, return a one-time portal login URL for www.riory.be.
+ * A brand-new Google account that is not a customer is removed again, so Google sign-in never creates stray logins.
+ */
+export async function portalLoginUrlForGoogleUser(
+  db: Db,
+  userId: string,
+  rawEmail: unknown,
+): Promise<string | null> {
+  const email = typeof rawEmail === "string" ? normalizePortalEmail(rawEmail) : "";
+  const { data: u } = await db.auth.admin.getUserById(userId);
+  const user = u?.user;
+  if (
+    !user ||
+    !email ||
+    !portalEmailAllowed(email) ||
+    normalizePortalEmail(user.email ?? "") !== email
+  )
+    return null;
+
+  const { data: roleRows } = await db.from("user_roles").select("role").eq("user_id", userId);
+  const roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
+  const { data: accRows } = await db
+    .from("customer_portal_accounts")
+    .select("id, customer_id, active, email, user_id")
+    .ilike("email", escapeIlike(email))
+    .limit(20);
+  const accounts = (
+    (accRows ?? []) as {
+      id: string;
+      customer_id: string;
+      active: boolean;
+      email: string;
+      user_id: string | null;
+    }[]
+  ).filter((a) => sameEmail(a.email, email));
+  const linked = await findPortalCustomerIds(db, email);
+  const customerIds = uniq([
+    ...accounts.filter((a) => a.active).map((a) => a.customer_id),
+    ...linked,
+  ]);
+
+  const fresh = Date.now() - new Date(user.created_at).getTime() < 15 * 60 * 1000;
+  if ((accounts.length && !accounts.some((a) => a.active)) || !customerIds.length) {
+    if (fresh && roles.length === 0 && accounts.length === 0)
+      await db.auth.admin.deleteUser(userId);
+    return null;
+  }
+  if (roles.some((r) => r !== "customer") && (await staffBlocked(db, userId))) return null;
+  if (roles.length === 0) await db.from("user_roles").insert({ user_id: userId, role: "customer" });
+  if (!accounts.some((a) => a.user_id === userId)) {
+    const stale = accounts[0];
+    if (stale)
+      await db.from("customer_portal_accounts").update({ user_id: userId }).eq("id", stale.id);
+    else {
+      const { error } = await db
+        .from("customer_portal_accounts")
+        .insert({ customer_id: customerIds[0], user_id: userId, email, active: true });
+      if (error) return null;
+    }
+  }
+  const { data: link, error: linkErr } = await db.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+  });
+  if (linkErr || !link?.properties?.hashed_token) return null;
+  return buildPortalLoginUrl(link.properties.hashed_token);
 }
