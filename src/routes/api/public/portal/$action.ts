@@ -16,7 +16,11 @@ const loginInput = z.object({
     .refine((v) => !v.includes("*")),
 });
 const exchangeInput = z.object({ token: z.string().regex(/^[a-zA-Z0-9_-]{32,512}$/) });
-const documentInput = z.object({ type: z.enum(["factuur", "werkbon"]), id: z.string().uuid() });
+const documentInput = z.object({
+  type: z.enum(["factuur", "werkbon"]),
+  // Real documents use UUIDs; "demo-…" ids are the in-memory examples for the test account.
+  id: z.union([z.string().uuid(), z.string().regex(/^demo-[a-z-]{2,30}$/)]),
+});
 const appointmentInput = z.object({
   description: z
     .string()

@@ -525,7 +525,9 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
   );
   const today = new Date();
   const { PORTAL_SERVICES } = await import("./customer-portal");
-  return {
+  const demo = await import("./customer-portal-demo");
+  const withDemo = demo.portalDemoEnabled(access.email, access.preview);
+  const overview = {
     accountEmail: access.email,
     preview: access.preview
       ? { name: (ordered[0] as { name?: string } | undefined)?.name ?? "klant" }
@@ -574,6 +576,13 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
         q.status === "verzonden" && q.token ? `${PORTAL_DOCUMENT_HOST}/offerte/${q.token}` : null,
     })),
   };
+  if (!withDemo) return overview;
+  // Test account only: in-memory examples of every work-order and invoice state, never stored.
+  return {
+    ...overview,
+    workOrders: [...demo.demoWorkOrders(today), ...overview.workOrders],
+    invoices: [...demo.demoInvoices(today), ...overview.invoices],
+  };
 }
 
 const PORTAL_DOCUMENT_HOST = "https://werkbonnen.riory.be";
@@ -585,6 +594,16 @@ export async function buildPortalDocument(
   input: { type: "factuur" | "werkbon"; id: string },
 ): Promise<{ pdf: Uint8Array; filename: string }> {
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  const demo = await import("./customer-portal-demo");
+  if (input.id.startsWith(demo.DEMO_PREFIX)) {
+    if (!demo.portalDemoEnabled(access.email, access.preview)) throw new Error("Document niet gevonden.");
+    const { data: c } = await db
+      .from("customers")
+      .select("name")
+      .eq("id", access.primaryCustomerId)
+      .maybeSingle();
+    return demo.demoDocument(input.type, input.id, (c as { name?: string } | null)?.name ?? "Klant");
+  }
   const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
 
   if (input.type === "factuur") {
