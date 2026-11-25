@@ -307,7 +307,7 @@ export function GroundPlanEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="flex max-h-[95dvh] max-w-5xl flex-col gap-3 overflow-y-auto p-4 sm:p-6">
+      <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col gap-2 overflow-y-auto rounded-none p-3 sm:h-auto sm:max-h-[95dvh] sm:w-[calc(100vw-2rem)] sm:max-w-5xl sm:gap-3 sm:rounded-lg sm:p-6">
         <DialogHeader>
           <DialogTitle>Rioolstelsel / Grondplan intekenen</DialogTitle>
         </DialogHeader>
@@ -405,12 +405,12 @@ export function GroundPlanEditorDialog({
           </div>
         )}
 
-        <div className="overflow-hidden rounded-md border bg-muted/20">
+        <div className="flex min-h-[45dvh] flex-1 items-center justify-center overflow-hidden rounded-md border bg-muted/20">
           <canvas
             ref={canvasRef}
             width={canvasW}
             height={canvasH}
-            className="block w-full touch-none select-none cursor-crosshair"
+            className="block max-h-full max-w-full touch-none select-none cursor-crosshair"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
