@@ -54,7 +54,7 @@ export type PlanPoint = { x: number; y: number };
 export type PlanElement =
   | { kind: "stroke"; color: string; width: number; points: PlanPoint[] }
   | { kind: "line"; color: string; width: number; x1: number; y1: number; x2: number; y2: number; arrow?: boolean }
-  | { kind: "stamp"; stamp: StampType; color: string; x: number; y: number; label?: string }
+  | { kind: "stamp"; stamp: StampType; color: string; x: number; y: number; label?: string; size?: number; rotation?: number }
   | { kind: "text"; color: string; x: number; y: number; text: string };
 
 const VALID_STAMPS = new Set<string>(STAMP_PRESETS.map((s) => s.id));
@@ -101,6 +101,8 @@ export function parseDrawingData(raw: unknown): PlanElement[] {
     ) {
       const el: PlanElement = { kind: "stamp", stamp: rec["stamp"] as StampType, color, x: rec["x"], y: rec["y"] };
       if (typeof rec["label"] === "string" && rec["label"].trim()) el.label = rec["label"].trim();
+      if (isFiniteNum(rec["size"])) el.size = Math.max(0.5, Math.min(3, rec["size"]));
+      if (isFiniteNum(rec["rotation"])) el.rotation = ((rec["rotation"] % 360) + 360) % 360;
       out.push(el);
     } else if (
       kind === "text" &&
@@ -172,9 +174,16 @@ export function drawGridBackground(ctx: CanvasRenderingContext2D, w: number, h: 
 }
 
 /** Renders all normalized plan elements onto a 2D canvas context. */
-export function drawPlanElements(ctx: CanvasRenderingContext2D, w: number, h: number, elements: readonly PlanElement[]) {
+export function drawPlanElements(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  elements: readonly PlanElement[],
+  selectedIndex = -1,
+) {
   const scale = Math.min(w, h) / 800;
-  for (const el of elements) {
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i]!;
     ctx.save();
     if (el.kind === "stroke") {
       const first = el.points[0];
@@ -217,25 +226,31 @@ export function drawPlanElements(ctx: CanvasRenderingContext2D, w: number, h: nu
       const preset = STAMP_PRESETS.find((s) => s.id === el.stamp) ?? STAMP_PRESETS[0]!;
       const cx = el.x * w;
       const cy = el.y * h;
-      const r = Math.max(14, 18 * scale);
+      const sizeMul = el.size ?? 1;
+      const r = Math.max(14, 18 * scale) * sizeMul;
+      const rad = ((el.rotation ?? 0) * Math.PI) / 180;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (rad !== 0) ctx.rotate(rad);
       ctx.fillStyle = "#ffffff";
       ctx.strokeStyle = el.color;
       ctx.lineWidth = Math.max(2, 3 * scale);
       ctx.beginPath();
       if (preset.shape === "circle" || preset.shape === "double_circle") {
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
       } else if (preset.shape === "square" || preset.shape === "double_square" || preset.shape === "grate") {
-        ctx.rect(cx - r, cy - r, r * 2, r * 2);
+        ctx.rect(-r, -r, r * 2, r * 2);
       } else if (preset.shape === "diamond") {
-        ctx.moveTo(cx, cy - r * 1.15);
-        ctx.lineTo(cx + r * 1.15, cy);
-        ctx.lineTo(cx, cy + r * 1.15);
-        ctx.lineTo(cx - r * 1.15, cy);
+        ctx.moveTo(0, -r * 1.15);
+        ctx.lineTo(r * 1.15, 0);
+        ctx.lineTo(0, r * 1.15);
+        ctx.lineTo(-r * 1.15, 0);
         ctx.closePath();
       } else {
-        ctx.moveTo(cx, cy - r * 1.1);
-        ctx.lineTo(cx + r * 1.1, cy + r * 0.9);
-        ctx.lineTo(cx - r * 1.1, cy + r * 0.9);
+        ctx.moveTo(0, -r * 1.1);
+        ctx.lineTo(r * 1.1, r * 0.9);
+        ctx.lineTo(-r * 1.1, r * 0.9);
         ctx.closePath();
       }
       ctx.fill();
@@ -243,26 +258,36 @@ export function drawPlanElements(ctx: CanvasRenderingContext2D, w: number, h: nu
       if (preset.shape === "double_circle") {
         ctx.beginPath();
         ctx.lineWidth = Math.max(1.2, 1.8 * scale);
-        ctx.arc(cx, cy, r * 0.76, 0, Math.PI * 2);
+        ctx.arc(0, 0, r * 0.76, 0, Math.PI * 2);
         ctx.stroke();
       } else if (preset.shape === "double_square") {
         const ir = r * 0.74;
         ctx.lineWidth = Math.max(1.2, 1.8 * scale);
-        ctx.strokeRect(cx - ir, cy - ir, ir * 2, ir * 2);
+        ctx.strokeRect(-ir, -ir, ir * 2, ir * 2);
       } else if (preset.shape === "grate") {
         ctx.beginPath();
         ctx.lineWidth = Math.max(1, 1.4 * scale);
         for (const offset of [-0.45, 0.45]) {
-          ctx.moveTo(cx - r * 0.75, cy + r * offset);
-          ctx.lineTo(cx + r * 0.75, cy + r * offset);
+          ctx.moveTo(-r * 0.75, r * offset);
+          ctx.lineTo(r * 0.75, r * offset);
         }
         ctx.stroke();
       }
       ctx.fillStyle = el.color;
-      ctx.font = `700 ${Math.max(10, Math.round(11 * scale))}px sans-serif`;
+      ctx.font = `700 ${Math.max(10, Math.round(11 * scale * Math.min(1.6, sizeMul)))}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(preset.code, cx, cy);
+      ctx.fillText(preset.code, 0, 0);
+      ctx.restore();
+
+      if (i === selectedIndex) {
+        ctx.save();
+        ctx.strokeStyle = "#ea580c";
+        ctx.lineWidth = Math.max(1.5, 2 * scale);
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(cx - r - 6, cy - r - 6, (r + 6) * 2, (r + 6) * 2);
+        ctx.restore();
+      }
       if (el.label) {
         const fontSize = Math.max(11, Math.round(12 * scale));
         ctx.font = `600 ${fontSize}px sans-serif`;

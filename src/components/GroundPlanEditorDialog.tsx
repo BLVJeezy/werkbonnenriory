@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowUpRight, Eraser, Hand, Minus, Pencil, Redo2, Stamp, Trash2, Type, Undo2, Upload, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowUpRight, Eraser, Hand, Minus, MousePointer2, Pencil, Redo2, RotateCcw, RotateCw, Stamp, Trash2, Type, Undo2, Upload, ZoomIn, ZoomOut } from "lucide-react";
 
 const BUCKET = "werkbon-fotos";
 
@@ -36,7 +36,7 @@ export type GroundPlanRecord = {
   backgroundUrl?: string | null;
 };
 
-type Tool = "pan" | "pen" | "line" | "arrow" | "stamp" | "text" | "eraser";
+type Tool = "select" | "pan" | "pen" | "line" | "arrow" | "stamp" | "text" | "eraser";
 
 type Props = {
   open: boolean;
@@ -73,6 +73,7 @@ export function GroundPlanEditorDialog({
   const [elements, setElements] = useState<PlanElement[]>([]);
   const [redoStack, setRedoStack] = useState<PlanElement[][]>([]);
   const [draft, setDraft] = useState<PlanElement | null>(null);
+  const [selectedIdx, setSelectedIdx] = useState<number>(-1);
   const [bgFile, setBgFile] = useState<File | null>(null);
   const [bgPath, setBgPath] = useState<string | null>(null);
   const [bgSrc, setBgSrc] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export function GroundPlanEditorDialog({
   const [saving, setSaving] = useState(false);
 
   const drawingRef = useRef(false);
+  const draggingStampRef = useRef<number>(-1);
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +91,7 @@ export function GroundPlanEditorDialog({
     setElements(parseDrawingData(existingPlan?.drawing_data));
     setRedoStack([]);
     setDraft(null);
+    setSelectedIdx(-1);
     setBgFile(null);
     setBgPath(existingPlan?.background_path ?? null);
     setBgSrc(existingPlan?.backgroundUrl ?? null);
@@ -133,13 +136,13 @@ export function GroundPlanEditorDialog({
     } else {
       drawGridBackground(ctx, w, h);
     }
-    drawPlanElements(ctx, w, h, draft ? [...elements, draft] : elements);
+    drawPlanElements(ctx, w, h, draft ? [...elements, draft] : elements, selectedIdx);
   }
 
   useEffect(() => {
     redraw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elements, draft, aspect, open]);
+  }, [elements, draft, aspect, open, selectedIdx]);
 
   function getNormPoint(e: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current!;
@@ -165,15 +168,31 @@ export function GroundPlanEditorDialog({
       return;
     }
     const pt = getNormPoint(e);
+    if (tool === "select") {
+      const idx = findNearestElementIndex(elements, pt.x, pt.y, 0.05);
+      const hit = idx >= 0 ? elements[idx] : null;
+      if (hit && hit.kind === "stamp") {
+        setSelectedIdx(idx);
+        draggingStampRef.current = idx;
+      } else {
+        setSelectedIdx(-1);
+        draggingStampRef.current = -1;
+      }
+      return;
+    }
     if (tool === "eraser") {
       const idx = findNearestElementIndex(elements, pt.x, pt.y);
-      if (idx >= 0) pushElements(elements.filter((_, i) => i !== idx));
+      if (idx >= 0) {
+        if (selectedIdx === idx) setSelectedIdx(-1);
+        pushElements(elements.filter((_, i) => i !== idx));
+      }
       return;
     }
     if (tool === "stamp") {
       const label = window.prompt("Optioneel bijschrift (bv. diepte 65 cm):", "")?.trim();
-      const el: PlanElement = { kind: "stamp", stamp, color, x: pt.x, y: pt.y };
+      const el: PlanElement = { kind: "stamp", stamp, color, x: pt.x, y: pt.y, size: 1, rotation: 0 };
       if (label) el.label = label;
+      setSelectedIdx(elements.length);
       pushElements([...elements, el]);
       return;
     }
@@ -196,6 +215,14 @@ export function GroundPlanEditorDialog({
       scrollRef.current.scrollTop = panStartRef.current.top - (e.clientY - panStartRef.current.y);
       return;
     }
+    if (tool === "select" && draggingStampRef.current >= 0) {
+      const pt = getNormPoint(e);
+      const idx = draggingStampRef.current;
+      setElements((prev) =>
+        prev.map((el, i) => (i === idx && el.kind === "stamp" ? { ...el, x: pt.x, y: pt.y } : el)),
+      );
+      return;
+    }
     if (!drawingRef.current || !draft) return;
     const pt = getNormPoint(e);
     if (draft.kind === "stroke") {
@@ -208,6 +235,10 @@ export function GroundPlanEditorDialog({
   function onPointerUp() {
     if (panStartRef.current) {
       panStartRef.current = null;
+      return;
+    }
+    if (draggingStampRef.current >= 0) {
+      draggingStampRef.current = -1;
       return;
     }
     if (!drawingRef.current) return;
@@ -325,6 +356,18 @@ export function GroundPlanEditorDialog({
   const canvasW = 1000;
   const canvasH = Math.round(canvasW / aspect);
 
+  const selectedStamp =
+    selectedIdx >= 0 && elements[selectedIdx]?.kind === "stamp"
+      ? (elements[selectedIdx] as Extract<PlanElement, { kind: "stamp" }>)
+      : null;
+
+  function updateSelectedStamp(patch: Partial<Extract<PlanElement, { kind: "stamp" }>>) {
+    if (selectedIdx < 0) return;
+    pushElements(
+      elements.map((el, i) => (i === selectedIdx && el.kind === "stamp" ? { ...el, ...patch } : el)),
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col gap-2 overflow-y-auto rounded-none p-3 sm:h-auto sm:max-h-[95dvh] sm:w-[calc(100vw-2rem)] sm:max-w-5xl sm:gap-3 sm:rounded-lg sm:p-6">
@@ -374,6 +417,7 @@ export function GroundPlanEditorDialog({
 
         <div className="flex flex-wrap items-center gap-1.5">
           {([
+            ["select", "Verplaatsen", MousePointer2],
             ["pan", "Slepen", Hand],
             ["line", "Leiding", Minus],
             ["arrow", "Stroomrichting", ArrowUpRight],
@@ -426,6 +470,74 @@ export function GroundPlanEditorDialog({
                 {s.label}
               </Button>
             ))}
+          </div>
+        )}
+
+        {selectedStamp && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2.5 py-1.5 text-xs">
+            <span className="font-semibold">Geselecteerd symbool:</span>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">Grootte</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2"
+                onClick={() => updateSelectedStamp({ size: Math.max(0.5, +((selectedStamp.size ?? 1) - 0.2).toFixed(2)) })}
+              >
+                −
+              </Button>
+              <span className="w-10 text-center font-mono">{Math.round((selectedStamp.size ?? 1) * 100)}%</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2"
+                onClick={() => updateSelectedStamp({ size: Math.min(3, +((selectedStamp.size ?? 1) + 0.2).toFixed(2)) })}
+              >
+                +
+              </Button>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">Draaien</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2"
+                title="15° linksom"
+                onClick={() => updateSelectedStamp({ rotation: (((selectedStamp.rotation ?? 0) - 15) + 360) % 360 })}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+              <span className="w-10 text-center font-mono">{Math.round(selectedStamp.rotation ?? 0)}°</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2"
+                title="15° rechtsom"
+                onClick={() => updateSelectedStamp({ rotation: ((selectedStamp.rotation ?? 0) + 15) % 360 })}
+              >
+                <RotateCw className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 font-mono text-xs"
+                onClick={() => updateSelectedStamp({ rotation: ((selectedStamp.rotation ?? 0) + 90) % 360 })}
+              >
+                +90°
+              </Button>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto h-7 text-xs text-destructive"
+              onClick={() => {
+                const idx = selectedIdx;
+                setSelectedIdx(-1);
+                pushElements(elements.filter((_, i) => i !== idx));
+              }}
+            >
+              Verwijderen
+            </Button>
           </div>
         )}
 
