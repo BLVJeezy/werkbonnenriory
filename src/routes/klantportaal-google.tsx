@@ -54,6 +54,10 @@ function GoogleHandoff() {
         if (error) return back("google");
       }
 
+      if (params.get("start") === "1") {
+        // Always a fresh Google sign-in: never reuse a session that is already open on this domain.
+        await supabase.auth.signOut({ scope: "local" });
+      }
       let { data } = await supabase.auth.getSession();
       if (!data.session && params.get("start") === "1") {
         setText("U wordt doorgestuurd naar Google…");

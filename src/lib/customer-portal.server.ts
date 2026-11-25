@@ -731,6 +731,17 @@ export async function portalLoginUrlForGoogleUser(
   const { data: u } = await db.auth.admin.getUserById(userId);
   const user = u?.user;
   if (!user || !email || normalizePortalEmail(user.email ?? "") !== email) return null;
+  if (!portalEmailAllowed(email)) {
+    const fresh = Date.now() - new Date(user.created_at).getTime() < 15 * 60 * 1000;
+    const { data: r } = await db.from("user_roles").select("role").eq("user_id", userId);
+    const { data: a } = await db
+      .from("customer_portal_accounts")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1);
+    if (fresh && !(r ?? []).length && !(a ?? []).length) await db.auth.admin.deleteUser(userId);
+    return null;
+  }
 
   const { data: roleRows } = await db.from("user_roles").select("role").eq("user_id", userId);
   const roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
