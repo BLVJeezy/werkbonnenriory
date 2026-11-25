@@ -39,6 +39,7 @@ import { WorkOrderPreview } from '@/components/WorkOrderPreview';
 import { startCcvPayment } from '@/lib/ccv.functions';
 import { FirstCustomerLabel } from '@/components/FirstCustomerLabel';
 import { OnderwegSms } from '@/components/OnderwegSms';
+import { OnderwegWhatsApp } from '@/components/OnderwegWhatsApp';
 import { SearchSelect } from '@/components/SearchSelect';
 import { materialChoices } from '@/lib/material-options';
 import { InsuranceReportPanel } from '@/components/InsuranceReportPanel';
@@ -295,6 +296,7 @@ function Detail() {
       {isAdmin && locked && <TabsContent value="verzekering"><InsuranceReportPanel key={id} id={id} notes={wo.work_notes} initialText={wo.insurance_report_text} email={wo.email} /></TabsContent>}
       <TabsContent value="werkbon" className="space-y-6">
       {(isAdmin || role === "technician") && !locked && <OnderwegSms workOrderId={id} />}
+      {(isAdmin || role === "technician") && !locked && <OnderwegWhatsApp workOrderId={id} />}
 
       <section className="grid gap-4 rounded-md border-2 border-primary bg-card p-4 sm:grid-cols-[1fr_10rem]">
         <div className="min-w-0 space-y-1">

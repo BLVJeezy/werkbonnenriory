@@ -12,6 +12,7 @@ import { WorkOrderPreview } from "@/components/WorkOrderPreview";
 import { WerkbonMailButton } from "@/components/WerkbonMailButton";
 import { FirstCustomerLabel } from "@/components/FirstCustomerLabel";
 import { OnderwegSms } from "@/components/OnderwegSms";
+import { OnderwegWhatsApp } from "@/components/OnderwegWhatsApp";
 import { showOnderwegSms } from "@/lib/onderweg-sms";
 
 type Row = SiteAddressParts & {
@@ -87,6 +88,7 @@ function RowLink({ w, label, extra, below }: { w: Row; label: string; extra?: Re
         {!signed && <TaskActions id={w.id} address={destinationAddress(w)} phone={showContact ? w.phone : null} contactPhone={w.site_contact_phone} contactName={w.site_contact_name} runningEntryId={running?.id ?? null} manualTime={!!w.technicians?.manual_time_entry} noAnswerAt={w.no_answer_at} />}
       </div>
       {showOnderwegSms(w.status) && <OnderwegSms compact workOrderId={w.id} />}
+      {showOnderwegSms(w.status) && <OnderwegWhatsApp compact workOrderId={w.id} />}
     </div>
   );
 }
