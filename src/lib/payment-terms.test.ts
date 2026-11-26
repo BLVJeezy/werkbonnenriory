@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCustomerPaymentTermInsertPatch,
+  buildCustomerPaymentTermUpdatePatch,
   computeInvoiceDueDate,
   parseCustomerPaymentTermDays,
   resolveCustomerPaymentTermFromRow,
@@ -50,6 +52,41 @@ describe("resolveCustomerPaymentTermFromRow", () => {
     expect(resolveCustomerPaymentTermFromRow({ payment_term_days: 60 })).toBe(60);
     expect(resolveCustomerPaymentTermFromRow({ payment_term_days: 99 })).toBeNull();
     expect(resolveCustomerPaymentTermFromRow({ payment_term_days: -1 })).toBeNull();
+  });
+});
+
+describe("admin-only customer payment term writes", () => {
+  it("lets an admin set a term on create and omits a blank/default term", () => {
+    expect(buildCustomerPaymentTermInsertPatch(true, "30")).toEqual({ ok: true, patch: { payment_term_days: 30 } });
+    expect(buildCustomerPaymentTermInsertPatch(true, 0)).toEqual({ ok: true, patch: { payment_term_days: 0 } });
+    expect(buildCustomerPaymentTermInsertPatch(true, "")).toEqual({ ok: true, patch: {} });
+  });
+
+  it("omits every non-admin create value, including invalid input", () => {
+    expect(buildCustomerPaymentTermInsertPatch(false, "30")).toEqual({ ok: true, patch: {} });
+    expect(buildCustomerPaymentTermInsertPatch(false, "not-a-number")).toEqual({ ok: true, patch: {} });
+  });
+
+  it("rejects invalid admin input before any save", () => {
+    expect(buildCustomerPaymentTermInsertPatch(true, "61").ok).toBe(false);
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: true, value: "abc", currentValue: 30, hasCurrentColumn: true }).ok).toBe(false);
+  });
+
+  it("omits unchanged admin edits and sends only genuine set/clear changes", () => {
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: true, value: "30", currentValue: 30, hasCurrentColumn: true })).toEqual({ ok: true, patch: {} });
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: true, value: "", currentValue: null, hasCurrentColumn: true })).toEqual({ ok: true, patch: {} });
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: true, value: "60", currentValue: 30, hasCurrentColumn: true })).toEqual({ ok: true, patch: { payment_term_days: 60 } });
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: true, value: "", currentValue: 30, hasCurrentColumn: true })).toEqual({ ok: true, patch: { payment_term_days: null } });
+  });
+
+  it("never lets non-admin unrelated edits wipe or replace an existing term", () => {
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: false, value: "", currentValue: 30, hasCurrentColumn: true })).toEqual({ ok: true, patch: {} });
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: false, value: "0", currentValue: 30, hasCurrentColumn: true })).toEqual({ ok: true, patch: {} });
+  });
+
+  it("stays backward-safe when the optional column is not deployed", () => {
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: true, value: "", currentValue: undefined, hasCurrentColumn: false })).toEqual({ ok: true, patch: {} });
+    expect(buildCustomerPaymentTermUpdatePatch({ isAdmin: true, value: "14", currentValue: undefined, hasCurrentColumn: false })).toEqual({ ok: true, patch: { payment_term_days: 14 } });
   });
 });
 

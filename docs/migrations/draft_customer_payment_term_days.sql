@@ -27,6 +27,49 @@ END $$;
 COMMENT ON COLUMN public.customers.payment_term_days IS
   'Optional customer-specific invoice payment term in calendar days (0-60). NULL falls back to settings.payment_days.';
 
+-- Defense in depth for the existing shared customer form and direct Data API
+-- writes. Only a real admin user ID may set or actually change this financial
+-- term. Trusted service/migration roles remain able to maintain the schema/data;
+-- an arbitrary request with NULL auth.uid() is never treated as an admin.
+CREATE OR REPLACE FUNCTION public.guard_customer_payment_term_days()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF current_user IN ('service_role', 'postgres', 'supabase_admin') THEN
+    RETURN NEW;
+  END IF;
+
+  IF auth.uid() IS NOT NULL
+    AND public.has_role(auth.uid(), 'admin'::public.app_role) THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' AND NEW.payment_term_days IS NOT NULL THEN
+    RAISE EXCEPTION 'Only admins may set customer payment terms'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+    AND NEW.payment_term_days IS DISTINCT FROM OLD.payment_term_days THEN
+    RAISE EXCEPTION 'Only admins may change customer payment terms'
+      USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END
+$$;
+
+REVOKE ALL ON FUNCTION public.guard_customer_payment_term_days() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.guard_customer_payment_term_days() TO service_role;
+
+CREATE OR REPLACE TRIGGER customers_payment_term_days_admin_guard
+BEFORE INSERT OR UPDATE ON public.customers
+FOR EACH ROW
+EXECUTE FUNCTION public.guard_customer_payment_term_days();
+
 CREATE OR REPLACE FUNCTION public.create_contract_completion_invoice(
   p_work_order uuid,
   p_customer jsonb,

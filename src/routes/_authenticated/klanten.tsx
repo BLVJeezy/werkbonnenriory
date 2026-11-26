@@ -19,7 +19,7 @@ import { syncSyndicusFromCustomer } from "@/lib/syndici.functions";
 import { parseContacts, type CustomerContact } from "@/lib/customer-contacts";
 import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
 import { lookupCompany } from "@/lib/company-lookup.functions";
-import { parseCustomerPaymentTermDays } from "@/lib/payment-terms";
+import { buildCustomerPaymentTermInsertPatch, buildCustomerPaymentTermUpdatePatch } from "@/lib/payment-terms";
 import { PageHeader } from "@/components/PageHeader";
 import { VmeSyndicusDialog } from "@/components/VmeSyndicusDialog";
 import { CustomerSectorsDialog } from "@/components/CustomerSectorsDialog";
@@ -112,12 +112,14 @@ function ContactsEditor({ form, setForm }: { form: Record<string, string>; setFo
 function CustomerFormFields({
   form,
   setForm,
+  isAdmin,
   templates = [],
   directory = [],
   sectors = [],
 }: {
   form: Record<string, string>;
   setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  isAdmin: boolean;
   templates?: { name: string; details: SyndicusDetails }[];
   directory?: SyndicusDir[];
   sectors?: CustomerSector[];
@@ -282,22 +284,24 @@ function CustomerFormFields({
       <ContactsEditor form={form} setForm={setForm} />
       <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
         <span className="block text-xs font-black uppercase tracking-wide text-muted-foreground">Facturatie</span>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="w-full space-y-1 sm:w-56">
-            <span className="block text-xs font-bold uppercase text-muted-foreground">Betalingstermijn (dagen)</span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={60}
-              step={1}
-              value={form["payment_term_days"] ?? ""}
-              onChange={(e) => setForm((prev) => ({ ...prev, payment_term_days: e.target.value }))}
-              placeholder="Standaard (14 dagen)"
-            />
-          </label>
-          <p className="text-xs text-muted-foreground">Leeg = standaardtermijn. Geheel getal tussen 0 en 60 kalenderdagen (0 = vervaldag op factuurdatum).</p>
-        </div>
+        {isAdmin && (
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="w-full space-y-1 sm:w-56">
+              <span className="block text-xs font-bold uppercase text-muted-foreground">Betalingstermijn (dagen)</span>
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={60}
+                step={1}
+                value={form["payment_term_days"] ?? ""}
+                onChange={(e) => setForm((prev) => ({ ...prev, payment_term_days: e.target.value }))}
+                placeholder="Standaardtermijn"
+              />
+            </label>
+            <p className="text-xs text-muted-foreground">Leeg = standaardtermijn. Geheel getal tussen 0 en 60 kalenderdagen (0 = vervaldag op factuurdatum).</p>
+          </div>
+        )}
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
           Vrij beroep — altijd 21% btw, ook met een btw-nummer
@@ -519,16 +523,16 @@ function Klanten() {
       toast.error("De naam mag niet leeg zijn.");
       return;
     }
-    const parsedTerm = parseCustomerPaymentTermDays(form["payment_term_days"]);
-    if (!parsedTerm.ok) {
-      toast.error(parsedTerm.error);
+    const paymentTerm = buildCustomerPaymentTermInsertPatch(isAdmin, form["payment_term_days"]);
+    if (!paymentTerm.ok) {
+      toast.error(paymentTerm.error);
       return;
     }
     setSaving(true);
     const { error } = await supabase.from("customers").insert({
       ...patch,
       name: patch.name,
-      ...(parsedTerm.value !== null ? { payment_term_days: parsedTerm.value } : {}),
+      ...paymentTerm.patch,
     } as never);
     setSaving(false);
     if (error) {
@@ -570,16 +574,20 @@ function Klanten() {
       toast.error("Kies een verantwoordelijke syndicus voor deze VME of vink 'Nog toe te wijzen' aan.");
       return;
     }
-    const parsedTerm = parseCustomerPaymentTermDays(form["payment_term_days"]);
-    if (!parsedTerm.ok) {
-      toast.error(parsedTerm.error);
+    const paymentTerm = buildCustomerPaymentTermUpdatePatch({
+      isAdmin,
+      value: form["payment_term_days"],
+      currentValue: (c as Record<string, unknown>)["payment_term_days"],
+      hasCurrentColumn: "payment_term_days" in (c as Record<string, unknown>),
+    });
+    if (!paymentTerm.ok) {
+      toast.error(paymentTerm.error);
       return;
     }
     let clearSyn = false;
     if (prevCat === "vme" && nextCat !== "vme" && (form["syndicus_id"] || form["syndicus_company"]?.trim())) {
       clearSyn = confirm("Deze klant is geen VME meer. Wil je de gekoppelde syndicusrelatie ook verwijderen? (OK = verwijderen, Annuleren = behouden)");
     }
-    const hasPaymentTermColumn = "payment_term_days" in (c as Record<string, unknown>);
     const patch = {
       ...customerPatch(form as Partial<CustomerRow>),
       ...(clearSyn ? syndicusDetailsPatch({}) : syndicusDetailsPatch(form)),
@@ -590,7 +598,7 @@ function Klanten() {
       contacts: parseContacts(JSON.parse(form["contacts"] || "[]")),
       vrij_beroep: form["vrij_beroep"] === "1",
       default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate),
-      ...(hasPaymentTermColumn || parsedTerm.value !== null ? { payment_term_days: parsedTerm.value } : {}),
+      ...paymentTerm.patch,
     };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
@@ -864,7 +872,7 @@ function Klanten() {
       {creating && (
         <div className="space-y-3 rounded-xl border border-primary/40 bg-card p-4 shadow-xs sm:p-5">
           <div className="border-b border-border/70 pb-2 text-sm font-bold text-foreground">Nieuwe klant aanmaken</div>
-          <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} sectors={sectors} />
+          <CustomerFormFields form={form} setForm={setForm} isAdmin={isAdmin} templates={templates} directory={directory} sectors={sectors} />
           <div className="flex gap-2">
             <Button size="sm" disabled={saving} onClick={createCustomer}>{saving ? "Bezig…" : "Klant aanmaken"}</Button>
             <Button size="sm" variant="ghost" disabled={saving} onClick={() => setCreating(false)}>Annuleren</Button>
@@ -1027,7 +1035,7 @@ function Klanten() {
                           <>
                             {c.customer_numbers?.length > 1 && <div className="text-xs text-muted-foreground">Klantnummers: {c.customer_numbers.join(', ')}</div>}
                             {own.map(p => <div key={p.id} className="border-l-2 border-primary pl-3 text-sm"><span className="font-mono text-muted-foreground">{p.number} </span><strong>{p.name}</strong><div className="text-muted-foreground">{formatAddress(p)}</div></div>)}
-                            <CustomerFormFields form={form} setForm={setForm} templates={templates} directory={directory} sectors={sectors} />
+                            <CustomerFormFields form={form} setForm={setForm} isAdmin={isAdmin} templates={templates} directory={directory} sectors={sectors} />
                             {isAdmin && (
                               <CustomerPortalAdmin
                                 customerId={c.id}

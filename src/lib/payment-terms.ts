@@ -8,6 +8,37 @@ export type ParsedPaymentTerm =
   | { ok: true; value: number | null }
   | { ok: false; error: string };
 
+export type CustomerPaymentTermPatchResult =
+  | { ok: true; patch: { payment_term_days?: number | null } }
+  | { ok: false; error: string };
+
+/** Only admins may supply a term while creating a customer; blank stays unset. */
+export function buildCustomerPaymentTermInsertPatch(isAdmin: boolean, input: unknown): CustomerPaymentTermPatchResult {
+  if (!isAdmin) return { ok: true, patch: {} };
+  const parsed = parseCustomerPaymentTermDays(input);
+  if (!parsed.ok) return parsed;
+  return { ok: true, patch: parsed.value === null ? {} : { payment_term_days: parsed.value } };
+}
+
+/**
+ * Builds only a genuine admin term change. Non-admin edits and unchanged admin
+ * edits omit the column entirely, preserving the stored value and compatibility
+ * with databases where the optional column is not deployed yet.
+ */
+export function buildCustomerPaymentTermUpdatePatch(input: {
+  isAdmin: boolean;
+  value: unknown;
+  currentValue: unknown;
+  hasCurrentColumn: boolean;
+}): CustomerPaymentTermPatchResult {
+  if (!input.isAdmin) return { ok: true, patch: {} };
+  const parsed = parseCustomerPaymentTermDays(input.value);
+  if (!parsed.ok) return parsed;
+  const currentValue = input.hasCurrentColumn ? input.currentValue : null;
+  if (parsed.value === currentValue) return { ok: true, patch: {} };
+  return { ok: true, patch: { payment_term_days: parsed.value } };
+}
+
 /**
  * Validates an optional customer payment term in calendar days (0–60).
  * Empty / null / undefined means "use the existing global default".
