@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { addDays, buildCreditNote, buildInvoice, buildManualCreditNote, buildManualInvoice, canInvoiceWorkOrder, invoiceMergeKey, mergeWorkOrderInvoices, isFullyPaid, isInvoiceEditable, peppolIdFromVat, type InvoiceCustomer, type InvoiceLine } from "@/lib/invoice";
+import { computeInvoiceDueDate, resolveCustomerPaymentTermFromRow } from "@/lib/payment-terms";
 import type { InvoicePdfData } from "@/lib/invoice-pdf";
 import { WERKBON_MAIL_SCOPES } from "@/lib/outlook-scopes";
 import { INVOICE_MAILBOX_KEY, INVOICE_MAILBOX_ADDRESS, assertInvoiceMailbox } from "@/lib/mail-senders";
@@ -30,7 +31,7 @@ export const createInvoices = createServerFn({ method: "POST" })
     const { data: prior } = (await supabase.from("invoices").select("*")) as { data: { work_order_id: string | null; extra_work_order_ids?: string[] | null }[] | null };
     const invoiced = new Set<string>();
     for (const p of prior ?? []) { if (p.work_order_id) invoiced.add(p.work_order_id); for (const x of p.extra_work_order_ids ?? []) invoiced.add(x); }
-    const groups = new Map<string, { wo: any; inv: ReturnType<typeof buildInvoice> }[]>();
+    const groups = new Map<string, { wo: any; klant: Record<string, unknown> | null; inv: ReturnType<typeof buildInvoice> }[]>();
     for (const id of data.workOrderIds) {
       const { data: wo } = await supabase.from("work_orders").select("*").eq("id", id).single();
       // Contract- en "niet factureren"-werkbonnen (bijv. garantie) worden nooit gefactureerd.
@@ -42,7 +43,7 @@ export const createInvoices = createServerFn({ method: "POST" })
       ]);
       const seconds = (t.data ?? []).reduce((sum: number, e: any) => sum + (e.ended_at ? (new Date(e.ended_at).getTime() - new Date(e.started_at).getTime()) / 1000 : 0), 0);
       const act = (acts ?? []).find((a: any) => a.id === wo.activity_id) ?? null;
-      const { data: klant } = wo.customer_id ? await supabase.from("customers").select("billing_email").eq("id", wo.customer_id).maybeSingle() : { data: null };
+      const { data: klant } = wo.customer_id ? await supabase.from("customers").select("*").eq("id", wo.customer_id).maybeSingle() : { data: null };
       const inv = buildInvoice({ wo: { ...wo, customer_billing_email: klant?.billing_email ?? null, distance_km: wo.distance_km == null ? null : Number(wo.distance_km), vat_rate: Number(wo.vat_rate) }, activity: act, seconds, kmRate: Number(s?.km_rate ?? 0), materials: m.data ?? [] });
       // Werkbon uit een goedgekeurde offerte: factureren volgens de offertelijnen (gekozen posten), niet volgens geregistreerde uren/materialen.
       const { data: q } = await supabase.from("quotes").select("lines, vat_rate").eq("work_order_id", id).eq("status", "akkoord").order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -52,16 +53,21 @@ export const createInvoices = createServerFn({ method: "POST" })
         if (rows.length) { const calc = buildManualInvoice(rows); Object.assign(inv, { lines: calc.lines, net: calc.net, vat: calc.vat, total: calc.total, vatRate: calc.vatRate }); }
       }
       const key = invoiceMergeKey(wo);
-      groups.set(key, [...(groups.get(key) ?? []), { wo, inv }]);
+      groups.set(key, [...(groups.get(key) ?? []), { wo, klant: (klant as Record<string, unknown> | null) ?? null, inv }]);
     }
     for (const parts of groups.values()) {
       const first = parts[0];
       if (!first) continue;
       const merged = mergeWorkOrderInvoices(parts.map((p) => ({ number: p.wo.number, lines: p.inv.lines, net: p.inv.net, vat: p.inv.vat, total: p.inv.total, paidAmount: p.inv.paidAmount })));
       const issue = new Date().toISOString().slice(0, 10);
+      const dueDate = computeInvoiceDueDate(issue, {
+        kind: "factuur",
+        customerPaymentTermDays: resolveCustomerPaymentTermFromRow(first.klant),
+        globalPaymentDays: s?.payment_days,
+      });
       // Atomic: number and invoice are created in one transaction, so a failed insert cannot burn a number.
       const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
-        p_work_order_id: first.wo.id, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+        p_work_order_id: first.wo.id, p_issue_date: issue, p_due_date: dueDate,
         p_customer: first.inv.customer, p_lines: merged.lines, p_vat_rate: first.inv.vatRate, p_net: merged.net, p_vat: merged.vat, p_total: merged.total, p_paid_amount: merged.paidAmount,
       });
       if (error) throw new Error(error.message);
@@ -90,12 +96,17 @@ export const createSubcontractInvoices = createServerFn({ method: "POST" })
       const { data: q } = await supabase.from("quotes").select("lines, vat_rate, number").eq("work_order_id", id).eq("status", "akkoord").order("created_at", { ascending: false }).limit(1).maybeSingle();
       const rows = quoteInvoiceLines(q?.lines as InvoiceLine[] | null, Number(q?.vat_rate ?? wo.vat_rate));
       if (!rows.length) { problems.push(`${wo.customer_name}: geen goedgekeurde offertelijnen`); continue; }
-      const { data: klant } = wo.customer_id ? await supabase.from("customers").select("billing_email").eq("id", wo.customer_id).maybeSingle() : { data: null };
+      const { data: klant } = wo.customer_id ? await supabase.from("customers").select("*").eq("id", wo.customer_id).maybeSingle() : { data: null };
       const base = buildInvoice({ wo: { ...wo, customer_billing_email: klant?.billing_email ?? null, distance_km: null, vat_rate: Number(wo.vat_rate) }, activity: null, seconds: 0, kmRate: 0, materials: [] });
       const calc = buildManualInvoice(rows);
       const issue = new Date().toISOString().slice(0, 10);
+      const dueDate = computeInvoiceDueDate(issue, {
+        kind: "factuur",
+        customerPaymentTermDays: resolveCustomerPaymentTermFromRow(klant as Record<string, unknown> | null),
+        globalPaymentDays: s?.payment_days,
+      });
       const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
-        p_work_order_id: wo.id, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+        p_work_order_id: wo.id, p_issue_date: issue, p_due_date: dueDate,
         p_customer: base.customer, p_lines: calc.lines, p_vat_rate: calc.vatRate, p_net: calc.net, p_vat: calc.vat, p_total: calc.total, p_paid_amount: Number(wo.paid_amount ?? 0),
         p_contract_reference: q?.number ? `Offerte ${q.number}` : "",
       });
@@ -122,9 +133,11 @@ export const createManualInvoice = createServerFn({ method: "POST" })
     // Losse creditnota: zelfde lijnen, bedragen negatief via buildCreditNote; zelfde nummering.
     const calc = data.creditNote ? buildManualCreditNote(rows) : buildManualInvoice(rows);
     let customer: InvoiceCustomer;
+    let selectedCustomerRow: Record<string, unknown> | null = null;
     if (data.customerId) {
       const { data: c, error } = await supabase.from("customers").select("*").eq("id", data.customerId).single();
       if (error || !c) throw new Error("Klant niet gevonden");
+      selectedCustomerRow = c as Record<string, unknown>;
       customer = { name: c.name, address: null, siteAddress: null, vatNumber: c.vat_number?.trim() || null, email: c.billing_email?.trim() || c.email?.trim() || null, street: c.street, houseNumber: c.house_number, postalCode: c.postal_code, city: c.city };
     } else {
       const m = data.customer;
@@ -133,8 +146,15 @@ export const createManualInvoice = createServerFn({ method: "POST" })
     }
     const { data: s } = await supabase.from("settings").select("payment_days").eq("id", 1).single();
     const issue = new Date().toISOString().slice(0, 10);
+    const dueDate = data.creditNote
+      ? addDays(issue, Number(s?.payment_days ?? 14))
+      : computeInvoiceDueDate(issue, {
+          kind: "factuur",
+          customerPaymentTermDays: resolveCustomerPaymentTermFromRow(selectedCustomerRow),
+          globalPaymentDays: s?.payment_days,
+        });
     const { data: row, error } = await supabase.rpc("create_numbered_invoice", {
-      p_work_order_id: null as unknown as string, p_issue_date: issue, p_due_date: addDays(issue, Number(s?.payment_days ?? 14)),
+      p_work_order_id: null as unknown as string, p_issue_date: issue, p_due_date: dueDate,
       p_customer: customer, p_lines: calc.lines, p_vat_rate: calc.vatRate, p_net: calc.net, p_vat: calc.vat, p_total: calc.total, p_paid_amount: 0,
       p_kind: data.creditNote ? "creditnota" : "factuur", p_contract_reference: data.reference?.trim() || "",
     });

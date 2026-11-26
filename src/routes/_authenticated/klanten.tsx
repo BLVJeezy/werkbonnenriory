@@ -19,6 +19,7 @@ import { syncSyndicusFromCustomer } from "@/lib/syndici.functions";
 import { parseContacts, type CustomerContact } from "@/lib/customer-contacts";
 import { companyNumber, fillCompanyDetails } from "@/lib/company-lookup";
 import { lookupCompany } from "@/lib/company-lookup.functions";
+import { parseCustomerPaymentTermDays } from "@/lib/payment-terms";
 import { PageHeader } from "@/components/PageHeader";
 import { VmeSyndicusDialog } from "@/components/VmeSyndicusDialog";
 import { CustomerSectorsDialog } from "@/components/CustomerSectorsDialog";
@@ -279,14 +280,33 @@ function CustomerFormFields({
         {syndicusLabel(form) && <div className="mt-2 text-xs text-muted-foreground">Weergave in de lijst: <strong className="font-semibold text-foreground">{syndicusLabel(form)}</strong></div>}
       </div>
       <ContactsEditor form={form} setForm={setForm} />
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
-        Vrij beroep — altijd 21% btw, ook met een btw-nummer
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["oud6"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, oud6: e.target.checked ? "1" : "" }))} />
-        Particulier, woning ouder dan 10 jaar — 6% btw
-      </label>
+      <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+        <span className="block text-xs font-black uppercase tracking-wide text-muted-foreground">Facturatie</span>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="w-full space-y-1 sm:w-56">
+            <span className="block text-xs font-bold uppercase text-muted-foreground">Betalingstermijn (dagen)</span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={60}
+              step={1}
+              value={form["payment_term_days"] ?? ""}
+              onChange={(e) => setForm((prev) => ({ ...prev, payment_term_days: e.target.value }))}
+              placeholder="Standaard (14 dagen)"
+            />
+          </label>
+          <p className="text-xs text-muted-foreground">Leeg = standaardtermijn. Geheel getal tussen 0 en 60 kalenderdagen (0 = vervaldag op factuurdatum).</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["vrij_beroep"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, vrij_beroep: e.target.checked ? "1" : "" }))} />
+          Vrij beroep — altijd 21% btw, ook met een btw-nummer
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" className="h-4 w-4 accent-primary" checked={form["oud6"] === "1"} onChange={(e) => setForm((prev) => ({ ...prev, oud6: e.target.checked ? "1" : "" }))} />
+          Particulier, woning ouder dan 10 jaar — 6% btw
+        </label>
+      </div>
     </>
   );
 }
@@ -499,8 +519,17 @@ function Klanten() {
       toast.error("De naam mag niet leeg zijn.");
       return;
     }
+    const parsedTerm = parseCustomerPaymentTermDays(form["payment_term_days"]);
+    if (!parsedTerm.ok) {
+      toast.error(parsedTerm.error);
+      return;
+    }
     setSaving(true);
-    const { error } = await supabase.from("customers").insert({ ...patch, name: patch.name });
+    const { error } = await supabase.from("customers").insert({
+      ...patch,
+      name: patch.name,
+      ...(parsedTerm.value !== null ? { payment_term_days: parsedTerm.value } : {}),
+    } as never);
     setSaving(false);
     if (error) {
       toast.error(error.code === "23505" ? "Er bestaat al een klant met deze naam en adres." : error.message);
@@ -528,6 +557,7 @@ function Klanten() {
       vme_syndicus_pending: ext.vme_syndicus_pending ? "1" : "",
       vrij_beroep: c.vrij_beroep ? "1" : "",
       oud6: Number(c.default_vat_rate) === 6 ? "1" : "",
+      payment_term_days: (c as { payment_term_days?: number | null }).payment_term_days != null ? String((c as { payment_term_days?: number | null }).payment_term_days) : "",
       contacts: JSON.stringify(parseContacts((c as { contacts?: unknown }).contacts)),
     });
   }
@@ -540,10 +570,16 @@ function Klanten() {
       toast.error("Kies een verantwoordelijke syndicus voor deze VME of vink 'Nog toe te wijzen' aan.");
       return;
     }
+    const parsedTerm = parseCustomerPaymentTermDays(form["payment_term_days"]);
+    if (!parsedTerm.ok) {
+      toast.error(parsedTerm.error);
+      return;
+    }
     let clearSyn = false;
     if (prevCat === "vme" && nextCat !== "vme" && (form["syndicus_id"] || form["syndicus_company"]?.trim())) {
       clearSyn = confirm("Deze klant is geen VME meer. Wil je de gekoppelde syndicusrelatie ook verwijderen? (OK = verwijderen, Annuleren = behouden)");
     }
+    const hasPaymentTermColumn = "payment_term_days" in (c as Record<string, unknown>);
     const patch = {
       ...customerPatch(form as Partial<CustomerRow>),
       ...(clearSyn ? syndicusDetailsPatch({}) : syndicusDetailsPatch(form)),
@@ -554,13 +590,14 @@ function Klanten() {
       contacts: parseContacts(JSON.parse(form["contacts"] || "[]")),
       vrij_beroep: form["vrij_beroep"] === "1",
       default_vat_rate: form["oud6"] === "1" ? 6 : (Number(c.default_vat_rate) === 6 ? null : c.default_vat_rate),
+      ...(hasPaymentTermColumn || parsedTerm.value !== null ? { payment_term_days: parsedTerm.value } : {}),
     };
     if (!patch.name) {
       toast.error("De naam mag niet leeg zijn.");
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("customers").update(patch).eq("id", c.id);
+    const { error } = await supabase.from("customers").update(patch as never).eq("id", c.id);
     setSaving(false);
     if (error) {
       toast.error(error.code === "23505" ? "Er bestaat al een klant met deze naam en adres." : error.message);
