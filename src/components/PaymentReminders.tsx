@@ -34,6 +34,8 @@ export function PaymentReminders({ invoiceId }: { invoiceId: string }) {
   const last = history[history.length - 1];
   const next = ((last?.stage ?? 0) + 1) as ReminderStage;
   const blocked = next > 3 || Boolean(last && last.status !== 'accepted');
+  const stage2Doc = history.find(h => h.stage === 2 && h.status === 'accepted')?.document as Partial<ReminderDocument> | undefined;
+  const requiresTermsForFees = next === 3 && Number(stage2Doc?.compensation ?? 0) > 0;
   useEffect(() => {
     if (!preview) { setPdfUrl(null); return; }
     const bytes = Uint8Array.from(atob(preview.base64), c => c.charCodeAt(0));
@@ -77,12 +79,14 @@ export function PaymentReminders({ invoiceId }: { invoiceId: string }) {
               <option value="consumer">Particulier / consument</option><option value="business">Onderneming — opdracht voor beroepsdoeleinden</option>
             </SearchableSelect>
             <Label className="flex items-start gap-2"><Checkbox checked={undisputed} disabled={busy} onCheckedChange={v => { setUndisputed(v === true); clear(); }} />Het saldo, betalingen en creditnota's zijn gecontroleerd; er is geen lopende betwisting, betalingsregeling of schuldbemiddeling.</Label>
-            <Label className="flex items-start gap-2"><Checkbox checked={terms} disabled={busy} onCheckedChange={v => { setTerms(v === true); clear(); }} />De voorwaarden van 18/09/2026 waren vóór de opdracht geldig overeengekomen en zijn op deze klant van toepassing.</Label>
+            {requiresTermsForFees && (
+              <Label className="flex items-start gap-2"><Checkbox checked={terms} disabled={busy} onCheckedChange={v => { setTerms(v === true); clear(); }} />De voorwaarden van 18/09/2026 waren vóór de opdracht geldig overeengekomen en zijn op deze klant van toepassing (vereist voor de reeds eerder aangerekende vergoeding).</Label>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">Eerste herinnering gratis; minstens 14 kalenderdagen betaaltermijn. Daarna maximaal één forfaitaire vergoeding volgens artikel 11. Er wordt geen interest of aparte aanmaningskost gevorderd.</p>
+          <p className="text-sm text-muted-foreground">Eerste en tweede herinnering zijn kosteloos (voor particulieren en ondernemingen), met minstens 14 kalenderdagen betaaltermijn. Er worden geen forfaitaire vergoeding, geen aanmaningskosten en geen verwijlinterest aangerekend.</p>
           {next === 3 && <p className="text-sm font-medium">Voor sterker bewijs van de ingebrekestelling: verstuur de PDF ook aangetekend. Deze app verzendt geen aangetekende brief.</p>}
           <p className="text-xs text-muted-foreground">Geen juridische certificering: laat de voorwaarden en een betwist dossier beoordelen door een Belgische jurist.</p>
-          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy || !undisputed || (next > 1 && !terms)} onClick={makePreview}><Eye className="h-4 w-4" />{busy ? 'Even geduld…' : 'Voorbeeld controleren'}</Button>
+          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy || !undisputed || (requiresTermsForFees && !terms)} onClick={makePreview}><Eye className="h-4 w-4" />{busy ? 'Even geduld…' : 'Voorbeeld controleren'}</Button>
             {pdfUrl && <Button variant="outline" asChild><a href={pdfUrl} download={`Herinnering-${next}-${preview?.document.number}.pdf`}><Download className="h-4 w-4" />PDF</a></Button>}
           </div>
           {preview && <>

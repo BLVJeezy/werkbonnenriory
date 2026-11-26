@@ -40,7 +40,6 @@ export function buildReminder(o: {
   if (!o.undisputed) throw new Error('Bevestig dat het openstaande saldo gecontroleerd en niet betwist is.');
   if (o.history.some(h => h.stage === stage)) throw new Error('Deze stap is al verzonden of wordt gecontroleerd. Geen dubbele aanmaning.');
   if (stage > 1) {
-    if (!o.termsAccepted) throw new Error('Kosten mogen alleen bij vooraf overeengekomen, toepasselijke voorwaarden.');
     const previous = o.history.find(h => h.stage === stage - 1 && h.status === 'accepted');
     if (!previous?.sent_at) throw new Error('Verzend eerst de vorige herinnering.');
     if (today < addDays(brusselsDate(new Date(previous.sent_at)), 15)) throw new Error(`Wacht tot ${dateLabel(addDays(brusselsDate(new Date(previous.sent_at)), 15))}: de vorige betaaltermijn loopt nog.`);
@@ -48,19 +47,27 @@ export function buildReminder(o: {
     if (doc?.debtorKind !== debtorKind) throw new Error('Het klanttype mag niet wijzigen tijdens de herinneringsreeks.');
   }
   const deadline = addDays(today, 14);
-  let compensation = stage === 1 ? 0 : debtorKind === 'consumer' ? consumerCompensation(balance) : businessCompensation(balance);
-  // The same one-off compensation from step 2 is not increased or charged again at step 3.
+  let compensation = 0;
+  // Stage 2 is free for both consumers and businesses.
+  // For stage 3, never add new compensation; only preserve an existing historical stage-2 fee (capped, never increased) when terms are confirmed.
   if (stage === 3) {
     const previous = o.history.find(h => h.stage === 2 && h.status === 'accepted');
     const old = previous?.document as Partial<ReminderDocument> | undefined;
-    compensation = Math.min(compensation, Number(old?.compensation ?? 0));
+    const historicalCompensation = Number(old?.compensation ?? 0);
+    if (historicalCompensation > 0) {
+      const cap = debtorKind === 'consumer' ? consumerCompensation(balance) : businessCompensation(balance);
+      compensation = Math.min(cap, historicalCompensation);
+    }
+  }
+  if (compensation > 0 && !o.termsAccepted) {
+    throw new Error('Kosten mogen alleen bij vooraf overeengekomen, toepasselijke voorwaarden.');
   }
   const title = reminderTitles[stage];
   const feesAfterDeadline = debtorKind === 'consumer' ? consumerCompensation(balance) : businessCompensation(balance);
   const intro = stage === 1
     ? 'Volgens onze administratie staat onderstaande factuur nog open. Wellicht is de betaling aan uw aandacht ontsnapt. Wij verzoeken u vriendelijk maar uitdrukkelijk het openstaande saldo binnen onderstaande termijn te betalen.'
     : stage === 2
-      ? 'Ondanks onze eerste kosteloze betalingsherinnering en het verstrijken van de betaaltermijn hebben wij geen volledige betaling ontvangen. Wij verzoeken u met aandrang het hieronder vermelde bedrag te voldoen.'
+      ? 'Ondanks onze eerste kosteloze betalingsherinnering en het verstrijken van de betaaltermijn hebben wij geen volledige betaling ontvangen. Wij verzoeken u met aandrang het openstaande saldo te voldoen.'
       : 'Hierbij stellen wij u uitdrukkelijk in gebreke wegens niet-betaling van onderstaande factuur. Dit is onze laatste buitengerechtelijke aanmaning. Wij sommeren u het hieronder vermelde bedrag uiterlijk op de aangegeven datum te voldoen.';
   const body = [
     `Geachte ${i.customer.name},`, '', intro, '',
@@ -74,8 +81,15 @@ export function buildReminder(o: {
     `Gelieve te betalen uiterlijk op ${dateLabel(deadline)} op IBAN ${o.iban}, met mededeling ${invoicePaymentReference(i.number)}.`,
     ...(stage === 1 ? [
       'Deze eerste herinnering is kosteloos. U beschikt over minstens veertien kalenderdagen, te rekenen vanaf de dag na deze elektronische verzending.',
-      `Bij uitblijven van betaling na deze termijn kan, uitsluitend als vooraf geldig overeengekomen en wettelijk toegestaan, een eenmalige forfaitaire vergoeding van ${eur(feesAfterDeadline)} worden gevorderd volgens artikel ${debtorKind === 'consumer' ? '11.5–11.7' : '11.3'} van onze algemene voorwaarden. Er wordt in deze herinneringsreeks geen verwijlinterest gevorderd.`,
-    ] : [`De forfaitaire vergoeding berust op artikel ${debtorKind === 'consumer' ? '11.7 (binnen de grenzen van Boek XIX WER)' : '11.3'} van de vooraf overeengekomen algemene voorwaarden. Deze vergoeding wordt niet per herinnering opgeteld.`]),
+      'Ook een eventuele tweede betalingsherinnering is kosteloos; in deze herinneringsreeks worden geen forfaitaire vergoeding en geen verwijlinterest aangerekend.',
+      `Ter informatie: artikel ${debtorKind === 'consumer' ? '11.5–11.7 (binnen de wettelijke plafonds van Boek XIX WER)' : '11.3'} van onze algemene voorwaarden voorziet — uitsluitend indien vooraf geldig overeengekomen en wettelijk van toepassing — in een mogelijke eenmalige forfaitaire vergoeding tot ${eur(feesAfterDeadline)}. Die vergoeding wordt echter niet automatisch en niet bij de tweede betalingsherinnering gevorderd.`,
+    ] : stage === 2 ? [
+      'Ook deze tweede betalingsherinnering is volledig kosteloos: er worden geen forfaitaire vergoeding, geen aanmaningskosten en geen verwijlinterest aangerekend.',
+    ] : compensation > 0 ? [
+      `De forfaitaire vergoeding berust op artikel ${debtorKind === 'consumer' ? '11.7 (binnen de grenzen van Boek XIX WER)' : '11.3'} van de vooraf overeengekomen algemene voorwaarden. Deze vergoeding wordt niet per herinnering opgeteld.`,
+    ] : [
+      'Er worden in deze aanmaning geen forfaitaire vergoeding, geen aanmaningskosten en geen verwijlinterest aangerekend.',
+    ]),
     ...(stage === 3 ? ['Als betaling binnen deze laatste termijn uitblijft, kunnen wij het dossier ter beoordeling aan onze raadsman voorleggen en zo nodig gerechtelijke invordering vragen. Alleen wettelijk toegelaten en door de bevoegde rechter toegekende kosten kunnen vervolgens worden gevorderd. Deze brief is een minnelijke aanmaning en vormt geen uitvoerbare titel.'] : []),
     '', 'Heeft u inmiddels betaald, stuur ons dan uw betalingsbewijs. Betwist u het saldo of wenst u een betalingsregeling, neem dan onmiddellijk contact op via info@riory.be. Een betwisting wordt beoordeeld vóór verdere invorderingsstappen.',
     '', `Met vriendelijke groeten,\n${o.companyName}\ninfo@riory.be\nwww.riory.be`,
