@@ -580,9 +580,11 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
       intro: (q.intro ?? null) as string | null,
       net: Number(q.net ?? 0),
       vat: Number(q.vat ?? 0),
+      // Keep the original line index: approving with options sends these indexes to signQuoteRecord.
       lines: (Array.isArray(q.lines) ? q.lines : [])
-        .filter((l: any) => String(l?.description ?? "").trim())
-        .map((l: any, index: number) => ({
+        .map((l: any, index: number) => ({ l, index }))
+        .filter(({ l }: { l: any }) => String(l?.description ?? "").trim())
+        .map(({ l, index }: { l: any; index: number }) => ({
           index,
           description: String(l.description),
           quantity: Number(l.quantity ?? 1),
@@ -596,10 +598,21 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
   // Test account only: in-memory examples of every work-order and invoice state, never stored.
   return {
     ...overview,
-    workOrders: [...demo.demoWorkOrders(today), ...overview.workOrders],
+    workOrders: [
+      ...demo.demoWorkOrders(today, demoAddress(overview.customer)),
+      ...overview.workOrders,
+    ],
     invoices: [...demo.demoInvoices(today), ...overview.invoices],
     quotes: [...demo.demoQuotes(today), ...overview.quotes],
   };
+}
+
+/** The test account's own address on its examples, so they look like its real history. */
+function demoAddress(c: any): string | undefined {
+  if (!c) return undefined;
+  const street = [c.street, c.house_number].filter(Boolean).join(" ");
+  const city = [c.postal_code, c.city].filter(Boolean).join(" ");
+  return [street, city].filter(Boolean).join(", ") || undefined;
 }
 
 const PORTAL_DOCUMENT_HOST = "https://werkbonnen.riory.be";
@@ -616,10 +629,11 @@ export async function buildPortalDocument(
     if (!demo.portalDemoEnabled(access.email, access.preview)) throw new Error("Document niet gevonden.");
     const { data: c } = await db
       .from("customers")
-      .select("name")
+      .select("name, street, house_number, postal_code, city")
       .eq("id", access.primaryCustomerId)
       .maybeSingle();
-    return demo.demoDocument(input.type, input.id, (c as { name?: string } | null)?.name ?? "Klant");
+    const cust = (c ?? {}) as { name?: string; street?: string | null; house_number?: string | null; postal_code?: string | null; city?: string | null };
+    return demo.demoDocument(input.type, input.id, cust.name ?? "Klant", cust);
   }
   const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
 

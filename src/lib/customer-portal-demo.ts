@@ -39,10 +39,10 @@ type DemoWorkOrder = {
 };
 
 /** A realistic customer history: one open request, one planned visit and three finished jobs. */
-export function demoWorkOrders(now = new Date()): DemoWorkOrder[] {
+export function demoWorkOrders(now = new Date(), address = ADDRESS): DemoWorkOrder[] {
   const base = {
     projectName: null,
-    address: ADDRESS,
+    address,
     urgent: false,
     scheduledFrom: null,
     scheduledUntil: null,
@@ -198,14 +198,22 @@ export async function demoDocument(
   type: "factuur" | "werkbon",
   id: string,
   customerName: string,
+  cust: { street?: string | null; house_number?: string | null; postal_code?: string | null; city?: string | null } = {},
 ): Promise<{ pdf: Uint8Array; filename: string }> {
+  const street = cust.street ?? "Voorbeeldstraat";
+  const houseNumber = cust.street ? (cust.house_number ?? "") : "1";
+  const postalCode = cust.street ? (cust.postal_code ?? "") : "3700";
+  const city = cust.street ? (cust.city ?? "") : "Tongeren";
+  const address = [[street, houseNumber].filter(Boolean).join(" "), [postalCode, city].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
   if (type === "werkbon") {
     const wo = demoWorkOrders().find((w) => w.id === id && w.hasPdf);
     if (!wo) throw new Error("Werkbon is nog niet beschikbaar.");
     const pdf = await createWerkbonPdf({
       number: wo.number ?? 0,
       customer: customerName,
-      address: ADDRESS,
+      address,
       siteAddress: null,
       description: wo.description,
       workNotes: "Dit is een voorbeeldwerkbon voor het klantportaal.",
@@ -232,14 +240,14 @@ export async function demoDocument(
     workOrderNumber: inv.workOrderNumber ?? 0,
     customer: {
       name: customerName,
-      address: ADDRESS,
+      address,
       siteAddress: null,
       vatNumber: null,
       email: null,
-      street: "Voorbeeldstraat",
-      houseNumber: "1",
-      postalCode: "3700",
-      city: "Tongeren",
+      street,
+      houseNumber,
+      postalCode,
+      city,
     },
     lines: [
       { description: inv.line, quantity: 1, unit: "st", unitPrice: net, amount: net },
