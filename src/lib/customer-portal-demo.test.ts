@@ -26,3 +26,21 @@ describe("brusselsToUtc", () => {
     expect(new Date(brusselsToUtc("2026-07-01", "08:00")).toISOString()).toBe("2026-07-01T06:00:00.000Z");
   });
 });
+
+import { validPortalPassword, portalEmailAllowed } from "./customer-portal";
+import { resolvePortalAccess } from "./customer-portal.server";
+describe("portal passwords and demo-only login", () => {
+  it("requires 8+ chars with a letter and a digit", () => {
+    expect(validPortalPassword("123Riory")).toBe(true);
+    expect(validPortalPassword("abcdefgh")).toBe(false);
+    expect(validPortalPassword("1234567")).toBe(false);
+  });
+  it("lets the demo-only address in without a customer record", async () => {
+    expect(portalEmailAllowed("test@mail.com")).toBe(true);
+    const access = await resolvePortalAccess({} as never, "demo:test@mail.com", "test@mail.com");
+    expect(access.demoOnly).toBe(true);
+    expect(access.customerIds).toEqual([]);
+    await expect(resolvePortalAccess({} as never, "demo:test@mail.com", "klant@example.com")).rejects.toThrow();
+    await expect(resolvePortalAccess({} as never, "demo:klant@example.com", "klant@example.com")).rejects.toThrow();
+  });
+});

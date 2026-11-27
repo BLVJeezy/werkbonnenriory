@@ -196,6 +196,21 @@ export async function loadPortalScope(db: Db, rawEmail: string, customerIds: rea
 
 /** Resolve the logged-in portal user: an active portal account plus every customer record of their e-mail. */
 export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: unknown) {
+  if (userId.startsWith("demo:")) {
+    const { PORTAL_DEMO_ONLY_EMAILS } = await import("./customer-portal");
+    const email = normalizePortalEmail(String(claimsEmail ?? ""));
+    if (userId !== `demo:${email}` || !PORTAL_DEMO_ONLY_EMAILS.includes(email))
+      throw new Error("Geen actieve toegang tot het klantenportaal voor dit account.");
+    return {
+      email,
+      scopeEmail: "",
+      preview: false,
+      demoOnly: true,
+      customerIds: [] as string[],
+      primaryCustomerId: "demo-customer",
+      accountIds: [] as string[],
+    };
+  }
   const accounts = check<{ id: string; customer_id: string; email: string; active: boolean }[]>(
     await db
       .from("customer_portal_accounts")
@@ -241,11 +256,14 @@ export async function resolvePortalAccess(db: Db, userId: string, claimsEmail: u
     email,
     scopeEmail,
     preview,
+    demoOnly: false,
     customerIds,
     primaryCustomerId: active[0]!.customer_id,
     accountIds: active.map((a) => a.id),
   };
 }
+
+const DEMO_READ_ONLY = "Dit is een testaccount: er wordt niets opgeslagen of verstuurd.";
 
 async function linkedToOwnFile(
   db: Db,
@@ -344,9 +362,18 @@ async function sendViaRioryMailbox(
  * Send a one-time login link when the e-mail belongs to a Riory customer.
  * Always resolves without revealing whether the address is known.
  */
-export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<void> {
+export async function requestPortalLoginLink(
+  db: Db,
+  rawEmail: string,
+  kind: "login" | "reset" = "login",
+): Promise<void> {
+  const { PORTAL_DEMO_ONLY_EMAILS, buildPortalResetUrl, portalResetMailText } = await import(
+    "./customer-portal"
+  );
   const email = normalizePortalEmail(rawEmail);
   if (!portalEmailAllowed(email)) return;
+  // Demo-only addresses are not real mailboxes we own: never send them anything.
+  if (PORTAL_DEMO_ONLY_EMAILS.includes(email)) return;
   const linkedIds = await findPortalCustomerIds(db, email);
 
   const { data: existing } = await db
@@ -398,7 +425,7 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
   }
 
   const { data: link, error: linkErr } = await db.auth.admin.generateLink({
-    type: "magiclink",
+    type: kind === "reset" ? "recovery" : "magiclink",
     email,
   });
   if (linkErr || !link?.user || !link.properties?.hashed_token) {
@@ -442,8 +469,12 @@ export async function requestPortalLoginLink(db: Db, rawEmail: string): Promise<
   const sent = await sendViaRioryMailbox(
     db,
     email,
-    "Riory — uw inloglink voor het klantenportaal",
-    portalLoginMailText(buildPortalLoginUrl(link.properties.hashed_token)),
+    kind === "reset"
+      ? "Riory — stel uw wachtwoord in voor het klantenportaal"
+      : "Riory — uw inloglink voor het klantenportaal",
+    kind === "reset"
+      ? portalResetMailText(buildPortalResetUrl(link.properties.hashed_token))
+      : portalLoginMailText(buildPortalLoginUrl(link.properties.hashed_token)),
   );
   if (sent) {
     await db.auth.admin.updateUserById(userId, {
@@ -465,6 +496,21 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
   const { workOrderStage, invoicePortalState, invoiceOpenAmount, portalWorkAddress } =
     await import("./customer-portal");
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.demoOnly) {
+    const demo = await import("./customer-portal-demo");
+    const { PORTAL_SERVICES } = await import("./customer-portal");
+    const today = new Date();
+    return {
+      accountEmail: access.email,
+      preview: null,
+      services: PORTAL_SERVICES.map((sv) => ({ key: sv.key, label: sv.label })),
+      customer: demo.DEMO_CUSTOMER,
+      customers: [demo.DEMO_CUSTOMER],
+      workOrders: demo.demoWorkOrders(today, demoAddress(demo.DEMO_CUSTOMER)),
+      invoices: demo.demoInvoices(today),
+      quotes: demo.demoQuotes(today),
+    };
+  }
   const [{ data: customers }, scope] = await Promise.all([
     db
       .from("customers")
@@ -547,7 +593,7 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
           .replace(/\[Aangevraagd via klantenportaal\]/g, "")
           .replace(CANCEL_MARKER_RE, "")
           .trim() || null,
-      cancelRequested: CANCEL_MARKER_RE.test(String(w.description ?? "")),
+      cancelRequested: String(w.description ?? "").includes(CANCEL_MARKER),
       projectName: (w.project_name ?? null) as string | null,
       address: portalWorkAddress(w),
       urgent: !!w.urgent,
@@ -627,6 +673,8 @@ export async function buildPortalDocument(
   const demo = await import("./customer-portal-demo");
   if (input.id.startsWith(demo.DEMO_PREFIX)) {
     if (!demo.portalDemoEnabled(access.email, access.preview)) throw new Error("Document niet gevonden.");
+    if (access.demoOnly)
+      return demo.demoDocument(input.type, input.id, demo.DEMO_CUSTOMER.name, demo.DEMO_CUSTOMER);
     const { data: c } = await db
       .from("customers")
       .select("name, street, house_number, postal_code, city")
@@ -635,6 +683,7 @@ export async function buildPortalDocument(
     const cust = (c ?? {}) as { name?: string; street?: string | null; house_number?: string | null; postal_code?: string | null; city?: string | null };
     return demo.demoDocument(input.type, input.id, cust.name ?? "Klant", cust);
   }
+  if (access.demoOnly) throw new Error("Document niet gevonden.");
   const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
 
   if (input.type === "factuur") {
@@ -730,6 +779,7 @@ export async function createPortalAppointment(
 ) {
   const { buildPortalAppointmentDescription } = await import("./customer-portal");
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.demoOnly) return { ok: true } as any; // test account: simulated, nothing is stored
   if (access.preview) throw new Error(PREVIEW_READ_ONLY);
   const { portalService } = await import("./customer-portal");
   const service = portalService(data.service);
@@ -1010,6 +1060,7 @@ export async function updatePortalProfile(
 ) {
   const { portalProfileChanges } = await import("./customer-portal");
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.demoOnly) throw new Error(DEMO_READ_ONLY);
   if (access.preview) throw new Error(PREVIEW_READ_ONLY);
   if (!access.customerIds.includes(input.customerId))
     throw new Error("Klantgegevens niet gevonden.");
@@ -1088,6 +1139,7 @@ export async function requestPortalInvoiceCopy(
   message: string,
 ) {
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.demoOnly) return { ok: true } as any; // test account: simulated, nothing is stored
   if (access.preview) throw new Error(PREVIEW_READ_ONLY);
   const { data: c } = await db
     .from("customers")
@@ -1126,6 +1178,7 @@ export async function reportPortalProblem(
   input: { topics: string[]; message: string; page?: string | undefined; userAgent?: string | undefined },
 ) {
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.demoOnly) return { ok: true }; // test account: no mail
   // At most 5 reports per account per 24 hours, so the form cannot be used to flood the mailbox.
   const { data: u } = await db.auth.admin.getUserById(userId);
   const now = Date.now();
@@ -1201,6 +1254,7 @@ export async function decidePortalQuote(
   },
 ) {
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.demoOnly) return { ok: true } as any; // test account: simulated, nothing is stored
   if (access.preview) throw new Error(PREVIEW_READ_ONLY);
   const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
   const q = scope.quotes.find((x: { id: string }) => x.id === input.quoteId) as
@@ -1254,6 +1308,7 @@ export async function cancelPortalAppointment(
   input: { workOrderId: string; reason?: string | undefined },
 ) {
   const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.demoOnly) return { ok: true } as any; // test account: simulated, nothing is stored
   if (access.preview) throw new Error(PREVIEW_READ_ONLY);
   const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
   const { workOrderStage, portalWorkAddress } = await import("./customer-portal");
@@ -1289,4 +1344,120 @@ export async function cancelPortalAppointment(
   );
   if (!sent) console.error("portal cancel mail failed", w.id);
   return { ok: true };
+}
+
+// ---------------------------------------------------------------- password login
+
+const PW_FAIL_WINDOW_MS = 15 * 60 * 1000;
+const PW_FAIL_MAX = 5;
+
+function constantTimeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const x = enc.encode(a);
+  const y = enc.encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
+
+/**
+ * E-mail + password login. Customers get a password through "Wachtwoord vergeten" (a recovery
+ * link to their own mailbox). Five wrong passwords lock the account for 15 minutes, because all
+ * attempts reach Supabase from this server and its per-IP limits cannot tell customers apart.
+ */
+export async function portalPasswordLogin(db: Db, rawEmail: string, password: string) {
+  const { PORTAL_DEMO_ONLY_EMAILS } = await import("./customer-portal");
+  const { signPortalToken } = await import("./portal-token");
+  const { url, key } = authEnv();
+  const email = normalizePortalEmail(rawEmail);
+  if (!portalEmailAllowed(email)) return null;
+
+  if (PORTAL_DEMO_ONLY_EMAILS.includes(email)) {
+    const secret = (process.env["PORTAL_DEMO_PASSWORD"] ?? "").trim();
+    if (!secret || !constantTimeEqual(password, secret)) return null;
+    return signPortalToken({ uid: `demo:${email}`, email }, key);
+  }
+
+  const { data: accounts } = await db
+    .from("customer_portal_accounts")
+    .select("user_id, active, email")
+    .ilike("email", escapeIlike(email))
+    .limit(20);
+  const acc = ((accounts ?? []) as { user_id: string | null; active: boolean; email: string }[]).find(
+    (a) => a.active && a.user_id && sameEmail(a.email, email),
+  );
+  if (!acc?.user_id) return null;
+  const userId = acc.user_id;
+  const { data: u } = await db.auth.admin.getUserById(userId);
+  if (!u?.user) return null;
+  if (await staffBlocked(db, userId)) return null;
+  const now = Date.now();
+  const fails = ((u.user.app_metadata?.portal_pw_fail as string[] | undefined) ?? []).filter(
+    (t) => now - Date.parse(t) < PW_FAIL_WINDOW_MS,
+  );
+  if (fails.length >= PW_FAIL_MAX)
+    throw new Error("Te veel mislukte pogingen. Probeer over 15 minuten opnieuw of kies 'Wachtwoord vergeten'.");
+
+  const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: key, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const session = res.ok
+    ? ((await res.json()) as { access_token?: string; user?: { id?: string } })
+    : null;
+  if (session?.access_token) {
+    await fetch(`${url}/auth/v1/logout?scope=local`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${session.access_token}` },
+    }).catch(() => undefined);
+  }
+  if (!session?.user?.id || session.user.id !== userId) {
+    await db.auth.admin.updateUserById(userId, {
+      app_metadata: { ...(u.user.app_metadata ?? {}), portal_pw_fail: [...fails, new Date(now).toISOString()] },
+    });
+    return null;
+  }
+  if (fails.length) {
+    await db.auth.admin.updateUserById(userId, {
+      app_metadata: { ...(u.user.app_metadata ?? {}), portal_pw_fail: [] },
+    });
+  }
+  await resolvePortalAccess(db, userId, email);
+  return signPortalToken({ uid: userId, email }, key);
+}
+
+/** Set a new password from the "Wachtwoord vergeten" link and log the customer in. */
+export async function setPortalPassword(db: Db, tokenHash: string, password: string) {
+  const { validPortalLoginToken, validPortalPassword } = await import("./customer-portal");
+  const { signPortalToken } = await import("./portal-token");
+  if (!validPortalPassword(password))
+    throw new Error("Kies een wachtwoord van minstens 8 tekens met een letter en een cijfer.");
+  if (!validPortalLoginToken(tokenHash)) return null;
+  const { url, key } = authEnv();
+  const res = await fetch(`${url}/auth/v1/verify`, {
+    method: "POST",
+    headers: { apikey: key, "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "recovery", token_hash: tokenHash }),
+  });
+  const session = res.ok
+    ? ((await res.json()) as { access_token?: string; user?: { id?: string; email?: string } })
+    : null;
+  if (session?.access_token) {
+    await fetch(`${url}/auth/v1/logout?scope=local`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${session.access_token}` },
+    }).catch(() => undefined);
+  }
+  const userId = session?.user?.id;
+  const email = session?.user?.email;
+  if (!userId || !email) return null;
+  await resolvePortalAccess(db, userId, email); // only portal customers, never staff
+  const { data: u } = await db.auth.admin.getUserById(userId);
+  const { error } = await db.auth.admin.updateUserById(userId, {
+    password,
+    app_metadata: { ...(u?.user?.app_metadata ?? {}), portal_pw_fail: [] },
+  });
+  if (error) throw new Error("Wachtwoord instellen mislukt. Probeer opnieuw.");
+  return signPortalToken({ uid: userId, email }, key);
 }

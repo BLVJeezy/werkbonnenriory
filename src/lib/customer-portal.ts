@@ -87,8 +87,15 @@ export function nextPortalLoginLog(
 /**
  * Test phase: only these addresses may use the portal. Set to null to open it to every customer.
  */
+/**
+ * Demo-only logins: no Supabase user, no customer data, never any mail. They sign in with the
+ * password in the PORTAL_DEMO_PASSWORD secret and only ever see the in-memory example history.
+ */
+export const PORTAL_DEMO_ONLY_EMAILS: readonly string[] = ["test@mail.com"];
+
 export const PORTAL_TEST_ALLOWLIST: readonly string[] | null = [
   "jasonbalongo@gmail.com",
+  ...PORTAL_DEMO_ONLY_EMAILS,
   // First five real customers (Nov 2026): their portal account is created on their first login
   // and everything with their e-mail address is linked automatically.
   "marieke.driesen@cps-processing.com", // The Salmon Atelier
@@ -107,6 +114,29 @@ export function portalEmailAllowed(email: string): boolean {
 /** Exact, case-insensitive comparison used to double-check every ilike match server-side. */
 export function sameEmail(value: string | null | undefined, normalized: string): boolean {
   return !!value && normalizePortalEmail(value) === normalized;
+}
+
+export function buildPortalResetUrl(tokenHash: string): string {
+  return `${PORTAL_PUBLIC_URL}#reset=${tokenHash}`;
+}
+
+/** At least 8 characters with a letter and a digit (bcrypt only uses the first 72 bytes). */
+export function validPortalPassword(pw: string): boolean {
+  return pw.length >= 8 && pw.length <= 72 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
+}
+
+export function portalResetMailText(link: string): string {
+  return [
+    "Beste klant,",
+    "",
+    "U vroeg een nieuw wachtwoord aan voor het Riory-klantenportaal. Klik op de link hieronder om uw wachtwoord in te stellen:",
+    link,
+    "",
+    "! Deze link werkt één keer en vervalt na 1 uur. Heeft u dit niet aangevraagd? Dan mag u deze mail negeren; uw wachtwoord blijft ongewijzigd.",
+    "",
+    "Met vriendelijke groeten,",
+    "Riory",
+  ].join("\n");
 }
 
 export function portalLoginMailText(link: string): string {

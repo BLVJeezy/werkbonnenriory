@@ -6,7 +6,27 @@
 import { createInvoicePdf } from "./invoice-pdf";
 import { createWerkbonPdf } from "./werkbon-pdf";
 
-export const DEMO_EMAILS = ["jasonbalongo@gmail.com"];
+import { PORTAL_DEMO_ONLY_EMAILS } from "./customer-portal";
+
+export const DEMO_EMAILS = ["jasonbalongo@gmail.com", ...PORTAL_DEMO_ONLY_EMAILS];
+export const DEMO_UID_PREFIX = "demo:";
+
+/** The fictional customer behind demo-only logins (test@mail.com): no real customer record. */
+export const DEMO_CUSTOMER = {
+  id: "demo-customer",
+  name: "Sofie Claes",
+  street: "Stationsstraat",
+  house_number: "24",
+  postal_code: "3740",
+  city: "Bilzen",
+  phone: "0470 12 34 56",
+  email: "test@mail.com",
+  billing_email: null,
+  vat_number: null,
+  customer_number: "2187",
+  profile_updated_at: null,
+  profile_history: [],
+};
 export const DEMO_PREFIX = "demo-";
 
 export function portalDemoEnabled(email: string, preview: boolean): boolean {

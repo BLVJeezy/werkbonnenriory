@@ -7,13 +7,17 @@ import { z } from "zod";
  * data action requires the customer's own Supabase session token.
  */
 
-const loginInput = z.object({
-  email: z
-    .string()
-    .trim()
-    .email()
-    .max(254)
-    .refine((v) => !v.includes("*")),
+const emailField = z
+  .string()
+  .trim()
+  .email()
+  .max(254)
+  .refine((v) => !v.includes("*"));
+const loginInput = z.object({ email: emailField, kind: z.enum(["login", "reset"]).optional() });
+const passwordLoginInput = z.object({ email: emailField, password: z.string().min(1).max(200) });
+const setPasswordInput = z.object({
+  token: z.string().regex(/^[a-zA-Z0-9_-]{32,512}$/),
+  password: z.string().min(1).max(200),
 });
 const exchangeInput = z.object({ token: z.string().regex(/^[a-zA-Z0-9_-]{32,512}$/) });
 const documentInput = z.object({
@@ -111,7 +115,9 @@ export const Route = createFileRoute("/api/public/portal/$action")({
         let body: unknown;
         try {
           const raw = await request.text();
-          if (raw.length > 8192) return reply({ error: "Aanvraag te groot." }, 413);
+          // A drawn signature (quote approval) is a PNG data URL; everything else is small.
+          const limit = params.action === "quote-decision" ? 450_000 : 8192;
+          if (raw.length > limit) return reply({ error: "Aanvraag te groot." }, 413);
           body = raw ? JSON.parse(raw) : {};
         } catch {
           return reply({ error: "Ongeldige aanvraag." }, 400);
@@ -125,7 +131,11 @@ export const Route = createFileRoute("/api/public/portal/$action")({
           if (!parsed.success) return reply({ error: "Vul een geldig e-mailadres in." }, 400);
           const started = Date.now();
           try {
-            await portal.requestPortalLoginLink(supabaseAdmin, parsed.data.email);
+            await portal.requestPortalLoginLink(
+              supabaseAdmin,
+              parsed.data.email,
+              parsed.data.kind ?? "login",
+            );
           } catch (e) {
             console.error("portal login request", e instanceof Error ? e.message : e);
           }
@@ -135,6 +145,42 @@ export const Route = createFileRoute("/api/public/portal/$action")({
           return reply({ ok: true });
         }
 
+        if (params.action === "password-login") {
+          const parsed = passwordLoginInput.safeParse(body);
+          if (!parsed.success) return reply({ error: "Vul uw e-mailadres en wachtwoord in." }, 400);
+          const started = Date.now();
+          let token: Awaited<ReturnType<typeof portal.portalPasswordLogin>> = null;
+          let lockMessage: string | null = null;
+          try {
+            token = await portal.portalPasswordLogin(
+              supabaseAdmin,
+              parsed.data.email,
+              parsed.data.password,
+            );
+          } catch (e) {
+            lockMessage = e instanceof Error ? e.message : "Inloggen mislukt.";
+          }
+          // Same response time whether the address exists or not.
+          const wait = 1200 - (Date.now() - started);
+          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+          if (token) return reply(token);
+          return reply({ error: lockMessage ?? "E-mailadres of wachtwoord klopt niet." }, lockMessage ? 429 : 401);
+        }
+        if (params.action === "set-password") {
+          const parsed = setPasswordInput.safeParse(body);
+          if (!parsed.success) return reply({ error: "Ongeldige link." }, 400);
+          try {
+            const result = await portal.setPortalPassword(
+              supabaseAdmin,
+              parsed.data.token,
+              parsed.data.password,
+            );
+            if (!result) return reply({ error: "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan." }, 401);
+            return reply(result);
+          } catch (e) {
+            return reply({ error: e instanceof Error ? e.message : "Wachtwoord instellen mislukt." }, 400);
+          }
+        }
         if (params.action === "exchange") {
           const parsed = exchangeInput.safeParse(body);
           if (!parsed.success) return reply({ error: "Ongeldige inloglink." }, 400);
