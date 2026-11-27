@@ -1374,7 +1374,9 @@ export async function portalPasswordLogin(db: Db, rawEmail: string, password: st
 
   if (PORTAL_DEMO_ONLY_EMAILS.includes(email)) {
     const secret = (process.env["PORTAL_DEMO_PASSWORD"] ?? "").trim();
-    if (!secret || !constantTimeEqual(password, secret)) return null;
+    // Say it plainly when the secret is missing, so a setup problem is not mistaken for a typo.
+    if (!secret) throw new Error("Het testaccount is nog niet ingesteld (geheim PORTAL_DEMO_PASSWORD ontbreekt).");
+    if (!constantTimeEqual(password, secret)) return null;
     return signPortalToken({ uid: `demo:${email}`, email }, key);
   }
 

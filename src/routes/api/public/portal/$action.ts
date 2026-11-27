@@ -164,7 +164,8 @@ export const Route = createFileRoute("/api/public/portal/$action")({
           const wait = 1200 - (Date.now() - started);
           if (wait > 0) await new Promise((r) => setTimeout(r, wait));
           if (token) return reply(token);
-          return reply({ error: lockMessage ?? "E-mailadres of wachtwoord klopt niet." }, lockMessage ? 429 : 401);
+          if (lockMessage) return reply({ error: lockMessage }, lockMessage.includes("testaccount") ? 503 : 429);
+          return reply({ error: "E-mailadres of wachtwoord klopt niet." }, 401);
         }
         if (params.action === "set-password") {
           const parsed = setPasswordInput.safeParse(body);
