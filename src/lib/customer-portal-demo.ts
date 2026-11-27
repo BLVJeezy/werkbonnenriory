@@ -58,7 +58,7 @@ type DemoWorkOrder = {
   cancelRequested: boolean;
 };
 
-/** A realistic customer history: one open request, one planned visit and three finished jobs. */
+/** A simple, clear example: one booked appointment, one recent finished work order. */
 export function demoWorkOrders(now = new Date(), address = ADDRESS): DemoWorkOrder[] {
   const base = {
     projectName: null,
@@ -73,22 +73,13 @@ export function demoWorkOrders(now = new Date(), address = ADDRESS): DemoWorkOrd
   return [
     {
       ...base,
-      id: `${DEMO_PREFIX}wo-aanvraag`,
-      number: null,
-      stage: "aangevraagd",
-      scheduledDate: null,
-      description: "WC op het gelijkvloers loopt traag weg en borrelt bij het doorspoelen.",
-      createdAt: `${day(-1, now)}T18:20:00Z`,
-    },
-    {
-      ...base,
       id: `${DEMO_PREFIX}wo-gepland`,
       number: 4231,
       stage: "gepland",
       scheduledDate: day(3, now),
       scheduledFrom: "08:00",
       scheduledUntil: "10:00",
-      description: "Camera-inspectie afvoerleiding badkamer, voorafgaand aan de vervanging.",
+      description: "Camera-inspectie afvoerleiding badkamer.",
       createdAt: `${day(-2, now)}T09:10:00Z`,
     },
     {
@@ -101,28 +92,6 @@ export function demoWorkOrders(now = new Date(), address = ADDRESS): DemoWorkOrd
       hasPdf: true,
       description: "Afvoer keuken ontstopt met veer en nagespoeld.",
       createdAt: `${day(-7, now)}T07:50:00Z`,
-    },
-    {
-      ...base,
-      id: `${DEMO_PREFIX}wo-putje`,
-      number: 4120,
-      stage: "afgewerkt",
-      scheduledDate: day(-40, now),
-      signedAt: `${day(-40, now)}T14:15:00Z`,
-      hasPdf: true,
-      description: "Rioolputje achtertuin hersteld en nieuw deksel geplaatst (offerte OFF-118).",
-      createdAt: `${day(-47, now)}T08:30:00Z`,
-    },
-    {
-      ...base,
-      id: `${DEMO_PREFIX}wo-wc`,
-      number: 3987,
-      stage: "afgewerkt",
-      scheduledDate: day(-95, now),
-      signedAt: `${day(-95, now)}T16:05:00Z`,
-      hasPdf: true,
-      description: "WC ontstopt, verstopping in de afvoer naar de septische put verwijderd.",
-      createdAt: `${day(-95, now)}T11:00:00Z`,
     },
   ];
 }
@@ -143,8 +112,6 @@ type DemoInvoice = {
 function demoInvoiceRows(now = new Date()): DemoInvoice[] {
   return [
     { id: `${DEMO_PREFIX}inv-open`, number: "20260912", kind: "factuur", issueDate: day(-5, now), dueDate: day(9, now), total: 157.3, paid: 0, state: "open", workOrderNumber: 4198, line: "Ontstopping afvoer keuken" },
-    { id: `${DEMO_PREFIX}inv-putje`, number: "20260871", kind: "factuur", issueDate: day(-39, now), dueDate: day(-25, now), total: 545.0, paid: 545.0, state: "betaald", workOrderNumber: 4120, line: "Herstelling rioolputje achtertuin" },
-    { id: `${DEMO_PREFIX}inv-wc`, number: "20260702", kind: "factuur", issueDate: day(-94, now), dueDate: day(-80, now), total: 133.1, paid: 133.1, state: "betaald", workOrderNumber: 3987, line: "Ontstopping WC" },
   ];
 }
 
@@ -162,7 +129,7 @@ export function demoInvoices(now = new Date()) {
   }));
 }
 
-/** Two quotes: one already approved (it became the rioolputje job), one still waiting for a decision. */
+/** One quote waiting for the customer's decision. */
 export function demoQuotes(now = new Date()) {
   const line = (index: number, description: string, quantity: number, unit: string, amount: number, optional = false) => ({
     index,
@@ -191,24 +158,6 @@ export function demoQuotes(now = new Date()) {
         line(1, "Aansluiten op bestaande rioolput", 1, "st", 260),
         line(2, "Werkuren loodgieter", 2.5, "u", 250),
         line(3, "Camera-inspectie na de werken (optie)", 1, "st", 145, true),
-      ],
-    },
-    {
-      id: `${DEMO_PREFIX}q-putje`,
-      number: "OFF-118",
-      kind: "offerte",
-      status: "akkoord",
-      total: 545,
-      net: 450.41,
-      vat: 94.59,
-      date: `${day(-50, now)}T10:00:00Z`,
-      signedAt: `${day(-46, now)}T19:30:00Z`,
-      signedName: "Jason Balongo",
-      signUrl: null,
-      intro: "Herstelling rioolputje achtertuin.",
-      lines: [
-        line(0, "Herstellen rioolputje en vervangen deksel", 1, "st", 360.41),
-        line(1, "Werkuren", 1.5, "u", 90),
       ],
     },
   ];

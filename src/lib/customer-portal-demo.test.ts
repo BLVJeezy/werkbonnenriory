@@ -8,11 +8,11 @@ describe("customer portal demo", () => {
     expect(portalDemoEnabled("klant@example.com", false)).toBe(false);
   });
   it("is a realistic history", () => {
-    expect(demoWorkOrders().map((w) => w.stage)).toEqual(["aangevraagd", "gepland", "afgewerkt", "afgewerkt", "afgewerkt"]);
-    expect(demoInvoices().map((i) => i.state)).toEqual(["open", "betaald", "betaald"]);
+    expect(demoWorkOrders().map((w) => w.stage)).toEqual(["gepland", "afgewerkt"]);
+    expect(demoInvoices().map((i) => i.state)).toEqual(["open"]);
   });
   it("renders PDFs", async () => {
-    const w = await demoDocument("werkbon", "demo-wo-putje", "Test");
+    const w = await demoDocument("werkbon", "demo-wo-afvoer", "Test");
     const f = await demoDocument("factuur", "demo-inv-open", "Test");
     expect(w.pdf.length).toBeGreaterThan(500);
     expect(f.pdf.length).toBeGreaterThan(500);
