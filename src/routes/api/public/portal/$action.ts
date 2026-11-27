@@ -56,6 +56,19 @@ const invoiceRequestInput = z.object({
   message: z.string().trim().min(3, "Zeg welke factuur u zoekt.").max(1000),
 });
 
+const quoteDecisionInput = z.object({
+  quoteId: z.string().uuid(),
+  decision: z.enum(["akkoord", "geweigerd"]),
+  name: z.string().trim().max(120).optional(),
+  signature: z.string().max(400_000).optional(),
+  options: z.array(z.number().int().min(0).max(499)).max(100).optional(),
+  reason: z.string().trim().max(1000).optional(),
+});
+const cancelInput = z.object({
+  workOrderId: z.string().uuid(),
+  reason: z.string().trim().max(500).optional(),
+});
+
 const problemInput = z
   .object({
     topics: z.array(z.string().trim().min(1).max(80)).max(7).default([]),
@@ -188,6 +201,16 @@ export const Route = createFileRoute("/api/public/portal/$action")({
             return reply(
               await portal.updatePortalProfile(supabaseAdmin, userId, email, parsed.data),
             );
+          }
+          if (params.action === "quote-decision") {
+            const parsed = quoteDecisionInput.safeParse(body);
+            if (!parsed.success) return reply({ error: "Ongeldige beslissing." }, 400);
+            return reply(await portal.decidePortalQuote(supabaseAdmin, userId, email, parsed.data));
+          }
+          if (params.action === "appointment-cancel") {
+            const parsed = cancelInput.safeParse(body);
+            if (!parsed.success) return reply({ error: "Ongeldige annulering." }, 400);
+            return reply(await portal.cancelPortalAppointment(supabaseAdmin, userId, email, parsed.data));
           }
           if (params.action === "problem") {
             const parsed = problemInput.safeParse(body);

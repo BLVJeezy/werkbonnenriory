@@ -21,66 +21,88 @@ function day(offset: number, now = new Date()): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function demoWorkOrders(now = new Date()) {
+type DemoWorkOrder = {
+  id: string;
+  number: number | null;
+  stage: "aangevraagd" | "offerte" | "gepland" | "afgewerkt";
+  scheduledDate: string | null;
+  scheduledFrom: string | null;
+  scheduledUntil: string | null;
+  description: string;
+  projectName: null;
+  address: string;
+  urgent: boolean;
+  createdAt: string;
+  signedAt: string | null;
+  hasPdf: boolean;
+  cancelRequested: boolean;
+};
+
+/** A realistic customer history: one open request, one planned visit and three finished jobs. */
+export function demoWorkOrders(now = new Date()): DemoWorkOrder[] {
   const base = {
     projectName: null,
     address: ADDRESS,
     urgent: false,
-    scheduledFrom: null as string | null,
-    scheduledUntil: null as string | null,
-    signedAt: null as string | null,
+    scheduledFrom: null,
+    scheduledUntil: null,
+    signedAt: null,
     hasPdf: false,
+    cancelRequested: false,
   };
   return [
     {
       ...base,
-      id: `${DEMO_PREFIX}wo-aangevraagd`,
+      id: `${DEMO_PREFIX}wo-aanvraag`,
       number: null,
-      stage: "aangevraagd" as const,
+      stage: "aangevraagd",
       scheduledDate: null,
-      description: "VOORBEELD — Aangevraagd: WC loopt traag weg (nog niet ingepland).",
-      createdAt: `${day(0, now)}T08:00:00Z`,
-    },
-    {
-      ...base,
-      id: `${DEMO_PREFIX}wo-dringend`,
-      number: null,
-      stage: "aangevraagd" as const,
-      scheduledDate: null,
-      urgent: true,
-      description: "VOORBEELD — Dringende aanvraag: riool verstopt, water komt omhoog.",
-      createdAt: `${day(0, now)}T07:30:00Z`,
-    },
-    {
-      ...base,
-      id: `${DEMO_PREFIX}wo-offerte`,
-      number: 9001,
-      stage: "offerte" as const,
-      scheduledDate: null,
-      description: "VOORBEELD — Offerte in opmaak: rioleringsherstel achtertuin.",
-      createdAt: `${day(-3, now)}T09:00:00Z`,
+      description: "WC op het gelijkvloers loopt traag weg en borrelt bij het doorspoelen.",
+      createdAt: `${day(-1, now)}T18:20:00Z`,
     },
     {
       ...base,
       id: `${DEMO_PREFIX}wo-gepland`,
-      number: 9002,
-      stage: "gepland" as const,
-      scheduledDate: day(5, now),
+      number: 4231,
+      stage: "gepland",
+      scheduledDate: day(3, now),
       scheduledFrom: "08:00",
       scheduledUntil: "10:00",
-      description: "VOORBEELD — Ingepland: camera-inspectie afvoerleiding keuken.",
-      createdAt: `${day(-6, now)}T09:00:00Z`,
+      description: "Camera-inspectie afvoerleiding badkamer, voorafgaand aan de vervanging.",
+      createdAt: `${day(-2, now)}T09:10:00Z`,
     },
     {
       ...base,
-      id: `${DEMO_PREFIX}wo-afgewerkt`,
-      number: 9003,
-      stage: "afgewerkt" as const,
-      scheduledDate: day(-12, now),
-      signedAt: `${day(-12, now)}T11:00:00Z`,
+      id: `${DEMO_PREFIX}wo-afvoer`,
+      number: 4198,
+      stage: "afgewerkt",
+      scheduledDate: day(-6, now),
+      signedAt: `${day(-6, now)}T10:40:00Z`,
       hasPdf: true,
-      description: "VOORBEELD — Afgewerkt: afvoer ontstopt met veer, werkbon afgetekend.",
-      createdAt: `${day(-14, now)}T09:00:00Z`,
+      description: "Afvoer keuken ontstopt met veer en nagespoeld.",
+      createdAt: `${day(-7, now)}T07:50:00Z`,
+    },
+    {
+      ...base,
+      id: `${DEMO_PREFIX}wo-putje`,
+      number: 4120,
+      stage: "afgewerkt",
+      scheduledDate: day(-40, now),
+      signedAt: `${day(-40, now)}T14:15:00Z`,
+      hasPdf: true,
+      description: "Rioolputje achtertuin hersteld en nieuw deksel geplaatst (offerte OFF-118).",
+      createdAt: `${day(-47, now)}T08:30:00Z`,
+    },
+    {
+      ...base,
+      id: `${DEMO_PREFIX}wo-wc`,
+      number: 3987,
+      stage: "afgewerkt",
+      scheduledDate: day(-95, now),
+      signedAt: `${day(-95, now)}T16:05:00Z`,
+      hasPdf: true,
+      description: "WC ontstopt, verstopping in de afvoer naar de septische put verwijderd.",
+      createdAt: `${day(-95, now)}T11:00:00Z`,
     },
   ];
 }
@@ -95,15 +117,14 @@ type DemoInvoice = {
   paid: number;
   state: "open" | "vervallen" | "betaald" | "creditnota";
   workOrderNumber: number | null;
+  line: string;
 };
 
 function demoInvoiceRows(now = new Date()): DemoInvoice[] {
   return [
-    { id: `${DEMO_PREFIX}inv-open`, number: "VOORBEELD-01", kind: "factuur", issueDate: day(-2, now), dueDate: day(12, now), total: 145.2, paid: 0, state: "open", workOrderNumber: null },
-    { id: `${DEMO_PREFIX}inv-deels`, number: "VOORBEELD-02", kind: "factuur", issueDate: day(-5, now), dueDate: day(9, now), total: 363, paid: 150, state: "open", workOrderNumber: null },
-    { id: `${DEMO_PREFIX}inv-vervallen`, number: "VOORBEELD-03", kind: "factuur", issueDate: day(-30, now), dueDate: day(-16, now), total: 186.34, paid: 0, state: "vervallen", workOrderNumber: null },
-    { id: `${DEMO_PREFIX}inv-betaald`, number: "VOORBEELD-04", kind: "factuur", issueDate: day(-12, now), dueDate: day(2, now), total: 290.4, paid: 290.4, state: "betaald", workOrderNumber: 9003 },
-    { id: `${DEMO_PREFIX}inv-credit`, number: "VOORBEELD-05", kind: "creditnota", issueDate: day(-10, now), dueDate: day(-10, now), total: 48.4, paid: 0, state: "creditnota", workOrderNumber: null },
+    { id: `${DEMO_PREFIX}inv-open`, number: "20260912", kind: "factuur", issueDate: day(-5, now), dueDate: day(9, now), total: 157.3, paid: 0, state: "open", workOrderNumber: 4198, line: "Ontstopping afvoer keuken" },
+    { id: `${DEMO_PREFIX}inv-putje`, number: "20260871", kind: "factuur", issueDate: day(-39, now), dueDate: day(-25, now), total: 545.0, paid: 545.0, state: "betaald", workOrderNumber: 4120, line: "Herstelling rioolputje achtertuin" },
+    { id: `${DEMO_PREFIX}inv-wc`, number: "20260702", kind: "factuur", issueDate: day(-94, now), dueDate: day(-80, now), total: 133.1, paid: 133.1, state: "betaald", workOrderNumber: 3987, line: "Ontstopping WC" },
   ];
 }
 
@@ -121,21 +142,74 @@ export function demoInvoices(now = new Date()) {
   }));
 }
 
+/** Two quotes: one already approved (it became the rioolputje job), one still waiting for a decision. */
+export function demoQuotes(now = new Date()) {
+  const line = (index: number, description: string, quantity: number, unit: string, amount: number, optional = false) => ({
+    index,
+    description,
+    quantity,
+    unit,
+    amount,
+    optional,
+  });
+  return [
+    {
+      id: `${DEMO_PREFIX}q-badkamer`,
+      number: "OFF-131",
+      kind: "offerte",
+      status: "verzonden",
+      total: 1452,
+      net: 1200,
+      vat: 252,
+      date: `${day(-2, now)}T15:00:00Z`,
+      signedAt: null,
+      signedName: null,
+      signUrl: null,
+      intro: "Vervanging van de afvoerleiding onder de badkamer.",
+      lines: [
+        line(0, "Uitbreken en vervangen afvoerleiding PVC Ø110 (6 m)", 6, "m", 690),
+        line(1, "Aansluiten op bestaande rioolput", 1, "st", 260),
+        line(2, "Werkuren loodgieter", 2.5, "u", 250),
+        line(3, "Camera-inspectie na de werken (optie)", 1, "st", 145, true),
+      ],
+    },
+    {
+      id: `${DEMO_PREFIX}q-putje`,
+      number: "OFF-118",
+      kind: "offerte",
+      status: "akkoord",
+      total: 545,
+      net: 450.41,
+      vat: 94.59,
+      date: `${day(-50, now)}T10:00:00Z`,
+      signedAt: `${day(-46, now)}T19:30:00Z`,
+      signedName: "Jason Balongo",
+      signUrl: null,
+      intro: "Herstelling rioolputje achtertuin.",
+      lines: [
+        line(0, "Herstellen rioolputje en vervangen deksel", 1, "st", 360.41),
+        line(1, "Werkuren", 1.5, "u", 90),
+      ],
+    },
+  ];
+}
+
 export async function demoDocument(
   type: "factuur" | "werkbon",
   id: string,
   customerName: string,
 ): Promise<{ pdf: Uint8Array; filename: string }> {
   if (type === "werkbon") {
-    if (id !== `${DEMO_PREFIX}wo-afgewerkt`) throw new Error("Werkbon is nog niet beschikbaar.");
+    const wo = demoWorkOrders().find((w) => w.id === id && w.hasPdf);
+    if (!wo) throw new Error("Werkbon is nog niet beschikbaar.");
     const pdf = await createWerkbonPdf({
-      number: 9003,
+      number: wo.number ?? 0,
       customer: customerName,
       address: ADDRESS,
       siteAddress: null,
-      description: "VOORBEELD — Afvoer ontstopt met veer, camera-inspectie uitgevoerd.",
+      description: wo.description,
       workNotes: "Dit is een voorbeeldwerkbon voor het klantportaal.",
-      signedAt: `${day(-12)}T11:00:00Z`,
+      signedAt: wo.signedAt,
       signedName: customerName,
       vatNumber: null,
       signature: null,
@@ -146,7 +220,7 @@ export async function demoDocument(
       paid: null,
       materials: [{ name: "Ontstoppingsmiddel", quantity: 1, unit: "st" }],
     });
-    return { pdf, filename: "Riory-Werkbon-VOORBEELD.pdf" };
+    return { pdf, filename: `Riory-Werkbon-${wo.number}.pdf` };
   }
   const inv = demoInvoiceRows().find((i) => i.id === id);
   if (!inv) throw new Error("Document niet gevonden.");
@@ -168,7 +242,7 @@ export async function demoDocument(
       city: "Tongeren",
     },
     lines: [
-      { description: "VOORBEELD — Ontstopping afvoer", quantity: 1, unit: "st", unitPrice: net, amount: net },
+      { description: inv.line, quantity: 1, unit: "st", unitPrice: net, amount: net },
     ],
     vatRate: 21,
     net,

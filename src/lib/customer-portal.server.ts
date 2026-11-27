@@ -14,11 +14,11 @@ import {
 type Db = any;
 
 const WO_FIELDS =
-  "id, number, status, email, billing_email, scheduled_date, scheduled_from, scheduled_until, description, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, project_name, urgent, created_at, signed_at, customer_id, not_needed";
+  "id, number, status, customer_name, email, billing_email, scheduled_date, scheduled_from, scheduled_until, description, street, house_number, postal_code, city, use_site_address, site_street, site_house_number, site_postal_code, site_city, project_name, urgent, created_at, signed_at, customer_id, not_needed";
 const INVOICE_FIELDS =
   "id, number, kind, status, issue_date, due_date, total, paid_amount, paid_at, work_order_id, sent_at, customer";
 const QUOTE_FIELDS =
-  "id, number, kind, status, total, created_at, sent_at, signed_at, token, customer";
+  "id, number, kind, status, total, net, vat, vat_rate, intro, lines, created_at, sent_at, signed_at, signed_name, token, customer";
 const SCOPE_LIMIT = 200;
 
 function uniq<T>(xs: Iterable<T>): T[] {
@@ -183,7 +183,7 @@ export async function loadPortalScope(db: Db, rawEmail: string, customerIds: rea
 
   const qMap = new Map<string, any>();
   const addQuote = (q: any) => {
-    if (q.status === "verzonden" || q.status === "akkoord") qMap.set(q.id, q);
+    if (q.status === "verzonden" || q.status === "akkoord" || q.status === "geweigerd") qMap.set(q.id, q);
   };
   for (const list of [q1, q2, q3]) for (const q of check<any[]>(list, "quotes")) addQuote(q);
   for (const q of check<any[]>(q4, "quotes")) if (sameEmail(invoiceEmail(q), target)) addQuote(q);
@@ -545,7 +545,9 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
       description:
         String(w.description ?? "")
           .replace(/\[Aangevraagd via klantenportaal\]/g, "")
+          .replace(CANCEL_MARKER_RE, "")
           .trim() || null,
+      cancelRequested: CANCEL_MARKER_RE.test(String(w.description ?? "")),
       projectName: (w.project_name ?? null) as string | null,
       address: portalWorkAddress(w),
       urgent: !!w.urgent,
@@ -574,6 +576,20 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
       signedAt: (q.signed_at ?? null) as string | null,
       signUrl:
         q.status === "verzonden" && q.token ? `${PORTAL_DOCUMENT_HOST}/offerte/${q.token}` : null,
+      signedName: (q.signed_name ?? null) as string | null,
+      intro: (q.intro ?? null) as string | null,
+      net: Number(q.net ?? 0),
+      vat: Number(q.vat ?? 0),
+      lines: (Array.isArray(q.lines) ? q.lines : [])
+        .filter((l: any) => String(l?.description ?? "").trim())
+        .map((l: any, index: number) => ({
+          index,
+          description: String(l.description),
+          quantity: Number(l.quantity ?? 1),
+          unit: String(l.unit ?? "st"),
+          amount: Number(l.amount ?? 0),
+          optional: !!l.optional,
+        })),
     })),
   };
   if (!withDemo) return overview;
@@ -582,6 +598,7 @@ export async function buildPortalOverview(db: Db, userId: string, claimsEmail: u
     ...overview,
     workOrders: [...demo.demoWorkOrders(today), ...overview.workOrders],
     invoices: [...demo.demoInvoices(today), ...overview.invoices],
+    quotes: [...demo.demoQuotes(today), ...overview.quotes],
   };
 }
 
@@ -1127,5 +1144,135 @@ export async function reportPortalProblem(
   await db.auth.admin.updateUserById(userId, {
     app_metadata: { ...(u?.user?.app_metadata ?? {}), portal_problem_log: [...log, new Date(now).toISOString()] },
   });
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------- quote decisions & cancellations
+
+/** Customers cancel online up to this many hours before the appointment; later they have to call. */
+export const PORTAL_CANCEL_HOURS = 24;
+const CANCEL_MARKER = "[Annulering aangevraagd via klantenportaal";
+const CANCEL_MARKER_RE = /\n?\[Annulering aangevraagd via klantenportaal[^\]]*\]/g;
+
+/** Brussels wall-clock date + time → UTC milliseconds. */
+export function brusselsToUtc(date: string, time: string | null): number {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const [hh, mm] = (time ?? "08:00").split(":").map(Number) as [number, number];
+  const guess = Date.UTC(y, m - 1, d, hh, mm);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Brussels",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(new Date(guess));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const asBrussels = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
+  return guess - (asBrussels - guess);
+}
+
+export async function decidePortalQuote(
+  db: Db,
+  userId: string,
+  claimsEmail: unknown,
+  input: {
+    quoteId: string;
+    decision: "akkoord" | "geweigerd";
+    name?: string | undefined;
+    signature?: string | undefined;
+    options?: number[] | undefined;
+    reason?: string | undefined;
+  },
+) {
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.preview) throw new Error(PREVIEW_READ_ONLY);
+  const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
+  const q = scope.quotes.find((x: { id: string }) => x.id === input.quoteId) as
+    | { id: string; number: string; status: string; total: number; customer: { name?: string } | null }
+    | undefined;
+  if (!q) throw new Error("Offerte niet gevonden.");
+  if (q.status !== "verzonden") throw new Error("Over deze offerte werd al beslist.");
+  const who = q.customer?.name ?? access.email;
+  if (input.decision === "akkoord") {
+    if (!input.signature?.startsWith("data:image/png") || input.signature.length > 400_000)
+      throw new Error("Zet uw handtekening.");
+    if (!input.name?.trim()) throw new Error("Vul uw naam in.");
+    const { signQuoteRecord } = await import("./quote-sign.server");
+    await signQuoteRecord(db, { column: "id", value: q.id }, {
+      signature: input.signature,
+      name: input.name.trim(),
+      options: (input.options ?? []).filter((n) => Number.isInteger(n) && n >= 0 && n < 500),
+    });
+    await sendViaRioryMailbox(
+      db,
+      RIORY_INBOX,
+      `Klantenportaal — offerte ${q.number} goedgekeurd`,
+      `${who} keurde offerte ${q.number} goed via het klantenportaal (ondertekend door ${input.name.trim()}).`,
+    );
+    return { ok: true };
+  }
+  const { data: updated, error } = await db
+    .from("quotes")
+    .update({ status: "geweigerd" })
+    .eq("id", q.id)
+    .eq("status", "verzonden")
+    .select("id");
+  if (error) throw new Error("Opslaan mislukt. Probeer opnieuw.");
+  if (!updated?.length) throw new Error("Over deze offerte werd al beslist.");
+  await sendViaRioryMailbox(
+    db,
+    RIORY_INBOX,
+    `Klantenportaal — offerte ${q.number} geweigerd`,
+    [
+      `${who} weigerde offerte ${q.number} via het klantenportaal.`,
+      `Reden: ${input.reason?.trim() || "(geen reden opgegeven)"}`,
+    ].join("\n"),
+  );
+  return { ok: true };
+}
+
+export async function cancelPortalAppointment(
+  db: Db,
+  userId: string,
+  claimsEmail: unknown,
+  input: { workOrderId: string; reason?: string | undefined },
+) {
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  if (access.preview) throw new Error(PREVIEW_READ_ONLY);
+  const scope = await loadPortalScope(db, access.scopeEmail, access.customerIds);
+  const { workOrderStage, portalWorkAddress } = await import("./customer-portal");
+  const w = scope.workOrders.find((x: { id: string }) => x.id === input.workOrderId) as any;
+  if (!w) throw new Error("Afspraak niet gevonden.");
+  if (workOrderStage(w) !== "gepland" || !w.scheduled_date)
+    throw new Error("Alleen een ingeplande afspraak kan geannuleerd worden.");
+  if (String(w.description ?? "").includes(CANCEL_MARKER)) return { ok: true };
+  const start = brusselsToUtc(w.scheduled_date, w.scheduled_from ? String(w.scheduled_from).slice(0, 5) : null);
+  if (start - Date.now() < PORTAL_CANCEL_HOURS * 3600 * 1000)
+    throw new Error(`Annuleren kan online tot ${PORTAL_CANCEL_HOURS} uur vooraf. Bel ons op +32 472 50 28 14.`);
+  const stamp = new Date().toLocaleString("nl-BE", { timeZone: "Europe/Brussels" });
+  const reason = input.reason?.trim();
+  // A visible note on the work order, so planning and crew see it; Riory removes it from the planning.
+  const { error } = await db
+    .from("work_orders")
+    .update({
+      description: `${String(w.description ?? "").trim()}\n${CANCEL_MARKER} op ${stamp}${reason ? ` — ${reason.replace(/[\[\]]/g, "")}` : ""}]`,
+    })
+    .eq("id", w.id);
+  if (error) throw new Error("Annuleren mislukt. Bel ons op +32 472 50 28 14.");
+  const sent = await sendViaRioryMailbox(
+    db,
+    RIORY_INBOX,
+    `Klantenportaal — afspraak geannuleerd${w.number ? ` (werkbon #${w.number})` : ""}`,
+    [
+      `${w.customer_name ?? access.email} annuleert de afspraak van ${w.scheduled_date}${w.scheduled_from ? ` om ${String(w.scheduled_from).slice(0, 5)}` : ""}${w.number ? ` (werkbon #${w.number})` : ""}.`,
+      `Adres: ${portalWorkAddress(w) ?? "-"}`,
+      `Reden: ${reason || "(geen reden opgegeven)"}`,
+      "",
+      "Haal de afspraak uit de planning en verwittig de ploeg.",
+    ].join("\n"),
+  );
+  if (!sent) console.error("portal cancel mail failed", w.id);
   return { ok: true };
 }
