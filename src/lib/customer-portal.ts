@@ -87,7 +87,16 @@ export function nextPortalLoginLog(
 /**
  * Test phase: only these addresses may use the portal. Set to null to open it to every customer.
  */
-export const PORTAL_TEST_ALLOWLIST: readonly string[] | null = ["jasonbalongo@gmail.com"];
+export const PORTAL_TEST_ALLOWLIST: readonly string[] | null = [
+  "jasonbalongo@gmail.com",
+  // First five real customers (Nov 2026): their portal account is created on their first login
+  // and everything with their e-mail address is linked automatically.
+  "marieke.driesen@cps-processing.com", // The Salmon Atelier
+  "berlingiere.laura@groupbruno.be", // BRIM NV
+  "smittchristel@gmail.com", // Lou Vandereycken
+  "nico.gelissen@gmail.com", // Nicolaas Gelissen
+  "andrea.schoubben68@gmail.com", // Andrea Rigo - Schoubben
+];
 
 export function portalEmailAllowed(email: string): boolean {
   if (email.includes("*")) return false;
