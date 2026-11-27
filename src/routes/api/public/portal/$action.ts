@@ -56,6 +56,17 @@ const invoiceRequestInput = z.object({
   message: z.string().trim().min(3, "Zeg welke factuur u zoekt.").max(1000),
 });
 
+const problemInput = z
+  .object({
+    topics: z.array(z.string().trim().min(1).max(80)).max(7).default([]),
+    message: z.string().trim().max(2000).default(""),
+    page: z.string().trim().max(120).optional(),
+    userAgent: z.string().trim().max(300).optional(),
+  })
+  .refine((v) => v.topics.length > 0 || v.message.length >= 5, {
+    message: "Kies wat er misloopt of beschrijf het probleem.",
+  });
+
 async function corsHeaders(request: Request): Promise<Record<string, string>> {
   const { portalOriginAllowed } = await import("@/lib/customer-portal");
   const origin = request.headers.get("Origin");
@@ -177,6 +188,16 @@ export const Route = createFileRoute("/api/public/portal/$action")({
             return reply(
               await portal.updatePortalProfile(supabaseAdmin, userId, email, parsed.data),
             );
+          }
+          if (params.action === "problem") {
+            const parsed = problemInput.safeParse(body);
+            if (!parsed.success) {
+              return reply(
+                { error: parsed.error.issues[0]?.message ?? "Ongeldige melding." },
+                400,
+              );
+            }
+            return reply(await portal.reportPortalProblem(supabaseAdmin, userId, email, parsed.data));
           }
           if (params.action === "invoice-request") {
             const parsed = invoiceRequestInput.safeParse(body);

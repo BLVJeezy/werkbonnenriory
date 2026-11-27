@@ -1078,3 +1078,54 @@ export async function requestPortalInvoiceCopy(
   if (!sent) throw new Error("Uw aanvraag kon niet verstuurd worden. Mail naar info@riory.be.");
   return { ok: true };
 }
+
+/**
+ * "Probleem met het klantenportaal" reports go to the portal builder: set the PORTAL_SUPPORT_EMAIL
+ * secret. Without it they land in Riory's own inbox so no report is lost.
+ */
+function portalSupportEmail(): string {
+  const v = (process.env["PORTAL_SUPPORT_EMAIL"] ?? "").trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v : RIORY_INBOX;
+}
+
+export async function reportPortalProblem(
+  db: Db,
+  userId: string,
+  claimsEmail: unknown,
+  input: { topics: string[]; message: string; page?: string | undefined; userAgent?: string | undefined },
+) {
+  const access = await resolvePortalAccess(db, userId, claimsEmail);
+  // At most 5 reports per account per 24 hours, so the form cannot be used to flood the mailbox.
+  const { data: u } = await db.auth.admin.getUserById(userId);
+  const now = Date.now();
+  const log = ((u?.user?.app_metadata?.portal_problem_log as string[] | undefined) ?? []).filter(
+    (t) => now - Date.parse(t) < 24 * 3600 * 1000,
+  );
+  if (log.length >= 5) throw new Error("U stuurde vandaag al meerdere meldingen. Mail naar info@riory.be.");
+  const { data: c } = await db
+    .from("customers")
+    .select("name, customer_number")
+    .eq("id", access.primaryCustomerId)
+    .maybeSingle();
+  const sent = await sendViaRioryMailbox(
+    db,
+    portalSupportEmail(),
+    `Klantenportaal — probleem gemeld door ${c?.name ?? access.email}`,
+    [
+      `${c?.name ?? "Een klant"}${c?.customer_number ? ` (klantnr. ${c.customer_number})` : ""} meldt een probleem met het klantenportaal.`,
+      "",
+      `Soort probleem: ${input.topics.length ? input.topics.join(", ") : "niet aangeduid"}`,
+      `Uitleg: ${input.message.trim() || "(geen uitleg)"}`,
+      "",
+      `Login: ${access.email}${access.preview ? " (voorbeeldweergave)" : ""}`,
+      `Pagina: ${input.page ?? "onbekend"}`,
+      `Toestel: ${input.userAgent ?? "onbekend"}`,
+      `Tijdstip: ${new Date(now).toLocaleString("nl-BE", { timeZone: "Europe/Brussels" })}`,
+    ].join("\n"),
+  );
+  if (!sent) throw new Error("Uw melding kon niet verstuurd worden. Mail naar info@riory.be.");
+  await db.auth.admin.updateUserById(userId, {
+    app_metadata: { ...(u?.user?.app_metadata ?? {}), portal_problem_log: [...log, new Date(now).toISOString()] },
+  });
+  return { ok: true };
+}
