@@ -6,14 +6,14 @@ import { cardGross } from "@/lib/card-gross";
 import { parseCoda } from "@/lib/coda";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { BankInvoiceLinkDialog } from "@/components/BankInvoiceLinkDialog";
 import { manualBankPreview } from "@/lib/manual-bank-invoice";
 import { purchaseBankChoices } from "@/lib/bank-purchase-choice";
 import { isInvoiceReconciled } from "@/lib/bank-reconciliation-status";
@@ -601,36 +601,6 @@ function SavingsDropZone({ onFile }: { onFile: (f: File) => Promise<void> }) {
 }
 
 // ---------- Bank ----------
-// Op iOS blijft 100dvh achter het geopende toetsenbord staan. De visuele viewport
-// geeft de werkelijk zichtbare hoogte én verschuiving voor deze mobiele dialoog.
-function useMobileDialogViewport(open: boolean): CSSProperties | undefined {
-  const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null);
-  useEffect(() => {
-    if (!open) {
-      setViewport(null);
-      return;
-    }
-    const mobile = window.matchMedia("(max-width: 639px)");
-    const update = () => {
-      const visual = window.visualViewport;
-      setViewport(mobile.matches && visual ? { height: Math.max(240, Math.round(visual.height)), top: Math.max(0, Math.round(visual.offsetTop)) } : null);
-    };
-    update();
-    mobile.addEventListener("change", update);
-    window.visualViewport?.addEventListener("resize", update);
-    window.visualViewport?.addEventListener("scroll", update);
-    window.addEventListener("orientationchange", update);
-    return () => {
-      mobile.removeEventListener("change", update);
-      window.visualViewport?.removeEventListener("resize", update);
-      window.visualViewport?.removeEventListener("scroll", update);
-      window.removeEventListener("orientationchange", update);
-    };
-  }, [open]);
-  if (!viewport) return undefined;
-  return { "--bank-dialog-height": `${viewport.height}px`, "--bank-dialog-offset": `${viewport.top}px` } as CSSProperties;
-}
-
 function Bank({ c }: { c: string }) {
   const qc = useQueryClient();
   const runImportSimplaCn = useServerFn(importSimplaCreditNotes);
@@ -907,7 +877,6 @@ function Bank({ c }: { c: string }) {
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [manualInvoiceId, setManualInvoiceId] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
-  const mobileDialogViewport = useMobileDialogViewport(!!manualTx);
   const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({});
   const splitInvoices = invoiceChoices.filter((i) => splitAmounts[i.id] !== undefined);
   const splitSummary = bankSplitSummary(Number(manualTx?.amount ?? 0), splitInvoices.map((i) => parseAmount(splitAmounts[i.id]) ?? NaN));
@@ -982,47 +951,42 @@ function Bank({ c }: { c: string }) {
   const openVis = open.filter((i: any) => !zo || `${i.counterparty ?? ""} ${i.number ?? ""}`.toLowerCase().includes(zo)).slice(0, 300);
   return (
     <div className="space-y-3">
-      <Dialog open={!!manualTx} onOpenChange={(value) => { if (!value && !manualBusy) { setManualTx(null); setSplitAmounts({}); } }}>
-        <DialogContent
-          style={mobileDialogViewport}
-          className="left-0 top-[var(--bank-dialog-offset,0px)] flex h-[var(--bank-dialog-height,100dvh)] max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-3 overflow-hidden rounded-none p-4 sm:left-[50%] sm:top-[50%] sm:grid sm:h-auto sm:max-h-[90dvh] sm:w-[calc(100vw-2rem)] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-y-auto sm:rounded-xl sm:p-6"
-        >
-          <DialogHeader className="shrink-0 pr-8 text-left"><DialogTitle>Bankverrichting aan factuur koppelen</DialogTitle><DialogDescription>{manualTx ? `${manualTx.tx_date} · ${manualTx.counterparty ?? ''} · ${eur(Number(manualTx.amount))}` : ''}</DialogDescription></DialogHeader>
-          <Input className="shrink-0" aria-label="Zoek te koppelen factuur" placeholder="Zoek op factuurnummer, klant of leverancier…" value={invoiceSearch} onChange={(e) => setInvoiceSearch(e.target.value)} />
-          <div data-testid="bank-invoice-results" className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] sm:max-h-72 sm:flex-none">
-            {invoiceChoices.filter((i) => {
-              if (i.doc_type !== 'factuur' && i.doc_type !== 'creditnota') return false;
-              const q = invoiceSearch.trim().toLowerCase();
-              if (!q) return true;
-              const openAmt = docOpenAmount(i, total(i));
-              return `${i.number ?? ''} ${i.counterparty ?? ''} ${i.doc_type === 'creditnota' ? 'creditnota cn' : ''} ${openAmt.toFixed(2)} ${openAmt.toFixed(2).replace('.', ',')}`.toLowerCase().includes(q);
-            }).sort((a, b) => {
-              const txAmt = Number(manualTx?.amount ?? 0);
-              const rank = (i: any) => {
-                const openAmt = docOpenAmount(i, total(i));
-                const dirOk = (txAmt < 0) === docExpectsOutgoing(i);
-                if (dirOk && openAmt > 0.005 && Math.abs(openAmt - Math.abs(txAmt)) < 0.025) return 0;
-                if (dirOk && openAmt > 0.005) return 1;
-                if (openAmt > 0.005) return 2;
-                return 3;
-              };
-              const diff = rank(a) - rank(b);
-              return diff !== 0 ? diff : String(b.invoice_date).localeCompare(String(a.invoice_date));
-            }).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
-              <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) { const available = Math.max(0, r2(Math.abs(Number(manualTx?.amount ?? 0)) - Object.values(current).reduce((sum, value) => sum + (parseAmount(value) ?? 0), 0))); next[i.id] = String(Math.min(available, docOpenAmount(i, total(i)))); } else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
-              <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction}{i.doc_type === 'creditnota' ? ' · creditnota' : ''} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
-              <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))} · nog open {eur(docOpenAmount(i, total(i)))}</span></span>
-            </label>)}
-          </div>
-          {splitInvoices.length >= 1 && manualPreview?.mode !== 'refund' && <div className="max-h-[28dvh] shrink-0 space-y-2 overflow-y-auto overscroll-contain border-t border-border pt-3 sm:max-h-none sm:overflow-visible">
-            {splitInvoices.map((i) => <div key={i.id} className="flex items-center justify-between gap-2 text-sm"><span className="min-w-0 break-words">{i.counterparty} · {i.number}</span><Input className="w-28 shrink-0" aria-label={`Bedrag voor ${i.counterparty} ${i.number}`} inputMode="decimal" value={splitAmounts[i.id]} onChange={(e) => setSplitAmounts((current) => ({ ...current, [i.id]: e.target.value }))} /></div>)}
-            <p className="text-sm">Toegekend {eur(splitSummary.sum)} · nog af te letteren {eur(splitSummary.difference)}</p>
-            {splitError && <p className="text-sm text-destructive">Kies passende facturen en overschrijd het openstaande bedrag niet.</p>}
-          </div>}
-          {manualPreview?.mode === 'refund' && <div className="text-sm" aria-live="polite">{manualPreview.error ? <p className="text-destructive">{manualPreview.error}</p> : <p>Terugstorting — factuur blijft betaald</p>}</div>}
-          <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] pt-3 sm:border-0 sm:pb-0 sm:pt-0"><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{manualPreview?.mode !== 'refund' ? <Button disabled={(!cardSplitOk && (!splitSummary.valid || splitError)) || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : cardSplitOk ? `Afletteren op bruto ${eur(cardGrossManual ?? 0)}` : 'Toegekend bedrag afletteren'}</Button> : <Button disabled={!!manualPreview.error || manualBusy || manualTx?.allocated_amount > 0} onClick={linkManual}>{manualBusy ? 'Koppelen…' : 'Terugstorting koppelen'}</Button>}</div>
-        </DialogContent>
-      </Dialog>
+      <BankInvoiceLinkDialog
+        open={!!manualTx}
+        onOpenChange={(value) => { if (!value && !manualBusy) { setManualTx(null); setSplitAmounts({}); } }}
+        description={manualTx ? `${manualTx.tx_date} · ${manualTx.counterparty ?? ''} · ${eur(Number(manualTx.amount))}` : ''}
+        search={<Input className="shrink-0" aria-label="Zoek te koppelen factuur" placeholder="Zoek op factuurnummer, klant of leverancier…" value={invoiceSearch} onChange={(e) => setInvoiceSearch(e.target.value)} />}
+        results={<>{invoiceChoices.filter((i) => {
+          if (i.doc_type !== 'factuur' && i.doc_type !== 'creditnota') return false;
+          const q = invoiceSearch.trim().toLowerCase();
+          if (!q) return true;
+          const openAmt = docOpenAmount(i, total(i));
+          return `${i.number ?? ''} ${i.counterparty ?? ''} ${i.doc_type === 'creditnota' ? 'creditnota cn' : ''} ${openAmt.toFixed(2)} ${openAmt.toFixed(2).replace('.', ',')}`.toLowerCase().includes(q);
+        }).sort((a, b) => {
+          const txAmt = Number(manualTx?.amount ?? 0);
+          const rank = (i: any) => {
+            const openAmt = docOpenAmount(i, total(i));
+            const dirOk = (txAmt < 0) === docExpectsOutgoing(i);
+            if (dirOk && openAmt > 0.005 && Math.abs(openAmt - Math.abs(txAmt)) < 0.025) return 0;
+            if (dirOk && openAmt > 0.005) return 1;
+            if (openAmt > 0.005) return 2;
+            return 3;
+          };
+          const diff = rank(a) - rank(b);
+          return diff !== 0 ? diff : String(b.invoice_date).localeCompare(String(a.invoice_date));
+        }).map((i) => <label key={i.id} className="flex cursor-pointer items-start gap-2 border-b border-border py-2 text-sm">
+          <input type="checkbox" name="manual-invoice" value={i.id} checked={splitAmounts[i.id] !== undefined} onChange={(e) => { const checked = e.target.checked; setSplitAmounts((current) => { const next = { ...current }; if (checked) { const available = Math.max(0, r2(Math.abs(Number(manualTx?.amount ?? 0)) - Object.values(current).reduce((sum, value) => sum + (parseAmount(value) ?? 0), 0))); next[i.id] = String(Math.min(available, docOpenAmount(i, total(i)))); } else delete next[i.id]; const ids = Object.keys(next); setManualInvoiceId(ids.length === 1 ? ids[0] ?? '' : ''); return next; }); }} className="mt-1" />
+          <span className="min-w-0 flex-1 break-words">{i.number} · {i.counterparty}<span className="block text-xs text-muted-foreground">{i.invoice_date} · {i.purchase_id ? 'aankoop uit deze app' : i.direction}{i.doc_type === 'creditnota' ? ' · creditnota' : ''} · {i.status}</span><Badge variant="outline" className={reconciled(i) ? 'mt-1 border-success/30 bg-success/10 text-success' : 'mt-1 border-warning/30 bg-warning/10 text-foreground'}>{reconciled(i) ? 'Afgeletterd' : 'Niet afgeletterd'}</Badge></span>
+          <span className="shrink-0 text-right">{eur(total(i))}<span className="block text-xs text-muted-foreground">Betaald {eur(Number(i.paid_amount ?? 0))} · nog open {eur(docOpenAmount(i, total(i)))}</span></span>
+        </label>)}</>}
+        selection={splitInvoices.length >= 1 && manualPreview?.mode !== 'refund' ? <div className="max-h-[28dvh] shrink-0 space-y-2 overflow-y-auto overscroll-contain border-t border-border pt-3 sm:max-h-none sm:overflow-visible">
+          {splitInvoices.map((i) => <div key={i.id} className="flex items-center justify-between gap-2 text-sm"><span className="min-w-0 break-words">{i.counterparty} · {i.number}</span><Input className="w-28 shrink-0" aria-label={`Bedrag voor ${i.counterparty} ${i.number}`} inputMode="decimal" value={splitAmounts[i.id]} onChange={(e) => setSplitAmounts((current) => ({ ...current, [i.id]: e.target.value }))} /></div>)}
+          <p className="text-sm">Toegekend {eur(splitSummary.sum)} · nog af te letteren {eur(splitSummary.difference)}</p>
+          {splitError && <p className="text-sm text-destructive">Kies passende facturen en overschrijd het openstaande bedrag niet.</p>}
+        </div> : undefined}
+        refund={manualPreview?.mode === 'refund' ? <div className="text-sm" aria-live="polite">{manualPreview.error ? <p className="text-destructive">{manualPreview.error}</p> : <p>Terugstorting — factuur blijft betaald</p>}</div> : undefined}
+        actions={<><Button variant="outline" disabled={manualBusy} onClick={() => { setManualTx(null); setSplitAmounts({}); }}>Annuleren</Button>{manualPreview?.mode !== 'refund' ? <Button disabled={(!cardSplitOk && (!splitSummary.valid || splitError)) || manualBusy} onClick={linkSplit}>{manualBusy ? 'Afletteren…' : cardSplitOk ? `Afletteren op bruto ${eur(cardGrossManual ?? 0)}` : 'Toegekend bedrag afletteren'}</Button> : <Button disabled={!!manualPreview.error || manualBusy || manualTx?.allocated_amount > 0} onClick={linkManual}>{manualBusy ? 'Koppelen…' : 'Terugstorting koppelen'}</Button>}</>}
+      />
       <AccountList accounts={accounts} />
       <Link to="/facturen"><Button size="sm" variant="outline">Naar facturen</Button></Link>
       <PontoCard c={c} bankAcc={bankAcc} onDone={refresh} />
